@@ -64,8 +64,14 @@ public class ModRecipeProvider {
         public Basin(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
             super(output, registries, CreateBrewery.MOD_ID);
 
-            // barley + 250mB water -> green malt x3, no heat (Basin mixing)
+            // barley x3 + 250mB water -> green malt x3, no heat (Basin mixing). Three
+            // separate .require(BARLEY) entries, not one: each Ingredient entry only ever
+            // consumes a single item (confirmed reading BasinRecipe.apply(), decompiled —
+            // it extracts exactly 1 item per ingredient entry), so matching the brief's
+            // stated 3-in/3-out ratio needs three entries, not an output count trick.
             create("steeping", b -> b
+                .require(ModItems.BARLEY.get())
+                .require(ModItems.BARLEY.get())
                 .require(ModItems.BARLEY.get())
                 .require(Fluids.WATER, 250)
                 .output(ModItems.GREEN_MALT.get(), 3)
