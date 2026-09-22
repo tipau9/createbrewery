@@ -13,6 +13,8 @@ public class CreateBrewery {
     public CreateBrewery(IEventBus modEventBus) {
         REGISTRATE.registerEventListeners(modEventBus);
         ModFluids.register();
+        ModItems.register();
+        ModBlocks.register();
     }
 
     public static ResourceLocation ID(String path) {
