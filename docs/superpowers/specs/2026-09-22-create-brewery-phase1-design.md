@@ -102,11 +102,11 @@ versionRange = "[6.0.10,6.1.0)"
 Each arrow is a real brewing step. Every box except the Fermenter is a machine Create already ships.
 
 ```
-barley  ──[ Basin: mix w/ water ]──▶  green malt
+barley  ──[ Basin + Mixer: mix w/ water ]──▶  green malt
         ──[ Encased Fan through fire: bulk smoking ]──▶  malt   (kilning)
         ──[ Millstone ]──▶  grist                           (milling)
-        ──[ Basin: HEATED, + water ]──▶  wort + spent grain (mashing + lauter)
-        ──[ Basin: SUPERHEATED, + hops ]──▶  hopped wort    (the boil)
+        ──[ Basin + Mixer: HEATED, + water ]──▶  wort + spent grain (mashing + lauter)
+        ──[ Basin + Mixer: SUPERHEATED, + hops ]──▶  hopped wort (the boil)
         ──[ ✦ FERMENTER, + yeast ]──▶  beer                 (fermentation)
         ──[ Spout / Press ]──▶  bottled or canned beer      (packaging)
 ```
@@ -123,6 +123,7 @@ Design notes per step:
   *Caveat:* no Create-shipped **mixing** recipe emits both, so this combination is exercised by the API but not by precedent in this specific machine. **Fallback if the basin refuses it in practice:** split lautering into its own stage — Basin outputs `mash` fluid only, then an Item Drain or Mechanical Press separates `wort` from `spent_grain`. This is arguably *more* realistic (lautering is a genuine separate stage) and costs only a line in the chain diagram, so the risk is bounded.
 
 - **Recipe JSON format.** Create 6 unified item and fluid outputs into a single `results` array; the pre-6 `fluid_results` key no longer applies. Fluid entries carry an `amount` in mB, item entries do not. Datagen must target the current format.
+- **Every Basin step needs a Mechanical Mixer.** All four are `create:mixing`, not plain basin recipes — including steeping and the yeast culture, which require no heat at all. `AllRecipeTypes` has `BASIN` and `MIXING` as distinct constants and `MechanicalMixerBlockEntity` does its own recipe matching. A Basin with only a Blaze Burner under it will not run any step of this chain. *Added 2026-09-23 after verifying against the shipped jar.*
 - **The boil requires SUPERHEATED**, the mash only HEATED. This is a real distinction in brewing and Create already models the two tiers, so it costs nothing to be accurate.
 - **Yeast** is an item, produced by mixing sugar + wheat in a Basin (a starter culture), consumed one per fermentation batch.
 
