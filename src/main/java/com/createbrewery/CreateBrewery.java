@@ -20,6 +20,7 @@ public class CreateBrewery {
         ModRecipeTypes.register(modEventBus);
         ModLootModifiers.register(modEventBus);
         ModDataMaps.register(modEventBus);
+        ModVillagerTrades.register();
     }
 
     public static ResourceLocation ID(String path) {
