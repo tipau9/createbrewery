@@ -119,7 +119,7 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
             reset();
             return;
         }
-        if (!inputStillValid(recipe)) { // Review Focus #5
+        if (!contentsSatisfy(recipe)) { // Review Focus #5
             reset();
             return;
         }
@@ -134,14 +134,12 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
      * against every loaded fermenting recipe, the same way Create's Basin does it.
      */
     private void tryStart() {
-        FluidStack held = inputTank.getPrimaryHandler().getFluid();
-        if (held.isEmpty()) return;
-        ItemStack yeast = yeastSlot.getStackInSlot(0);
-        if (yeast.isEmpty()) return;
+        if (inputTank.getPrimaryHandler().getFluid().isEmpty()) return;
+        if (yeastSlot.getStackInSlot(0).isEmpty()) return;
 
         for (RecipeHolder<FermentingRecipe> holder : allFermentingRecipes()) {
             FermentingRecipe recipe = holder.value();
-            if (!matchesContents(recipe, held, yeast)) continue;
+            if (!contentsSatisfy(recipe)) continue;
             startedAt = level.getGameTime();
             activeRecipeId = holder.id();
             setChanged();
@@ -155,23 +153,24 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
             .getAllRecipesFor(ModRecipeTypes.FERMENTING.<RecipeInput, FermentingRecipe>getType());
     }
 
-    private boolean matchesContents(FermentingRecipe recipe, FluidStack held, ItemStack yeast) {
+    /**
+     * The condition to START a batch and the condition to KEEP one are deliberately the same
+     * predicate, not two similar ones. Review Focus #5 is only half the problem: if this
+     * checked the fluid alone, a hopper could pull the yeast out mid-batch, finish() would
+     * extract nothing, and that one yeast would go on to run unlimited batches.
+     *
+     * The arity guards run before any get(0), so a malformed recipe cannot throw inside tick().
+     */
+    private boolean contentsSatisfy(FermentingRecipe recipe) {
         if (recipe.getFluidIngredients().size() != 1) return false;
         if (recipe.getIngredients().size() != 1) return false;
         if (recipe.getFluidResults().size() != 1) return false;
-        return recipe.getIngredients().get(0).test(yeast) && fluidSufficient(recipe, held);
-    }
 
-    /** Review Focus #5: the player piped the wort back out mid-batch. */
-    private boolean inputStillValid(FermentingRecipe recipe) {
-        if (recipe.getFluidIngredients().size() != 1 || recipe.getFluidResults().size() != 1) return false;
-        return fluidSufficient(recipe, inputTank.getPrimaryHandler().getFluid());
-    }
-
-    private boolean fluidSufficient(FermentingRecipe recipe, FluidStack held) {
+        FluidStack held = inputTank.getPrimaryHandler().getFluid();
         return !held.isEmpty()
             && recipe.getFluidIngredients().get(0).test(held)
-            && held.getAmount() >= recipe.getFluidIngredients().get(0).amount();
+            && held.getAmount() >= recipe.getFluidIngredients().get(0).amount()
+            && recipe.getIngredients().get(0).test(yeastSlot.getStackInSlot(0));
     }
 
     /** Review Focus #3: never destroy a finished batch because the output is full. */

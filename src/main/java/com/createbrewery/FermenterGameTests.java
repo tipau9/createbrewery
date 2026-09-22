@@ -271,6 +271,35 @@ public class FermenterGameTests {
     }
 
     /**
+     * The other half of Review Focus #5: a hopper pulls the yeast out mid-batch. If only the
+     * fluid were re-checked, finish() would extract nothing from an empty slot and still
+     * produce beer, letting one yeast run unlimited batches.
+     */
+    @GameTest(template = TEMPLATE)
+    public static void invalidatesWhenYeastRemovedMidBatch(GameTestHelper helper) {
+        FermenterBlockEntity be = loadedFermenter(helper);
+
+        helper.startSequence()
+            .thenIdle(2)
+            .thenExecute(() -> {
+                assertStarted(helper, be);
+                backdate(be);
+                be.getYeastSlot().extractItem(0, 1, false);
+                helper.assertTrue(be.getYeastSlot().getStackInSlot(0).isEmpty(),
+                    "the yeast slot did not empty");
+            })
+            .thenIdle(2)
+            .thenExecute(() -> {
+                helper.assertTrue(be.getStartedAt() == FermenterBlockEntity.NOT_STARTED,
+                    "the batch survived its yeast being removed");
+                helper.assertTrue(amountOf(be, true) == 0, "beer was produced with no yeast");
+                helper.assertTrue(amountOf(be, false) == BATCH,
+                    "the wort was consumed by a batch that never completed");
+            })
+            .thenSucceed();
+    }
+
+    /**
      * Not about the Fermenter: barley seeds were once registered as a plain Item and could
      * not plant anything, and the bug survived review because verification used /setblock.
      * This goes through the real use-item-on-block path instead.
