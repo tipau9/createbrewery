@@ -5,6 +5,9 @@ import com.tterrag.registrate.util.entry.ItemEntry;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemNameBlockItem;
 
+import static com.createbrewery.ModTags.BEER;
+import static com.createbrewery.ModTags.BREWERY_BEER;
+
 public class ModItems {
     private static final CreateRegistrate REGISTRATE = CreateBrewery.REGISTRATE;
 
@@ -37,11 +40,13 @@ public class ModItems {
     public static final ItemEntry<Item> BEER_BOTTLE = REGISTRATE
         .item("beer_bottle", Item::new)
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
+        .tag(BEER, BREWERY_BEER)
         .register();
 
     public static final ItemEntry<Item> SEALED_CAN = REGISTRATE
         .item("sealed_can", Item::new)
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
+        .tag(BEER, BREWERY_BEER)
         .register();
 
     public static void register() {}
