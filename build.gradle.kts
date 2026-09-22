@@ -56,6 +56,12 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
+tasks.processResources {
+    val props = mapOf("mod_version" to project.version.toString())
+    inputs.properties(props)
+    filesMatching("META-INF/neoforge.mods.toml") { expand(props) }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
