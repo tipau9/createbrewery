@@ -1,0 +1,15 @@
+{
+  "block.createbrewery.barley_crop": "Barley Crop",
+  "block.createbrewery.hops_crop": "Hops Crop",
+  "item.createbrewery.barley": "Barley",
+  "item.createbrewery.barley_seeds": "Barley Seeds",
+  "item.createbrewery.beer_bottle": "Beer Bottle",
+  "item.createbrewery.empty_can": "Empty Can",
+  "item.createbrewery.green_malt": "Green Malt",
+  "item.createbrewery.grist": "Grist",
+  "item.createbrewery.hop_cones": "Hop Cones",
+  "item.createbrewery.malt": "Malt",
+  "item.createbrewery.sealed_can": "Sealed Can",
+  "item.createbrewery.spent_grain": "Spent Grain",
+  "item.createbrewery.yeast": "Yeast"
+}

@@ -1,0 +1,15 @@
+{
+  "block.createbrewery.barley_crop": "doɹƆ ʎǝןɹɐᗺ",
+  "block.createbrewery.hops_crop": "doɹƆ sdoH",
+  "item.createbrewery.barley": "ʎǝןɹɐᗺ",
+  "item.createbrewery.barley_seeds": "spǝǝS ʎǝןɹɐᗺ",
+  "item.createbrewery.beer_bottle": "ǝןʇʇoᗺ ɹǝǝᗺ",
+  "item.createbrewery.empty_can": "uɐƆ ʎʇdɯƎ",
+  "item.createbrewery.green_malt": "ʇןɐW uǝǝɹ⅁",
+  "item.createbrewery.grist": "ʇsıɹ⅁",
+  "item.createbrewery.hop_cones": "sǝuoƆ doH",
+  "item.createbrewery.malt": "ʇןɐW",
+  "item.createbrewery.sealed_can": "uɐƆ pǝןɐǝS",
+  "item.createbrewery.spent_grain": "uıɐɹ⅁ ʇuǝdS",
+  "item.createbrewery.yeast": "ʇsɐǝʎ"
+}
