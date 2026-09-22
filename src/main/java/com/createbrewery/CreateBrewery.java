@@ -15,6 +15,7 @@ public class CreateBrewery {
         ModFluids.register();
         ModItems.register();
         ModBlocks.register();
+        ModRecipeTypes.register(modEventBus);
     }
 
     public static ResourceLocation ID(String path) {
