@@ -4,3 +4,4 @@ run/
 .superpowers/
 *.class
 src/generated/resources/.cache/
+.worktrees/
