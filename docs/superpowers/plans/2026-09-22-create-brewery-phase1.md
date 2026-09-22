@@ -4,7 +4,7 @@
 
 **Goal:** Ship a playable NeoForge 1.21.1 addon providing a complete grain-to-bottle beer chain that a player automates using Create's existing machinery, plus one new block (the Fermenter) for the timed step Create cannot express.
 
-**Architecture:** Every brewing stage except fermentation maps onto a machine Create already ships (Basin, Blaze Burner, Millstone, Spout, Press). The Fermenter is a passive `SmartBlockEntity` that stores a world-time stamp and computes progress from `level.getGameTime() - startedAt`, so batches survive chunk unload without a chunkloader. It exposes standard `IFluidHandler`/`IItemHandler` capabilities, so Create pipes and funnels automate it exactly like a Basin.
+**Architecture:** Every brewing stage except fermentation maps onto a machine Create already ships (Basin, Encased Fan, Millstone, Spout, Press). The Fermenter is a passive `SmartBlockEntity` that stores a world-time stamp and computes progress from `level.getGameTime() - startedAt`, so batches survive chunk unload without a chunkloader. It exposes standard `IFluidHandler`/`IItemHandler` capabilities, so Create pipes and funnels automate it exactly like a Basin.
 
 **Tech Stack:** Java 21 · NeoForge 21.1.2xx · Create 6.0.10 · Registrate · Ponder · Flywheel · Gradle (Kotlin DSL) · JUnit 5 + NeoForge GameTest
 
@@ -1046,7 +1046,7 @@ SimpleCookingRecipeBuilder.smoking(
     .save(output, CreateBrewery.ID("kilning"));
 ```
 
-This is what makes Create's Blaze Burner bulk-process the step for free. **Verify on first run** that the burner picks it up (Risks table).
+This is what lets Create bulk-process the step for free via an **Encased Fan blowing through fire** (`AllFanProcessingTypes.SMOKING`). *Corrected 2026-09-23: this previously credited the Blaze Burner, which only heats Basins.* **Verify on first run** that the fan picks it up (Risks table).
 
 - [ ] **Step 3: Milling — malt to grist (Millstone)**
 
@@ -1249,7 +1249,7 @@ Show wort piped in, yeast funnelled in, the goggle overlay counting up, beer pip
 
 - [ ] **Step 2: Scene — mash versus boil heat**
 
-Show a Basin over a normal Blaze Burner mashing, then over a superheated one boiling. The heat distinction is the most likely thing for a player to get wrong.
+Show a Basin with a Mechanical Mixer over a normal Blaze Burner mashing, then over a superheated one boiling. The heat distinction is the most likely thing for a player to get wrong.
 
 - [ ] **Step 3: Register scenes**
 

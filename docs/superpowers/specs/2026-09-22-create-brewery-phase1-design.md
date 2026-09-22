@@ -103,7 +103,7 @@ Each arrow is a real brewing step. Every box except the Fermenter is a machine C
 
 ```
 barley  ──[ Basin: mix w/ water ]──▶  green malt
-        ──[ Blaze Burner: bulk smoking ]──▶  malt          (kilning)
+        ──[ Encased Fan through fire: bulk smoking ]──▶  malt   (kilning)
         ──[ Millstone ]──▶  grist                           (milling)
         ──[ Basin: HEATED, + water ]──▶  wort + spent grain (mashing + lauter)
         ──[ Basin: SUPERHEATED, + hops ]──▶  hopped wort    (the boil)
@@ -113,7 +113,9 @@ barley  ──[ Basin: mix w/ water ]──▶  green malt
 
 Design notes per step:
 
-- **Kilning reuses vanilla smoking.** `green_malt → malt` is registered as an ordinary vanilla smoking recipe. Create's Blaze Burner bulk-smokes items passing over it on a belt or depot, so this step should automate for free with zero new code and zero new blocks. *Confirm on first run* that a plain `minecraft:smoking` recipe is picked up by the burner's bulk processing, and that making green malt smokable doesn't leak into campfire cooking in a way we don't want. Low risk, self-correcting the moment it's tested.
+- **Kilning reuses vanilla smoking.** `green_malt → malt` is registered as an ordinary vanilla smoking recipe. Create bulk-smokes items on a belt using an **Encased Fan blowing through fire**, so this step automates for free with zero new code and zero new blocks.
+
+  *Corrected 2026-09-23.* This previously said the **Blaze Burner** does the bulk smoking. That was wrong: the Blaze Burner heats Basins. Bulk processing is fan-driven — verified in the shipped jar, where `AllFanProcessingTypes.SMOKING/BLASTING/SPLASHING/HAUNTING` live under `content/kinetics/fan/processing/`. Still confirm on first run that a plain `minecraft:smoking` recipe is picked up, and that making green malt smokable doesn't leak into campfire cooking in a way we don't want.
 - **Mashing and lautering are one recipe.** A heated Basin mixing recipe takes grist + water and outputs *both* `wort` fluid and a `spent_grain` item. Spent grain is a compostable byproduct and an animal feed item.
 
   *Verified:* `BasinBlockEntity.acceptOutputs(List<ItemStack>, List<FluidStack>, boolean)` takes items and fluids in a single call, and the basin maintains a separate `outputInventory` and `outputTank`. Combined item+fluid output is also a shipped pattern — `create:emptying`'s `honey_bottle` recipe returns `minecraft:glass_bottle` and 250 mB of `create:honey` from one `results` array.
@@ -245,7 +247,7 @@ Fluids are registered through `CreateRegistrate.virtualFluid(...)` — Create's 
 |---|---|
 | Gradle plugin choice (ModDevGradle vs NeoGradle) unconfirmed | Resolve as implementation step 1, before any other code |
 | Basin mixing emitting item + fluid together has API support but no shipped precedent | Bounded: fallback is splitting lautering into its own Item Drain / Press stage |
-| Blaze Burner bulk-smoking a custom vanilla smoking recipe assumed, not tested | Verified on first run; fallback is a Create pressing or drying recipe instead |
+| Encased-Fan bulk-smoking of a custom vanilla smoking recipe not yet tested in-game | Verified on first run; fallback is a Create pressing or drying recipe instead |
 | Create 6.0.x is a moving target; `:slim` + `isTransitive = false` means transitive deps are hand-declared | Pin `create_version`; widen the `mods.toml` range only after testing |
 | `selling_bin` component format inferred from a data map, not from its source | Treated as optional; Phase 1 does not depend on it |
 | Ponder API changed in Create 6 ("ponder dependency path has changed") | Write Ponder scenes last, after the chain works |
