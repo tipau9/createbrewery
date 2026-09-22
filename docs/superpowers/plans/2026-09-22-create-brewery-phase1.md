@@ -263,7 +263,9 @@ Create `src/main/resources/assets/createbrewery/textures/fluid/wort_still.png`, 
 - [ ] **Step 4: Verify in game**
 
 Run: `./gradlew runClient`
-Expected: `/give @s createbrewery:wort_bucket` yields a bucket with the fluid name rendered correctly and no missing-texture magenta.
+Expected: the three fluids are registered and resolvable, and their textures load without missing-texture magenta.
+
+> **Corrected 2026-09-23.** This step originally said to run `/give @s createbrewery:wort_bucket`. That command can never work: `virtualFluid(...)` registers no bucket item (see the spec). Verify the fluids by placing them in a Create tank or by checking the registry, not by giving yourself a bucket.
 
 - [ ] **Step 5: Commit**
 

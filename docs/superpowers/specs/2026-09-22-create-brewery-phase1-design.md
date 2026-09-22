@@ -204,7 +204,9 @@ createbrewery/
   ponder/         scene definitions
 ```
 
-Fluids use Registrate's fluid builder; each gets a bucket item and a source block, matching how `createfood` exposes its juices.
+Fluids are registered through `CreateRegistrate.virtualFluid(...)` — Create's builder for fluids that exist only in tanks and pipes. They deliberately have **no bucket item and no source block**, matching Create's own tea and potion fluids: you do not want lakes of wort.
+
+*Corrected 2026-09-23.* This section previously claimed each fluid gets a bucket and a source block. That was wrong. Verified by decompiling `FluidBuilder`: `register()` only calls `.bucket()` when `defaultBucket == TRUE`, and `virtualFluid()` builds through a path that never sets it. Phase 1 moves every fluid by Create pipe and Spout, so a bucket is convenience we do not need. Re-adding one later is a single builder call per fluid.
 
 ---
 
