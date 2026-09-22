@@ -12,6 +12,11 @@ base {
 
 java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
+sourceSets.main.get().resources {
+    srcDir("src/generated/resources")
+    exclude("**/.cache/**")
+}
+
 neoForge {
     version = property("neo_version") as String
 
@@ -24,6 +29,19 @@ neoForge {
             server()
             programArgument("--nogui")
             systemProperty("neoforge.enabledGameTestNamespaces", property("mod_id") as String)
+        }
+        create("gameTestServer") {
+            type = "gameTestServer"
+            systemProperty("neoforge.enabledGameTestNamespaces", property("mod_id") as String)
+        }
+        create("data") {
+            data()
+            programArguments.addAll(
+                "--mod", property("mod_id") as String,
+                "--all",
+                "--output", file("src/generated/resources").absolutePath,
+                "--existing", file("src/main/resources").absolutePath
+            )
         }
         configureEach {
             systemProperty("forge.logging.markers", "REGISTRIES")
