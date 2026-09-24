@@ -6,23 +6,27 @@ import com.createbrewery.data.ModRecipeProvider;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 
 @Mod(CreateBrewery.MOD_ID)
 public class CreateBrewery {
     public static final String MOD_ID = "createbrewery";
     public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MOD_ID);
 
-    public CreateBrewery(IEventBus modEventBus) {
+    public CreateBrewery(IEventBus modEventBus, ModContainer modContainer) {
         REGISTRATE.registerEventListeners(modEventBus);
         ModFluids.register();
         ModItems.register();
         ModBlocks.register();
+        ModBlockEntities.register();
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(ModRecipeProvider::gatherData);
         ModLootModifiers.register(modEventBus);
         ModDataMaps.register(modEventBus);
         ModVillagerTrades.register();
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     public static ResourceLocation ID(String path) {
