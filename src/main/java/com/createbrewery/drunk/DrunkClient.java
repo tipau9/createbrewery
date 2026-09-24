@@ -257,9 +257,16 @@ public final class DrunkClient {
     private static int shadowAge = -1;
     private static boolean shadowGoing;
 
-    /** Too dark to see much: night, caves, unlit rooms. */
+    /**
+     * Too dark to see much: night, caves, unlit rooms. Worked out here, because the client level
+     * never updates its own sky darkness after loading.
+     */
     private static boolean dark(LocalPlayer player) {
-        return player.level().getMaxLocalRawBrightness(player.blockPosition()) < 7;
+        var pos = player.blockPosition();
+        var level = player.level();
+        float daylight = level instanceof net.minecraft.client.multiplayer.ClientLevel client ? client.getSkyDarken(1f) : 1f;
+        return Math.max(level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, pos),
+            level.getBrightness(net.minecraft.world.level.LightLayer.SKY, pos) * daylight) < 7f;
     }
 
     /**
@@ -426,8 +433,9 @@ public final class DrunkClient {
         SoundSource source = sound.getSource();
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
         if (sound instanceof Echo || sound instanceof Phantom) return;
-        // Your own steps, blocks and bites ring on for a moment.
+        // Your own mining, placing and bites ring on for a moment (not every footstep).
         if (high > 0.2f && (source == SoundSource.PLAYERS || source == SoundSource.BLOCKS)
+            && !sound.getLocation().getPath().endsWith(".step")
             && !(sound instanceof TickableSoundInstance) && !sound.isLooping()
             && player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 9.0 && pendingEchoes.size() < 16) {
             pendingEchoes.add(new PendingEcho(sound, player.tickCount + 4, 0.3f * high));
@@ -486,6 +494,8 @@ public final class DrunkClient {
     /** High-frequency gain for sounds around you: 1 sober, lower when high. Read on the sound thread. */
     private static volatile float muffle = 1f;
     private static int muffleFilter = -1;
+    /** The OpenAL context the filter belongs to; a new one (F3+T, another audio device) needs a new filter. */
+    private static long muffleContext;
     private static boolean muffleFailed;
     private static java.lang.reflect.Field channelSource;
 
@@ -511,8 +521,10 @@ public final class DrunkClient {
                     org.lwjgl.openal.EXTEfx.AL_FILTER_NULL);
                 return;
             }
-            if (muffleFilter < 0) {
-                long device = org.lwjgl.openal.ALC10.alcGetContextsDevice(org.lwjgl.openal.ALC10.alcGetCurrentContext());
+            long context = org.lwjgl.openal.ALC10.alcGetCurrentContext();
+            if (muffleFilter < 0 || context != muffleContext) {
+                muffleContext = context;
+                long device = org.lwjgl.openal.ALC10.alcGetContextsDevice(context);
                 if (!org.lwjgl.openal.ALC10.alcIsExtensionPresent(device, "ALC_EXT_EFX")) {
                     muffleFailed = true;
                     return;
@@ -696,6 +708,9 @@ public final class DrunkClient {
         float start = 1f - 0.88f * high, stop = 1f - 0.75f * high;
         heavyForward += (input.forwardImpulse - heavyForward) * (Math.abs(input.forwardImpulse) > Math.abs(heavyForward) ? start : stop);
         heavyLeft += (input.leftImpulse - heavyLeft) * (Math.abs(input.leftImpulse) > Math.abs(heavyLeft) ? start : stop);
+        // Settle at rest: vanilla keeps sprinting until the forward impulse is really 0.
+        if (input.forwardImpulse == 0f && Math.abs(heavyForward) < 0.05f) heavyForward = 0f;
+        if (input.leftImpulse == 0f && Math.abs(heavyLeft) < 0.05f) heavyLeft = 0f;
         input.forwardImpulse = heavyForward;
         input.leftImpulse = heavyLeft;
         if (input.jumping && player.onGround() && !player.isInWater() && !player.isInLava() && !player.onClimbable()) {

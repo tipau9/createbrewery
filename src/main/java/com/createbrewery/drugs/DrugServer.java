@@ -285,7 +285,10 @@ public final class DrugServer {
         }
     }
 
-    /** Cake is eaten off the block, not from the hand. */
+    /**
+     * Cake is eaten off the block, not from the hand, and only after this event: the slice itself
+     * feeds as usual (extra food here would fill you up before vanilla takes the slice).
+     */
     @SubscribeEvent
     public static void onEatCake(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
         Player player = event.getEntity();
@@ -294,13 +297,16 @@ public final class DrugServer {
             || !(player.level().getBlockState(event.getPos()).getBlock() instanceof net.minecraft.world.level.block.CakeBlock)) {
             return;
         }
-        player.getFoodData().eat(2, 0.3f);
-        sweet(player);
+        bliss(player);
     }
 
     /** Sugar when high: fills you up at once, and pure happiness for a while. */
     public static void sweet(Player player) {
         player.getFoodData().eat(2, 0.3f);
+        bliss(player);
+    }
+
+    private static void bliss(Player player) {
         player.addEffect(new MobEffectInstance(ModEffects.SNACK_BLISS, SNACK_BLISS_TICKS, 0, false, false, true));
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
             net.minecraft.sounds.SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.6f, 1.2f);

@@ -721,4 +721,19 @@ public class FermenterGameTests {
         helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.GREENING_OUT).getDuration() == 380, "crouching did not help");
         helper.succeed();
     }
+
+    /** Cake while high is bliss, but the bliss adds no food of its own: the slice must still be taken. */
+    @GameTest(template = TEMPLATE)
+    public static void cakeWhileHighIsBlissNotFreeFood(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = stonedPlayer(helper);
+        net.minecraft.core.BlockPos cake = helper.absolutePos(new net.minecraft.core.BlockPos(1, 2, 1));
+        helper.getLevel().setBlockAndUpdate(cake, net.minecraft.world.level.block.Blocks.CAKE.defaultBlockState());
+        player.getFoodData().setFoodLevel(18);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
+            player, net.minecraft.world.InteractionHand.MAIN_HAND, cake,
+            new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(cake), net.minecraft.core.Direction.UP, cake, false)));
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.SNACK_BLISS), "cake while high was no bliss");
+        helper.assertTrue(player.getFoodData().getFoodLevel() == 18, "the bliss fed on its own, food " + player.getFoodData().getFoodLevel());
+        helper.succeed();
+    }
 }
