@@ -47,6 +47,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("subtitles.createbrewery.giggle", "Kichern");
         REGISTRATE.addRawLang("effect.createbrewery.ck_mix", "CK-Mix");
         REGISTRATE.addRawLang("effect.createbrewery.tachycardia", "Herzrasen");
+        REGISTRATE.addRawLang("effect.createbrewery.cottonmouth", "Pappmaul");
+        REGISTRATE.addRawLang("effect.createbrewery.snack_bliss", "Genuss");
         REGISTRATE.addRawLang("effect.createbrewery.heart_attack", "Herzinfarkt");
         REGISTRATE.addRawLang("effect.createbrewery.aspiration", "Erstickt am Erbrochenen");
         REGISTRATE.addRawLang("death.attack.createbrewery.aspiration", "%1$s ist an seinem Erbrochenen erstickt");

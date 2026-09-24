@@ -101,6 +101,25 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, MobEffect> ASPIRATION = EFFECTS.register("aspiration", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x6B7A1E, 20, DrugServer::aspirationTick, 0, 0, 0));
 
+    /** Pappmaul: no spit left after smoking. Drinking anything takes it away. */
+    public static final DeferredHolder<MobEffect, MobEffect> COTTONMOUTH = EFFECTS.register("cottonmouth", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xD8C49A, 0, null, 0, 0, 0));
+
+    /** Genuss: something sweet while high - the best thing you ever ate. Fixed, so the hearts do not shrink. */
+    public static final DeferredHolder<MobEffect, MobEffect> SNACK_BLISS = EFFECTS.register("snack_bliss", () ->
+        new MobEffect(MobEffectCategory.BENEFICIAL, 0xF2A65A) {
+            @Override
+            public void onEffectStarted(net.minecraft.world.entity.LivingEntity entity, int amplifier) {
+                super.onEffectStarted(entity, amplifier);
+                entity.setAbsorptionAmount(Math.max(entity.getAbsorptionAmount(), 4f));
+            }
+        }.addAttributeModifier(Attributes.LUCK, id("snack_bliss_luck"), 1.0,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE)
+            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("snack_bliss_speed"), 0.1,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(Attributes.MAX_ABSORPTION, id("snack_bliss_absorption"), 4.0,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);
     }

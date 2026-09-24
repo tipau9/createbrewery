@@ -81,6 +81,11 @@ public final class DrugServer {
 
     public static final int WEED_TICKS = 4800;
     public static final int GREENING_TICKS = 800;
+    public static final int COTTONMOUTH_TICKS = 3600;
+    public static final int SNACK_BLISS_TICKS = 600;
+    /** Sweets taste like heaven when high (the munchies). */
+    public static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> SWEETS = net.minecraft.tags.TagKey.create(
+        Registries.ITEM, ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "sweets"));
     /** A joint lasts this many hits (its durability); each hit is one amplifier step of the high. */
     public static final int HITS_PER_JOINT = 6;
     /** Three joints' worth of hits in the body at most. */
@@ -121,6 +126,8 @@ public final class DrugServer {
         if (DrunkServer.state(player).blood >= Intoxication.MERRY) sick = Math.max(sick, 0.15f + 0.1f * joints);
         if (player.getRandom().nextFloat() < sick) greenOut(player);
         smoke(player);
+        // The spit dries up: Pappmaul until you drink something.
+        player.addEffect(new MobEffectInstance(ModEffects.COTTONMOUTH, COTTONMOUTH_TICKS, 0, false, false, true));
     }
 
     /** A line goes up the nose, or a joint is smoked (see {@link #hit}). Stacks with what is still active. */
@@ -172,7 +179,8 @@ public final class DrugServer {
                 player.getZ() + look.z * 0.35, 0, look.x + (player.getRandom().nextDouble() - 0.5) * 0.4,
                 0.25, look.z + (player.getRandom().nextDouble() - 0.5) * 0.4, speed);
         }
-        if (player.getRandom().nextFloat() < 0.25f) {
+        // A dry throat coughs more.
+        if (player.getRandom().nextFloat() < (player.hasEffect(ModEffects.COTTONMOUTH) ? 0.4f : 0.25f)) {
             level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.COUGH.get(),
                 SoundSource.PLAYERS, 1.0f, 0.9f + player.getRandom().nextFloat() * 0.2f);
         }
@@ -266,14 +274,46 @@ public final class DrugServer {
         if (player.getRandom().nextFloat() < 0.12f * strength) DrunkServer.vomit(player);
     }
 
-    /** The munchies: food tastes twice as good and fills more. */
+    /** The munchies: food tastes twice as good and fills more; sweets most of all. */
     @SubscribeEvent
     public static void onFinishEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide
             && player.hasEffect(ModEffects.WEED_HIGH)
             && event.getItem().getFoodProperties(player) != null) {
             player.getFoodData().eat(2, 0.3f);
+            if (event.getItem().is(SWEETS)) sweet(player);
         }
+    }
+
+    /** Cake is eaten off the block, not from the hand. */
+    @SubscribeEvent
+    public static void onEatCake(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide || event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND
+            || !player.hasEffect(ModEffects.WEED_HIGH) || !player.canEat(false)
+            || !(player.level().getBlockState(event.getPos()).getBlock() instanceof net.minecraft.world.level.block.CakeBlock)) {
+            return;
+        }
+        player.getFoodData().eat(2, 0.3f);
+        sweet(player);
+    }
+
+    /** Sugar when high: fills you up at once, and pure happiness for a while. */
+    public static void sweet(Player player) {
+        player.getFoodData().eat(2, 0.3f);
+        player.addEffect(new MobEffectInstance(ModEffects.SNACK_BLISS, SNACK_BLISS_TICKS, 0, false, false, true));
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+            net.minecraft.sounds.SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.6f, 1.2f);
+    }
+
+    /** A drink after smoking: the dry mouth is gone, and it feels amazing. */
+    public static void quench(Player player, net.minecraft.world.item.ItemStack drink) {
+        if (drink.getUseAnimation() != net.minecraft.world.item.UseAnim.DRINK || !player.hasEffect(ModEffects.COTTONMOUTH)) return;
+        player.removeEffect(ModEffects.COTTONMOUTH);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+            net.minecraft.sounds.SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 0.8f);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+            net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.4f, 0.6f);
     }
 
     // ---- events ----
@@ -307,7 +347,25 @@ public final class DrugServer {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
-        if (!player.level().isClientSide && player.tickCount % 20 == 0) heartTick(player);
+        if (!player.level().isClientSide && player.tickCount % 20 == 0) {
+            heartTick(player);
+            weedBody(player);
+        }
+    }
+
+    /**
+     * Weed, every second, outside the effect ticks (effects may be swapped here): sprinting is
+     * twice the effort for a heavy body, and sitting or crouching down lets a hangover and the
+     * nausea pass twice as fast.
+     */
+    public static void weedBody(Player player) {
+        float felt = DrugEffect.felt(player, ModEffects.WEED_HIGH);
+        if (felt <= 0f) return;
+        if (player.isSprinting()) player.causeFoodExhaustion(0.55f * felt); // about what sprinting costs anyway
+        if (player.isPassenger() || player.isShiftKeyDown()) {
+            com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.HANGOVER, 20);
+            com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.GREENING_OUT, 20);
+        }
     }
 
     public static void heartTick(Player player) {

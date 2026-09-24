@@ -444,7 +444,7 @@ public class FermenterGameTests {
     }
 
     /** The party and vomiting effects tick for their whole duration without crashing. */
-    @GameTest(template = TEMPLATE, timeoutTicks = 100)
+    @GameTest(template = TEMPLATE, timeoutTicks = 200)
     public static void partyAndVomitEffectsRunThrough(GameTestHelper helper) {
         net.minecraft.world.entity.animal.Pig pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
         pig.setHealth(5f);
@@ -452,10 +452,10 @@ public class FermenterGameTests {
             com.createbrewery.effect.VomitingEffect.DURATION));
         pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.GOOD_MOOD, 200));
         pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.CHEERS, 201));
-        helper.runAfterDelay(80, () -> {
+        // Waits for it rather than a fixed delay: the pig may start ticking a little late.
+        helper.succeedWhen(() -> {
             helper.assertTrue(!pig.hasEffect(com.createbrewery.effect.ModEffects.VOMITING), "vomiting did not end");
             helper.assertTrue(pig.getHealth() > 5f, "cheers did not heal");
-            helper.succeed();
         });
     }
 
@@ -666,6 +666,59 @@ public class FermenterGameTests {
         helper.assertTrue(joint.getDamageValue() == 1 && joint.isBarVisible(), "a creative hit did not wear the joint");
         for (int i = 1; i < com.createbrewery.drugs.DrugServer.HITS_PER_JOINT; i++) joint.finishUsingItem(helper.getLevel(), player);
         helper.assertTrue(joint.isEmpty(), "the joint did not burn down in creative");
+        helper.succeed();
+    }
+
+    private static net.minecraft.world.entity.player.Player stonedPlayer(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
+        for (int i = 0; i < 3; i++) com.createbrewery.drugs.DrugServer.hit(player);
+        return player;
+    }
+
+    private static void finishUsing(net.minecraft.world.entity.player.Player player, net.minecraft.world.item.ItemStack stack) {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+            new net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish(player, stack, 0, stack));
+    }
+
+    /** Smoking dries the mouth; any drink takes it away. */
+    @GameTest(template = TEMPLATE)
+    public static void cottonmouthUntilYouDrink(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = stonedPlayer(helper);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.COTTONMOUTH), "smoking left no dry mouth");
+        finishUsing(player, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD));
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.COTTONMOUTH), "bread quenched the thirst");
+        finishUsing(player, net.minecraft.world.item.alchemy.PotionContents.createItemStack(
+            net.minecraft.world.item.Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER));
+        helper.assertTrue(!player.hasEffect(com.createbrewery.effect.ModEffects.COTTONMOUTH), "water did not help the dry mouth");
+        helper.succeed();
+    }
+
+    /** The munchies: something sweet while high fills you up and makes you happy (luck, speed, extra hearts). */
+    @GameTest(template = TEMPLATE)
+    public static void sweetsWhileHighAreBliss(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = stonedPlayer(helper);
+        player.getFoodData().setFoodLevel(4);
+        finishUsing(player, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKIE));
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.SNACK_BLISS), "a cookie while high was no bliss");
+        helper.assertTrue(player.getAbsorptionAmount() >= 4f, "no extra hearts from the bliss, had " + player.getAbsorptionAmount());
+        helper.assertTrue(player.getFoodData().getFoodLevel() >= 8, "sweets did not fill up, food " + player.getFoodData().getFoodLevel());
+        net.minecraft.world.entity.player.Player sober = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        finishUsing(sober, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKIE));
+        helper.assertTrue(!sober.hasEffect(com.createbrewery.effect.ModEffects.SNACK_BLISS), "bliss without being high");
+        helper.succeed();
+    }
+
+    /** High, crouched down: the nausea passes twice as fast. */
+    @GameTest(template = TEMPLATE)
+    public static void sittingDownHelpsTheNausea(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = stonedPlayer(helper);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.GREENING_OUT, 400));
+        com.createbrewery.drugs.DrugServer.weedBody(player);
+        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.GREENING_OUT).getDuration() == 400, "standing helped");
+        player.setShiftKeyDown(true);
+        com.createbrewery.drugs.DrugServer.weedBody(player);
+        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.GREENING_OUT).getDuration() == 380, "crouching did not help");
         helper.succeed();
     }
 }

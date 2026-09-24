@@ -87,6 +87,7 @@ public class BreweryCommonEvents {
     public static void onFinishDrinking(LivingEntityUseItemEvent.Finish event) {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide) {
             ItemStack stack = event.getItem();
+            com.createbrewery.drugs.DrugServer.quench(player, stack);
             if (stack.is(Items.POTION)) {
                 PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
                 if (contents != null && contents.is(Potions.WATER)) {
@@ -109,7 +110,7 @@ public class BreweryCommonEvents {
         }
     }
 
-    private static void reduceDuration(Player player, Holder<MobEffect> effectHolder, int reductionTicks) {
+    public static void reduceDuration(Player player, Holder<MobEffect> effectHolder, int reductionTicks) {
         MobEffectInstance current = player.getEffect(effectHolder);
         if (current != null) {
             int newDuration = current.getDuration() - reductionTicks;
