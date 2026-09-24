@@ -3,15 +3,14 @@ package com.createbrewery.drunk;
 import com.createbrewery.CreateBrewery;
 import com.createbrewery.effect.ModEffects;
 import com.createbrewery.effect.VomitingEffect;
-import org.joml.Vector3f;
+import com.createbrewery.particle.ModParticles;
+import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.Holder;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -75,12 +74,14 @@ public final class DrunkServer {
             if (s.lastDrinkTime - state(other).lastDrinkTime > 100) continue;
             for (Player p : new Player[] { player, other }) {
                 p.addEffect(new MobEffectInstance(ModEffects.CHEERS, 1200, 0, false, true, true));
-                level.sendParticles(ParticleTypes.HEART, p.getX(), p.getEyeY() + 0.5, p.getZ(), 3, 0.3, 0.2, 0.3, 0.0);
-                level.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.getX(), p.getEyeY(), p.getZ(), 10, 0.4, 0.3, 0.4, 0.0);
             }
+            // Where the glasses meet: a burst of golden sparks and foam, then confetti raining down.
             Vec3 mid = player.getEyePosition().add(other.getEyePosition()).scale(0.5);
-            level.playSound(null, mid.x, mid.y, mid.z, SoundEvents.AMETHYST_CLUSTER_HIT, SoundSource.PLAYERS, 1.2f, 1.6f);
-            level.playSound(null, mid.x, mid.y, mid.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.5f, 1.2f);
+            level.sendParticles(ModParticles.CHEERS_SPARK.get(), mid.x, mid.y, mid.z, 18, 0.25, 0.2, 0.25, 0.08);
+            level.sendParticles(ModParticles.BEER_FOAM.get(), mid.x, mid.y - 0.1, mid.z, 14, 0.15, 0.05, 0.15, 0.03);
+            level.sendParticles(ModParticles.CONFETTI.get(), mid.x, mid.y + 1.2, mid.z, 40, 0.9, 0.3, 0.9, 0.02);
+            level.playSound(null, mid.x, mid.y, mid.z, ModSounds.GLASS_CLINK.get(), SoundSource.PLAYERS, 1.3f,
+                0.95f + player.getRandom().nextFloat() * 0.1f);
         }
     }
 
@@ -89,12 +90,8 @@ public final class DrunkServer {
     public static void onJump(LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player && player.level() instanceof ServerLevel level
             && player.hasEffect(ModEffects.GOOD_MOOD)) {
-            // With count 0 the NOTE particle takes its colour (0..1 over 24 notes) from the x offset.
-            for (int i = 0; i < 3; i++) {
-                level.sendParticles(ParticleTypes.NOTE, player.getX() + (player.getRandom().nextDouble() - 0.5),
-                    player.getY() + 2.1, player.getZ() + (player.getRandom().nextDouble() - 0.5),
-                    0, player.getRandom().nextInt(25) / 24.0, 0, 0, 1);
-            }
+            level.sendParticles(ModParticles.PARTY_NOTE.get(), player.getX(), player.getY() + 2.0, player.getZ(),
+                3, 0.4, 0.15, 0.4, 0.02);
         }
     }
 
@@ -190,7 +187,7 @@ public final class DrunkServer {
             Vec3 look = player.getLookAngle();
             AreaEffectCloud puddle = new AreaEffectCloud(level,
                 player.getX() + look.x * 1.1, player.getY(), player.getZ() + look.z * 1.1);
-            puddle.setParticle(new DustParticleOptions(new Vector3f(0.5f, 0.46f, 0.12f), 1.0f));
+            puddle.setParticle(ModParticles.VOMIT_PUDDLE.get());
             puddle.setRadius(0.9f);
             puddle.setRadiusPerTick(0f);
             puddle.setWaitTime(15);

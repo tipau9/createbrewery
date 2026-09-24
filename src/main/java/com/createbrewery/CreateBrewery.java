@@ -23,6 +23,8 @@ public class CreateBrewery {
         ModBlockEntities.register();
         com.createbrewery.effect.ModEffects.register(modEventBus);
         com.createbrewery.drunk.ModAttachments.register(modEventBus);
+        com.createbrewery.particle.ModParticles.register(modEventBus);
+        com.createbrewery.sound.ModSounds.register(modEventBus);
         REGISTRATE.addRawLang("effect.createbrewery.inebriation", "Trunkenheit");
         REGISTRATE.addRawLang("effect.createbrewery.hangover", "Kater des Todes");
         REGISTRATE.addRawLang("effect.createbrewery.hiccups", "Schluckauf");
@@ -33,6 +35,11 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.good_mood", "Bierlaune");
         REGISTRATE.addRawLang("effect.createbrewery.cheers", "Geselligkeit");
         REGISTRATE.addRawLang("effect.createbrewery.vomiting", "Kotzanfall");
+        REGISTRATE.addRawLang("subtitles.createbrewery.glass_clink", "Gläser klirren");
+        REGISTRATE.addRawLang("subtitles.createbrewery.hiccup", "Hicks");
+        REGISTRATE.addRawLang("subtitles.createbrewery.heartbeat", "Herzklopfen");
+        REGISTRATE.addRawLang("subtitles.createbrewery.beer_open", "Bier zischt");
+        REGISTRATE.addRawLang("subtitles.createbrewery.ear_ringing", "Ohrenpfeifen");
         REGISTRATE.addRawLang("death.attack.createbrewery.alcohol_poisoning", "%1$s hat sich zu Tode gesoffen");
         // Hand-written strings with no registry object of their own to hang a .lang() call
         // off of. addRawLang feeds the same RegistrateLangProvider as every other entry, so
@@ -64,6 +71,7 @@ public class CreateBrewery {
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(CreateBreweryClient::onClientSetup);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
+            modEventBus.addListener(com.createbrewery.particle.BreweryParticle::register);
         }
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(ModRecipeProvider::gatherData);

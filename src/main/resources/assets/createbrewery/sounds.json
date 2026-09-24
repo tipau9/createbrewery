@@ -1,0 +1,38 @@
+{
+  "glass_clink": {
+    "subtitle": "subtitles.createbrewery.glass_clink",
+    "sounds": [
+      "createbrewery:glass_clink1",
+      "createbrewery:glass_clink2",
+      "createbrewery:glass_clink3"
+    ]
+  },
+  "hiccup": {
+    "subtitle": "subtitles.createbrewery.hiccup",
+    "sounds": [
+      "createbrewery:hiccup1",
+      "createbrewery:hiccup2",
+      "createbrewery:hiccup3"
+    ]
+  },
+  "heartbeat": {
+    "subtitle": "subtitles.createbrewery.heartbeat",
+    "sounds": [
+      "createbrewery:heartbeat1",
+      "createbrewery:heartbeat2"
+    ]
+  },
+  "beer_open": {
+    "subtitle": "subtitles.createbrewery.beer_open",
+    "sounds": [
+      "createbrewery:beer_open1",
+      "createbrewery:beer_open2"
+    ]
+  },
+  "ear_ringing": {
+    "subtitle": "subtitles.createbrewery.ear_ringing",
+    "sounds": [
+      "createbrewery:ear_ringing"
+    ]
+  }
+}

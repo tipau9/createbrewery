@@ -2,12 +2,16 @@ package com.createbrewery.item;
 
 import com.createbrewery.drunk.DrunkServer;
 import com.createbrewery.drunk.Intoxication;
+import com.createbrewery.particle.ModParticles;
+import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -49,11 +53,15 @@ public class BeerDrinkItem extends Item {
         return SoundEvents.GENERIC_DRINK;
     }
 
+    /** Zisch: the bottle or can is opened as you lift it - unless the drink cooldown still runs. */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
         if (player.getCooldowns().isOnCooldown(this)) {
-            return InteractionResultHolder.fail(stack);
+            return InteractionResultHolder.fail(player.getItemInHand(hand));
+        }
+        if (!level.isClientSide) {
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.BEER_OPEN.get(),
+                SoundSource.PLAYERS, 0.8f, 0.9f + player.getRandom().nextFloat() * 0.2f);
         }
         return super.use(level, player, hand);
     }
@@ -71,6 +79,11 @@ public class BeerDrinkItem extends Item {
                 float after = DrunkServer.state(player).total() + Intoxication.PER_BEER;
                 DrunkServer.drink(player, Intoxication.PER_BEER);
                 reactToDrink(player, level, after);
+            if (level instanceof ServerLevel serverLevel) {
+                Vec3 look = player.getLookAngle();
+                serverLevel.sendParticles(ModParticles.BEER_FOAM.get(), player.getX() + look.x * 0.35,
+                    player.getEyeY() - 0.2, player.getZ() + look.z * 0.35, 5, 0.08, 0.03, 0.08, 0.01);
+            }
 
                 if (!player.getAbilities().instabuild && returnItemSupplier != null) {
                     ItemLike returnItem = returnItemSupplier.get();

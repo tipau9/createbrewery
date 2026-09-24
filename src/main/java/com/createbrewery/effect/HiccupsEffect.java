@@ -1,8 +1,8 @@
 package com.createbrewery.effect;
 
-import net.minecraft.core.particles.ParticleTypes;
+import com.createbrewery.particle.ModParticles;
+import com.createbrewery.sound.ModSounds;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
@@ -41,15 +41,14 @@ public class HiccupsEffect extends MobEffect {
                 player.hurtMarked = true;
             }
 
-            float pitch = 1.6f + player.getRandom().nextFloat() * 0.5f;
+            float pitch = 0.9f + player.getRandom().nextFloat() * 0.25f;
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 1.5f, 0.6f);
-            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.SLIME_JUMP, SoundSource.PLAYERS, 1.2f, pitch);
+                ModSounds.HICCUP.get(), SoundSource.PLAYERS, 1.2f, pitch);
 
             if (player.level() instanceof ServerLevel serverLevel) {
-                serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
-                    player.getX(), player.getEyeY(), player.getZ(), 10, 0.2, 0.2, 0.2, 0.05);
+                Vec3 look = player.getLookAngle();
+                serverLevel.sendParticles(ModParticles.BEER_FOAM.get(), player.getX() + look.x * 0.4,
+                    player.getEyeY() - 0.15, player.getZ() + look.z * 0.4, 6, 0.1, 0.05, 0.1, 0.02);
             }
         }
         return true;

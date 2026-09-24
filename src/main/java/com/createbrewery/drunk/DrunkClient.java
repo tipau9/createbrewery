@@ -9,7 +9,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
+import com.createbrewery.sound.ModSounds;
 import net.minecraft.client.player.Input;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
@@ -54,6 +56,10 @@ public final class DrunkClient {
     private static float appliedYaw, appliedPitch;
     /** Same for the head bending down while throwing up. */
     private static float appliedRetch;
+    /** Last hangover heartbeat played, and when the ears last rang (client ticks of the player). */
+    private static int lastBeat = Integer.MIN_VALUE;
+    private static int lastRinging = -1000;
+    private static boolean wasNodding, wasBlackedOut;
     /** Set once the shader failed to load (old GPU, shaderpack...): never try again this session. */
     private static boolean shaderFailed;
 
@@ -110,7 +116,8 @@ public final class DrunkClient {
         if (Math.abs(target - blood) < 0.001f) blood = target;
 
         PostChain current = mc.gameRenderer.currentEffect();
-        boolean want = player != null && !shaderFailed && Intoxication.visualIntensity(blood) > 0.01f;
+        boolean want = player != null && !shaderFailed
+            && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f);
         if (want && current == null) {
             // Only when no other post effect runs (spectating a creeper etc. keeps its own).
             mc.gameRenderer.loadEffect(SHADER);
@@ -122,6 +129,40 @@ public final class DrunkClient {
             mc.gameRenderer.shutdownEffect();
             if (mc.getCameraEntity() != null) mc.gameRenderer.checkEntityPostEffect(mc.getCameraEntity());
         }
+        if (player != null && !mc.isPaused()) bodySounds(mc, player);
+    }
+
+    /**
+     * Sounds only the drunk player hears, inside their own head: the hangover heartbeat in step
+     * with the throbbing screen edge, and ringing ears when nodding off or passing out.
+     */
+    private static void bodySounds(Minecraft mc, LocalPlayer player) {
+        if (player.hasEffect(ModEffects.HANGOVER)) {
+            // The overlay throbs at sin(pi * 1.6 t); this counts its peaks and fires just before each.
+            int beat = (int) Math.floor((seconds(player, 0f) * 1.6 - 0.35) / 2.0);
+            if (beat != lastBeat) {
+                if (lastBeat != Integer.MIN_VALUE) {
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.HEARTBEAT.get(), 1.0f, 0.7f));
+                }
+                lastBeat = beat;
+            }
+        } else {
+            lastBeat = Integer.MIN_VALUE;
+        }
+
+        boolean nodding = blood >= Intoxication.SMASHED && nod(seconds(player, 0f)) > 0.5f;
+        boolean blackedOut = player.hasEffect(ModEffects.BLACKOUT);
+        if (((nodding && !wasNodding) || (blackedOut && !wasBlackedOut)) && player.tickCount - lastRinging > 80) {
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.EAR_RINGING.get(), 1.0f, 0.5f));
+            lastRinging = player.tickCount;
+        }
+        wasNodding = nodding;
+        wasBlackedOut = blackedOut;
+    }
+
+    /** 0..1 how far the eyes have fallen shut in a micro-sleep (used from beer five on). */
+    private static float nod(double t) {
+        return Math.max(0f, Math.min(1f, (noise(t * 0.4, 21) - 0.55f) / 0.3f));
     }
 
     // ---- aim drift + shader uniforms, every frame ----
@@ -139,6 +180,7 @@ public final class DrunkClient {
         PostChain current = mc.gameRenderer.currentEffect();
         if (isOurs(current)) {
             current.setUniform("Intensity", Intoxication.visualIntensity(blood));
+            current.setUniform("Mood", Intoxication.mood(blood));
             current.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -274,8 +316,7 @@ public final class DrunkClient {
             float e = ramp(Intoxication.DRUNK);
             float lid = (0.05f + 0.2f * e) * (0.6f + 0.4f * noise(t * 0.5, 17));
             if (blood >= Intoxication.SMASHED) {
-                float nod = Math.max(0f, Math.min(1f, (noise(t * 0.4, 21) - 0.55f) / 0.3f));
-                lid = Math.max(lid, nod * 0.52f);
+                lid = Math.max(lid, nod(t) * 0.52f);
             }
             int px = (int) (h * lid);
             int feather = h / 8;

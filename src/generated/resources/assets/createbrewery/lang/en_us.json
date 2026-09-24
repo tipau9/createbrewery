@@ -48,5 +48,10 @@
   "item.createbrewery.malt": "Malt",
   "item.createbrewery.sealed_can": "Sealed Can",
   "item.createbrewery.spent_grain": "Spent Grain",
-  "item.createbrewery.yeast": "Yeast"
+  "item.createbrewery.yeast": "Yeast",
+  "subtitles.createbrewery.beer_open": "Bier zischt",
+  "subtitles.createbrewery.ear_ringing": "Ohrenpfeifen",
+  "subtitles.createbrewery.glass_clink": "Gläser klirren",
+  "subtitles.createbrewery.heartbeat": "Herzklopfen",
+  "subtitles.createbrewery.hiccup": "Hicks"
 }

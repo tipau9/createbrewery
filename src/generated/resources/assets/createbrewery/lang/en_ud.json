@@ -48,5 +48,10 @@
   "item.createbrewery.malt": "ʇןɐW",
   "item.createbrewery.sealed_can": "uɐƆ pǝןɐǝS",
   "item.createbrewery.spent_grain": "uıɐɹ⅁ ʇuǝdS",
-  "item.createbrewery.yeast": "ʇsɐǝʎ"
+  "item.createbrewery.yeast": "ʇsɐǝʎ",
+  "subtitles.createbrewery.beer_open": "ʇɥɔsız ɹǝıᗺ",
+  "subtitles.createbrewery.ear_ringing": "uǝɟıǝɟduǝɹɥO",
+  "subtitles.createbrewery.glass_clink": "uǝɹɹıןʞ ɹǝsäן⅁",
+  "subtitles.createbrewery.heartbeat": "uǝɟdoןʞzɹǝH",
+  "subtitles.createbrewery.hiccup": "sʞɔıH"
 }

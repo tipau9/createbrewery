@@ -86,6 +86,14 @@ class IntoxicationTest {
     }
 
     @Test
+    void beerGogglesOnlyInThePartyZone() {
+        assertEquals(0f, Intoxication.mood(0.05f));
+        assertEquals(1f, Intoxication.mood(0.7f), 1e-6f);
+        assertTrue(Intoxication.mood(1.25f) > 0f && Intoxication.mood(1.25f) < 1f);
+        assertEquals(0f, Intoxication.mood(2.0f));
+    }
+
+    @Test
     void firstBeersAreAlreadyFelt() {
         assertTrue(Intoxication.visualIntensity(2 * Intoxication.PER_BEER) > 0.45f);
     }

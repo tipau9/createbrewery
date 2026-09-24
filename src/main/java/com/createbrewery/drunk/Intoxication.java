@@ -46,6 +46,19 @@ public final class Intoxication {
         return Math.min(stomach, Math.max(stomach * ABSORB_SHARE_PER_TICK * fed, ABSORB_MIN_PER_TICK));
     }
 
+    /**
+     * 0..1 how strong the "beer goggles" are: fades in with the first beer, full from ~0.45 per
+     * mille, gone again once properly drunk (~1.5).
+     */
+    public static float mood(float blood) {
+        return smoothstep(0.15f, 0.45f, blood) * (1f - smoothstep(1.0f, 1.5f, blood));
+    }
+
+    private static float smoothstep(float a, float b, float x) {
+        float t = Math.max(0f, Math.min(1f, (x - a) / (b - a)));
+        return t * t * (3f - 2f * t);
+    }
+
     /** Party zone: one or two beers make you better company, not worse. */
     public static boolean inGoodMood(float blood) {
         return blood >= TIPSY && blood < DRUNK;

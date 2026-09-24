@@ -458,4 +458,25 @@ public class FermenterGameTests {
             helper.succeed();
         });
     }
+
+    /** Every custom particle type and sound is registered and can be sent to clients. */
+    @GameTest(template = TEMPLATE)
+    public static void customParticlesAndSoundsAreRegistered(GameTestHelper helper) {
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        net.minecraft.core.BlockPos pos = helper.absolutePos(new net.minecraft.core.BlockPos(1, 2, 1));
+        for (var p : java.util.List.of(com.createbrewery.particle.ModParticles.BEER_FOAM, com.createbrewery.particle.ModParticles.CHEERS_SPARK,
+                com.createbrewery.particle.ModParticles.CONFETTI, com.createbrewery.particle.ModParticles.PARTY_NOTE,
+                com.createbrewery.particle.ModParticles.VOMIT_CHUNK, com.createbrewery.particle.ModParticles.VOMIT_SPLASH,
+                com.createbrewery.particle.ModParticles.VOMIT_PUDDLE)) {
+            helper.assertTrue(p.isBound(), "particle not registered: " + p.getId());
+            level.sendParticles(p.get(), pos.getX(), pos.getY(), pos.getZ(), 3, 0.1, 0.1, 0.1, 0.01);
+        }
+        for (var s : java.util.List.of(com.createbrewery.sound.ModSounds.GLASS_CLINK, com.createbrewery.sound.ModSounds.HICCUP,
+                com.createbrewery.sound.ModSounds.HEARTBEAT, com.createbrewery.sound.ModSounds.BEER_OPEN,
+                com.createbrewery.sound.ModSounds.EAR_RINGING)) {
+            helper.assertTrue(s.isBound(), "sound not registered: " + s.getId());
+            level.playSound(null, pos, s.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1f, 1f);
+        }
+        helper.succeed();
+    }
 }
