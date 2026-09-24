@@ -107,6 +107,8 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onInteract);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenOpening);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenMouse);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenKey);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onPlaySound);
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
@@ -482,6 +484,39 @@ public final class DrunkClient {
     private static void onMovementInput(MovementInputUpdateEvent event) {
         if (!(event.getEntity() instanceof LocalPlayer player)) return;
         Input input = event.getInput();
+        steer(player, input);
+        boolean overridden = player.hasEffect(ModEffects.HEART_ATTACK) || player.hasEffect(ModEffects.BLACKOUT)
+            || player.hasEffect(ModEffects.VOMITING);
+        couchLock(player, input, overridden);
+    }
+
+    /** Movement as the body actually carries it out, before weed makes it heavy. */
+    private static float heavyForward, heavyLeft;
+    private static int lastJump = -1000;
+
+    /**
+     * Weed: a heavy, relaxed body (couch lock). Getting going takes a moment, letting go glides
+     * on for about half a block, and there is no urge to jump - a pause between jumps. Only on
+     * the ground: swimming up and ladders stay as they are.
+     */
+    private static void couchLock(LocalPlayer player, Input input, boolean overridden) {
+        if (overridden || high <= 0.01f) {
+            heavyForward = input.forwardImpulse;
+            heavyLeft = input.leftImpulse;
+            return;
+        }
+        float start = 1f - 0.88f * high, stop = 1f - 0.75f * high;
+        heavyForward += (input.forwardImpulse - heavyForward) * (Math.abs(input.forwardImpulse) > Math.abs(heavyForward) ? start : stop);
+        heavyLeft += (input.leftImpulse - heavyLeft) * (Math.abs(input.leftImpulse) > Math.abs(heavyLeft) ? start : stop);
+        input.forwardImpulse = heavyForward;
+        input.leftImpulse = heavyLeft;
+        if (input.jumping && player.onGround() && !player.isInWater() && !player.isInLava() && !player.onClimbable()) {
+            if (player.tickCount - lastJump < 10 + (int) (25 * high)) input.jumping = false;
+            else lastJump = player.tickCount;
+        }
+    }
+
+    private static void steer(LocalPlayer player, Input input) {
         if (player.hasEffect(ModEffects.HEART_ATTACK)) {
             // Collapsed: the legs give way. A friend sneaking next to you is doing CPR.
             input.forwardImpulse = input.leftImpulse = 0f;
@@ -592,6 +627,30 @@ public final class DrunkClient {
     /** No rummaging through inventories or chests while passed out; pause and chat still work. */
     private static void onScreenOpening(ScreenEvent.Opening event) {
         if (blackedOut() && event.getNewScreen() instanceof AbstractContainerScreen<?>) event.setCanceled(true);
+        // High: open a chest or a workbench and - what did I want here again? The hands stop for half a second.
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (!event.isCanceled() && player != null && high > 0.1f && event.getNewScreen() instanceof AbstractContainerScreen<?>
+            && !(event.getNewScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)
+            && !(event.getNewScreen() instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen)
+            && player.getRandom().nextFloat() < 0.4f * high) {
+            blankUntil = net.minecraft.Util.getMillis() + 500;
+        }
+    }
+
+    /** Until when (ms) the mind is blank in an open container; clicks and keys do nothing. */
+    private static long blankUntil;
+
+    private static boolean blank(net.minecraft.client.gui.screens.Screen screen) {
+        return screen instanceof AbstractContainerScreen<?> && net.minecraft.Util.getMillis() < blankUntil;
+    }
+
+    private static void onScreenMouse(ScreenEvent.MouseButtonPressed.Pre event) {
+        if (blank(event.getScreen())) event.setCanceled(true);
+    }
+
+    private static void onScreenKey(ScreenEvent.KeyPressed.Pre event) {
+        // Escape still closes it.
+        if (blank(event.getScreen()) && event.getKeyCode() != org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) event.setCanceled(true);
     }
 
     // ---- overlays ----
