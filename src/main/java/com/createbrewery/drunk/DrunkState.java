@@ -18,6 +18,10 @@ public final class DrunkState {
     public float stomach;
     /** Highest blood level of the current session; decides the hangover. */
     public float peak;
+    /** 0..1 how used the body is to alcohol. Survives sobering up and death. */
+    public float tolerance;
+    /** Game time the tolerance was last brought up to date; sober time since then wears it off. */
+    public long toleranceTime;
 
     /** Server-only bookkeeping: whether the client last saw a non-zero state. */
     transient boolean clientSawAlcohol;
@@ -26,10 +30,26 @@ public final class DrunkState {
 
     public DrunkState() {}
 
-    public DrunkState(float blood, float stomach, float peak) {
+    public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime) {
         this.blood = blood;
         this.stomach = stomach;
         this.peak = peak;
+        this.tolerance = tolerance;
+        this.toleranceTime = toleranceTime;
+    }
+
+    /** Client copy: the client needs the tolerance for how drunk things look, not its clock. */
+    private DrunkState(float blood, float stomach, float peak, float tolerance) {
+        this(blood, stomach, peak, tolerance, 0L);
+    }
+
+    public boolean hasAlcohol() {
+        return blood > 0f || stomach > 0f;
+    }
+
+    /** The blood level as this body feels it (see {@link Intoxication#felt}). */
+    public float felt() {
+        return Intoxication.felt(blood, tolerance);
     }
 
     public float total() {
@@ -37,18 +57,21 @@ public final class DrunkState {
     }
 
     public boolean isEmpty() {
-        return blood <= 0f && stomach <= 0f && peak <= 0f;
+        return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f;
     }
 
     public static final Codec<DrunkState> CODEC = RecordCodecBuilder.create(i -> i.group(
         Codec.FLOAT.fieldOf("blood").forGetter(s -> s.blood),
         Codec.FLOAT.fieldOf("stomach").forGetter(s -> s.stomach),
-        Codec.FLOAT.fieldOf("peak").forGetter(s -> s.peak)
+        Codec.FLOAT.fieldOf("peak").forGetter(s -> s.peak),
+        Codec.FLOAT.optionalFieldOf("tolerance", 0f).forGetter(s -> s.tolerance),
+        Codec.LONG.optionalFieldOf("tolerance_time", 0L).forGetter(s -> s.toleranceTime)
     ).apply(i, DrunkState::new));
 
     public static final StreamCodec<ByteBuf, DrunkState> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.FLOAT, s -> s.blood,
         ByteBufCodecs.FLOAT, s -> s.stomach,
         ByteBufCodecs.FLOAT, s -> s.peak,
+        ByteBufCodecs.FLOAT, s -> s.tolerance,
         DrunkState::new);
 }

@@ -86,6 +86,30 @@ class IntoxicationTest {
     }
 
     @Test
+    void toleranceDullsTheFeelingButNotThePoisoning() {
+        assertEquals(1.0f, Intoxication.felt(1.0f, 0f), 1e-6f);
+        assertEquals(0.6f, Intoxication.felt(1.0f, 1f), 1e-6f);
+        // A seasoned drinker at the poisoning level feels only wasted, not near a blackout.
+        assertTrue(Intoxication.felt(Intoxication.POISONING, 1f) < Intoxication.SMASHED);
+    }
+
+    @Test
+    void toleranceBuildsOverSessionsAndFadesWhenSober() {
+        float t = 0f;
+        // Eight evenings of ~5 beers: about 8000 ticks at an average 0.6 per mille each.
+        for (int i = 0; i < 8 * 8000; i++) t = Intoxication.toleranceAfterTick(t, 0.6f);
+        assertTrue(t > 0.6f && t < 0.95f, "tolerance after eight sessions: " + t);
+        assertTrue(Intoxication.toleranceAfterTick(0.99f, 3f) <= 1f);
+        assertEquals(t / 2f, Intoxication.toleranceDecayed(t, 72000), 1e-4f);
+        assertEquals(0f, Intoxication.toleranceDecayed(t, 72000L * 20));
+    }
+
+    @Test
+    void aSeasonedLiverWorksFaster() {
+        assertTrue(Intoxication.ticksUntilSober(1f, 0f, 1f) < Intoxication.ticksUntilSober(1f, 0f, 0f));
+    }
+
+    @Test
     void goodMoodOnlyForTheFirstBeers() {
         assertFalse(Intoxication.inGoodMood(0.1f));
         assertTrue(Intoxication.inGoodMood(0.5f));

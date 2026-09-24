@@ -122,7 +122,7 @@ public final class DrunkClient {
     private static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
-        float target = player == null ? 0f : player.getData(ModAttachments.DRUNK).blood;
+        float target = player == null ? 0f : player.getData(ModAttachments.DRUNK).felt();
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
 
@@ -424,6 +424,8 @@ public final class DrunkClient {
         DrunkState s = player.getData(ModAttachments.DRUNK);
         if (s.total() < 0.005f) return;
         String text = String.format(Locale.GERMAN, "%.2f ‰%s", s.blood, s.stomach > 0.02f ? " ↑" : "");
+        // Show the tolerance once it is worth mentioning.
+        if (s.tolerance >= 0.05f) text += String.format(Locale.GERMAN, "  ·  Toleranz %d %%", Math.round(s.tolerance * 100));
         int colour = s.blood < Intoxication.TIPSY ? 0xB0E8B0
             : s.blood < Intoxication.DRUNK ? 0xFFD35A
             : s.blood < Intoxication.POISONING ? 0xFF8A30 : 0xFF3A3A;
@@ -451,7 +453,7 @@ public final class DrunkClient {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null) return false;
                 DrunkState s = mc.player.getData(ModAttachments.DRUNK);
-                int secs = Intoxication.ticksUntilSober(s.blood, s.stomach) / 20;
+                int secs = Intoxication.ticksUntilSober(s.blood, s.stomach, s.tolerance) / 20;
                 // The blood level itself, with an arrow while the stomach is still feeding it.
                 String rising = s.stomach > 0.02f ? " ↑" : "";
                 g.drawString(mc.font, instance.getEffect().value().getDisplayName(), x + 28, y + 6, 0xFFFFFF);

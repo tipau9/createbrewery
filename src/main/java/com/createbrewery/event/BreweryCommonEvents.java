@@ -31,7 +31,7 @@ public class BreweryCommonEvents {
     @SubscribeEvent
     public static void onServerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
-        float bac = DrunkServer.state(player).blood;
+        float bac = DrunkServer.felt(player);
 
         if (bac >= Intoxication.TIPSY) {
             int stage = Intoxication.slurStage(bac); // 0 = occasional slip ... 3 = barely legible

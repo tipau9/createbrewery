@@ -71,14 +71,59 @@ public final class Intoxication {
 
     /** Blood level after one tick of elimination; never negative. */
     public static float eliminated(float blood) {
-        return Math.max(0f, blood - ELIMINATE_PER_TICK);
+        return eliminated(blood, 0f);
+    }
+
+    /** Same, for a body used to alcohol: the liver of a regular drinker works up to 30 % faster. */
+    public static float eliminated(float blood, float tolerance) {
+        return Math.max(0f, blood - eliminationRate(tolerance));
+    }
+
+    public static float eliminationRate(float tolerance) {
+        return ELIMINATE_PER_TICK * (1f + 0.3f * clamp01(tolerance));
     }
 
     /** Ticks until completely sober, counting alcohol still waiting in the stomach. */
     public static int ticksUntilSober(float blood, float stomach) {
+        return ticksUntilSober(blood, stomach, 0f);
+    }
+
+    public static int ticksUntilSober(float blood, float stomach, float tolerance) {
         float total = Math.max(0f, blood) + Math.max(0f, stomach);
         if (total <= 0f) return 0;
-        return (int) Math.ceil(total / ELIMINATE_PER_TICK);
+        return (int) Math.ceil(total / eliminationRate(tolerance));
+    }
+
+    // ---- tolerance ----
+    // 0..1. Built up by time spent with alcohol in the blood, lost again during sober days.
+    // It changes how drunk you FEEL, not how much alcohol is in you: poisoning still follows the
+    // real blood level, which is exactly why a high tolerance is dangerous.
+
+    /** Tolerance gained per tick, per per-mille in the blood, scaled by what is still to gain. */
+    public static final float TOLERANCE_GAIN = 3.5e-5f;
+    /** Half of the tolerance is gone after 3 sober Minecraft days. */
+    public static final float TOLERANCE_HALF_LIFE = 72000f;
+
+    /** The blood level as the body experiences it: up to 40 % less for a seasoned drinker. */
+    public static float felt(float blood, float tolerance) {
+        return blood * (1f - 0.4f * clamp01(tolerance));
+    }
+
+    /** Tolerance after one tick at this blood level; grows ever more slowly towards 1. */
+    public static float toleranceAfterTick(float tolerance, float blood) {
+        if (blood <= 0f) return tolerance;
+        return clamp01(tolerance + TOLERANCE_GAIN * blood * (1f - tolerance));
+    }
+
+    /** Tolerance left after {@code soberTicks} without alcohol. */
+    public static float toleranceDecayed(float tolerance, long soberTicks) {
+        if (soberTicks <= 0 || tolerance <= 0f) return tolerance;
+        float left = tolerance * (float) Math.pow(0.5, soberTicks / TOLERANCE_HALF_LIFE);
+        return left < 0.001f ? 0f : left;
+    }
+
+    private static float clamp01(float v) {
+        return Math.max(0f, Math.min(1f, v));
     }
 
     /**

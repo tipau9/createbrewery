@@ -54,6 +54,30 @@ public final class DrunkServer {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(OVERDOSE_DAMAGE));
     }
 
+    /** How drunk the player feels: blood level lessened by tolerance. For chat, visuals, symptoms. */
+    public static float felt(Player player) {
+        return state(player).felt();
+    }
+
+    /** Sober time since the last update wears the tolerance off (also covers time offline on a server). */
+    private static void catchUpTolerance(Player player, DrunkState s) {
+        long now = player.level().getGameTime();
+        if (!s.hasAlcohol() && s.toleranceTime > 0) {
+            s.tolerance = Intoxication.toleranceDecayed(s.tolerance, now - s.toleranceTime);
+        }
+        s.toleranceTime = now;
+    }
+
+    /** Dying sobers you up, but the body keeps what it got used to. */
+    @SubscribeEvent
+    public static void onClone(PlayerEvent.Clone event) {
+        if (!event.isWasDeath()) return;
+        DrunkState old = state(event.getOriginal());
+        DrunkState fresh = state(event.getEntity());
+        fresh.tolerance = old.tolerance;
+        fresh.toleranceTime = old.toleranceTime;
+    }
+
     /** Throw up now, e.g. a painkiller on top of too much alcohol. */
     public static void vomit(Player player) {
         if (!player.hasEffect(ModEffects.VOMITING)) vomit(player, state(player));
@@ -71,6 +95,7 @@ public final class DrunkServer {
     /** A beer lands in the stomach; the blood follows over the next Minecraft hour (~50 s). */
     public static void drink(Player player, float perMille) {
         DrunkState s = state(player);
+        catchUpTolerance(player, s);
         s.stomach += perMille;
         s.lastDrinkTime = player.level().getGameTime();
         showIndicator(player);
@@ -123,12 +148,14 @@ public final class DrunkServer {
         if (player.level().isClientSide) return;
 
         DrunkState s = state(player);
-        if (s.isEmpty() && !s.clientSawAlcohol) return; // sober: nothing to do
+        if (!s.hasAlcohol() && s.peak <= 0f && !s.clientSawAlcohol) return; // sober: nothing to do
 
         float absorbed = Intoxication.absorbed(s.stomach, player.getFoodData().getFoodLevel());
         s.stomach -= absorbed;
-        s.blood = Intoxication.eliminated(s.blood + absorbed);
+        s.blood = Intoxication.eliminated(s.blood + absorbed, s.tolerance);
         s.peak = Math.max(s.peak, s.blood);
+        s.tolerance = Intoxication.toleranceAfterTick(s.tolerance, s.blood);
+        s.toleranceTime = player.level().getGameTime();
 
         if (s.blood <= 0f && s.stomach <= 0f) {
             soberUp(player, s);
@@ -162,7 +189,8 @@ public final class DrunkServer {
     }
 
     private static void symptoms(Player player, DrunkState s, RandomSource random) {
-        float bac = s.blood;
+        // Symptoms follow how drunk the body feels; poisoning (below) follows the real level.
+        float bac = s.felt();
         showIndicator(player);
 
         if (Intoxication.inGoodMood(bac)) refresh(player, ModEffects.GOOD_MOOD, 0);
@@ -176,11 +204,11 @@ public final class DrunkServer {
         }
 
         // Alkoholvergiftung: the body is being poisoned and takes damage until the level drops.
-        boolean poisoned = bac >= Intoxication.POISONING;
+        boolean poisoned = s.blood >= Intoxication.POISONING;
         if (poisoned) {
             refresh(player, ModEffects.POISONING, 0);
             if (player.tickCount % Intoxication.POISON_INTERVAL == 0) {
-                player.hurt(poisonSource(player.level()), Intoxication.poisonDamage(bac));
+                player.hurt(poisonSource(player.level()), Intoxication.poisonDamage(s.blood));
             }
         }
 
