@@ -3,9 +3,15 @@ package com.createbrewery;
 import com.createbrewery.block.BarleyCropBlock;
 import com.createbrewery.block.HopsCropBlock;
 import com.simibubi.create.foundation.data.CreateRegistrate;
+import com.tterrag.registrate.providers.DataGenContext;
+import com.tterrag.registrate.providers.RegistrateBlockstateProvider;
 import com.tterrag.registrate.util.entry.BlockEntry;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.neoforged.neoforge.client.model.generators.ConfiguredModel;
 
 public class ModBlocks {
     private static final CreateRegistrate REGISTRATE = CreateBrewery.REGISTRATE;
@@ -14,13 +20,45 @@ public class ModBlocks {
         .block("barley_crop", BarleyCropBlock::new)
         .initialProperties(() -> Blocks.WHEAT)
         .properties(BlockBehaviour.Properties::noOcclusion)
+        .tag(BlockTags.CROPS)
+        .blockstate(ModBlocks::cropBlockstate)
         .register();
 
     public static final BlockEntry<HopsCropBlock> HOPS_CROP = REGISTRATE
         .block("hops_crop", HopsCropBlock::new)
         .initialProperties(() -> Blocks.WHEAT)
         .properties(BlockBehaviour.Properties::noOcclusion)
+        .tag(BlockTags.CROPS)
+        .blockstate(ModBlocks::cropBlockstate)
         .register();
+
+    /**
+     * Real 8-stage (age 0-7) crop blockstate/models, replacing Registrate's placeholder
+     * single-variant cube default (Registrate's {@code BlockBuilder.defaultBlockstate()} has no
+     * CropBlock special case — see task-D-report.md). Keyed on {@code CropBlock.AGE} exactly the
+     * way vanilla wheat does it: parent model {@code minecraft:block/crop} (a cross-shaped model,
+     * confirmed by extracting assets/minecraft/models/block/crop.json from
+     * minecraft_1.21.1_client.jar) with one {@code "crop"}-textured child model per age. Calling
+     * {@code .blockstate(...)} here *replaces* the queued default (Registrate's
+     * {@code AbstractRegistrate.setDataGenerator} de-dupes per (entry, ProviderType) and removes
+     * the previous consumer before adding the new one — confirmed by decompiling
+     * AbstractRegistrate.class), so there is no double-registration/conflicting-variant hazard.
+     *
+     * <p>Stage textures are placeholders on purpose (brief: "do not spend effort on art") — all
+     * 8 stage models reuse the single existing {@code block/<name>.png} placeholder texture; only
+     * the model/blockstate *structure* is real.
+     */
+    private static <T extends CropBlock> void cropBlockstate(DataGenContext<Block, T> ctx, RegistrateBlockstateProvider prov) {
+        prov.getVariantBuilder(ctx.getEntry()).forAllStates(state -> {
+            int age = state.getValue(CropBlock.AGE);
+            return new ConfiguredModel[] {
+                new ConfiguredModel(
+                    prov.models()
+                        .withExistingParent(ctx.getName() + "_stage" + age, prov.mcLoc("block/crop"))
+                        .texture("crop", prov.modLoc("block/" + ctx.getName())))
+            };
+        });
+    }
 
     public static void register() {}
 }

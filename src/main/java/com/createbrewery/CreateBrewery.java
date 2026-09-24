@@ -1,5 +1,7 @@
 package com.createbrewery;
 
+import com.createbrewery.data.ModDataMaps;
+import com.createbrewery.data.ModLootModifiers;
 import com.createbrewery.data.ModRecipeProvider;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import net.minecraft.resources.ResourceLocation;
@@ -18,6 +20,9 @@ public class CreateBrewery {
         ModBlocks.register();
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(ModRecipeProvider::gatherData);
+        ModLootModifiers.register(modEventBus);
+        ModDataMaps.register(modEventBus);
+        ModVillagerTrades.register();
     }
 
     public static ResourceLocation ID(String path) {
