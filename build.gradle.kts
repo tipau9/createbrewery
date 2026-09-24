@@ -68,14 +68,8 @@ dependencies {
     runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${property("minecraft_version")}:${property("flywheel_version")}")
     implementation("com.tterrag.registrate:Registrate:${property("registrate_version")}")
 
-    // API only, no runtime jar. The full jei-neoforge jar declares a hard dependency on
-    // neoforge [21.1.238,) and this toolchain is 21.1.228, so putting it on the runtime
-    // classpath fails mod loading outright ("Mod jei requires neoforge 21.1.238 or above")
-    // and takes every run config down with it, gameTestServer included. The JEI plugin is
-    // loaded reflectively by JEI itself, so compiling against the API is all that is needed;
-    // the integration is exercised in the real pack, which ships jei 19.57.0.444 - the
-    // version pinned here - on a newer neoforge.
     compileOnly("mezz.jei:jei-${property("minecraft_version")}-neoforge-api:${property("jei_version")}")
+    runtimeOnly("mezz.jei:jei-${property("minecraft_version")}-neoforge:${property("jei_version")}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // Required to actually launch the JUnit Platform. Without it, the first unit
