@@ -108,15 +108,17 @@ void main() {
     col *= 1.0 - smoothstep(0.12, 0.7, length(d)) * 0.85 * hole;
 
     // Weed: colours pop and details look more interesting (broad local contrast, not the hard
-    // Koks sharpening), wide pupils let lights glow cool-white, and the eyes fix on the middle
-    // while the edges go dreamy - soft, with a faint colour fringe.
+    // Koks sharpening), wide pupils let lights glow in a warm, sunny white, the whole world gets
+    // a summery warmth, and the eyes fix on the middle while the edges go dreamy - soft, with a
+    // faint colour fringe. Beer's gold halo is softer and blurrier; this stays crisp.
     // Clamped, so small bright lights do not get a dark ring around them.
     col += clamp((col - ring(uv, px * 7.0)) * 0.6, -0.01, 0.16) * High;
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     float sat = length(col - vec3(lum));
     col = mix(vec3(lum), col, 1.0 + (0.9 - 1.0 * clamp(sat, 0.0, 0.5)) * High); // vibrance: dull colours gain most
     vec3 glow = spill(uv, px * 3.0, 0.1) + spill(uv, px * 7.0, 0.5) * 1.2 + spill(uv, px * 12.0, 0.3) * 1.4;
-    col += glow * vec3(0.9, 1.0, 1.0) * 1.1 * High;
+    col += glow * vec3(1.0, 0.94, 0.8) * 1.1 * High;
+    col *= mix(vec3(1.0), vec3(1.05, 1.02, 0.94), High); // summer warmth
     col += (1.0 - col) * col * 0.12 * High; // shadows open up a little
     float dream = smoothstep(0.25, 0.75, length(d)) * High;
     col = mix(col, ring(uv, px * 4.0), 0.45 * dream);
@@ -142,8 +144,8 @@ void main() {
     // Trail is 0 on the first frames of a fresh chain, whose previous frame is still black.
     // Only when properly drunk: in the party zone the camera never rests (aim drift, sway, view
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
-    // Weed: at a strong high, faint trails behind movement.
-    col = mix(col, prev, (0.6 * k * heavy + 0.35 * Dissoc + 0.25 * stoned) * Trail);
+    // Weed: faint trails behind movement from a mild high on, stronger when stoned.
+    col = mix(col, prev, (0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned) * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
