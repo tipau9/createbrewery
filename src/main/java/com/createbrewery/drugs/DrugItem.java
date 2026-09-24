@@ -45,7 +45,15 @@ public class DrugItem extends Item {
             player.getCooldowns().addCooldown(this, kind == DrugServer.Kind.WEED ? 30 : COOLDOWN);
         }
         if (kind == DrugServer.Kind.WEED) {
-            stack.hurtAndBreak(1, entity, LivingEntity.getSlotForHand(entity.getUsedItemHand()));
+            if (player.hasInfiniteMaterials()) {
+                // hurtAndBreak spares creative players; a joint still burns down.
+                if (!level.isClientSide) {
+                    if (stack.getDamageValue() + 1 >= stack.getMaxDamage()) stack.shrink(1);
+                    else stack.setDamageValue(stack.getDamageValue() + 1);
+                }
+            } else {
+                stack.hurtAndBreak(1, entity, LivingEntity.getSlotForHand(entity.getUsedItemHand()));
+            }
         } else if (!player.getAbilities().instabuild) {
             stack.shrink(1);
         }

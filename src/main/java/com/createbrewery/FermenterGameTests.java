@@ -654,4 +654,18 @@ public class FermenterGameTests {
         helper.assertTrue(Math.abs(joints - 1f) < 0.01f, "one joint should be one joint's worth, was " + joints);
         helper.succeed();
     }
+
+    /** Creative players smoke joints down too, so the durability bar shows. */
+    @GameTest(template = TEMPLATE)
+    public static void jointWearsDownInCreative(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.CREATIVE);
+        player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
+        net.minecraft.world.item.ItemStack joint = new net.minecraft.world.item.ItemStack(com.createbrewery.ModItems.JOINT.get());
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, joint);
+        joint.finishUsingItem(helper.getLevel(), player);
+        helper.assertTrue(joint.getDamageValue() == 1 && joint.isBarVisible(), "a creative hit did not wear the joint");
+        for (int i = 1; i < com.createbrewery.drugs.DrugServer.HITS_PER_JOINT; i++) joint.finishUsingItem(helper.getLevel(), player);
+        helper.assertTrue(joint.isEmpty(), "the joint did not burn down in creative");
+        helper.succeed();
+    }
 }
