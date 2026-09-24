@@ -1,5 +1,6 @@
 package com.createbrewery;
 
+import com.createbrewery.data.ModRecipeProvider;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
@@ -16,6 +17,7 @@ public class CreateBrewery {
         ModItems.register();
         ModBlocks.register();
         ModRecipeTypes.register(modEventBus);
+        modEventBus.addListener(ModRecipeProvider::gatherData);
     }
 
     public static ResourceLocation ID(String path) {
