@@ -1,9 +1,11 @@
 package com.createbrewery;
 
+import com.createbrewery.item.BeerDrinkItem;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.tterrag.registrate.util.entry.ItemEntry;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemNameBlockItem;
+import net.minecraft.world.item.Items;
 
 import static com.createbrewery.ModTags.*;
 
@@ -40,14 +42,14 @@ public class ModItems {
     public static final ItemEntry<Item> YEAST = REGISTRATE.item("yeast", Item::new).register();
     public static final ItemEntry<Item> EMPTY_CAN = REGISTRATE.item("empty_can", Item::new).register();
 
-    public static final ItemEntry<Item> BEER_BOTTLE = REGISTRATE
-        .item("beer_bottle", Item::new)
+    public static final ItemEntry<BeerDrinkItem> BEER_BOTTLE = REGISTRATE
+        .item("beer_bottle", p -> new BeerDrinkItem(p, () -> Items.GLASS_BOTTLE))
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
         .tag(BEER, BREWERY_BEER, C_BEVERAGES, C_FOODS)
         .register();
 
-    public static final ItemEntry<Item> SEALED_CAN = REGISTRATE
-        .item("sealed_can", Item::new)
+    public static final ItemEntry<BeerDrinkItem> SEALED_CAN = REGISTRATE
+        .item("sealed_can", p -> new BeerDrinkItem(p, ModItems.EMPTY_CAN::get))
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
         .tag(BEER, BREWERY_BEER, C_BEVERAGES, C_FOODS)
         .register();
