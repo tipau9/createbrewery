@@ -1,6 +1,9 @@
 package com.createbrewery.drunk;
 
+import com.createbrewery.Config;
 import com.createbrewery.CreateBrewery;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.createbrewery.effect.HiccupsEffect;
 import com.createbrewery.effect.ModEffects;
 import com.createbrewery.effect.VomitingEffect;
@@ -23,6 +26,7 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions;
@@ -60,8 +64,18 @@ public final class DrunkClient {
     private static int lastBeat = Integer.MIN_VALUE;
     private static int lastRinging = -1000;
     private static boolean wasNodding, wasBlackedOut;
-    /** Set once the shader failed to load (old GPU, shaderpack...): never try again this session. */
+    /** Set once the shader failed to load (old GPU...): never try again this session. */
     private static boolean shaderFailed;
+    /**
+     * Our own post chain. Deliberately not GameRenderer's single post-effect slot: other mods in
+     * the pack (Moonlight, Supplementaries, KubeJS...) also use that slot and swap it out, and a
+     * chain that keeps getting recreated would flash its black first frame again and again.
+     */
+    private static PostChain chain;
+    private static int chainWidth, chainHeight;
+    /** Frames drawn since the chain was (re)built; the afterimage waits until it has a real previous frame. */
+    private static int chainFrames;
+    private static int chainBuilds;
 
     public static void init() {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onClientTick);
@@ -72,6 +86,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onPlayerTurn);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onGuiPre);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onGuiPost);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onInteract);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenOpening);
         HiccupsEffect.clientKick = entity -> {
@@ -102,10 +117,6 @@ public final class DrunkClient {
         return (player.tickCount + partial) / 20.0;
     }
 
-    private static boolean isOurs(PostChain chain) {
-        return chain != null && SHADER.toString().equals(chain.getName());
-    }
-
     // ---- state + shader ----
 
     private static void onClientTick(ClientTickEvent.Post event) {
@@ -115,19 +126,23 @@ public final class DrunkClient {
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
 
-        PostChain current = mc.gameRenderer.currentEffect();
-        boolean want = player != null && !shaderFailed
+        boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f);
-        if (want && current == null) {
-            // Only when no other post effect runs (spectating a creeper etc. keeps its own).
-            mc.gameRenderer.loadEffect(SHADER);
-            if (!isOurs(mc.gameRenderer.currentEffect())) {
+        if (want && chain == null) {
+            try {
+                chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
+                chainBuilds++;
+                // A rebuild should happen once per drinking session; many of these point at a conflict.
+                if (chainBuilds <= 5 || chainBuilds % 100 == 0) LOGGER.info("Drunk shader chain built (#{})", chainBuilds);
+                chainWidth = chainHeight = -1;
+                chainFrames = 0;
+            } catch (Exception e) {
                 shaderFailed = true;
-                LOGGER.warn("Drunk shader could not be loaded; drunk vision falls back to overlays only");
+                LOGGER.warn("Drunk shader could not be loaded; drunk vision falls back to overlays only", e);
             }
-        } else if (!want && isOurs(current)) {
-            mc.gameRenderer.shutdownEffect();
-            if (mc.getCameraEntity() != null) mc.gameRenderer.checkEntityPostEffect(mc.getCameraEntity());
+        } else if (!want && chain != null) {
+            chain.close();
+            chain = null;
         }
         if (player != null && !mc.isPaused()) bodySounds(mc, player);
     }
@@ -177,11 +192,10 @@ public final class DrunkClient {
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
         double t = seconds(player, partial);
 
-        PostChain current = mc.gameRenderer.currentEffect();
-        if (isOurs(current)) {
-            current.setUniform("Intensity", Intoxication.visualIntensity(blood));
-            current.setUniform("Mood", Intoxication.mood(blood));
-            current.setUniform("DrunkTime", (float) (t % 3600.0));
+        if (chain != null) {
+            chain.setUniform("Intensity", Intoxication.visualIntensity(blood) * screen());
+            chain.setUniform("Mood", Intoxication.mood(blood) * screen());
+            chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
         // From the second beer the aim wanders off on its own and has to be pulled back.
@@ -212,6 +226,53 @@ public final class DrunkClient {
         return envelope * (0.55f + 0.45f * heave);
     }
 
+    /** Draws the drunk vision over the finished world, before the hand and the HUD. */
+    private static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (chain == null || event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        Minecraft mc = Minecraft.getInstance();
+        RenderTarget main = mc.getMainRenderTarget();
+        if (main.width != chainWidth || main.height != chainHeight) {
+            chain.resize(main.width, main.height);
+            chainWidth = main.width;
+            chainHeight = main.height;
+            chainFrames = 0;
+        }
+        chain.setUniform("Trail", chainFrames < 3 ? 0f : 1f);
+        chainFrames++;
+        // Same state handling as vanilla around its own post effect.
+        RenderSystem.disableBlend();
+        RenderSystem.disableDepthTest();
+        RenderSystem.resetTextureMatrix();
+        chain.process(event.getPartialTick().getGameTimeDeltaTicks());
+        main.bindWrite(false);
+        RenderSystem.enableDepthTest();
+    }
+
+    /** The player's comfort setting, 0..1. */
+    private static float screen() {
+        return Config.CLIENT_SPEC.isLoaded() ? Config.SCREEN_EFFECTS.get().floatValue() : 1f;
+    }
+
+    private static Boolean irisPresent;
+
+    /**
+     * An Iris shaderpack draws the world its own way, and a vanilla post chain on top of it can
+     * break the picture. Looked up by reflection, so Iris stays optional.
+     */
+    private static boolean shaderPackActive() {
+        try {
+            if (irisPresent == null) {
+                irisPresent = net.neoforged.fml.ModList.get().isLoaded("iris");
+            }
+            if (!irisPresent) return false;
+            Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+            Object instance = api.getMethod("getInstance").invoke(null);
+            return (Boolean) api.getMethod("isShaderPackInUse").invoke(instance);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return false;
+        }
+    }
+
     // ---- view ----
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
@@ -220,16 +281,16 @@ public final class DrunkClient {
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
-        // The whole body shudders while retching.
-        roll += (float) Math.sin(t * 55.0) * 2.5f * retch(player, (float) event.getPartialTick());
-        event.setRoll(event.getRoll() + roll);
+        // The whole body sways while retching - slowly, about twice a second, never a fast shake.
+        roll += (float) Math.sin(t * 14.0) * 2f * retch(player, (float) event.getPartialTick());
+        event.setRoll(event.getRoll() + roll * screen());
     }
 
     private static void onFov(ComputeFovModifierEvent event) {
         if (event.getPlayer() != Minecraft.getInstance().player || blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.
         float breath = noise(event.getPlayer().tickCount / 20.0 * 0.8, 7) * 0.07f * Intoxication.visualIntensity(blood);
-        event.setNewFovModifier(event.getNewFovModifier() * (1f + breath));
+        event.setNewFovModifier(event.getNewFovModifier() * (1f + breath * screen()));
     }
 
     // ---- legs + hands ----
@@ -329,24 +390,24 @@ public final class DrunkClient {
         float retch = retch(player, event.getPartialTick().getGameTimeDeltaPartialTick(true));
         if (retch > 0f) {
             // Sick green creeping in from the edges, and the eyes going dark in the middle of a heave.
-            int a = (int) (retch * 150);
+            int a = (int) (retch * 150 * screen());
             int edge = h / 3;
             g.fillGradient(0, 0, w, edge, (a << 24) | 0x4A5A10, 0x004A5A10);
             g.fillGradient(0, h - edge, w, h, 0x004A5A10, (a << 24) | 0x4A5A10);
-            g.fill(0, 0, w, h, ((int) (retch * 60) << 24) | 0x303A08);
+            g.fill(0, 0, w, h, ((int) (retch * 60 * screen()) << 24) | 0x303A08);
         }
 
         MobEffectInstance hangover = player.getEffect(ModEffects.HANGOVER);
         if (hangover != null) {
             // Throbbing headache: the edges of the view darken with every heartbeat.
             float beat = (float) Math.pow(Math.max(0.0, Math.sin(t * Math.PI * 1.6)), 6.0);
-            int a = (int) (beat * (90 + 40 * Math.min(hangover.getAmplifier(), 2)));
+            int a = (int) (beat * (90 + 40 * Math.min(hangover.getAmplifier(), 2)) * screen());
             int edge = h / 4;
             g.fillGradient(0, 0, w, edge, (a << 24) | 0x2A0000, 0x002A0000);
             g.fillGradient(0, h - edge, w, h, 0x002A0000, (a << 24) | 0x2A0000);
             // Daylight glare: bright sky hurts.
             if (player.level().isDay() && player.level().canSeeSky(player.blockPosition())) {
-                int glare = (int) (60 + 30 * noise(t * 0.9, 25));
+                int glare = (int) ((60 + 30 * noise(t * 0.9, 25)) * screen());
                 g.fill(0, 0, w, h, (glare << 24) | 0xFFF8E0);
             }
         }

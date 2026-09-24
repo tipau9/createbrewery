@@ -81,6 +81,7 @@ public class CreateBrewery {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.event.BreweryCommonEvents.class);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.drunk.DrunkServer.class);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_SPEC);
     }
 
     public static ResourceLocation ID(String path) {

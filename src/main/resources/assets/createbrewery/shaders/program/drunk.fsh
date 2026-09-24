@@ -5,7 +5,7 @@
 //                   richer, warmer colours. The world simply looks nicer.
 //   Intensity 0..1  how drunk: wobble, double vision, blurred edges, tunnel, washed-out colours,
 //                   and afterimages - the picture drags behind when you turn.
-// PrevSampler is last frame's output (see post/drunk.json), which makes the afterimages.
+// PrevSampler is last frame's output (see post/drunk.json), which makes the afterimages once drunk.
 
 uniform sampler2D DiffuseSampler;
 uniform sampler2D PrevSampler;
@@ -13,6 +13,7 @@ uniform vec2 OutSize;
 uniform float Intensity;
 uniform float Mood;
 uniform float DrunkTime;
+uniform float Trail;
 
 in vec2 texCoord;
 
@@ -48,12 +49,16 @@ void main() {
     vec2 px = 1.0 / OutSize;
     vec2 uv = texCoord;
 
+    // Only once properly drunk (not in the party zone): wobble and double vision. Both move
+    // slowly; nothing here changes faster than about once a second.
+    float heavy = smoothstep(0.45, 0.8, k);
+
     // The world wobbles like looking through water.
-    uv += vec2(sin(uv.y * 9.0 + t * 1.3), cos(uv.x * 7.0 + t * 1.1)) * 0.005 * k;
+    uv += vec2(sin(uv.y * 9.0 + t * 1.3), cos(uv.x * 7.0 + t * 1.1)) * 0.005 * k * heavy;
 
     // Double vision: a second image drifts apart and back together.
     vec2 ghost = vec2(sin(t * 0.7) + 0.35 * sin(t * 1.9), 0.4 * cos(t * 0.53)) * 0.022 * k;
-    vec3 col = mix(tap(uv), tap(uv + ghost), 0.5 * smoothstep(0.0, 0.6, k));
+    vec3 col = mix(tap(uv), tap(uv + ghost), 0.5 * heavy);
 
     // Edges lose focus first.
     vec2 d = uv - 0.5;
@@ -62,8 +67,8 @@ void main() {
 
     // Beer goggles: soft focus, light bleeding into halos, rich warm colours.
     col = mix(col, ring(uv, px * 2.5), 0.25 * m);
-    vec3 halo = spill(uv, px * 2.0, 0.0) * 1.2 + spill(uv, px * 4.0, 0.39) * 1.4 + spill(uv, px * 6.5, 0.2)
-              * 1.6 + spill(uv, px * 9.5, 0.59) * 1.8 + spill(uv, px * 13.0, 0.1) * 2.0;
+    vec3 halo = spill(uv, px * 2.0, 0.0) * 0.8 + spill(uv, px * 4.0, 0.39) * 0.9 + spill(uv, px * 6.5, 0.2)
+              * 1.0 + spill(uv, px * 9.5, 0.59) * 1.1 + spill(uv, px * 13.0, 0.1) * 1.2;
     col += halo * vec3(1.0, 0.8, 0.5) * m;
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(vec3(lum), col, 1.0 + 0.35 * m);
@@ -80,7 +85,10 @@ void main() {
     // Afterimages: blend in the previous finished frame. Done last, so the steady picture is
     // exactly the processed one and only movement smears.
     vec3 prev = texture(PrevSampler, texCoord).rgb;
-    col = mix(col, prev, 0.12 * m + 0.6 * k);
+    // Trail is 0 on the first frames of a fresh chain, whose previous frame is still black.
+    // Only when properly drunk: in the party zone the camera never rests (aim drift, sway, view
+    // bobbing), and trailing ghost copies of every edge would look like constant trembling.
+    col = mix(col, prev, 0.6 * k * heavy * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
