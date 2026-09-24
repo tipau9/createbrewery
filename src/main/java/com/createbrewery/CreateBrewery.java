@@ -39,14 +39,14 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_3", "Wort can be piped into the Fermenter from any side.");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_4", "Yeast can be inserted with a Funnel or by hand.");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_5", "Engineer's Goggles display fermentation progress.");
-        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_6", "Fermenting: 33% (2 days remaining)");
-        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_7", "Fermenting: 67% (1 day remaining)");
+        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_6", "Fermenting: 25% (1 day remaining)");
+        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_7", "Fermenting: 50% (1 day remaining)");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_8", "Fermenting: 100% (Ready)");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_9", "Finished Beer can then be piped out and bottled.");
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.header", "Brewing Heat Requirements");
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_1", "Brewing requires different heat tiers for different stages of the process.");
-        REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_2", "Mashing (Barley + Water -> Sweet Wort) requires standard HEAT (Kindled Blaze Burner).");
-        REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_3", "Boiling (Sweet Wort + Hops -> Wort) requires SUPERHEATED heat (fed with Blaze Cake).");
+        REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_2", "Mashing (Grist + Water -> Wort) requires standard HEAT (Kindled Blaze Burner).");
+        REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_3", "Boiling (Wort + Hops -> Hopped Wort) requires SUPERHEATED heat (fed with Blaze Cake).");
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_4", "Remember: Mashing needs standard heat, while Boiling hops must be Superheated!");
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(CreateBreweryClient::onClientSetup);

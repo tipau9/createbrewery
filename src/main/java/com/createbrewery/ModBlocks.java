@@ -23,6 +23,11 @@ public class ModBlocks {
         .properties(BlockBehaviour.Properties::noOcclusion)
         .tag(BlockTags.CROPS)
         .blockstate(ModBlocks::cropBlockstate)
+        .loot((p, b) -> {
+            var condition = net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(b)
+                .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties().hasProperty(CropBlock.AGE, 7));
+            p.add(b, p.createCropDrops(b, ModItems.BARLEY.get(), ModItems.BARLEY_SEEDS.get(), condition));
+        })
         .register();
 
     public static final BlockEntry<HopsCropBlock> HOPS_CROP = REGISTRATE
@@ -31,6 +36,11 @@ public class ModBlocks {
         .properties(BlockBehaviour.Properties::noOcclusion)
         .tag(BlockTags.CROPS)
         .blockstate(ModBlocks::cropBlockstate)
+        .loot((p, b) -> {
+            var condition = net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(b)
+                .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties().hasProperty(CropBlock.AGE, 7));
+            p.add(b, p.createCropDrops(b, ModItems.HOP_CONES.get(), ModItems.HOP_CONES.get(), condition));
+        })
         .register();
 
     // simpleItem() is not decoration: without a BlockItem the fermenter cannot be placed

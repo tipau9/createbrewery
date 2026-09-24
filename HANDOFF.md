@@ -52,31 +52,31 @@ Phase 2 (wine/cider) is already designed but **not started**: `docs/superpowers/
 
 ## 2. State as of this writing
 
-Branch `phase-1-beer-chain`, at commit `7b81b52`. Never merged to any main branch; there is no remote.
+Branch `phase-1-beer-chain`, at commit `6311739`. All Phase 1 tasks (1-10) are COMPLETE and REVIEWED.
 
 | Task | Status |
 |---|---|
 | 1 — scaffold + toolchain | complete, reviewed |
 | 2–4 — fluids, items, crops, recipe type | complete, reviewed |
-| D — datagen + run configs (added mid-flight; not in the original plan) | complete, reviewed |
+| D — datagen + run configs | complete, reviewed |
 | 5 — Fermenter | complete, reviewed, 1 fix round |
 | 7 — recipe chain | complete, reviewed |
 | 8 — acquisition, tags, crop models | complete, reviewed |
-| **6 — goggle overlay** | **was in flight when this was written — check `git status`** |
-| 9 — JEI category | not started |
-| 10 — Ponder scenes | not started |
+| 6 — goggle overlay + config sync | complete, reviewed |
+| 9 — JEI category | complete, reviewed |
+| 10 — Ponder scenes | complete, reviewed |
 
 ---
 
 ## 3. How to verify anything
 
 ```bash
-./gradlew build                # compiles + 7 JUnit tests
-./gradlew runGameTestServer    # 9 GameTests — expect "All 9 required tests passed"
+./gradlew build                # compiles + 10 JUnit tests (build SUCCESSFUL)
+./gradlew runGameTestServer    # 10 GameTests — expect "All 10 required tests passed"
 ./gradlew runData              # regenerates src/generated
 ```
 
-All three were green at `7b81b52`. There is **no `gradle` CLI** on this machine — always use `./gradlew`. JDK 21 is at `C:\Program Files\Java\jdk-21`, `JAVA_HOME` is set. Gradle tasks can take minutes; allow long timeouts.
+All three are green at `6311739`. Toolchain: NeoForge `21.1.238`, Create `6.0.10`, JEI `19.57.0.444`. There is **no `gradle` CLI** on this machine — always use `./gradlew`. JDK 21 is at `C:\Program Files\Java\jdk-21`, `JAVA_HOME` is set. Gradle tasks can take minutes; allow long timeouts.
 
 **Never run `./gradlew runClient` from an automated agent.** It launches a GUI Minecraft client you cannot observe and it will hang your session. That was a standing rule for the whole project. A human runs it.
 

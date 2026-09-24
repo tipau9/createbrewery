@@ -23,4 +23,19 @@ public class ModTags {
      */
     public static final TagKey<Item> BREWERY_BEER =
         TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("brewery", "beer"));
+
+    public static final TagKey<Item> C_BEVERAGES =
+        TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "beverages"));
+
+    public static final TagKey<Item> C_FOODS =
+        TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "foods"));
+
+    public static final TagKey<Item> C_CROPS_BARLEY =
+        TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "crops/barley"));
+
+    public static final TagKey<Item> C_SEEDS_BARLEY =
+        TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "seeds/barley"));
+
+    public static final TagKey<Item> C_CROPS_HOPS =
+        TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "crops/hops"));
 }

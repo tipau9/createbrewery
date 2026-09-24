@@ -82,14 +82,14 @@ public class BreweryScenes {
 
         scene.overlay().showText(30)
             .colored(PonderPalette.MEDIUM)
-            .text("Fermenting: 33% (2 days remaining)")
+            .text("Fermenting: 25% (1 day remaining)")
             .pointAt(util.vector().blockSurface(fermenter, Direction.WEST))
             .placeNearTarget();
         scene.idle(35);
 
         scene.overlay().showText(30)
             .colored(PonderPalette.MEDIUM)
-            .text("Fermenting: 67% (1 day remaining)")
+            .text("Fermenting: 50% (1 day remaining)")
             .pointAt(util.vector().blockSurface(fermenter, Direction.WEST))
             .placeNearTarget();
         scene.idle(35);
@@ -154,7 +154,7 @@ public class BreweryScenes {
         // Keyframe 2: Mashing (KINDLED / Heated)
         scene.overlay().showOutlineWithText(util.select().position(burnerPos), 80)
             .colored(PonderPalette.MEDIUM)
-            .text("Mashing (Barley + Water -> Sweet Wort) requires standard HEAT (Kindled Blaze Burner).")
+            .text("Mashing (Grist + Water -> Wort) requires standard HEAT (Kindled Blaze Burner).")
             .pointAt(util.vector().blockSurface(burnerPos, Direction.WEST))
             .placeNearTarget()
             .attachKeyFrame();
@@ -171,7 +171,7 @@ public class BreweryScenes {
         // Keyframe 4: Boiling (SEETHING / Superheated)
         scene.overlay().showOutlineWithText(util.select().position(burnerPos), 80)
             .colored(PonderPalette.BLUE)
-            .text("Boiling (Sweet Wort + Hops -> Wort) requires SUPERHEATED heat (fed with Blaze Cake).")
+            .text("Boiling (Wort + Hops -> Hopped Wort) requires SUPERHEATED heat (fed with Blaze Cake).")
             .pointAt(util.vector().blockSurface(burnerPos, Direction.WEST))
             .placeNearTarget()
             .attachKeyFrame();

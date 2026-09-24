@@ -5,13 +5,14 @@ import com.tterrag.registrate.util.entry.ItemEntry;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemNameBlockItem;
 
-import static com.createbrewery.ModTags.BEER;
-import static com.createbrewery.ModTags.BREWERY_BEER;
+import static com.createbrewery.ModTags.*;
 
 public class ModItems {
     private static final CreateRegistrate REGISTRATE = CreateBrewery.REGISTRATE;
 
-    public static final ItemEntry<Item> BARLEY = REGISTRATE.item("barley", Item::new).register();
+    public static final ItemEntry<Item> BARLEY = REGISTRATE.item("barley", Item::new)
+        .tag(C_CROPS_BARLEY)
+        .register();
 
     // Places ModBlocks.BARLEY_CROP, same pattern vanilla uses for wheat_seeds. The block
     // reference is resolved lazily inside this factory lambda (invoked only when the Item
@@ -22,6 +23,7 @@ public class ModItems {
     // registered).
     public static final ItemEntry<ItemNameBlockItem> BARLEY_SEEDS = REGISTRATE
         .item("barley_seeds", p -> new ItemNameBlockItem(ModBlocks.BARLEY_CROP.get(), p))
+        .tag(C_SEEDS_BARLEY)
         .register();
 
     public static final ItemEntry<Item> GREEN_MALT = REGISTRATE.item("green_malt", Item::new).register();
@@ -32,6 +34,7 @@ public class ModItems {
     // Places ModBlocks.HOPS_CROP; hop cones are both the seed and the harvested item.
     public static final ItemEntry<ItemNameBlockItem> HOP_CONES = REGISTRATE
         .item("hop_cones", p -> new ItemNameBlockItem(ModBlocks.HOPS_CROP.get(), p))
+        .tag(C_CROPS_HOPS)
         .register();
 
     public static final ItemEntry<Item> YEAST = REGISTRATE.item("yeast", Item::new).register();
@@ -40,13 +43,13 @@ public class ModItems {
     public static final ItemEntry<Item> BEER_BOTTLE = REGISTRATE
         .item("beer_bottle", Item::new)
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
-        .tag(BEER, BREWERY_BEER)
+        .tag(BEER, BREWERY_BEER, C_BEVERAGES, C_FOODS)
         .register();
 
     public static final ItemEntry<Item> SEALED_CAN = REGISTRATE
         .item("sealed_can", Item::new)
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
-        .tag(BEER, BREWERY_BEER)
+        .tag(BEER, BREWERY_BEER, C_BEVERAGES, C_FOODS)
         .register();
 
     public static void register() {}
