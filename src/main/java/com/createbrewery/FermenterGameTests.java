@@ -498,4 +498,14 @@ public class FermenterGameTests {
             helper.succeed();
         });
     }
+
+    /** Ibu plus alcohol: the stomach-bleeding damage type is registered and hurts at once. */
+    @GameTest(template = TEMPLATE)
+    public static void ibuWithAlcoholHurts(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        float before = player.getHealth();
+        com.createbrewery.drunk.DrunkServer.irritateStomach(player);
+        helper.assertTrue(player.getHealth() < before, "Ibu and alcohol did not hurt");
+        helper.succeed();
+    }
 }

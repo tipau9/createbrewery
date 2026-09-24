@@ -49,6 +49,21 @@ public final class DrunkServer {
     private static final ResourceKey<DamageType> OVERDOSE_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "painkiller_overdose"));
 
+    private static final ResourceKey<DamageType> STOMACH_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "stomach_bleeding"));
+
+    /**
+     * Ibu and alcohol together attack the stomach lining, as in real life. Called when a beer goes
+     * down on top of a painkiller, and when a painkiller goes down on top of alcohol: 1.5 hearts
+     * of damage right away, one heart more for every further pill still in the body.
+     */
+    public static void irritateStomach(Player player) {
+        MobEffectInstance painkiller = player.getEffect(ModEffects.PAINKILLER);
+        int pills = painkiller == null ? 1 : painkiller.getAmplifier() + 1;
+        player.hurt(new DamageSource(player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+            .getHolderOrThrow(STOMACH_DAMAGE)), 1f + 2f * pills);
+    }
+
     /** Damage from swallowing too many painkillers. */
     public static DamageSource overdoseSource(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(OVERDOSE_DAMAGE));

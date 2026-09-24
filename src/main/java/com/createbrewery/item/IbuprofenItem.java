@@ -19,7 +19,8 @@ import net.minecraft.world.level.Level;
 /**
  * Ibu 400: the cure for the Kater. Swallowed in a second, works after 25 s (see PainkillerEffect).
  * Not a free pass either:
- * - on top of a lot of alcohol it upsets the stomach and comes back up (with everything in it);
+ * - together with alcohol (either way round) it hurts the stomach at once, and on top of a lot of
+ *   alcohol it comes back up (with everything in it);
  * - a third pill while the others still work is an overdose and hurts badly.
  */
 public class IbuprofenItem extends Item {
@@ -59,6 +60,8 @@ public class IbuprofenItem extends Item {
             if (pills >= 2) {
                 player.hurt(DrunkServer.overdoseSource(level), 6f);
             }
+            // Ibu on top of alcohol: damage right away, and with a lot of it the stomach gives up.
+            if (DrunkServer.state(player).hasAlcohol()) DrunkServer.irritateStomach(player);
             if (DrunkServer.state(player).blood >= Intoxication.DRUNK) {
                 DrunkServer.vomit(player);
             }

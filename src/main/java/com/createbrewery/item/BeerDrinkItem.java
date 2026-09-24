@@ -2,6 +2,7 @@ package com.createbrewery.item;
 
 import com.createbrewery.drunk.DrunkServer;
 import com.createbrewery.drunk.Intoxication;
+import com.createbrewery.effect.ModEffects;
 import com.createbrewery.particle.ModParticles;
 import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -74,6 +75,8 @@ public class BeerDrinkItem extends Item {
             // Apply cooldown on BOTH client and server (like Ender Pearl) so the white
             // sweep animation displays immediately and rapid chugging is blocked.
             startCooldown(player);
+            // Beer on top of Ibu: the stomach pays for it immediately.
+            if (player.hasEffect(ModEffects.PAINKILLER)) DrunkServer.irritateStomach(player);
 
             if (!level.isClientSide) {
                 float after = DrunkServer.state(player).total() + Intoxication.PER_BEER;
