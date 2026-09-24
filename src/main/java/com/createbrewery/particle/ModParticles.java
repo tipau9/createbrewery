@@ -30,6 +30,8 @@ public final class ModParticles {
     /** Bubbling blobs of the puddle left on the ground. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> VOMIT_PUDDLE = simple("vomit_puddle");
 
+    /** Drops of blood from the nose. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> NOSEBLEED = simple("nosebleed");
     /** A puff of white powder. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POWDER = simple("powder");
 

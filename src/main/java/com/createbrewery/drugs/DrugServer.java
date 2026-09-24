@@ -37,6 +37,11 @@ import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
  * <p>Keta (dissociative): slow motion, the world far away, pain dulled. Too much tips into the
  * K-Loch, where the body barely obeys. With alcohol both depress the body together: blackouts
  * and vomiting become far likelier. Afterwards: dazed.
+ *
+ * <p>Both together ("CK"): Keta raises heart rate and blood pressure as well, so the heart is
+ * strained even at small doses and beats irregularly; Koks masks the dissociation, so it feels
+ * clearer than it is and the next dose comes sooner; orientation flips (left and right swap for
+ * moments); two powders up the same nose make it bleed; and the comedown is longer and harder.
  */
 public final class DrugServer {
     private DrugServer() {}
@@ -49,11 +54,19 @@ public final class DrugServer {
 
     private static final ResourceKey<DamageType> HEART_ATTACK = ResourceKey.create(Registries.DAMAGE_TYPE,
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "heart_attack"));
+    private static final ResourceKey<DamageType> NOSEBLEED = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "nosebleed"));
 
     public enum Kind { COKE, KETA }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
+    }
+
+    /** Both at once: Koks and Keta (or the K-Loch) active together. */
+    public static boolean mixed(LivingEntity entity) {
+        return entity.hasEffect(ModEffects.COKE_HIGH)
+            && (entity.hasEffect(ModEffects.KETA_HIGH) || entity.hasEffect(ModEffects.K_HOLE));
     }
 
     /** Whether drugs are enabled in the config (off: the items do nothing). */
@@ -71,6 +84,8 @@ public final class DrugServer {
         if (kind == Kind.KETA && level >= 2) player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, 0, false, false, true));
 
         if (player.level() instanceof ServerLevel level1) {
+            // The other powder is still in there: the nose gives up now and then.
+            if (mixed(player) && player.getRandom().nextFloat() < 0.35f) nosebleed(player, level1);
             Vec3 look = player.getLookAngle();
             level1.sendParticles(ModParticles.POWDER.get(), player.getX() + look.x * 0.3, player.getEyeY() - 0.1,
                 player.getZ() + look.z * 0.3, 8, 0.06, 0.04, 0.06, 0.01);
@@ -79,10 +94,44 @@ public final class DrugServer {
         }
     }
 
+    private static void nosebleed(Player player, ServerLevel level) {
+        player.hurt(new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(NOSEBLEED)), 1f);
+        Vec3 look = player.getLookAngle();
+        level.sendParticles(ModParticles.NOSEBLEED.get(), player.getX() + look.x * 0.25, player.getEyeY() - 0.15,
+            player.getZ() + look.z * 0.25, 6, 0.03, 0.02, 0.03, 0.0);
+    }
+
+    /** Keeps the CK-Mix indicator up while both are active; its own tick does the heart strain. */
+    private static void checkMix(LivingEntity entity) {
+        if (mixed(entity)) entity.addEffect(new MobEffectInstance(ModEffects.CK_MIX, 60, 0, false, false, true));
+    }
+
+    /** Heart under Koks and Keta at once: at risk from the first dose, far more with alcohol. */
+    public static void mixTick(LivingEntity entity, int level) {
+        if (entity.tickCount % 40 != 0) return;
+        int doses = amp(entity, ModEffects.COKE_HIGH) + amp(entity, ModEffects.KETA_HIGH) + 2;
+        float blood = entity instanceof Player p ? DrunkServer.state(p).blood : 0f;
+        float chance = 0.04f * doses + (blood >= Intoxication.TIPSY ? 0.08f : 0f);
+        if (entity.getRandom().nextFloat() < chance) {
+            entity.hurt(heartAttack(entity.level()), 3f + doses + (blood >= Intoxication.TIPSY ? 2f : 0f));
+        }
+        // Nosebleeds keep coming back while both are in the system.
+        if (entity instanceof Player player && player.level() instanceof ServerLevel level1
+            && player.getRandom().nextFloat() < 0.05f) {
+            nosebleed(player, level1);
+        }
+    }
+
+    private static int amp(LivingEntity entity, Holder<MobEffect> effect) {
+        MobEffectInstance instance = entity.getEffect(effect);
+        return instance == null ? -1 : instance.getAmplifier();
+    }
+
     // ---- ticks, called from the effects every 20 ticks ----
 
     public static void cokeTick(LivingEntity entity, int level) {
         if (entity instanceof Player player) player.getFoodData().setExhaustion(0f); // no appetite
+        checkMix(entity);
         if (entity.tickCount % 40 != 0) return;
         float blood = entity instanceof Player p ? DrunkServer.state(p).blood : 0f;
         // Heart attack: from a third line on, or earlier with alcohol in the blood (cocaethylene).
@@ -101,6 +150,7 @@ public final class DrugServer {
     }
 
     public static void ketaTick(LivingEntity entity, int level) {
+        checkMix(entity);
         if (!(entity instanceof Player player)) return;
         float blood = DrunkServer.state(player).blood;
         // Keta and alcohol together: the body switches off.
@@ -118,10 +168,12 @@ public final class DrugServer {
         MobEffectInstance instance = event.getEffectInstance();
         LivingEntity entity = event.getEntity();
         if (instance == null || entity.level().isClientSide) return;
+        // After a CK session everything lasts half again as long.
+        float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
         if (instance.is(ModEffects.COKE_HIGH)) {
-            entity.addEffect(new MobEffectInstance(ModEffects.COKE_CRASH, 1200 + 600 * instance.getAmplifier(), 0));
+            entity.addEffect(new MobEffectInstance(ModEffects.COKE_CRASH, (int) ((1200 + 600 * instance.getAmplifier()) * worse), 0));
         } else if (instance.is(ModEffects.KETA_HIGH) || instance.is(ModEffects.K_HOLE)) {
-            entity.addEffect(new MobEffectInstance(ModEffects.DAZED, 1200, 0));
+            entity.addEffect(new MobEffectInstance(ModEffects.DAZED, (int) (1200 * worse), 0));
         }
     }
 

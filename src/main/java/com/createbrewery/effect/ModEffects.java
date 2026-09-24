@@ -75,6 +75,9 @@ public class ModEffects {
         new DrugEffect(MobEffectCategory.HARMFUL, 0x8A8FA8, 0, null)
             .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("dazed_speed"), -0.15, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 
+    public static final DeferredHolder<MobEffect, MobEffect> CK_MIX = EFFECTS.register("ck_mix", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xC44A7A, 20, DrugServer::mixTick));
+
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);
     }

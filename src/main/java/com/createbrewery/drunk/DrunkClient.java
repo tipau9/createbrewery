@@ -132,7 +132,9 @@ public final class DrunkClient {
         gray = ease(gray, player != null && player.hasEffect(ModEffects.COKE_CRASH) ? 0.7f : 0f);
         dissoc = ease(dissoc, player == null ? 0f
             : player.hasEffect(ModEffects.K_HOLE) ? 1f
+            // Koks masks the Keta: it feels clearer than it is (the K-Loch does not care).
             : player.hasEffect(ModEffects.KETA_HIGH) ? level(player, ModEffects.KETA_HIGH, 0.4f, 0.2f, 0.85f)
+                * (player.hasEffect(ModEffects.COKE_HIGH) ? 0.6f : 1f)
             : player.hasEffect(ModEffects.DAZED) ? 0.15f : 0f);
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
@@ -179,6 +181,8 @@ public final class DrunkClient {
         MobEffectInstance coke = player.getEffect(ModEffects.COKE_HIGH);
         if (coke != null) {
             int interval = Math.max(8, 12 - 2 * coke.getAmplifier());
+            // With Keta on top the rhythm stumbles: beats come early and late.
+            if (player.hasEffect(ModEffects.CK_MIX)) interval = 6 + player.getRandom().nextInt(10);
             if (player.tickCount - lastCokeBeat >= interval) {
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.HEARTBEAT.get(), 1.25f, 0.45f));
                 lastCokeBeat = player.tickCount;
@@ -356,6 +360,13 @@ public final class DrunkClient {
             input.jumping = false;
             player.setSprinting(false);
             return;
+        }
+        if (player.hasEffect(ModEffects.CK_MIX) && noise(seconds(player, 0f) * 0.25, 31) > 0.55f) {
+            // CK: for a few seconds at a time, left and right swap places.
+            input.leftImpulse = -input.leftImpulse;
+            boolean left = input.left;
+            input.left = input.right;
+            input.right = left;
         }
         if (dissoc > 0f) {
             // Keta: the legs are somewhere far away; in the K-Loch they barely move at all.

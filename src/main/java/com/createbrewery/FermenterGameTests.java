@@ -467,7 +467,7 @@ public class FermenterGameTests {
         for (var p : java.util.List.of(com.createbrewery.particle.ModParticles.BEER_FOAM, com.createbrewery.particle.ModParticles.CHEERS_SPARK,
                 com.createbrewery.particle.ModParticles.CONFETTI, com.createbrewery.particle.ModParticles.PARTY_NOTE,
                 com.createbrewery.particle.ModParticles.VOMIT_CHUNK, com.createbrewery.particle.ModParticles.VOMIT_SPLASH,
-                com.createbrewery.particle.ModParticles.VOMIT_PUDDLE, com.createbrewery.particle.ModParticles.POWDER)) {
+                com.createbrewery.particle.ModParticles.VOMIT_PUDDLE, com.createbrewery.particle.ModParticles.POWDER, com.createbrewery.particle.ModParticles.NOSEBLEED)) {
             helper.assertTrue(p.isBound(), "particle not registered: " + p.getId());
             level.sendParticles(p.get(), pos.getX(), pos.getY(), pos.getZ(), 3, 0.1, 0.1, 0.1, 0.01);
         }
@@ -522,6 +522,21 @@ public class FermenterGameTests {
         helper.runAfterDelay(30, () -> {
             helper.assertTrue(coke.hasEffect(com.createbrewery.effect.ModEffects.COKE_CRASH), "no crash after Koks");
             helper.assertTrue(keta.hasEffect(com.createbrewery.effect.ModEffects.DAZED), "not dazed after Keta");
+            helper.succeed();
+        });
+    }
+
+    /** Koks and Keta together raise the CK-Mix, and that makes the comedown longer. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 200)
+    public static void ckMixMakesTheComedownWorse(GameTestHelper helper) {
+        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        pig.setInvulnerable(true); // the heart strain must not end the test early
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.COKE_HIGH, 45));
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.KETA_HIGH, 200));
+        helper.runAfterDelay(25, () -> helper.assertTrue(pig.hasEffect(com.createbrewery.effect.ModEffects.CK_MIX), "no CK-Mix"));
+        helper.runAfterDelay(60, () -> {
+            var crash = pig.getEffect(com.createbrewery.effect.ModEffects.COKE_CRASH);
+            helper.assertTrue(crash != null && crash.getDuration() > 1200, "comedown not longer after CK");
             helper.succeed();
         });
     }
