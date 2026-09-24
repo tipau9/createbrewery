@@ -17,6 +17,8 @@ uniform float Trail;
 uniform float Stim;    // Koks: 0..1
 uniform float Gray;    // the crash after Koks: 0..1
 uniform float Dissoc;  // Keta: 0..1, 1 = K-Loch
+uniform float High;    // Weed: 0..1
+uniform float Green;   // greening out: 0..1
 
 in vec2 texCoord;
 
@@ -57,6 +59,8 @@ void main() {
     float ang = Dissoc * 0.35 * sin(t * 0.15) * length(c) * 2.0;
     c = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * c;
     uv = 0.5 + c * (1.0 - 0.08 * Dissoc);
+    // Weed: the view breathes very slowly (about one breath every 12 s).
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.012 * High * (1.0 + sin(t * 0.5)));
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -96,6 +100,16 @@ void main() {
     col = mix(col, vec3(lum), 0.45 * Dissoc) * mix(vec3(1.0), vec3(0.85, 0.93, 1.08), Dissoc);
     float hole = clamp((Dissoc - 0.6) / 0.4, 0.0, 1.0);
     col *= 1.0 - smoothstep(0.12, 0.7, length(d)) * 0.85 * hole;
+
+    // Weed: soft, warm and rich - everything looks a bit more interesting.
+    col = mix(col, ring(uv, px * 2.0), 0.15 * High);
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(lum), col, 1.0 + 0.3 * High) * mix(vec3(1.0), vec3(1.05, 1.03, 0.92), High);
+
+    // Greening out: pale and green, the edges going dark.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.35 * Green) * mix(vec3(1.0), vec3(0.85, 1.05, 0.8), Green);
+    col *= 1.0 - smoothstep(0.25, 0.8, length(d)) * 0.45 * Green;
 
     // Too much: washed-out, sickly warm colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

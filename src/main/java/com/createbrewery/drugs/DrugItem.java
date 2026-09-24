@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
-/** A small bag of Koks or Keta: held up to the face and sniffed (see DrugServer). */
+/** A bag of Koks or Keta held up to the nose, or a joint to the mouth (see DrugServer). */
 public class DrugItem extends Item {
     private static final int COOLDOWN = 100;
     private final DrugServer.Kind kind;
@@ -26,7 +26,7 @@ public class DrugItem extends Item {
 
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
-        return 24;
+        return kind == DrugServer.Kind.WEED ? 40 : 24; // a long drag on the joint
     }
 
     @Override

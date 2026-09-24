@@ -20,6 +20,8 @@
         { "name": "Trail",     "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Stim",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Gray",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
-        { "name": "Dissoc",    "type": "float",     "count": 1,  "values": [ 0.0 ] }
+        { "name": "Dissoc",    "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "High",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Green",     "type": "float",     "count": 1,  "values": [ 0.0 ] }
     ]
 }

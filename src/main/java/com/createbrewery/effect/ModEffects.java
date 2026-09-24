@@ -75,6 +75,14 @@ public class ModEffects {
         new DrugEffect(MobEffectCategory.HARMFUL, 0x8A8FA8, 0, null)
             .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("dazed_speed"), -0.15, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 
+    public static final DeferredHolder<MobEffect, MobEffect> WEED_HIGH = EFFECTS.register("weed_high", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x6FAF4A, 20, DrugServer::weedTick)
+            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("weed_speed"), -0.05, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+
+    public static final DeferredHolder<MobEffect, MobEffect> GREENING_OUT = EFFECTS.register("greening_out", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x9CC25A, 20, DrugServer::greeningTick)
+            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("greening_speed"), -0.3, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+
     public static final DeferredHolder<MobEffect, MobEffect> CK_MIX = EFFECTS.register("ck_mix", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0xC44A7A, 20, DrugServer::mixTick));
 

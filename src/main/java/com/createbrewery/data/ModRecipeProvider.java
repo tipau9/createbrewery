@@ -217,6 +217,12 @@ public class ModRecipeProvider {
                 .requires(Items.SLIME_BALL)
                 .unlockedBy("has_amethyst_shard", has(Items.AMETHYST_SHARD))
                 .save(output, CreateBrewery.ID("keta"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.JOINT.get(), 2)
+                .requires(Items.PAPER)
+                .requires(ModItems.HOP_CONES.get())
+                .requires(Items.DRIED_KELP)
+                .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
+                .save(output, CreateBrewery.ID("joint"));
         }
     }
 }

@@ -41,5 +41,12 @@
       "createbrewery:sniff1",
       "createbrewery:sniff2"
     ]
+  },
+  "cough": {
+    "subtitle": "subtitles.createbrewery.cough",
+    "sounds": [
+      "createbrewery:cough1",
+      "createbrewery:cough2"
+    ]
   }
 }

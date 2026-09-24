@@ -32,6 +32,8 @@ public final class ModParticles {
 
     /** Drops of blood from the nose. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> NOSEBLEED = simple("nosebleed");
+    /** Exhaled smoke, drifting up and spreading. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SMOKE = simple("smoke");
     /** A puff of white powder. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POWDER = simple("powder");
 

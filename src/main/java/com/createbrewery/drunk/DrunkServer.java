@@ -82,6 +82,7 @@ public final class DrunkServer {
         float felt = s.felt();
         if (entity.hasEffect(ModEffects.COKE_HIGH)) felt *= 0.75f;
         if (entity.hasEffect(ModEffects.KETA_HIGH) || entity.hasEffect(ModEffects.K_HOLE)) felt *= 1.3f;
+        if (entity.hasEffect(ModEffects.WEED_HIGH)) felt *= 1.2f; // crossfaded: both hit harder
         return felt;
     }
 

@@ -19,6 +19,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.CalculatePlayerTurnEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
@@ -57,7 +58,9 @@ public final class DrunkClient {
     /** Blood level eased towards the synced value, so water, vomiting or sleep fade instead of snap. */
     private static float blood;
     /** Koks, the crash after it, and Keta, eased like the blood level (0..1 each). */
-    private static float stim, gray, dissoc;
+    private static float stim, gray, dissoc, high, green;
+    /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
+    private static int nextFootstep = 400;
     private static int lastCokeBeat;
     /** Aim offset already applied to the player; drift is applied as the change of this each frame. */
     private static float appliedYaw, appliedPitch;
@@ -135,11 +138,16 @@ public final class DrunkClient {
             // Koks masks the Keta: it feels clearer than it is (the K-Loch does not care).
             : player.hasEffect(ModEffects.KETA_HIGH) ? level(player, ModEffects.KETA_HIGH, 0.4f, 0.2f, 0.85f)
                 * (player.hasEffect(ModEffects.COKE_HIGH) ? 0.6f : 1f)
-            : player.hasEffect(ModEffects.DAZED) ? 0.15f : 0f);
+            : player.hasEffect(ModEffects.DAZED) ? 0.15f : 0f)
+            // Weed deepens the dissociation.
+            * (player != null && player.hasEffect(ModEffects.WEED_HIGH) ? 1.3f : 1f);
+        dissoc = Math.min(1f, dissoc);
+        high = ease(high, player == null ? 0f : level(player, ModEffects.WEED_HIGH, 0.5f, 0.2f, 1f));
+        green = ease(green, player != null && player.hasEffect(ModEffects.GREENING_OUT) ? 1f : 0f);
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
-                || stim > 0.01f || gray > 0.01f || dissoc > 0.01f);
+                || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -177,6 +185,18 @@ public final class DrunkClient {
     }
 
     private static void bodySounds(Minecraft mc, LocalPlayer player) {
+        // Paranoia: from the second joint, or weed with Koks, footsteps behind you - nobody is there.
+        MobEffectInstance weed = player.getEffect(ModEffects.WEED_HIGH);
+        boolean paranoid = weed != null && (weed.getAmplifier() >= 1 || player.hasEffect(ModEffects.COKE_HIGH));
+        if (paranoid && player.tickCount >= nextFootstep) {
+            Vec3 behind = player.position().subtract(player.getLookAngle().multiply(3.0, 0.0, 3.0));
+            mc.getSoundManager().play(new SimpleSoundInstance(net.minecraft.sounds.SoundEvents.GRAVEL_STEP,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 0.9f + player.getRandom().nextFloat() * 0.2f,
+                player.getRandom(), behind.x, behind.y, behind.z));
+            nextFootstep = player.tickCount + 300 + player.getRandom().nextInt(500);
+        } else if (!paranoid) {
+            nextFootstep = player.tickCount + 300;
+        }
         // Koks: the heart races - twice a second, faster with every line.
         MobEffectInstance coke = player.getEffect(ModEffects.COKE_HIGH);
         if (coke != null) {
@@ -234,6 +254,8 @@ public final class DrunkClient {
             chain.setUniform("Stim", stim * screen());
             chain.setUniform("Gray", gray * screen());
             chain.setUniform("Dissoc", dissoc * screen());
+            chain.setUniform("High", high * screen());
+            chain.setUniform("Green", green * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -256,6 +278,7 @@ public final class DrunkClient {
 
     /** 0..1 how far the body is doubled over right now; 0 when not throwing up. */
     private static float retch(LocalPlayer player, float partial) {
+        if (player == null) return 0f;
         MobEffectInstance vomiting = player.getEffect(ModEffects.VOMITING);
         if (vomiting == null) return 0f;
         float d = Math.max(0f, vomiting.getDuration() - partial);
@@ -316,19 +339,21 @@ public final class DrunkClient {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || blood <= 0f) return;
+        if (player == null || (blood <= 0f && green <= 0f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
         // The whole body sways while retching - slowly, about twice a second, never a fast shake.
         roll += (float) Math.sin(t * 14.0) * 2f * retch(player, (float) event.getPartialTick());
+        // Greening out: the head swims in slow circles.
+        roll += noise(t * 0.3, 41) * 6f * green;
         event.setRoll(event.getRoll() + roll * screen());
     }
 
     private static void onFov(ComputeFovModifierEvent event) {
         if (event.getPlayer() != Minecraft.getInstance().player) return;
         // Keta pushes the world away (wider view), Koks narrows the focus.
-        float drugs = 1f + (0.12f * dissoc - 0.04f * stim) * screen();
+        float drugs = 1f + (0.12f * dissoc - 0.04f * stim + 0.03f * high) * screen();
         if (drugs != 1f) event.setNewFovModifier(event.getNewFovModifier() * drugs);
         if (blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.
@@ -368,6 +393,11 @@ public final class DrunkClient {
             input.left = input.right;
             input.right = left;
         }
+        if (green > 0f) {
+            // Greening out: the legs are jelly.
+            input.forwardImpulse *= 1f - 0.4f * green;
+            input.leftImpulse *= 1f - 0.4f * green;
+        }
         if (dissoc > 0f) {
             // Keta: the legs are somewhere far away; in the K-Loch they barely move at all.
             float slow = 1f - 0.5f * dissoc - (player.hasEffect(ModEffects.K_HOLE) ? 0.35f : 0f);
@@ -401,6 +431,9 @@ public final class DrunkClient {
         }
         // Koks makes the hands twitchy, Keta makes them distant and slow.
         if (stim > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f + 0.25f * stim));
+        // Weed slows time down; greening out makes the head spin and the hands limp.
+        if (high > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.15f * high));
+        if (green > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.3f * green));
         if (dissoc > 0f) {
             event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.6f * dissoc));
             if (dissoc > 0.5f) event.setCinematicCameraEnabled(true);

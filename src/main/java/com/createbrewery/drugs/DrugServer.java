@@ -42,6 +42,12 @@ import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
  * strained even at small doses and beats irregularly; Koks masks the dissociation, so it feels
  * clearer than it is and the next dose comes sooner; orientation flips (left and right swap for
  * moments); two powders up the same nose make it bleed; and the comedown is longer and harder.
+ *
+ * <p>Weed (smoked): relaxed, colours richer, time slower, the munchies. Too much, or on top of
+ * alcohol, and the circulation gives up ("greening out"): dizzy, green, throwing up - unpleasant
+ * but never deadly on its own. Mixed: with alcohol both hit harder; with Koks the heart works a
+ * little harder and paranoia creeps in; with Keta the dissociation deepens and the K-Loch comes
+ * a dose sooner. Ibu and weed do not interact.
  */
 public final class DrugServer {
     private DrugServer() {}
@@ -57,7 +63,10 @@ public final class DrugServer {
     private static final ResourceKey<DamageType> NOSEBLEED = ResourceKey.create(Registries.DAMAGE_TYPE,
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "nosebleed"));
 
-    public enum Kind { COKE, KETA }
+    public static final int WEED_TICKS = 4800;
+    public static final int GREENING_TICKS = 500;
+
+    public enum Kind { COKE, KETA, WEED }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
@@ -74,15 +83,31 @@ public final class DrugServer {
         return !Config.SPEC.isLoaded() || Config.ENABLE_DRUGS.get();
     }
 
-    /** A line goes up the nose. Stacks with what is still active. */
+    /** A line goes up the nose, or a joint is smoked. Stacks with what is still active. */
     public static void take(Player player, Kind kind) {
-        Holder<MobEffect> high = kind == Kind.COKE ? ModEffects.COKE_HIGH : ModEffects.KETA_HIGH;
+        Holder<MobEffect> high = switch (kind) {
+            case COKE -> ModEffects.COKE_HIGH;
+            case KETA -> ModEffects.KETA_HIGH;
+            case WEED -> ModEffects.WEED_HIGH;
+        };
+        int ticks = switch (kind) {
+            case COKE -> COKE_TICKS;
+            case KETA -> KETA_TICKS;
+            case WEED -> WEED_TICKS;
+        };
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(high, kind == Kind.COKE ? COKE_TICKS : KETA_TICKS, level, false, false, true));
+        player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
         if (kind == Kind.COKE) player.removeEffect(ModEffects.COKE_CRASH); // a new line pushes the crash back
-        if (kind == Kind.KETA && level >= 2) player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, 0, false, false, true));
+        // Keta: the K-Loch from the third dose - or the second, with weed deepening it.
+        int holeAt = player.hasEffect(ModEffects.WEED_HIGH) ? 1 : 2;
+        if (kind == Kind.KETA && level >= holeAt) player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, 0, false, false, true));
+        if (kind == Kind.WEED && level >= 2) greenOut(player);
 
+        if (kind == Kind.WEED) {
+            smoke(player);
+            return;
+        }
         if (player.level() instanceof ServerLevel level1) {
             // The other powder is still in there: the nose gives up now and then.
             if (mixed(player) && player.getRandom().nextFloat() < 0.35f) nosebleed(player, level1);
@@ -91,6 +116,29 @@ public final class DrugServer {
                 player.getZ() + look.z * 0.3, 8, 0.06, 0.04, 0.06, 0.01);
             level1.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.SNIFF.get(),
                 SoundSource.PLAYERS, 1.0f, 0.9f + player.getRandom().nextFloat() * 0.2f);
+        }
+    }
+
+    /** Exhaling: a cloud others can see, and now and then a coughing fit. */
+    private static void smoke(Player player) {
+        if (!(player.level() instanceof ServerLevel level)) return;
+        Vec3 look = player.getLookAngle();
+        for (int i = 0; i < 10; i++) {
+            double speed = 0.04 + player.getRandom().nextDouble() * 0.04;
+            level.sendParticles(ModParticles.SMOKE.get(), player.getX() + look.x * 0.35, player.getEyeY() - 0.1,
+                player.getZ() + look.z * 0.35, 0, look.x + (player.getRandom().nextDouble() - 0.5) * 0.4,
+                0.25, look.z + (player.getRandom().nextDouble() - 0.5) * 0.4, speed);
+        }
+        if (player.getRandom().nextFloat() < 0.4f) {
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.COUGH.get(),
+                SoundSource.PLAYERS, 1.0f, 0.9f + player.getRandom().nextFloat() * 0.2f);
+        }
+    }
+
+    /** Greening out: the circulation gives up for a while. */
+    public static void greenOut(Player player) {
+        if (!player.hasEffect(ModEffects.GREENING_OUT)) {
+            player.addEffect(new MobEffectInstance(ModEffects.GREENING_OUT, GREENING_TICKS, 0, false, false, true));
         }
     }
 
@@ -139,6 +187,7 @@ public final class DrugServer {
         if (level >= 2) chance = 0.12f + 0.08f * (level - 2);
         if (blood >= Intoxication.TIPSY && level >= 1) chance += 0.08f;
         if (blood >= Intoxication.DRUNK) chance += 0.1f;
+        if (entity.hasEffect(ModEffects.WEED_HIGH) && level >= 1) chance += 0.04f; // both raise the pulse
         if (chance > 0f && entity.getRandom().nextFloat() < chance) {
             float damage = 4f + level * 2f + (blood >= Intoxication.TIPSY ? 3f : 0f);
             entity.hurt(heartAttack(entity.level()), damage);
@@ -158,6 +207,29 @@ public final class DrugServer {
             DrunkServer.blackout(player);
         }
         if (blood >= Intoxication.TIPSY && player.getRandom().nextFloat() < 0.015f) DrunkServer.vomit(player);
+    }
+
+    /** Weed, every 20 ticks: the munchies, and alcohol tipping the circulation over. */
+    public static void weedTick(LivingEntity entity, int level) {
+        if (!(entity instanceof Player player)) return;
+        player.causeFoodExhaustion(0.15f); // the munchies
+        float blood = DrunkServer.state(player).blood;
+        if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < 0.03f + 0.02f * level) greenOut(player);
+    }
+
+    /** Greening out, every 20 ticks: queasy, and it may all come back up. */
+    public static void greeningTick(LivingEntity entity, int level) {
+        if (entity instanceof Player player && player.getRandom().nextFloat() < 0.04f) DrunkServer.vomit(player);
+    }
+
+    /** The munchies: food tastes twice as good and fills more. */
+    @SubscribeEvent
+    public static void onFinishEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
+        if (event.getEntity() instanceof Player player && !player.level().isClientSide
+            && player.hasEffect(ModEffects.WEED_HIGH)
+            && event.getItem().getFoodProperties(player) != null) {
+            player.getFoodData().eat(2, 0.3f);
+        }
     }
 
     // ---- events ----
