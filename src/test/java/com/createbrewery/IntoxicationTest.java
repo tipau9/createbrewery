@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class IntoxicationTest {
 
     @Test
-    void oneBeerIsFullyAbsorbedAfter400Ticks() {
+    void oneBeerIsFullyAbsorbedWithinFifteenSeconds() {
         float stomach = Intoxication.PER_BEER, blood = 0f;
-        for (int i = 0; i < 400; i++) {
+        for (int i = 0; i < 300; i++) {
             float a = Intoxication.absorbed(stomach);
             stomach -= a;
             blood += a;
@@ -49,7 +49,8 @@ class IntoxicationTest {
             assertTrue(bac >= thresholds[beer - 1], "beer " + beer + " should reach threshold " + thresholds[beer - 1]);
             assertTrue((beer - 1) * Intoxication.PER_BEER < thresholds[beer - 1], "beer " + (beer - 1) + " should stay below it");
         }
-        assertTrue(6 * Intoxication.PER_BEER >= Intoxication.MAX_DRINKABLE, "the 7th beer must be refused");
+        assertTrue(7 * Intoxication.PER_BEER >= Intoxication.POISONING, "the 7th beer poisons");
+        assertTrue(6 * Intoxication.PER_BEER < Intoxication.POISONING, "six beers do not");
     }
 
     @Test
@@ -64,6 +65,18 @@ class IntoxicationTest {
             assertTrue(v >= prev);
             prev = v;
         }
+    }
+
+    @Test
+    void firstBeersAreAlreadyFelt() {
+        assertTrue(Intoxication.visualIntensity(2 * Intoxication.PER_BEER) > 0.45f);
+    }
+
+    @Test
+    void poisoningHurtsMoreTheHigherItGoes() {
+        assertEquals(0f, Intoxication.poisonDamage(3.0f));
+        assertTrue(Intoxication.poisonDamage(Intoxication.POISONING) >= 1f);
+        assertTrue(Intoxication.poisonDamage(4.0f) > Intoxication.poisonDamage(3.5f));
     }
 
     @Test

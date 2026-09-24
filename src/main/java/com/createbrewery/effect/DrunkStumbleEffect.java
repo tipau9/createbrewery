@@ -1,6 +1,5 @@
 package com.createbrewery.effect;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffect;
@@ -35,8 +34,6 @@ public class DrunkStumbleEffect extends MobEffect {
             if (amplifier >= 1) player.hurt(player.damageSources().fall(), 1.0f);
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.PLAYER_BIG_FALL, SoundSource.PLAYERS, 1.2f, 0.8f);
-            player.displayClientMessage(Component.literal(
-                "§c§l*PATSCH!* §6Über die eigenen Beine gestolpert!"), true);
         } else if (roll < 0.04f + amplifier * 0.03f) {
             // The legs forget which way is down for a moment: a sideways stagger.
             double side = Math.toRadians(player.getYRot() + (player.getRandom().nextBoolean() ? 90.0 : -90.0));

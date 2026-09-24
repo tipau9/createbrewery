@@ -6,6 +6,7 @@ import com.createbrewery.effect.ModEffects;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
@@ -15,9 +16,11 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.neoforged.neoforge.client.event.CalculatePlayerTurnEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
@@ -60,6 +63,8 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onPlayerTurn);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onGuiPre);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onGuiPost);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onInteract);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenOpening);
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -75,9 +80,13 @@ public final class DrunkClient {
         return (float) (Math.sin(t + s) * 0.5 + Math.sin(t * 2.31 + s * 1.7) * 0.3 + Math.sin(t * 4.13 + s * 2.9) * 0.2);
     }
 
-    /** 0 below {@code from}, rising to 1 at the blackout zone. */
     private static float ramp(float from) {
-        return Math.max(0f, Math.min(1f, (blood - from) / (Intoxication.BLACKOUT - from)));
+        return Intoxication.ramp(blood, from);
+    }
+
+    private static boolean blackedOut() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player != null && player.hasEffect(ModEffects.BLACKOUT);
     }
 
     private static double seconds(LocalPlayer player, float partial) {
@@ -167,11 +176,15 @@ public final class DrunkClient {
         if (!(event.getEntity() instanceof LocalPlayer player)) return;
         Input input = event.getInput();
         if (player.hasEffect(ModEffects.BLACKOUT)) {
-            // Filmriss: the body is not taking orders.
-            input.forwardImpulse = 0f;
-            input.leftImpulse = 0f;
-            input.up = input.down = input.left = input.right = false;
-            input.jumping = false;
+            // Filmriss: the body walks on by itself, weaving, and nobody is steering. Other
+            // players see it stagger off; the player sees nothing (see onGuiPost).
+            input.up = true;
+            input.down = input.left = input.right = false;
+            input.shiftKeyDown = false;
+            input.forwardImpulse = 1f;
+            input.leftImpulse = noise(seconds(player, 0f) * 0.7, 9) * 0.6f;
+            input.jumping = player.horizontalCollision && player.onGround();
+            player.setSprinting(false);
             return;
         }
         if (blood < Intoxication.MERRY) return;
@@ -192,10 +205,29 @@ public final class DrunkClient {
     }
 
     private static void onPlayerTurn(CalculatePlayerTurnEvent event) {
+        if (blackedOut()) {
+            // The mouse does nothing: MouseHandler turns by (s * 0.6 + 0.2)^3, which is 0 here.
+            event.setMouseSensitivity(-0.20000000298023224 / 0.6000000238418579);
+            event.setCinematicCameraEnabled(false);
+            return;
+        }
         if (blood < Intoxication.MERRY) return;
         // Hands lag behind the head: duller mouse, and from beer four the view drags after it.
         event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.4f * ramp(Intoxication.MERRY)));
         if (blood >= Intoxication.WASTED) event.setCinematicCameraEnabled(true);
+    }
+
+    /** No attacking, using or placing while passed out. */
+    private static void onInteract(InputEvent.InteractionKeyMappingTriggered event) {
+        if (blackedOut()) {
+            event.setCanceled(true);
+            event.setSwingHand(false);
+        }
+    }
+
+    /** No rummaging through inventories or chests while passed out; pause and chat still work. */
+    private static void onScreenOpening(ScreenEvent.Opening event) {
+        if (blackedOut() && event.getNewScreen() instanceof AbstractContainerScreen<?>) event.setCanceled(true);
     }
 
     // ---- overlays ----
@@ -246,7 +278,7 @@ public final class DrunkClient {
         if (player == null) return;
         MobEffectInstance blackout = player.getEffect(ModEffects.BLACKOUT);
         if (blackout == null) return;
-        // Filmriss: everything goes black, then the world slowly fades back in.
+        // Filmriss: pitch black, the world only fades back in during the last second and a half.
         float alpha = Math.min(1f, blackout.getDuration() / 30f);
         GuiGraphics g = event.getGuiGraphics();
         g.fill(0, 0, g.guiWidth(), g.guiHeight(), (int) (alpha * 255) << 24);

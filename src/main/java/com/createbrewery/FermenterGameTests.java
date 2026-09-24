@@ -432,4 +432,14 @@ public class FermenterGameTests {
             })
             .thenSucceed();
     }
+
+    /** The alcohol-poisoning damage type is registered and actually hurts. */
+    @GameTest(template = TEMPLATE)
+    public static void alcoholPoisoningDealsDamage(GameTestHelper helper) {
+        net.minecraft.world.entity.animal.Pig pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        float before = pig.getHealth();
+        pig.hurt(com.createbrewery.drunk.DrunkServer.poisonSource(helper.getLevel()), 2f);
+        helper.assertTrue(pig.getHealth() < before, "poisoning did not hurt");
+        helper.succeed();
+    }
 }

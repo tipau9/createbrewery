@@ -1,9 +1,15 @@
 package com.createbrewery.drunk;
 
+import com.createbrewery.CreateBrewery;
 import com.createbrewery.ModItems;
 import com.createbrewery.effect.ModEffects;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +20,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
@@ -31,18 +38,21 @@ public final class DrunkServer {
 
     /** Symptom indicator effects are refreshed every second and expire 5 s after the cause stops. */
     private static final int INDICATOR_TICKS = 100;
-    private static final int BLACKOUT_TICKS = 120;
+    /** Long enough to wake up somewhere else: the body keeps walking while the screen is black. */
+    private static final int BLACKOUT_TICKS = 240;
+    private static final ResourceKey<DamageType> POISON_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "alcohol_poisoning"));
+
+    /** Damage from alcohol poisoning: ignores armour, no knockback, own death message. */
+    public static DamageSource poisonSource(Level level) {
+        return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(POISON_DAMAGE));
+    }
 
     public static DrunkState state(Player player) {
         return player.getData(ModAttachments.DRUNK);
     }
 
-    /** Whether another drink would go down. Safe on both sides: the state is synced. */
-    public static boolean canDrink(Player player) {
-        return state(player).total() < Intoxication.MAX_DRINKABLE;
-    }
-
-    /** A beer lands in the stomach; the blood follows over the next ~20 seconds. */
+    /** A beer lands in the stomach; the blood follows over the next ~10 seconds. */
     public static void drink(Player player, float perMille) {
         DrunkState s = state(player);
         s.stomach += perMille;
@@ -84,15 +94,8 @@ public final class DrunkServer {
         s.stomach = 0f;
         player.removeEffect(ModEffects.INEBRIATION);
         int hangover = Intoxication.hangoverTicks(s.peak);
-        boolean wasDrunk = s.peak > 0f;
         s.peak = 0f;
-        if (hangover > 0) {
-            player.addEffect(new MobEffectInstance(ModEffects.HANGOVER, hangover, 0));
-            player.displayClientMessage(Component.literal(
-                "§6Der Rausch ist weg... §cund jetzt kommt der Kater."), true);
-        } else if (wasDrunk) {
-            player.displayClientMessage(Component.literal("§aDu bist wieder nüchtern."), true);
-        }
+        if (hangover > 0) player.addEffect(new MobEffectInstance(ModEffects.HANGOVER, hangover, 0));
         sync(player, s);
     }
 
@@ -109,7 +112,17 @@ public final class DrunkServer {
                 bac >= Intoxication.WASTED ? 1 : 0, false, false, true));
         }
 
-        if (bac >= Intoxication.WASTED && random.nextFloat() < (bac >= Intoxication.SMASHED ? 0.012f : 0.006f)) {
+        // Alkoholvergiftung: the body is being poisoned and takes damage until the level drops.
+        boolean poisoned = bac >= Intoxication.POISONING;
+        if (poisoned) {
+            refresh(player, ModEffects.POISONING, 0);
+            if (player.tickCount % Intoxication.POISON_INTERVAL == 0) {
+                player.hurt(poisonSource(player.level()), Intoxication.poisonDamage(bac));
+            }
+        }
+
+        float vomitChance = poisoned ? 0.03f : bac >= Intoxication.SMASHED ? 0.012f : 0.006f;
+        if (bac >= Intoxication.WASTED && random.nextFloat() < vomitChance) {
             vomit(player, s);
         }
 
@@ -140,8 +153,6 @@ public final class DrunkServer {
             SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 1.3f, 0.45f);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
             SoundEvents.HONEY_BLOCK_SLIDE, SoundSource.PLAYERS, 1.0f, 0.6f);
-        player.displayClientMessage(Component.literal(
-            "§2§l*BÖÖÖRGH!* §aDas war zu viel. Wenigstens ist der Magen jetzt leer..."), true);
     }
 
     @SubscribeEvent

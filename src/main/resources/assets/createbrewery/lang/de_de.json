@@ -9,6 +9,8 @@
   "createbrewery.jei.fermenting.days_decimal": "%s Tage",
   "createbrewery.jei.fermenting.one_day": "1 Tag",
   "createbrewery.recipe.fermenting": "Gärung",
+  "death.attack.createbrewery.alcohol_poisoning": "%1$s hat sich zu Tode gesoffen",
+  "effect.createbrewery.alcohol_poisoning": "Alkoholvergiftung",
   "effect.createbrewery.blackout": "Filmriss",
   "effect.createbrewery.delirium": "Größenwahn",
   "effect.createbrewery.hangover": "Kater des Todes",

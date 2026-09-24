@@ -29,6 +29,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.stumble", "Schlingerkurs");
         REGISTRATE.addRawLang("effect.createbrewery.delirium", "Größenwahn");
         REGISTRATE.addRawLang("effect.createbrewery.blackout", "Filmriss");
+        REGISTRATE.addRawLang("effect.createbrewery.alcohol_poisoning", "Alkoholvergiftung");
+        REGISTRATE.addRawLang("death.attack.createbrewery.alcohol_poisoning", "%1$s hat sich zu Tode gesoffen");
         // Hand-written strings with no registry object of their own to hang a .lang() call
         // off of. addRawLang feeds the same RegistrateLangProvider as every other entry, so
         // this stays in the one generated en_us.json rather than a hand file that would

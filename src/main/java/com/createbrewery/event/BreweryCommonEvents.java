@@ -22,7 +22,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 
-import java.util.Locale;
 
 public class BreweryCommonEvents {
 
@@ -104,20 +103,6 @@ public class BreweryCommonEvents {
 
                         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 1.1f);
-
-                        if (drunk) {
-                            player.displayClientMessage(Component.literal(String.format(Locale.GERMAN,
-                                "\u00a7b\u00a7lEin Schluck Wasser... \u00a77Dein Kopf wird etwas klarer (~%.1f \u2030).",
-                                state.total())), true);
-                        } else if (!player.hasEffect(ModEffects.HANGOVER)) {
-                            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                                SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8f, 1.8f);
-                            player.displayClientMessage(Component.literal(
-                                "\u00a7a\u00a7lKater \u00fcberstanden! \u00a72Endlich wieder ein klarer Kopf."), true);
-                        } else {
-                            player.displayClientMessage(Component.literal(
-                                "\u00a7b\u00a7lWasser... \u00a77Der Kater l\u00e4sst ein bisschen nach."), true);
-                        }
                     }
                 }
             }

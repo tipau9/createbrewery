@@ -1,7 +1,6 @@
 package com.createbrewery.effect;
 
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -52,7 +51,6 @@ public class HiccupsEffect extends MobEffect {
                 serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
                     player.getX(), player.getEyeY(), player.getZ(), 10, 0.2, 0.2, 0.2, 0.05);
             }
-            player.displayClientMessage(Component.literal("§a§l*HIIICK!*"), true);
         }
         return true;
     }

@@ -12,14 +12,14 @@ package com.createbrewery.drunk;
 public final class Intoxication {
     private Intoxication() {}
 
-    /** One beer. Six beers reach the blackout zone, seven are refused. */
+    /** One beer. Six beers reach the blackout zone, the seventh poisons you. */
     public static final float PER_BEER = 0.5f;
-    /** ‰ moved from stomach to blood per tick: one beer is fully absorbed after 400 ticks. */
-    public static final float ABSORB_PER_TICK = PER_BEER / 400f;
+    /** Absorption: a fixed share of the stomach per tick, but never slower than {@link #ABSORB_MIN_PER_TICK}. */
+    public static final float ABSORB_SHARE_PER_TICK = 1f / 120f;
+    /** Floor so the last sip does not trickle in forever. One beer is in the blood after ~10 s. */
+    public static final float ABSORB_MIN_PER_TICK = 0.002f;
     /** ‰ removed from the blood per tick: 0.1‰ per 600 ticks (30 s). */
     public static final float ELIMINATE_PER_TICK = 0.1f / 600f;
-    /** Above this total (blood + stomach) the player cannot get another drop down. */
-    public static final float MAX_DRINKABLE = 3.0f;
 
     // Symptom thresholds, in ‰. Each beer (0.5‰) crosses roughly one of them.
     public static final float TIPSY = 0.3f;        // beer 1: sway, warm vision
@@ -28,13 +28,14 @@ public final class Intoxication {
     public static final float WASTED = 1.8f;       // beer 4: sluggish mouse, tripping, vomiting
     public static final float SMASHED = 2.4f;      // beer 5: micro-sleep
     public static final float BLACKOUT = 2.9f;     // beer 6: blackouts
+    public static final float POISONING = 3.3f;     // beer 7: alcohol poisoning, damage over time
     /** A peak at or above this earns a hangover once the player sobers up or sleeps. */
     public static final float HANGOVER_PEAK = 1.3f;
 
     /** How much of the stomach content reaches the blood this tick. */
     public static float absorbed(float stomach) {
         if (stomach <= 0f) return 0f;
-        return Math.min(stomach, ABSORB_PER_TICK);
+        return Math.min(stomach, Math.max(stomach * ABSORB_SHARE_PER_TICK, ABSORB_MIN_PER_TICK));
     }
 
     /** Blood level after one tick of elimination; never negative. */
@@ -49,11 +50,27 @@ public final class Intoxication {
         return (int) Math.ceil(total / ELIMINATE_PER_TICK);
     }
 
-    /** 0..1 strength of the visual effects: nothing below a light buzz, full at the blackout zone. */
+    /**
+     * 0..1 strength of the visual effects: nothing below a light buzz, full at the blackout zone.
+     * Square-root curve, so the first beers are already clearly felt.
+     */
     public static float visualIntensity(float blood) {
-        float t = (blood - TIPSY) / (BLACKOUT - TIPSY);
-        return Math.max(0f, Math.min(1f, t));
+        return ramp(blood, TIPSY);
     }
+
+    /** 0 below {@code from}, rising steeply at first and reaching 1 at the blackout zone. */
+    public static float ramp(float blood, float from) {
+        float t = (blood - from) / (BLACKOUT - from);
+        return (float) Math.sqrt(Math.max(0f, Math.min(1f, t)));
+    }
+
+    /** Health lost every {@link #POISON_INTERVAL} ticks; 0 below the poisoning threshold. */
+    public static float poisonDamage(float blood) {
+        if (blood < POISONING) return 0f;
+        return 1f + (blood - POISONING) * 2f;
+    }
+
+    public static final int POISON_INTERVAL = 100;
 
     /** 0 = speaks normally, 1..3 = increasingly slurred chat. */
     public static int slurStage(float blood) {

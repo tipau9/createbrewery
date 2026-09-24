@@ -29,6 +29,9 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, BlackoutEffect> BLACKOUT =
         EFFECTS.register("blackout", BlackoutEffect::new);
 
+    public static final DeferredHolder<MobEffect, AlcoholPoisoningEffect> POISONING =
+        EFFECTS.register("alcohol_poisoning", AlcoholPoisoningEffect::new);
+
     public static void register(IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
     }
