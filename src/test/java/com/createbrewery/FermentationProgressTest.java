@@ -46,4 +46,31 @@ class FermentationProgressTest {
         assertFalse(Float.isNaN(FermentationProgress.progress(0L, 0L, 0)));
         assertFalse(Float.isNaN(FermentationProgress.progress(-1L, -1L, DAY)));
     }
+
+    // Config-sync bug: FERMENTATION_DURATION_MULTIPLIER is a COMMON config, which NeoForge
+    // never syncs to clients, so a client recomputing the scaled duration from its own config
+    // can disagree with the server. resolveScaledDuration is the pure decision of which value
+    // wins; the actual network round trip needs a real client and can't run in a GameTest
+    // (GameTestServer has no ClientLevel, so level.isClientSide is never true there) - that
+    // part is deferred to manual verification, noted in the task report.
+
+    @Test
+    void serverAlwaysUsesItsOwnComputation() {
+        // Even if some synced value is present, the server is authoritative and ignores it.
+        assertEquals(10000, FermentationProgress.resolveScaledDuration(false, 5000, 10000));
+        assertEquals(10000, FermentationProgress.resolveScaledDuration(false, FermentationProgress.NO_SYNCED_DURATION, 10000));
+    }
+
+    @Test
+    void clientPrefersSyncedValueOverItsOwnConfigMismatch() {
+        // The exact bug: client's local multiplier disagrees with the server's (locallyComputed
+        // stands in for "what the client would compute from its own, unsynced config").
+        assertEquals(5000, FermentationProgress.resolveScaledDuration(true, 5000, 10000));
+    }
+
+    @Test
+    void clientFallsBackBeforeFirstSync() {
+        assertEquals(10000,
+            FermentationProgress.resolveScaledDuration(true, FermentationProgress.NO_SYNCED_DURATION, 10000));
+    }
 }

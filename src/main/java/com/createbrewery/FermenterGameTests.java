@@ -383,4 +383,53 @@ public class FermenterGameTests {
             "planting did not consume a seed");
         helper.succeed();
     }
+
+    /**
+     * addToGoggleTooltip/containedFluidTooltip cannot be exercised in a GameTest at all: they
+     * are client-only despite living on a plain interface with no visible @OnlyIn marker.
+     * Empirically confirmed - calling addToGoggleTooltip here crashed the whole GameTestServer
+     * (not just failed the test), with the real cause several frames down:
+     *
+     *   net.createmod.catnip.lang.LangBuilder.forGoggles(LangBuilder.java:179)
+     *   -> attempted to load net.minecraft.client.Minecraft for invalid dist DEDICATED_SERVER
+     *
+     * So the goggle tooltip override is verified by reading the code and by the manual checks
+     * in the task report; it cannot be pinned by an automated test in this project without a
+     * real client, which the task explicitly forbids running (runClient hangs the agent).
+     */
+
+    /**
+     * Config-sync fix: FERMENTATION_DURATION_MULTIPLIER is a COMMON config, never synced to
+     * clients, so getProgress() on the client must not recompute it locally. This proves the
+     * write side of the fix - that the server actually puts ScaledDuration into the same tag
+     * BlockEntity#getUpdateTag sends to clients (getUpdateTag -> writeClient -> write(...,
+     * clientPacket=true), confirmed by decompiling SmartBlockEntity/SyncedBlockEntity.
+     *
+     * What this cannot prove in a GameTest: a GameTestServer has no ClientLevel, so
+     * level.isClientSide is never true here, and the read-side preference in
+     * FermenterBlockEntity#scaledDuration (see FermentationProgress#resolveScaledDuration,
+     * unit-tested headlessly) is untested end-to-end. That needs a real client, noted in the
+     * task report as a manual check.
+     */
+    @GameTest(template = TEMPLATE)
+    public static void syncTagCarriesServerScaledDuration(GameTestHelper helper) {
+        FermenterBlockEntity be = loadedFermenter(helper);
+
+        CompoundTag idleTag = be.getUpdateTag(helper.getLevel().registryAccess());
+        helper.assertTrue(!idleTag.contains("ScaledDuration"),
+            "an idle fermenter must not put a scaled duration in the sync tag");
+
+        helper.startSequence()
+            .thenIdle(2)
+            .thenExecute(() -> {
+                assertStarted(helper, be);
+                CompoundTag tag = be.getUpdateTag(helper.getLevel().registryAccess());
+                helper.assertTrue(tag.contains("ScaledDuration"),
+                    "the sync tag did not carry ScaledDuration while a batch is active");
+                helper.assertTrue(tag.getInt("ScaledDuration") == 24000,
+                    "expected the recipe's own 24000-tick duration at the default 1.0 multiplier, got "
+                        + tag.getInt("ScaledDuration"));
+            })
+            .thenSucceed();
+    }
 }

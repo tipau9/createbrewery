@@ -23,4 +23,21 @@ public final class FermentationProgress {
 
         return (float) elapsed / (float) duration;
     }
+
+    /** Sentinel meaning "no synced duration has been received yet". */
+    public static final int NO_SYNCED_DURATION = -1;
+
+    /**
+     * Chooses which scaled duration a block entity should treat as authoritative.
+     *
+     * Common configs are never synced to clients by NeoForge (only server-controlled ones
+     * are), so a client that recomputes the scaled duration from its own copy of the config
+     * can disagree with the server whenever the fermentation duration multiplier isn't 1.0.
+     * Once the server has sent a synced value, the client must prefer it over anything it
+     * would compute locally; the server always uses its own live computation.
+     */
+    public static int resolveScaledDuration(boolean clientSide, int syncedDuration, int locallyComputed) {
+        if (clientSide && syncedDuration != NO_SYNCED_DURATION) return syncedDuration;
+        return locallyComputed;
+    }
 }

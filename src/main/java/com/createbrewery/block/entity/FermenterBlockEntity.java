@@ -8,10 +8,13 @@ import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.simibubi.create.foundation.fluid.CombinedTankWrapper;
 import com.simibubi.create.foundation.item.ItemHelper;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -51,6 +54,15 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
 
     private long startedAt = NOT_STARTED;
     private ResourceLocation activeRecipeId = null;
+
+    /**
+     * The scaled duration the server actually used, as last received over the sync packet.
+     * FERMENTATION_DURATION_MULTIPLIER is a COMMON config, which NeoForge does not sync to
+     * clients, so the client's own copy can silently disagree with the server's. The goggle
+     * overlay runs client-side, so without this it would show a progress bar and countdown
+     * computed from the wrong multiplier whenever a server sets one other than 1.0.
+     */
+    private int clientScaledDuration = FermentationProgress.NO_SYNCED_DURATION;
 
     public FermenterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -104,13 +116,43 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
 
     public int scaledDuration(FermentingRecipe recipe) {
         double scaled = recipe.getProcessingDuration() * Config.FERMENTATION_DURATION_MULTIPLIER.get();
-        return (int) Math.max(1, Math.min(Integer.MAX_VALUE, scaled));
+        int locallyComputed = (int) Math.max(1, Math.min(Integer.MAX_VALUE, scaled));
+        boolean clientSide = level != null && level.isClientSide;
+        return FermentationProgress.resolveScaledDuration(clientSide, clientScaledDuration, locallyComputed);
     }
 
     public float getProgress() {
         FermentingRecipe recipe = currentRecipe();
         if (recipe == null) return 0f;
         return FermentationProgress.progress(startedAt, level.getGameTime(), scaledDuration(recipe));
+    }
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        FermentingRecipe recipe = currentRecipe();
+
+        if (recipe == null) {
+            tooltip.add(Component.translatable("createbrewery.goggles.fermenter.idle")
+                .withStyle(ChatFormatting.GRAY));
+        } else {
+            int percent = Math.round(getProgress() * 100f);
+            tooltip.add(Component.translatable("createbrewery.goggles.fermenter.progress", percent)
+                .withStyle(ChatFormatting.GOLD));
+
+            long remaining = Math.max(0, scaledDuration(recipe) - (level.getGameTime() - startedAt));
+            tooltip.add(Component.translatable("createbrewery.goggles.fermenter.remaining",
+                    String.format("%.1f", remaining / 24000f))
+                .withStyle(ChatFormatting.DARK_GRAY));
+        }
+
+        // One call, not two: containedFluidTooltip always prepends a "Fluid Container"
+        // header, even for an empty tank (it only omits the header entirely when every tank
+        // in the handler it's given is empty). Calling it once per tank would show that
+        // generic header twice with nothing distinguishing input from output. The combined
+        // wrapper is the same class ModBlockEntities already uses for the block capability.
+        containedFluidTooltip(tooltip, isPlayerSneaking,
+            new CombinedTankWrapper(inputTank.getCapability(), outputTank.getCapability()));
+        return true;
     }
 
     /** Review Focus #2: a saved recipe id that no longer resolves must not crash. */
@@ -264,6 +306,13 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
         tag.putLong("StartedAt", startedAt);
         if (activeRecipeId != null) tag.putString("Recipe", activeRecipeId.toString());
         tag.put("Yeast", yeastSlot.serializeNBT(registries));
+
+        // Only meaningful on a sync packet: this is always built server-side from the live
+        // (server-authoritative) config, so the client never has to guess at the multiplier.
+        if (clientPacket) {
+            FermentingRecipe recipe = currentRecipe();
+            if (recipe != null) tag.putInt("ScaledDuration", scaledDuration(recipe));
+        }
     }
 
     @Override
@@ -276,5 +325,8 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
             ? ResourceLocation.tryParse(tag.getString("Recipe"))   // malformed id yields null, not a throw
             : null;
         if (tag.contains("Yeast")) yeastSlot.deserializeNBT(registries, tag.getCompound("Yeast"));
+        clientScaledDuration = tag.contains("ScaledDuration")
+            ? tag.getInt("ScaledDuration")
+            : FermentationProgress.NO_SYNCED_DURATION;
     }
 }

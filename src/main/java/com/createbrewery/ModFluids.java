@@ -8,13 +8,13 @@ public class ModFluids {
     private static final CreateRegistrate REGISTRATE = CreateBrewery.REGISTRATE;
 
     public static final FluidEntry<VirtualFluid> WORT =
-        REGISTRATE.virtualFluid("wort").register();
+        REGISTRATE.virtualFluid("wort").lang("Wort").register();
 
     public static final FluidEntry<VirtualFluid> HOPPED_WORT =
-        REGISTRATE.virtualFluid("hopped_wort").register();
+        REGISTRATE.virtualFluid("hopped_wort").lang("Hopped Wort").register();
 
     public static final FluidEntry<VirtualFluid> BEER =
-        REGISTRATE.virtualFluid("beer").register();
+        REGISTRATE.virtualFluid("beer").lang("Beer").register();
 
     public static void register() {}
 }

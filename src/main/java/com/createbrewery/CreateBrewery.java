@@ -21,6 +21,14 @@ public class CreateBrewery {
         ModItems.register();
         ModBlocks.register();
         ModBlockEntities.register();
+        // Hand-written strings with no registry object of their own to hang a .lang() call
+        // off of. addRawLang feeds the same RegistrateLangProvider as every other entry, so
+        // this stays in the one generated en_us.json rather than a hand file that would
+        // collide with it (that file is 100% datagen output already - see ModFluids, item(),
+        // block()).
+        REGISTRATE.addRawLang("createbrewery.goggles.fermenter.idle", "Idle");
+        REGISTRATE.addRawLang("createbrewery.goggles.fermenter.progress", "Fermenting: %s%%");
+        REGISTRATE.addRawLang("createbrewery.goggles.fermenter.remaining", "%s days remaining");
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(ModRecipeProvider::gatherData);
         ModLootModifiers.register(modEventBus);
