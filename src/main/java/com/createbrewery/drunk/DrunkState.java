@@ -25,6 +25,8 @@ public final class DrunkState {
 
     /** Server-only bookkeeping: whether the client last saw a non-zero state. */
     transient boolean clientSawAlcohol;
+    /** Server-only: load on the heart from drugs (see Pharmacology#heartLoad). Not saved: it rebuilds in seconds. */
+    public transient float heart;
     /** Server-only: game time of the last drink, to spot two players clinking glasses. */
     transient long lastDrinkTime = Long.MIN_VALUE / 2;
 

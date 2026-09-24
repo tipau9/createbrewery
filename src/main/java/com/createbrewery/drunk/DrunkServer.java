@@ -1,6 +1,8 @@
 package com.createbrewery.drunk;
 
 import com.createbrewery.CreateBrewery;
+import com.createbrewery.drugs.DrugEffect;
+import com.createbrewery.drugs.DrugServer;
 import com.createbrewery.effect.ModEffects;
 import com.createbrewery.effect.PainkillerEffect;
 import com.createbrewery.effect.VomitingEffect;
@@ -75,15 +77,29 @@ public final class DrunkServer {
     }
 
     /**
-     * Felt level including drugs, on either side (effects are synced): Koks masks the alcohol
-     * (you feel a quarter less drunk - and drink on), Keta amplifies it by a third.
+     * Felt level including drugs, on either side (effects are synced), following how strongly each
+     * acts right now: Koks masks the alcohol (up to a quarter less drunk - and you drink on), Keta
+     * amplifies it by up to a third, weed by a fifth (crossfaded).
      */
     public static float feltFor(net.minecraft.world.entity.LivingEntity entity, DrunkState s) {
         float felt = s.felt();
-        if (entity.hasEffect(ModEffects.COKE_HIGH)) felt *= 0.75f;
-        if (entity.hasEffect(ModEffects.KETA_HIGH) || entity.hasEffect(ModEffects.K_HOLE)) felt *= 1.3f;
-        if (entity.hasEffect(ModEffects.WEED_HIGH)) felt *= 1.2f; // crossfaded: both hit harder
+        felt *= 1f - 0.25f * DrugEffect.strength(entity, ModEffects.COKE_HIGH);
+        felt *= 1f + 0.3f * ketamine(entity);
+        felt *= 1f + 0.2f * DrugEffect.strength(entity, ModEffects.WEED_HIGH);
         return felt;
+    }
+
+    /** 0..1 how strongly Keta acts (the K-Loch counts in full). */
+    public static float ketamine(net.minecraft.world.entity.LivingEntity entity) {
+        return Math.max(DrugEffect.strength(entity, ModEffects.KETA_HIGH), DrugEffect.strength(entity, ModEffects.K_HOLE));
+    }
+
+    /**
+     * The blood level that decides alcohol poisoning: the real one - Koks never lowers it - but
+     * Keta weighs on breathing too, so together they poison at a lower level.
+     */
+    public static float poisoningLevel(Player player, DrunkState s) {
+        return s.blood * (1f + 0.3f * ketamine(player));
     }
 
     /** Pass out right now (Keta on top of alcohol), unless already out. */
@@ -185,6 +201,8 @@ public final class DrunkServer {
         if (!s.hasAlcohol() && s.peak <= 0f && !s.clientSawAlcohol) return; // sober: nothing to do
 
         float absorbed = Intoxication.absorbed(s.stomach, player.getFoodData().getFoodLevel());
+        // THC slows the stomach down: alcohol on top of weed reaches the blood more slowly.
+        absorbed *= 1f - 0.3f * DrugEffect.strength(player, ModEffects.WEED_HIGH);
         s.stomach -= absorbed;
         s.blood = Intoxication.eliminated(s.blood + absorbed, s.tolerance);
         s.peak = Math.max(s.peak, s.blood);
@@ -238,11 +256,12 @@ public final class DrunkServer {
         }
 
         // Alkoholvergiftung: the body is being poisoned and takes damage until the level drops.
-        boolean poisoned = s.blood >= Intoxication.POISONING;
+        float poison = poisoningLevel(player, s);
+        boolean poisoned = poison >= Intoxication.POISONING;
         if (poisoned) {
             refresh(player, ModEffects.POISONING, 0);
             if (player.tickCount % Intoxication.POISON_INTERVAL == 0) {
-                player.hurt(poisonSource(player.level()), Intoxication.poisonDamage(s.blood));
+                player.hurt(poisonSource(player.level()), Intoxication.poisonDamage(poison));
             }
         }
 
@@ -271,6 +290,8 @@ public final class DrunkServer {
         player.setDeltaMovement(player.getDeltaMovement().multiply(0.2, 1.0, 0.2));
         player.hurtMarked = true;
         player.addEffect(new MobEffectInstance(ModEffects.VOMITING, VomitingEffect.DURATION, 0, false, false, true));
+        // Out cold, it goes the wrong way.
+        if (DrugServer.unconscious(player)) DrugServer.aspirate(player);
 
         if (player.level() instanceof ServerLevel level) {
             Vec3 look = player.getLookAngle();

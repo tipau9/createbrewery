@@ -557,4 +557,56 @@ public class FermenterGameTests {
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.GREENING_OUT), "three joints did not green out");
         helper.succeed();
     }
+
+    /** Four lines on alcohol overload the heart: it races first, and when it gives out you collapse. */
+    @GameTest(template = TEMPLATE)
+    public static void overloadedHeartRacesThenGivesOut(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        float before = player.getHealth();
+        // Past the come-up, fourth line.
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.COKE_HIGH,
+            com.createbrewery.drugs.DrugServer.COKE_TICKS - 400, 3));
+        com.createbrewery.drunk.DrunkServer.state(player).blood = 1.5f;
+        for (int i = 0; i < 20; i++) com.createbrewery.drugs.DrugServer.heartTick(player);
+        var racing = player.getEffect(com.createbrewery.effect.ModEffects.TACHYCARDIA);
+        helper.assertTrue(racing != null && racing.getAmplifier() == 1, "the heart did not race");
+        com.createbrewery.drugs.DrugServer.heartAttack(player);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.HEART_ATTACK), "no collapse");
+        helper.assertTrue(player.getHealth() < before, "the heart attack did not hurt");
+        helper.succeed();
+    }
+
+    /** Throwing up while out cold chokes you; awake, it does not. */
+    @GameTest(template = TEMPLATE)
+    public static void vomitingOutColdChokes(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player out = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        net.minecraft.world.entity.player.Player awake = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        com.createbrewery.drunk.DrunkServer.blackout(out);
+        com.createbrewery.drunk.DrunkServer.vomit(out);
+        com.createbrewery.drunk.DrunkServer.vomit(awake);
+        helper.assertTrue(out.hasEffect(com.createbrewery.effect.ModEffects.ASPIRATION), "out cold, but no choking");
+        helper.assertTrue(!awake.hasEffect(com.createbrewery.effect.ModEffects.ASPIRATION), "choked while awake");
+        helper.succeed();
+    }
+
+    /** Keta dulls the pain, not the injury: the hit lands in full. */
+    @GameTest(template = TEMPLATE)
+    public static void ketaDoesNotSoftenDamage(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.K_HOLE, 200));
+        float before = player.getHealth();
+        player.hurt(player.damageSources().generic(), 4f);
+        helper.assertTrue(Math.abs(before - 4f - player.getHealth()) < 0.01f, "Keta softened the hit");
+        helper.succeed();
+    }
+
+    /** A line comes up over seconds instead of hitting at once. */
+    @GameTest(template = TEMPLATE)
+    public static void aLineComesUpSlowly(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.COKE);
+        helper.assertTrue(com.createbrewery.drugs.DrugEffect.strength(player, com.createbrewery.effect.ModEffects.COKE_HIGH) < 0.05f,
+            "Koks hit at full strength at once");
+        helper.succeed();
+    }
 }

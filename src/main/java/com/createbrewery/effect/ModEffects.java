@@ -2,12 +2,10 @@ package com.createbrewery.effect;
 
 import com.createbrewery.CreateBrewery;
 import net.minecraft.core.registries.BuiltInRegistries;
-import com.createbrewery.CreateBrewery;
 import com.createbrewery.drugs.DrugEffect;
 import com.createbrewery.drugs.DrugServer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectCategory;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.effect.MobEffect;
 import net.neoforged.bus.api.IEventBus;
@@ -53,38 +51,55 @@ public class ModEffects {
 
     // ---- Koks and Keta (see drugs/DrugServer) ----
 
+    // Each comes up, holds and fades (DrugEffect/Pharmacology). Game time runs ~20x real time:
+    // a Koks line of about an hour is three minutes here, its come-up of a few minutes 15 s.
+
     public static final DeferredHolder<MobEffect, MobEffect> COKE_HIGH = EFFECTS.register("coke_high", () ->
-        new DrugEffect(MobEffectCategory.NEUTRAL, 0xF4F4FF, 20, DrugServer::cokeTick)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("coke_speed"), 0.12, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
-            .addAttributeModifier(Attributes.BLOCK_BREAK_SPEED, id("coke_mining"), 0.3, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xF4F4FF, 20, DrugServer::cokeTick, DrugServer.COKE_TICKS, 300, 900).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("coke_speed"), 0.15)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("coke_mining"), 0.35));
 
     public static final DeferredHolder<MobEffect, MobEffect> COKE_CRASH = EFFECTS.register("coke_crash", () ->
-        new DrugEffect(MobEffectCategory.HARMFUL, 0x5A5A66, 20, DrugServer::crashTick)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("crash_speed"), -0.2, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
-            .addAttributeModifier(Attributes.BLOCK_BREAK_SPEED, id("crash_mining"), -0.35, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x5A5A66, 20, DrugServer::crashTick, 0, 0, 400)
+            .scaled(Attributes.MOVEMENT_SPEED, id("crash_speed"), -0.2)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("crash_mining"), -0.35));
 
     public static final DeferredHolder<MobEffect, MobEffect> KETA_HIGH = EFFECTS.register("keta_high", () ->
-        new DrugEffect(MobEffectCategory.NEUTRAL, 0x9FB8E8, 20, DrugServer::ketaTick)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("keta_speed"), -0.12, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x9FB8E8, 20, DrugServer::ketaTick, DrugServer.KETA_TICKS, 400, 600).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("keta_speed"), -0.15));
 
     public static final DeferredHolder<MobEffect, MobEffect> K_HOLE = EFFECTS.register("k_hole", () ->
-        new DrugEffect(MobEffectCategory.HARMFUL, 0x2B2F5A, 0, null)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("k_hole_speed"), -0.7, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x2B2F5A, 0, null, DrugServer.K_HOLE_TICKS, 100, 200)
+            .scaled(Attributes.MOVEMENT_SPEED, id("k_hole_speed"), -0.7));
 
     public static final DeferredHolder<MobEffect, MobEffect> DAZED = EFFECTS.register("dazed", () ->
-        new DrugEffect(MobEffectCategory.HARMFUL, 0x8A8FA8, 0, null)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("dazed_speed"), -0.15, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x8A8FA8, 0, null, 0, 0, 400)
+            .scaled(Attributes.MOVEMENT_SPEED, id("dazed_speed"), -0.15));
 
     public static final DeferredHolder<MobEffect, MobEffect> WEED_HIGH = EFFECTS.register("weed_high", () ->
-        new DrugEffect(MobEffectCategory.NEUTRAL, 0x6FAF4A, 20, DrugServer::weedTick)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("weed_speed"), -0.05, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x6FAF4A, 20, DrugServer::weedTick, DrugServer.WEED_TICKS, 300, 1600).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("weed_speed"), -0.08));
 
     public static final DeferredHolder<MobEffect, MobEffect> GREENING_OUT = EFFECTS.register("greening_out", () ->
-        new DrugEffect(MobEffectCategory.HARMFUL, 0x9CC25A, 20, DrugServer::greeningTick)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("greening_speed"), -0.3, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x9CC25A, 20, DrugServer::greeningTick, DrugServer.GREENING_TICKS, 60, 200)
+            .scaled(Attributes.MOVEMENT_SPEED, id("greening_speed"), -0.3));
 
     public static final DeferredHolder<MobEffect, MobEffect> CK_MIX = EFFECTS.register("ck_mix", () ->
-        new DrugEffect(MobEffectCategory.HARMFUL, 0xC44A7A, 20, DrugServer::mixTick));
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xC44A7A, 20, DrugServer::mixTick, 0, 0, 0));
+
+    /** Herzrasen: the heart is overloaded (amplifier 1: strained). The warning before it gives out. */
+    public static final DeferredHolder<MobEffect, MobEffect> TACHYCARDIA = EFFECTS.register("tachycardia", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xE0304A, 0, null, 0, 0, 0));
+
+    /** Herzinfarkt: collapsed, the heart failing; a friend doing CPR (sneaking next to you) keeps you alive. */
+    public static final DeferredHolder<MobEffect, MobEffect> HEART_ATTACK = EFFECTS.register("heart_attack", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x7A0010, 40, DrugServer::heartAttackTick, 0, 0, 0)
+            .scaled(Attributes.MOVEMENT_SPEED, id("heart_attack_speed"), -0.85)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("heart_attack_mining"), -0.8));
+
+    /** Throwing up while out cold: the airway fills. A friend turning you on your side saves you. */
+    public static final DeferredHolder<MobEffect, MobEffect> ASPIRATION = EFFECTS.register("aspiration", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x6B7A1E, 20, DrugServer::aspirationTick, 0, 0, 0));
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);

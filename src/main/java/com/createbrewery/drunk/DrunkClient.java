@@ -4,6 +4,8 @@ import com.createbrewery.Config;
 import com.createbrewery.CreateBrewery;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.createbrewery.drugs.DrugEffect;
+import com.createbrewery.drugs.DrugServer;
 import com.createbrewery.effect.HiccupsEffect;
 import com.createbrewery.effect.ModEffects;
 import com.createbrewery.effect.VomitingEffect;
@@ -30,6 +32,7 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -95,6 +98,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onInteract);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenOpening);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onPlaySound);
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -131,19 +135,18 @@ public final class DrunkClient {
         float target = player == null ? 0f : DrunkServer.feltFor(player, player.getData(ModAttachments.DRUNK));
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
-        stim = ease(stim, player == null ? 0f : level(player, ModEffects.COKE_HIGH, 0.45f, 0.2f, 1f));
-        gray = ease(gray, player != null && player.hasEffect(ModEffects.COKE_CRASH) ? 0.7f : 0f);
-        dissoc = ease(dissoc, player == null ? 0f
-            : player.hasEffect(ModEffects.K_HOLE) ? 1f
+        // Every drug comes up, holds and fades (DrugEffect.strength); the screen follows that curve.
+        stim = ease(stim, player == null ? 0f : DrugEffect.felt(player, ModEffects.COKE_HIGH));
+        gray = ease(gray, player == null ? 0f : 0.7f * DrugEffect.strength(player, ModEffects.COKE_CRASH));
+        float keta = player == null ? 0f : Math.max(DrugEffect.strength(player, ModEffects.K_HOLE),
             // Koks masks the Keta: it feels clearer than it is (the K-Loch does not care).
-            : player.hasEffect(ModEffects.KETA_HIGH) ? level(player, ModEffects.KETA_HIGH, 0.4f, 0.2f, 0.85f)
-                * (player.hasEffect(ModEffects.COKE_HIGH) ? 0.6f : 1f)
-            : player.hasEffect(ModEffects.DAZED) ? 0.15f : 0f)
-            // Weed deepens the dissociation.
-            * (player != null && player.hasEffect(ModEffects.WEED_HIGH) ? 1.3f : 1f);
-        dissoc = Math.min(1f, dissoc);
-        high = ease(high, player == null ? 0f : level(player, ModEffects.WEED_HIGH, 0.5f, 0.2f, 1f));
-        green = ease(green, player != null && player.hasEffect(ModEffects.GREENING_OUT) ? 1f : 0f);
+            0.85f * DrugEffect.felt(player, ModEffects.KETA_HIGH) * (1f - 0.4f * DrugEffect.strength(player, ModEffects.COKE_HIGH)));
+        if (player != null) keta = Math.max(keta, 0.15f * DrugEffect.strength(player, ModEffects.DAZED));
+        // Weed deepens the dissociation.
+        if (player != null) keta *= 1f + 0.3f * DrugEffect.strength(player, ModEffects.WEED_HIGH);
+        dissoc = ease(dissoc, Math.min(1f, keta));
+        high = ease(high, player == null ? 0f : DrugEffect.felt(player, ModEffects.WEED_HIGH));
+        green = ease(green, player == null ? 0f : DrugEffect.strength(player, ModEffects.GREENING_OUT));
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
@@ -177,13 +180,6 @@ public final class DrunkClient {
         return Math.abs(target - next) < 0.002f ? target : next;
     }
 
-    /** base + step per extra dose, capped; 0 if the effect is not active. */
-    private static float level(LocalPlayer player, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect,
-                               float base, float step, float max) {
-        MobEffectInstance instance = player.getEffect(effect);
-        return instance == null ? 0f : Math.min(max, base + step * instance.getAmplifier());
-    }
-
     private static void bodySounds(Minecraft mc, LocalPlayer player) {
         // Paranoia: from the second joint, or weed with Koks, footsteps behind you - nobody is there.
         MobEffectInstance weed = player.getEffect(ModEffects.WEED_HIGH);
@@ -197,14 +193,21 @@ public final class DrunkClient {
         } else if (!paranoid) {
             nextFootstep = player.tickCount + 300;
         }
-        // Koks: the heart races - twice a second, faster with every line.
+        // The heart you can hear: fast on Koks, racing when overloaded, stumbling with Keta on
+        // top, and weak and chaotic when it gives out. Sound only - the screen never pulses with it.
         MobEffectInstance coke = player.getEffect(ModEffects.COKE_HIGH);
-        if (coke != null) {
-            int interval = Math.max(8, 12 - 2 * coke.getAmplifier());
+        MobEffectInstance racing = player.getEffect(ModEffects.TACHYCARDIA);
+        boolean failing = player.hasEffect(ModEffects.HEART_ATTACK);
+        boolean audible = failing || racing != null || (coke != null && stim > 0.2f);
+        if (audible) {
+            int interval = coke == null ? 10 : Math.max(8, 12 - 2 * coke.getAmplifier());
+            if (racing != null) interval = racing.getAmplifier() >= 1 ? 6 : 7;
             // With Keta on top the rhythm stumbles: beats come early and late.
             if (player.hasEffect(ModEffects.CK_MIX)) interval = 6 + player.getRandom().nextInt(10);
+            if (failing) interval = 5 + player.getRandom().nextInt(25);
             if (player.tickCount - lastCokeBeat >= interval) {
-                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.HEARTBEAT.get(), 1.25f, 0.45f));
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.HEARTBEAT.get(),
+                    failing ? 0.8f : 1.25f, failing ? 0.35f : 0.45f));
                 lastCokeBeat = player.tickCount;
             }
         }
@@ -247,6 +250,9 @@ public final class DrunkClient {
         }
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
         double t = seconds(player, partial);
+        // Numb: Keta (and a lot of alcohol) dull the pain, not the injury. The hit lands in full,
+        // but the view does not flinch and you do not hear yourself - only the hearts tell.
+        if (numb(player)) player.hurtTime = 0;
 
         if (chain != null) {
             chain.setUniform("Intensity", Intoxication.visualIntensity(blood) * screen());
@@ -286,6 +292,21 @@ public final class DrunkClient {
         float heave = (float) Math.pow(Math.sin(phase * Math.PI), 4);
         float envelope = Math.min(1f, d / 10f) * Math.min(1f, (VomitingEffect.DURATION - d) / 6f);
         return envelope * (0.55f + 0.45f * heave);
+    }
+
+    private static boolean numb(LocalPlayer player) {
+        return DrunkServer.ketamine(player) > 0.3f || blood >= Intoxication.WASTED;
+    }
+
+    /** Numb: your own hurt sounds stay silent (see onRenderFrame). */
+    private static void onPlaySound(PlaySoundEvent event) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        var sound = event.getSound();
+        if (player == null || sound == null || !numb(player)) return;
+        if (sound.getLocation().getPath().startsWith("entity.player.hurt")
+            && player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 4.0) {
+            event.setSound(null);
+        }
     }
 
     /** Draws the drunk vision over the finished world, before the hand and the HUD. */
@@ -353,7 +374,9 @@ public final class DrunkClient {
     private static void onFov(ComputeFovModifierEvent event) {
         if (event.getPlayer() != Minecraft.getInstance().player) return;
         // Keta pushes the world away (wider view), Koks narrows the focus.
-        float drugs = 1f + (0.12f * dissoc - 0.04f * stim + 0.03f * high) * screen();
+        MobEffectInstance racing = event.getPlayer().getEffect(ModEffects.TACHYCARDIA);
+        float tunnel = racing == null ? 0f : 0.03f * (racing.getAmplifier() + 1);
+        float drugs = 1f + (0.12f * dissoc - 0.04f * stim + 0.03f * high - tunnel) * screen();
         if (drugs != 1f) event.setNewFovModifier(event.getNewFovModifier() * drugs);
         if (blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.
@@ -366,6 +389,14 @@ public final class DrunkClient {
     private static void onMovementInput(MovementInputUpdateEvent event) {
         if (!(event.getEntity() instanceof LocalPlayer player)) return;
         Input input = event.getInput();
+        if (player.hasEffect(ModEffects.HEART_ATTACK)) {
+            // Collapsed: the legs give way. A friend sneaking next to you is doing CPR.
+            input.forwardImpulse = input.leftImpulse = 0f;
+            input.up = input.down = input.left = input.right = input.jumping = false;
+            input.shiftKeyDown = true;
+            player.setSprinting(false);
+            return;
+        }
         if (player.hasEffect(ModEffects.BLACKOUT)) {
             // Filmriss: the body walks on by itself, weaving, and nobody is steering. Other
             // players see it stagger off; the player sees nothing (see onGuiPost).
@@ -427,6 +458,11 @@ public final class DrunkClient {
             // The mouse does nothing: MouseHandler turns by (s * 0.6 + 0.2)^3, which is 0 here.
             event.setMouseSensitivity(-0.20000000298023224 / 0.6000000238418579);
             event.setCinematicCameraEnabled(false);
+            return;
+        }
+        if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.hasEffect(ModEffects.HEART_ATTACK)) {
+            event.setMouseSensitivity(event.getMouseSensitivity() * 0.15f);
+            event.setCinematicCameraEnabled(true);
             return;
         }
         // Koks makes the hands twitchy, Keta makes them distant and slow.
@@ -493,17 +529,41 @@ public final class DrunkClient {
             g.fill(0, 0, w, h, ((int) (retch * 60 * screen()) << 24) | 0x303A08);
         }
 
+        MobEffectInstance racing = player.getEffect(ModEffects.TACHYCARDIA);
+        if (racing != null) {
+            // Herzrasen: a steady tightness at the edges of the view - it does not pulse.
+            int a = (int) ((35 + 35 * racing.getAmplifier()) * screen());
+            int edge = h / 5;
+            g.fillGradient(0, 0, w, edge, (a << 24) | 0x3A0008, 0x003A0008);
+            g.fillGradient(0, h - edge, w, h, 0x003A0008, (a << 24) | 0x3A0008);
+        }
+        MobEffectInstance failing = player.getEffect(ModEffects.HEART_ATTACK);
+        if (failing != null) {
+            // Collapsed: the world goes grey-dark, fading in over a second and out at the end.
+            float fade = Math.min(1f, Math.min((DrugServer.HEART_ATTACK_TICKS - failing.getDuration()) / 20f,
+                failing.getDuration() / 40f));
+            g.fill(0, 0, w, h, ((int) (fade * 170) << 24) | 0x0A0004);
+        }
+        if (player.hasEffect(ModEffects.ASPIRATION)) {
+            // Choking: sick green closing in, steady.
+            int edge = h / 3;
+            g.fillGradient(0, 0, w, edge, 0xA04A5A10, 0x004A5A10);
+            g.fillGradient(0, h - edge, w, h, 0x004A5A10, 0xA04A5A10);
+        }
+
         MobEffectInstance hangover = player.getEffect(ModEffects.HANGOVER);
         if (hangover != null) {
+            // Konterbier and Koks both mask the hangover for a while - it is still there afterwards.
+            float masked = (1f - 0.7f * Math.min(1f, blood / Intoxication.MERRY)) * (1f - 0.7f * stim);
             // Throbbing headache: the edges of the view darken with every heartbeat.
             float beat = (float) Math.pow(Math.max(0.0, Math.sin(t * Math.PI * 1.6)), 6.0);
-            int a = (int) (beat * (90 + 40 * Math.min(hangover.getAmplifier(), 2)) * screen());
+            int a = (int) (beat * (90 + 40 * Math.min(hangover.getAmplifier(), 2)) * screen() * masked);
             int edge = h / 4;
             g.fillGradient(0, 0, w, edge, (a << 24) | 0x2A0000, 0x002A0000);
             g.fillGradient(0, h - edge, w, h, 0x002A0000, (a << 24) | 0x2A0000);
             // Daylight glare: bright sky hurts.
             if (player.level().isDay() && player.level().canSeeSky(player.blockPosition())) {
-                int glare = (int) ((60 + 30 * noise(t * 0.9, 25)) * screen());
+                int glare = (int) ((60 + 30 * noise(t * 0.9, 25)) * screen() * masked);
                 g.fill(0, 0, w, h, (glare << 24) | 0xFFF8E0);
             }
         }

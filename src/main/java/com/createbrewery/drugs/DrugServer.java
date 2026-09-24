@@ -3,6 +3,7 @@ package com.createbrewery.drugs;
 import com.createbrewery.Config;
 import com.createbrewery.CreateBrewery;
 import com.createbrewery.drunk.DrunkServer;
+import com.createbrewery.drunk.DrunkState;
 import com.createbrewery.drunk.Intoxication;
 import com.createbrewery.effect.ModEffects;
 import com.createbrewery.particle.ModParticles;
@@ -22,7 +23,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
 
@@ -48,6 +51,14 @@ import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
  * but never deadly on its own. Mixed: with alcohol both hit harder; with Koks the heart works a
  * little harder and paranoia creeps in; with Keta the dissociation deepens and the K-Loch comes
  * a dose sooner. Ibu and weed do not interact.
+ *
+ * <p>Realism across all of them: every dose comes up, holds and fades (DrugEffect); every
+ * further dose feels like less but strains the heart just as much. The heart has one load
+ * (Pharmacology#heartLoad) that every stimulant, alcohol on top, sprinting and heat add to:
+ * first it races (Herzrasen), then it can give out (Herzinfarkt) - a friend sneaking next to you
+ * is doing CPR. Throwing up while out cold (Filmriss, K-Loch, collapse) fills the airway unless
+ * someone turns you on your side the same way. Order matters: weed on top of alcohol greens you
+ * out, alcohol on top of weed is absorbed more slowly.
  */
 public final class DrugServer {
     private DrugServer() {}
@@ -62,6 +73,11 @@ public final class DrugServer {
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "heart_attack"));
     private static final ResourceKey<DamageType> NOSEBLEED = ResourceKey.create(Registries.DAMAGE_TYPE,
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "nosebleed"));
+    private static final ResourceKey<DamageType> ASPIRATION = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "aspiration"));
+
+    public static final int HEART_ATTACK_TICKS = 300;
+    public static final int ASPIRATION_TICKS = 200;
 
     public static final int WEED_TICKS = 4800;
     public static final int GREENING_TICKS = 500;
@@ -103,14 +119,18 @@ public final class DrugServer {
         int holeAt = player.hasEffect(ModEffects.WEED_HIGH) ? 1 : 2;
         if (kind == Kind.KETA && level >= holeAt) player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, 0, false, false, true));
         if (kind == Kind.WEED && level >= 2) greenOut(player);
+        // Erst saufen, dann kiffen: weed on top of alcohol tips the circulation over far more easily.
+        if (kind == Kind.WEED && DrunkServer.state(player).blood >= Intoxication.MERRY
+            && player.getRandom().nextFloat() < 0.5f) greenOut(player);
 
         if (kind == Kind.WEED) {
             smoke(player);
             return;
         }
         if (player.level() instanceof ServerLevel level1) {
-            // The other powder is still in there: the nose gives up now and then.
-            if (mixed(player) && player.getRandom().nextFloat() < 0.35f) nosebleed(player, level1);
+            // The lining gives up: often with the other powder still in there, and line after line.
+            float bleed = mixed(player) ? 0.35f : level >= 2 ? 0.08f * (level - 1) : 0f;
+            if (player.getRandom().nextFloat() < bleed) nosebleed(player, level1);
             Vec3 look = player.getLookAngle();
             level1.sendParticles(ModParticles.POWDER.get(), player.getX() + look.x * 0.3, player.getEyeY() - 0.1,
                 player.getZ() + look.z * 0.3, 8, 0.06, 0.04, 0.06, 0.01);
@@ -149,20 +169,14 @@ public final class DrugServer {
             player.getZ() + look.z * 0.25, 6, 0.03, 0.02, 0.03, 0.0);
     }
 
-    /** Keeps the CK-Mix indicator up while both are active; its own tick does the heart strain. */
+    /** Keeps the CK-Mix indicator up while both are active. */
     private static void checkMix(LivingEntity entity) {
         if (mixed(entity)) entity.addEffect(new MobEffectInstance(ModEffects.CK_MIX, 60, 0, false, false, true));
     }
 
-    /** Heart under Koks and Keta at once: at risk from the first dose, far more with alcohol. */
+    /** Koks and Keta at once. The heart strain is part of the heart load (Pharmacology#heartLoad). */
     public static void mixTick(LivingEntity entity, int level) {
         if (entity.tickCount % 40 != 0) return;
-        int doses = amp(entity, ModEffects.COKE_HIGH) + amp(entity, ModEffects.KETA_HIGH) + 2;
-        float blood = entity instanceof Player p ? DrunkServer.state(p).blood : 0f;
-        float chance = 0.04f * doses + (blood >= Intoxication.TIPSY ? 0.08f : 0f);
-        if (entity.getRandom().nextFloat() < chance) {
-            entity.hurt(heartAttack(entity.level()), 3f + doses + (blood >= Intoxication.TIPSY ? 2f : 0f));
-        }
         // Nosebleeds keep coming back while both are in the system.
         if (entity instanceof Player player && player.level() instanceof ServerLevel level1
             && player.getRandom().nextFloat() < 0.05f) {
@@ -178,20 +192,11 @@ public final class DrugServer {
     // ---- ticks, called from the effects every 20 ticks ----
 
     public static void cokeTick(LivingEntity entity, int level) {
-        if (entity instanceof Player player) player.getFoodData().setExhaustion(0f); // no appetite
-        checkMix(entity);
-        if (entity.tickCount % 40 != 0) return;
-        float blood = entity instanceof Player p ? DrunkServer.state(p).blood : 0f;
-        // Heart attack: from a third line on, or earlier with alcohol in the blood (cocaethylene).
-        float chance = 0f;
-        if (level >= 2) chance = 0.12f + 0.08f * (level - 2);
-        if (blood >= Intoxication.TIPSY && level >= 1) chance += 0.08f;
-        if (blood >= Intoxication.DRUNK) chance += 0.1f;
-        if (entity.hasEffect(ModEffects.WEED_HIGH) && level >= 1) chance += 0.04f; // both raise the pulse
-        if (chance > 0f && entity.getRandom().nextFloat() < chance) {
-            float damage = 4f + level * 2f + (blood >= Intoxication.TIPSY ? 3f : 0f);
-            entity.hurt(heartAttack(entity.level()), damage);
+        // No appetite while it acts. The heart: see heartTick.
+        if (entity instanceof Player player && DrugEffect.strength(entity, ModEffects.COKE_HIGH) > 0.3f) {
+            player.getFoodData().setExhaustion(0f);
         }
+        checkMix(entity);
     }
 
     public static void crashTick(LivingEntity entity, int level) {
@@ -202,19 +207,21 @@ public final class DrugServer {
         checkMix(entity);
         if (!(entity instanceof Player player)) return;
         float blood = DrunkServer.state(player).blood;
-        // Keta and alcohol together: the body switches off.
-        if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < 0.02f + 0.02f * level) {
+        float strength = DrugEffect.strength(player, ModEffects.KETA_HIGH);
+        // Keta and alcohol together: the body switches off, and it all comes back up.
+        if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < (0.02f + 0.02f * level) * strength) {
             DrunkServer.blackout(player);
         }
-        if (blood >= Intoxication.TIPSY && player.getRandom().nextFloat() < 0.015f) DrunkServer.vomit(player);
+        if (blood >= Intoxication.TIPSY && player.getRandom().nextFloat() < 0.015f * strength) DrunkServer.vomit(player);
     }
 
     /** Weed, every 20 ticks: the munchies, and alcohol tipping the circulation over. */
     public static void weedTick(LivingEntity entity, int level) {
         if (!(entity instanceof Player player)) return;
-        player.causeFoodExhaustion(0.15f); // the munchies
+        player.causeFoodExhaustion(0.2f * DrugEffect.felt(player, ModEffects.WEED_HIGH)); // the munchies
+        // Alcohol after weed is gentler than weed after alcohol (see take), but not harmless.
         float blood = DrunkServer.state(player).blood;
-        if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < 0.03f + 0.02f * level) greenOut(player);
+        if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < 0.01f + 0.01f * level) greenOut(player);
     }
 
     /** Greening out, every 20 ticks: queasy, and it may all come back up. */
@@ -257,11 +264,88 @@ public final class DrugServer {
         }
     }
 
-    /** Keta dulls pain. */
+    // ---- the heart ----
+
+    /** Every second: the heart load follows what is in the body and what the body is doing. */
     @SubscribeEvent
-    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (!player.level().isClientSide && player.tickCount % 20 == 0) heartTick(player);
+    }
+
+    public static void heartTick(Player player) {
+        DrunkState s = DrunkServer.state(player);
+        boolean hole = player.hasEffect(ModEffects.K_HOLE);
+        float target = Pharmacology.heartLoad(
+            amp(player, ModEffects.COKE_HIGH), DrugEffect.strength(player, ModEffects.COKE_HIGH),
+            hole ? Math.max(1, amp(player, ModEffects.KETA_HIGH)) : amp(player, ModEffects.KETA_HIGH),
+            Math.max(DrugEffect.strength(player, ModEffects.KETA_HIGH), DrugEffect.strength(player, ModEffects.K_HOLE)),
+            DrugEffect.strength(player, ModEffects.WEED_HIGH), s.blood,
+            player.isSprinting(), player.level().dimensionType().ultraWarm());
+        if (target <= 0f && s.heart <= 0f) return;
+        // Up within seconds, back down over a minute.
+        s.heart += (target - s.heart) * (target > s.heart ? 0.2f : 0.05f);
+        if (target <= 0f && s.heart < 0.05f) s.heart = 0f;
+        if (s.heart >= Pharmacology.HEART_RACING) {
+            player.addEffect(new MobEffectInstance(ModEffects.TACHYCARDIA, 60,
+                s.heart >= Pharmacology.HEART_STRAINED ? 1 : 0, false, false, true));
+        }
+        if (player.getRandom().nextFloat() < Pharmacology.heartAttackChance(s.heart)) heartAttack(player);
+    }
+
+    /** The heart gives out: you collapse, and without CPR it keeps failing. */
+    public static void heartAttack(Player player) {
+        if (player.hasEffect(ModEffects.HEART_ATTACK)) return;
+        player.setSprinting(false);
+        player.addEffect(new MobEffectInstance(ModEffects.HEART_ATTACK, HEART_ATTACK_TICKS, 0, false, false, true));
+        player.hurt(heartAttack(player.level()), 6f);
+    }
+
+    public static void heartAttackTick(LivingEntity entity, int level) {
+        if (!helped(entity)) entity.hurt(heartAttack(entity.level()), 1f);
+    }
+
+    // ---- choking ----
+
+    /** Out cold: a Filmriss, the K-Loch, or collapsed with a failing heart. */
+    public static boolean unconscious(LivingEntity entity) {
+        return entity.hasEffect(ModEffects.BLACKOUT) || entity.hasEffect(ModEffects.K_HOLE)
+            || entity.hasEffect(ModEffects.HEART_ATTACK);
+    }
+
+    /** Someone awake is crouched right next to you: CPR, or the recovery position. */
+    public static boolean helped(LivingEntity entity) {
+        return !entity.level().getEntitiesOfClass(Player.class, entity.getBoundingBox().inflate(1.5),
+            p -> p != entity && p.isCrouching() && !unconscious(p)).isEmpty();
+    }
+
+    /** Throwing up while out cold: it goes into the airway, unless someone turns you over. */
+    public static void aspirate(Player player) {
+        if (!helped(player)) {
+            player.addEffect(new MobEffectInstance(ModEffects.ASPIRATION, ASPIRATION_TICKS, 0, false, false, true));
+        }
+    }
+
+    public static void aspirationTick(LivingEntity entity, int level) {
+        if (entity.getAirSupply() <= 0 && !helped(entity)) {
+            entity.hurt(new DamageSource(entity.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+                .getHolderOrThrow(ASPIRATION)), 2f);
+        }
+    }
+
+    /** No air gets through while choking - the bubbles run out like under water. */
+    @SubscribeEvent
+    public static void onBreathe(LivingBreatheEvent event) {
         LivingEntity entity = event.getEntity();
-        if (entity.hasEffect(ModEffects.K_HOLE)) event.setAmount(event.getAmount() * 0.5f);
-        else if (entity.hasEffect(ModEffects.KETA_HIGH)) event.setAmount(event.getAmount() * 0.7f);
+        if (entity.hasEffect(ModEffects.ASPIRATION) && !helped(entity)) {
+            event.setCanBreathe(false);
+            event.setConsumeAirAmount(entity.getAirSupply() > 0 ? 5 : 0);
+        }
+    }
+
+    /** The choking does its own damage (aspirationTick), not vanilla drowning every tick. */
+    @SubscribeEvent
+    public static void onDrown(LivingDrownEvent event) {
+        if (event.getEntity().hasEffect(ModEffects.ASPIRATION)) event.setDrowning(false);
     }
 }
