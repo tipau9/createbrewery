@@ -27,9 +27,10 @@ public class DeliriumEffect extends MobEffect {
 
     @Override
     public boolean applyEffectTick(LivingEntity entity, int amplifier) {
-        if (entity instanceof Player player) {
-            // Loud boastful yelling every 70 ticks
-            if (player.tickCount % 70 == 0) {
+        // Server only: the client runs this tick too, and would print every shout twice.
+        if (!entity.level().isClientSide && entity instanceof Player player) {
+            // Loud boastful yelling every 5 seconds
+            if (player.tickCount % 100 == 0) {
                 String shout = SHOUTS[player.getRandom().nextInt(SHOUTS.length)];
                 player.displayClientMessage(Component.literal(shout), true);
 
@@ -38,7 +39,7 @@ public class DeliriumEffect extends MobEffect {
             }
 
             // Provoke nearby monsters: drunk shouting attracts hostiles within 18 blocks
-            if (!player.level().isClientSide && player.tickCount % 60 == 0) {
+            if (player.tickCount % 60 == 0) {
                 List<Mob> nearbyMonsters = player.level().getEntitiesOfClass(
                     Mob.class,
                     player.getBoundingBox().inflate(18.0),

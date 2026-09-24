@@ -1,5 +1,8 @@
 package com.createbrewery.event;
 
+import com.createbrewery.drunk.DrunkServer;
+import com.createbrewery.drunk.DrunkState;
+import com.createbrewery.drunk.Intoxication;
 import com.createbrewery.effect.ModEffects;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -19,6 +22,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 
+import java.util.Locale;
+
 public class BreweryCommonEvents {
 
     /**
@@ -27,10 +32,10 @@ public class BreweryCommonEvents {
     @SubscribeEvent
     public static void onServerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
-        MobEffectInstance inebriation = player.getEffect(ModEffects.INEBRIATION);
+        float bac = DrunkServer.state(player).blood;
 
-        if (inebriation != null) {
-            int stage = inebriation.getAmplifier(); // 0 = I, 1 = II, 2 = III, 3 = IV
+        if (bac >= Intoxication.TIPSY) {
+            int stage = Intoxication.slurStage(bac); // 0 = occasional slip ... 3 = barely legible
             String original = event.getRawText();
             String slurred = slurText(original, player.getRandom(), stage);
             event.setMessage(Component.literal(slurred));
@@ -86,49 +91,32 @@ public class BreweryCommonEvents {
             if (stack.is(Items.POTION)) {
                 PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
                 if (contents != null && contents.is(Potions.WATER)) {
-                    MobEffectInstance inebriation = player.getEffect(ModEffects.INEBRIATION);
-                    boolean hasOtherEffects = player.hasEffect(ModEffects.HANGOVER)
-                                           || player.hasEffect(ModEffects.STUMBLE)
-                                           || player.hasEffect(ModEffects.HICCUPS)
-                                           || player.hasEffect(ModEffects.DELIRIUM);
+                    DrunkState state = DrunkServer.state(player);
+                    boolean drunk = state.total() > 0f;
+                    boolean hungover = player.hasEffect(ModEffects.HANGOVER);
 
-                    if (inebriation != null || hasOtherEffects) {
-                        // Step down inebriation amplifier by 1, or remove if at stage 0
-                        if (inebriation != null) {
-                            int currentStage = inebriation.getAmplifier();
-                            int newDuration = Math.max(0, inebriation.getDuration() - 500);
-                            player.removeEffect(ModEffects.INEBRIATION);
-
-                            if (currentStage > 0 && newDuration > 0) {
-                                player.addEffect(new MobEffectInstance(
-                                    ModEffects.INEBRIATION, newDuration, currentStage - 1, false, true, true
-                                ));
-                            }
-                        }
-
-                        // Reduce duration of individual symptoms by 260 ticks
+                    if (drunk || hungover) {
+                        // Water dilutes the stomach and takes 0.15 per mille off the blood;
+                        // it shortens a hangover and calms hiccups, but it is no instant cure.
+                        if (drunk) DrunkServer.water(player);
                         reduceDuration(player, ModEffects.HANGOVER, 260);
-                        reduceDuration(player, ModEffects.STUMBLE, 260);
                         reduceDuration(player, ModEffects.HICCUPS, 260);
-                        reduceDuration(player, ModEffects.DELIRIUM, 260);
-
-                        boolean stillDrunk = player.hasEffect(ModEffects.INEBRIATION)
-                                          || player.hasEffect(ModEffects.HANGOVER)
-                                          || player.hasEffect(ModEffects.STUMBLE)
-                                          || player.hasEffect(ModEffects.HICCUPS)
-                                          || player.hasEffect(ModEffects.DELIRIUM);
 
                         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 1.1f);
 
-                        if (!stillDrunk) {
+                        if (drunk) {
+                            player.displayClientMessage(Component.literal(String.format(Locale.GERMAN,
+                                "\u00a7b\u00a7lEin Schluck Wasser... \u00a77Dein Kopf wird etwas klarer (~%.1f \u2030).",
+                                state.total())), true);
+                        } else if (!player.hasEffect(ModEffects.HANGOVER)) {
                             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8f, 1.8f);
-                            player.displayClientMessage(
-                                Component.literal("\u00a7a\u00a7lVollst\u00e4ndig ern\u00fcchtert! \u00a72Der Alkohol ist endg\u00fcltig aus deinem Blut."), true);
+                            player.displayClientMessage(Component.literal(
+                                "\u00a7a\u00a7lKater \u00fcberstanden! \u00a72Endlich wieder ein klarer Kopf."), true);
                         } else {
-                            player.displayClientMessage(
-                                Component.literal("\u00a7b\u00a7lEin Schluck Wasser... \u00a77Dein Kopf wird etwas klarer (Trunkenheitsstufe gesunken)!"), true);
+                            player.displayClientMessage(Component.literal(
+                                "\u00a7b\u00a7lWasser... \u00a77Der Kater l\u00e4sst ein bisschen nach."), true);
                         }
                     }
                 }

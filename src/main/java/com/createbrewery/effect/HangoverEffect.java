@@ -9,6 +9,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
+/**
+ * Kater des Todes. Arrives after the drinking, not during it: when the blood level runs out
+ * or when you wake up after a heavy night (see DrunkServer). Server side here: shaking hands,
+ * a body burning through food, and a head that cannot stand daylight. The client adds the
+ * throbbing headache and the painful glare on screen, and DrunkServer slows mining.
+ */
 public class HangoverEffect extends MobEffect {
     public HangoverEffect() {
         super(MobEffectCategory.HARMFUL, 0x784421);
@@ -16,29 +22,26 @@ public class HangoverEffect extends MobEffect {
 
     @Override
     public boolean applyEffectTick(LivingEntity entity, int amplifier) {
-        if (entity instanceof Player player) {
-            // 1. Photophobia (Lichtempfindlichkeit): sunlight hurts the throbbing head!
-            if (player.level().isDay() && player.level().canSeeSky(player.blockPosition())) {
-                if (player.tickCount % 60 == 0) {
-                    player.hurt(player.damageSources().dryOut(), 1.0f);
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.8f, 0.6f);
-                    player.displayClientMessage(
-                        Component.literal("\u00a76\u00a7l*KOPFWEH* \u00a7cDie Sonne blendet unmenschlich! Aua mein Sch\u00e4del..."), true);
-                }
-            }
+        if (entity.level().isClientSide || !(entity instanceof Player player)) return true;
 
-            // 2. Butterfinger Tremors (Zittrige H\u00e4nde): randomly drop held item
-            if (player.tickCount % 100 == 0) {
-                ItemStack held = player.getMainHandItem();
-                if (!held.isEmpty() && player.getRandom().nextFloat() < (0.35f + amplifier * 0.15f)) {
-                    ItemStack dropped = held.split(1);
-                    player.drop(dropped, false);
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 0.4f);
-                    player.displayClientMessage(
-                        Component.literal("\u00a7c\u00a7lUpps! \u00a76Deine zittrigen H\u00e4nde lassen das Werkzeug fallen!"), true);
-                }
+        // A hungover body is running on empty.
+        player.causeFoodExhaustion(0.005f);
+
+        // Photophobia: the glare itself is drawn client-side; this is the grumbling.
+        if (player.tickCount % 200 == 0 && player.level().isDay() && player.level().canSeeSky(player.blockPosition())) {
+            player.displayClientMessage(Component.literal(
+                "§6§l*KOPFWEH* §cDie Sonne sticht dir direkt ins Hirn..."), true);
+        }
+
+        // Shaking hands: every 10 s a chance to lose grip of whatever you hold.
+        if (player.tickCount % 200 == 0 && !player.isCreative() && !player.isSpectator()) {
+            ItemStack held = player.getMainHandItem();
+            if (!held.isEmpty() && player.getRandom().nextFloat() < 0.12f + amplifier * 0.06f) {
+                player.drop(held.split(1), false);
+                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 0.4f);
+                player.displayClientMessage(Component.literal(
+                    "§c§lUpps! §6Deine zittrigen Hände lassen es fallen!"), true);
             }
         }
         return true;
