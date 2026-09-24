@@ -1,0 +1,18 @@
+{
+  "type": "create:filling",
+  "ingredients": [
+    {
+      "item": "createbrewery:empty_can"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 250,
+      "fluid": "createbrewery:beer"
+    }
+  ],
+  "results": [
+    {
+      "id": "createbrewery:sealed_can"
+    }
+  ]
+}

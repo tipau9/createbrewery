@@ -1,0 +1,14 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "item": "create:iron_sheet"
+    }
+  ],
+  "results": [
+    {
+      "count": 2,
+      "id": "createbrewery:empty_can"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "heated",
+  "ingredients": [
+    {
+      "item": "createbrewery:grist"
+    },
+    {
+      "item": "createbrewery:grist"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 500,
+      "fluid": "minecraft:water"
+    }
+  ],
+  "processing_time": 400,
+  "results": [
+    {
+      "id": "createbrewery:spent_grain"
+    },
+    {
+      "amount": 500,
+      "id": "createbrewery:wort"
+    }
+  ]
+}

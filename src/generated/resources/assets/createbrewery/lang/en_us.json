@@ -1,5 +1,6 @@
 {
   "block.createbrewery.barley_crop": "Barley Crop",
+  "block.createbrewery.fermenter": "Fermenter",
   "block.createbrewery.hops_crop": "Hops Crop",
   "item.createbrewery.barley": "Barley",
   "item.createbrewery.barley_seeds": "Barley Seeds",

@@ -1,0 +1,21 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "superheated",
+  "ingredients": [
+    {
+      "item": "createbrewery:hop_cones"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 500,
+      "fluid": "createbrewery:wort"
+    }
+  ],
+  "processing_time": 600,
+  "results": [
+    {
+      "amount": 500,
+      "id": "createbrewery:hopped_wort"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "values": {
+    "createbrewery:green_malt": {
+      "chance": 0.5
+    },
+    "createbrewery:hop_cones": {
+      "chance": 0.5
+    },
+    "createbrewery:spent_grain": {
+      "chance": 0.3
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_green_malt": {
+      "conditions": {
+        "items": [
+          {
+            "items": "createbrewery:green_malt"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "createbrewery:kilning"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_green_malt"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "createbrewery:kilning"
+    ]
+  }
+}

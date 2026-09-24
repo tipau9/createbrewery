@@ -10,11 +10,11 @@
       "fluid": "createbrewery:hopped_wort"
     }
   ],
+  "processing_time": 24000,
   "results": [
     {
       "amount": 500,
       "id": "createbrewery:beer"
     }
-  ],
-  "processing_time": 24000
+  ]
 }

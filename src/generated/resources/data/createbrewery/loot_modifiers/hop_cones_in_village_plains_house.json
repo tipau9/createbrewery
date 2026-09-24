@@ -1,0 +1,15 @@
+{
+  "type": "createbrewery:add_item",
+  "conditions": [
+    {
+      "condition": "neoforge:loot_table_id",
+      "loot_table_id": "minecraft:chests/village/village_plains_house"
+    },
+    {
+      "chance": 0.3,
+      "condition": "minecraft:random_chance"
+    }
+  ],
+  "count": 2,
+  "item": "createbrewery:hop_cones"
+}
