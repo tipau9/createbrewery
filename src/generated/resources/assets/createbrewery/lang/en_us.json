@@ -24,6 +24,7 @@
   "createbrewery.ponder.fermenter.text_8": "Fermenting: 100% (Ready)",
   "createbrewery.ponder.fermenter.text_9": "Finished Beer can then be piped out and bottled.",
   "createbrewery.recipe.fermenting": "Fermenting",
+  "effect.createbrewery.blackout": "Filmriss",
   "effect.createbrewery.delirium": "Größenwahn",
   "effect.createbrewery.hangover": "Kater des Todes",
   "effect.createbrewery.hiccups": "Schluckauf",

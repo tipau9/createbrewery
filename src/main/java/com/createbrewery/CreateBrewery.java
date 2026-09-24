@@ -58,6 +58,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_4", "Remember: Mashing needs standard heat, while Boiling hops must be Superheated!");
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(CreateBreweryClient::onClientSetup);
+            modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
         }
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(ModRecipeProvider::gatherData);

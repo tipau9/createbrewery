@@ -9,6 +9,7 @@
   "createbrewery.jei.fermenting.days_decimal": "%s Tage",
   "createbrewery.jei.fermenting.one_day": "1 Tag",
   "createbrewery.recipe.fermenting": "Gärung",
+  "effect.createbrewery.blackout": "Filmriss",
   "effect.createbrewery.delirium": "Größenwahn",
   "effect.createbrewery.hangover": "Kater des Todes",
   "effect.createbrewery.hiccups": "Schluckauf",
