@@ -16,7 +16,9 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -297,6 +299,64 @@ public class FermenterGameTests {
                     "the wort was consumed by a batch that never completed");
             })
             .thenSucceed();
+    }
+
+    /**
+     * The registered BLOCK capabilities are what make the Fermenter automatable, and nothing
+     * else tests them: the asymmetry assertion in holdsBatchWhenOutputTankIsFull hits the
+     * behaviour's own handler, not the capability a hopper or pipe actually resolves.
+     *
+     * This goes through level.getCapability, i.e. the same lookup a hopper does.
+     */
+    @GameTest(template = TEMPLATE)
+    public static void blockCapabilitiesAreInsertOnlyWhereItMatters(GameTestHelper helper) {
+        helper.setBlock(FERMENTER_POS, ModBlocks.FERMENTER.get());
+        FermenterBlockEntity be = helper.getBlockEntity(FERMENTER_POS);
+        be.getYeastSlot().setStackInSlot(0, new ItemStack(ModItems.YEAST.get(), 1));
+
+        BlockPos abs = helper.absolutePos(FERMENTER_POS);
+
+        IItemHandler items = helper.getLevel()
+            .getCapability(Capabilities.ItemHandler.BLOCK, abs, Direction.DOWN);
+        helper.assertTrue(items != null, "no item handler capability is registered on the fermenter");
+
+        helper.assertTrue(items.extractItem(0, 1, false).isEmpty(),
+            "a hopper under the fermenter could pull the yeast out and cancel the batch");
+        helper.assertTrue(be.getYeastSlot().getStackInSlot(0).getCount() == 1,
+            "the yeast slot lost its contents to an extraction that should have been refused");
+
+        // Insertion must still work, or a funnel could never feed it in the first place.
+        helper.assertTrue(items.insertItem(0, new ItemStack(ModItems.YEAST.get(), 1), false).isEmpty(),
+            "the yeast slot refused an insertion it had room for");
+        helper.assertTrue(be.getYeastSlot().getStackInSlot(0).getCount() == 2,
+            "the inserted yeast did not reach the real slot");
+
+        IFluidHandler fluids = helper.getLevel()
+            .getCapability(Capabilities.FluidHandler.BLOCK, abs, Direction.UP);
+        helper.assertTrue(fluids != null, "no fluid handler capability is registered on the fermenter");
+        helper.assertTrue(fluids.fill(hoppedWort(BATCH), IFluidHandler.FluidAction.EXECUTE) == BATCH,
+            "a pipe could not fill the input tank through the block capability");
+        helper.assertTrue(amountOf(be, false) == BATCH, "the piped-in wort did not reach the input tank");
+
+        helper.succeed();
+    }
+
+    /**
+     * SmartBlockEntity#destroy only fans out to behaviours, and the yeast slot is not one, so
+     * without an explicit drop the yeast is voided when the block is broken. destroyBlock does
+     * not drop the block itself, so a yeast item entity here can only have come from the slot.
+     */
+    @GameTest(template = TEMPLATE)
+    public static void breakingTheFermenterDropsItsYeast(GameTestHelper helper) {
+        helper.setBlock(FERMENTER_POS, ModBlocks.FERMENTER.get());
+        FermenterBlockEntity be = helper.getBlockEntity(FERMENTER_POS);
+        be.getYeastSlot().setStackInSlot(0, new ItemStack(ModItems.YEAST.get(), 3));
+
+        helper.destroyBlock(FERMENTER_POS);
+
+        helper.assertBlockNotPresent(ModBlocks.FERMENTER.get(), FERMENTER_POS);
+        helper.assertItemEntityCountIs(ModItems.YEAST.get(), FERMENTER_POS, 2.0, 3);
+        helper.succeed();
     }
 
     /**

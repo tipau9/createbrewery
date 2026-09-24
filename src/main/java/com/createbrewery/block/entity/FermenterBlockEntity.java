@@ -8,6 +8,7 @@ import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
+import com.simibubi.create.foundation.item.ItemHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -19,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.List;
@@ -43,6 +45,9 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
             setChanged();
         }
     };
+
+    /** What automation is allowed to see. Declared after yeastSlot, which it wraps. */
+    private final IItemHandler yeastInsertionOnly = new InsertOnlyHandler(yeastSlot);
 
     private long startedAt = NOT_STARTED;
     private ResourceLocation activeRecipeId = null;
@@ -69,8 +74,21 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
         return outputTank;
     }
 
+    /** The real slot. Internal use and tests only — never hand this to a capability. */
     public ItemStackHandler getYeastSlot() {
         return yeastSlot;
+    }
+
+    /**
+     * The view automation gets: a funnel may feed the fermenter, a hopper may not rob it.
+     *
+     * Extraction failing safe is not good enough here. Pulling the yeast cancels the batch,
+     * so a hopper placed under the fermenter silently costs the player a full in-game day —
+     * including a finished batch being held back by a full output tank, which is exactly the
+     * loss the hold in finish() exists to prevent.
+     */
+    public IItemHandler getYeastInsertionHandler() {
+        return yeastInsertionOnly;
     }
 
     public long getStartedAt() {
@@ -193,6 +211,51 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
         activeRecipeId = null;
         setChanged();
         sendData();
+    }
+
+    /**
+     * SmartBlockEntity#destroy only fans out to behaviours, and yeastSlot is a plain
+     * ItemStackHandler rather than a behaviour, so without this the yeast is voided when the
+     * block is broken. The tanks hold virtual fluids with no bucket item, so there is nothing
+     * to drop for them.
+     */
+    @Override
+    public void destroy() {
+        super.destroy();
+        ItemHelper.dropContents(level, worldPosition, yeastSlot);
+    }
+
+    /** NeoForge ships no insert-only view, and it is six forwarding methods. */
+    private record InsertOnlyHandler(IItemHandler delegate) implements IItemHandler {
+        @Override
+        public int getSlots() {
+            return delegate.getSlots();
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return delegate.getStackInSlot(slot);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return delegate.insertItem(slot, stack, simulate);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return delegate.getSlotLimit(slot);
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return delegate.isItemValid(slot, stack);
+        }
     }
 
     @Override

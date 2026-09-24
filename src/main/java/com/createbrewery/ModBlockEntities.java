@@ -14,12 +14,15 @@ public class ModBlockEntities {
         .validBlocks(ModBlocks.FERMENTER)
         // Without these the tanks and the yeast slot are invisible to pipes, spouts and
         // funnels, so the block could never be fed or drained by a Create contraption.
+        // Note the asymmetry in both: the fluid wrapper is built from the tanks' capability
+        // handlers (input insert-only, output extract-only), and the yeast slot is exposed
+        // through an insert-only view so a hopper cannot cancel a batch by robbing it.
         .registerCapability(event -> {
             event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.FERMENTER.get(),
                 (be, side) -> new CombinedTankWrapper(
                     be.getInputTank().getCapability(), be.getOutputTank().getCapability()));
             event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.FERMENTER.get(),
-                (be, side) -> be.getYeastSlot());
+                (be, side) -> be.getYeastInsertionHandler());
         })
         .register();
 
