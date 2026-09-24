@@ -199,18 +199,7 @@ public final class DrunkClient {
     }
 
     private static void bodySounds(Minecraft mc, LocalPlayer player) {
-        // Paranoia: from the second joint, or weed with Koks, footsteps behind you - nobody is there.
-        MobEffectInstance weed = player.getEffect(ModEffects.WEED_HIGH);
-        boolean paranoid = weed != null && (DrugServer.joints(player) > 1f || player.hasEffect(ModEffects.COKE_HIGH));
-        if (paranoid && player.tickCount >= nextFootstep) {
-            Vec3 behind = player.position().subtract(player.getLookAngle().multiply(3.0, 0.0, 3.0));
-            mc.getSoundManager().play(new SimpleSoundInstance(net.minecraft.sounds.SoundEvents.GRAVEL_STEP,
-                net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 0.9f + player.getRandom().nextFloat() * 0.2f,
-                player.getRandom(), behind.x, behind.y, behind.z));
-            nextFootstep = player.tickCount + 300 + player.getRandom().nextInt(500);
-        } else if (!paranoid) {
-            nextFootstep = player.tickCount + 300;
-        }
+        paranoia(mc, player);
         // The heart you can hear: fast on Koks, racing when overloaded, stumbling with Keta on
         // top, and weak and chaotic when it gives out. Sound only - the screen never pulses with it.
         MobEffectInstance coke = player.getEffect(ModEffects.COKE_HIGH);
@@ -250,6 +239,107 @@ public final class DrunkClient {
         }
         wasNodding = nodding;
         wasBlackedOut = blackedOut;
+    }
+
+    /** Something behind you: footsteps coming closer or a hiss. Stops the moment you turn round. */
+    private static final class Phantom extends SimpleSoundInstance {
+        Phantom(net.minecraft.sounds.SoundEvent sound, SoundSource source, float volume, float pitch, LocalPlayer player, Vec3 at) {
+            super(sound, source, volume, pitch, player.getRandom(), at.x, at.y, at.z);
+        }
+    }
+
+    private static Vec3 phantomAt;
+    private static float phantomYaw;
+    private static int phantomSteps, nextPhantomStep;
+    private static Phantom phantomSound;
+    /** A shadow in the corner of the eye: where it stands (world yaw), how visible, and whether it is dissolving. */
+    private static float shadowYaw, shadowAlpha;
+    private static int shadowAge = -1;
+    private static boolean shadowGoing;
+
+    /** Too dark to see much: night, caves, unlit rooms. */
+    private static boolean dark(LocalPlayer player) {
+        return player.level().getMaxLocalRawBrightness(player.blockPosition()) < 7;
+    }
+
+    /**
+     * Paranoia: from the second joint, with Koks, or high in the dark. Footsteps creep up from
+     * behind, or something hisses - nobody is there, and it stops the moment you turn round.
+     * In the dark a figure stands at the edge of the view, and dissolves when you look at it.
+     */
+    private static void paranoia(Minecraft mc, LocalPlayer player) {
+        boolean dark = dark(player);
+        boolean paranoid = player.hasEffect(ModEffects.WEED_HIGH)
+            && (DrugServer.joints(player) > 1f || player.hasEffect(ModEffects.COKE_HIGH) || (dark && high > 0.3f));
+        if (phantomAt != null) {
+            if (Math.abs(net.minecraft.util.Mth.wrapDegrees(player.getYRot() - phantomYaw)) > 110f) {
+                if (phantomSound != null) mc.getSoundManager().stop(phantomSound); // turned round: silence
+                phantomAt = null;
+            } else if (phantomSteps > 0 && player.tickCount >= nextPhantomStep) {
+                var below = net.minecraft.core.BlockPos.containing(phantomAt).below();
+                var step = player.level().getBlockState(below).getSoundType().getStepSound();
+                phantomSound = new Phantom(step, SoundSource.PLAYERS, 0.35f, 0.85f + player.getRandom().nextFloat() * 0.15f, player, phantomAt);
+                mc.getSoundManager().play(phantomSound);
+                // Each step a little closer.
+                phantomAt = phantomAt.add(player.position().subtract(phantomAt).normalize().scale(0.35));
+                nextPhantomStep = player.tickCount + 9 + player.getRandom().nextInt(4);
+                if (--phantomSteps == 0) phantomAt = null;
+            } else if (phantomSteps == 0 && phantomSound != null && !mc.getSoundManager().isActive(phantomSound)) {
+                phantomAt = null;
+            }
+        }
+        if (paranoid && phantomAt == null && player.tickCount >= nextFootstep) {
+            Vec3 look = player.getLookAngle().multiply(1.0, 0.0, 1.0).normalize();
+            phantomAt = player.position().subtract(look.scale(4.0));
+            phantomYaw = player.getYRot();
+            if (player.getRandom().nextFloat() < 0.25f) {
+                // A faint hiss right behind you.
+                phantomSteps = 0;
+                phantomSound = new Phantom(net.minecraft.sounds.SoundEvents.CREEPER_PRIMED, SoundSource.HOSTILE, 0.15f, 0.5f, player,
+                    player.position().subtract(look.scale(2.0)));
+                mc.getSoundManager().play(phantomSound);
+            } else {
+                phantomSteps = 3 + player.getRandom().nextInt(3);
+                nextPhantomStep = player.tickCount;
+            }
+            nextFootstep = player.tickCount + (dark ? 200 : 300) + player.getRandom().nextInt(dark ? 300 : 500);
+        } else if (!paranoid) {
+            nextFootstep = Math.max(nextFootstep, player.tickCount + 200);
+        }
+
+        // The figure: comes in slowly, gone when looked at, never longer than a few seconds.
+        if (shadowAge < 0 && paranoid && dark && player.getRandom().nextFloat() < 1f / 700f) {
+            shadowYaw = player.getYRot() + (player.getRandom().nextBoolean() ? 62f : -62f);
+            shadowAge = 0;
+            shadowGoing = false;
+        }
+        if (shadowAge >= 0) {
+            shadowAge++;
+            float rel = net.minecraft.util.Mth.wrapDegrees(shadowYaw - player.getYRot());
+            if (Math.abs(rel) < 40f || Math.abs(rel) > 100f || shadowAge > 140 || !paranoid) shadowGoing = true;
+            // In over 1.5 s, out over 0.6 s: always a soft fade, never a pop.
+            shadowAlpha = shadowGoing ? shadowAlpha - 1f / 12f : Math.min(1f, shadowAlpha + 1f / 30f);
+            if (shadowGoing && shadowAlpha <= 0f) {
+                shadowAlpha = 0f;
+                shadowAge = -1;
+            }
+        }
+    }
+
+    private static final ResourceLocation SHADOW_FIGURE =
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "textures/misc/shadow_figure.png");
+
+    private static void drawShadow(LocalPlayer player, GuiGraphics g, int w, int h) {
+        if (shadowAge < 0 || shadowAlpha <= 0f) return;
+        float rel = net.minecraft.util.Mth.wrapDegrees(shadowYaw - player.getYRot());
+        int fh = (int) (h * 0.55f), fw = fh / 2;
+        // At the very edge of the view, half out of it.
+        int x = rel > 0 ? w - fw * 2 / 3 : -fw / 3;
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        g.setColor(1f, 1f, 1f, shadowAlpha * 0.5f * screen());
+        g.blit(SHADOW_FIGURE, x, (h - fh) / 2 + h / 12, fw, fh, 0f, 0f, 64, 128, 64, 128);
+        g.setColor(1f, 1f, 1f, 1f);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     /** 0..1 how far the eyes have fallen shut in a micro-sleep (used from beer five on). */
@@ -335,7 +425,7 @@ public final class DrunkClient {
         // wrapper would hide - the listener gain makes those louder instead.
         SoundSource source = sound.getSource();
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
-        if (sound instanceof Echo) return;
+        if (sound instanceof Echo || sound instanceof Phantom) return;
         // Your own steps, blocks and bites ring on for a moment.
         if (high > 0.2f && (source == SoundSource.PLAYERS || source == SoundSource.BLOCKS)
             && !(sound instanceof TickableSoundInstance) && !sound.isLooping()
@@ -761,6 +851,8 @@ public final class DrunkClient {
         int w = g.guiWidth();
         int h = g.guiHeight();
         double t = seconds(player, event.getPartialTick().getGameTimeDeltaPartialTick(true));
+
+        drawShadow(player, g, w, h);
 
         if (blood >= Intoxication.DRUNK) {
             // Heavy eyelids that keep sinking; from beer five they fall shut for a moment (micro-sleep).
