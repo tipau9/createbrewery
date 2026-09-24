@@ -78,7 +78,7 @@ public class ModEffects {
 
     public static final DeferredHolder<MobEffect, MobEffect> WEED_HIGH = EFFECTS.register("weed_high", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0x6FAF4A, 20, DrugServer::weedTick, DrugServer.WEED_TICKS, 300, 1600).stacks()
-            .scaled(Attributes.MOVEMENT_SPEED, id("weed_speed"), -0.08));
+            .scaled(Attributes.MOVEMENT_SPEED, id("weed_speed"), -0.12)); // couch lock, strongest with stacked joints
 
     public static final DeferredHolder<MobEffect, MobEffect> GREENING_OUT = EFFECTS.register("greening_out", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x9CC25A, 20, DrugServer::greeningTick, DrugServer.GREENING_TICKS, 60, 200)

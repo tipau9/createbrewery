@@ -475,7 +475,7 @@ public class FermenterGameTests {
         for (var s : java.util.List.of(com.createbrewery.sound.ModSounds.GLASS_CLINK, com.createbrewery.sound.ModSounds.HICCUP,
                 com.createbrewery.sound.ModSounds.HEARTBEAT, com.createbrewery.sound.ModSounds.BEER_OPEN,
                 com.createbrewery.sound.ModSounds.EAR_RINGING, com.createbrewery.sound.ModSounds.SNIFF,
-                com.createbrewery.sound.ModSounds.COUGH)) {
+                com.createbrewery.sound.ModSounds.COUGH, com.createbrewery.sound.ModSounds.GIGGLE)) {
             helper.assertTrue(s.isBound(), "sound not registered: " + s.getId());
             level.playSound(null, pos, s.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1f, 1f);
         }

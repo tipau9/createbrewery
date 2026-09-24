@@ -222,7 +222,15 @@ public final class DrugServer {
     /** Weed, every 20 ticks: the munchies, and alcohol tipping the circulation over. */
     public static void weedTick(LivingEntity entity, int level) {
         if (!(entity instanceof Player player)) return;
-        player.causeFoodExhaustion(0.2f * DrugEffect.felt(player, ModEffects.WEED_HIGH)); // the munchies
+        float felt = DrugEffect.felt(player, ModEffects.WEED_HIGH);
+        player.causeFoodExhaustion(0.2f * felt); // the munchies
+        // Giggle fits, about once a minute when properly high - and laughing is contagious.
+        boolean company = !player.level().getEntitiesOfClass(Player.class, player.getBoundingBox().inflate(8.0),
+            p -> p != player).isEmpty();
+        if (player.getRandom().nextFloat() < 0.015f * felt * (company ? 2f : 1f)) {
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.GIGGLE.get(),
+                SoundSource.PLAYERS, 1.0f, 0.95f + player.getRandom().nextFloat() * 0.1f);
+        }
         // Alcohol after weed is gentler than weed after alcohol (see take), but not harmless.
         float blood = DrunkServer.state(player).blood;
         if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < 0.01f + 0.01f * level) greenOut(player);

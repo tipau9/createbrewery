@@ -48,5 +48,13 @@
       "createbrewery:cough1",
       "createbrewery:cough2"
     ]
+  },
+  "giggle": {
+    "subtitle": "subtitles.createbrewery.giggle",
+    "sounds": [
+      "createbrewery:giggle1",
+      "createbrewery:giggle2",
+      "createbrewery:giggle3"
+    ]
   }
 }

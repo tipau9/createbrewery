@@ -17,6 +17,14 @@ import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen
 import com.createbrewery.sound.ModSounds;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.Sound;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.resources.sounds.TickableSoundInstance;
+import net.minecraft.client.sounds.AudioStream;
+import net.minecraft.client.sounds.SoundBufferLibrary;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.client.sounds.WeighedSoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
@@ -40,6 +48,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Everything the drunk player feels on their own screen, derived from the synced blood level.
@@ -168,6 +177,7 @@ public final class DrunkClient {
             chain = null;
         }
         if (player != null && !mc.isPaused()) bodySounds(mc, player);
+        hearing(mc);
     }
 
     /**
@@ -298,14 +308,69 @@ public final class DrunkClient {
         return DrunkServer.ketamine(player) > 0.3f || blood >= Intoxication.WASTED;
     }
 
-    /** Numb: your own hurt sounds stay silent (see onRenderFrame). */
+    /**
+     * Numb: your own hurt sounds stay silent (see onRenderFrame). High: every sound is richer -
+     * music, ambience, rain, blocks and animals louder and heard from farther away (a louder
+     * sound carries further in Minecraft), and a touch slower, as time stretches.
+     */
     private static void onPlaySound(PlaySoundEvent event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        var sound = event.getSound();
-        if (player == null || sound == null || !numb(player)) return;
-        if (sound.getLocation().getPath().startsWith("entity.player.hurt")
+        SoundInstance sound = event.getSound();
+        if (player == null || sound == null) return;
+        if (numb(player) && sound.getLocation().getPath().startsWith("entity.player.hurt")
             && player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 4.0) {
             event.setSound(null);
+            return;
+        }
+        // Only one-shot sounds are wrapped. Tickable ones set their own volume every tick, and music
+        // and records are stopped later by their instance (the music manager, a jukebox), which a
+        // wrapper would hide - the listener gain makes those louder instead.
+        SoundSource source = sound.getSource();
+        if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
+            && !(sound instanceof TickableSoundInstance)) {
+            event.setSound(new EnhancedSound(sound, 1f + 0.3f * high, 1f - 0.04f * high));
+        }
+    }
+
+    /** A sound played as it is, only louder and a little slower. */
+    private record EnhancedSound(SoundInstance sound, float louder, float slower) implements SoundInstance {
+        @Override public ResourceLocation getLocation() { return sound.getLocation(); }
+        @Override public WeighedSoundEvents resolve(SoundManager manager) { return sound.resolve(manager); }
+        @Override public Sound getSound() { return sound.getSound(); }
+        @Override public SoundSource getSource() { return sound.getSource(); }
+        @Override public boolean isLooping() { return sound.isLooping(); }
+        @Override public boolean isRelative() { return sound.isRelative(); }
+        @Override public int getDelay() { return sound.getDelay(); }
+        @Override public float getVolume() { return sound.getVolume() * louder; }
+        @Override public float getPitch() { return sound.getPitch() * slower; }
+        @Override public double getX() { return sound.getX(); }
+        @Override public double getY() { return sound.getY(); }
+        @Override public double getZ() { return sound.getZ(); }
+        @Override public Attenuation getAttenuation() { return sound.getAttenuation(); }
+        @Override public boolean canStartSilent() { return sound.canStartSilent(); }
+        @Override public boolean canPlaySound() { return sound.canPlaySound(); }
+        @Override public CompletableFuture<AudioStream> getStream(SoundBufferLibrary buffers, Sound s, boolean looping) {
+            return sound.getStream(buffers, s, looping);
+        }
+    }
+
+    /** Whether the listener gain is currently raised (see {@link #hearing}). */
+    private static boolean hearingBoosted;
+    private static boolean hearingFailed;
+
+    /**
+     * High: the whole soundscape a little louder, music playing already included. Minecraft caps
+     * each sound at its slider, so this goes through the listener gain on top of the master
+     * volume, which OpenAL lets rise above 1.
+     */
+    private static void hearing(Minecraft mc) {
+        if (hearingFailed || (high <= 0.001f && !hearingBoosted)) return;
+        try {
+            float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
+            org.lwjgl.openal.AL10.alListenerf(org.lwjgl.openal.AL10.AL_GAIN, master * (1f + 0.35f * high));
+            hearingBoosted = high > 0.001f;
+        } catch (RuntimeException | LinkageError e) {
+            hearingFailed = true; // no sound device: nothing to make louder
         }
     }
 
@@ -376,7 +441,7 @@ public final class DrunkClient {
         // Keta pushes the world away (wider view), Koks narrows the focus.
         MobEffectInstance racing = event.getPlayer().getEffect(ModEffects.TACHYCARDIA);
         float tunnel = racing == null ? 0f : 0.03f * (racing.getAmplifier() + 1);
-        float drugs = 1f + (0.12f * dissoc - 0.04f * stim + 0.03f * high - tunnel) * screen();
+        float drugs = 1f + (0.12f * dissoc - 0.04f * stim - tunnel) * screen();
         if (drugs != 1f) event.setNewFovModifier(event.getNewFovModifier() * drugs);
         if (blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.
@@ -467,8 +532,15 @@ public final class DrunkClient {
         }
         // Koks makes the hands twitchy, Keta makes them distant and slow.
         if (stim > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f + 0.25f * stim));
-        // Weed slows time down; greening out makes the head spin and the hands limp.
-        if (high > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.15f * high));
+        // Weed slows time down and the view floats; now and then you zone out, staring, and the
+        // hands barely follow for a few seconds. Greening out makes the head spin and the hands limp.
+        if (high > 0f) {
+            LocalPlayer me = Minecraft.getInstance().player;
+            double t = me == null ? 0.0 : seconds(me, 0f);
+            float zone = Math.max(0f, Math.min(1f, (noise(t * 0.12, 51) - 0.55f) / 0.25f)) * high;
+            event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.1f * high) * (1f - 0.75f * zone));
+            if (high > 0.6f) event.setCinematicCameraEnabled(true);
+        }
         if (green > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.3f * green));
         if (dissoc > 0f) {
             event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.6f * dissoc));

@@ -3,6 +3,8 @@
 // Drunk vision. Two inputs from DrunkClient:
 //   Mood      0..1  the party zone (a beer or two): "beer goggles" - glow, halos around lights,
 //                   richer, warmer colours. The world simply looks nicer.
+//   (High is weed: its own look - vivid, clear colours, cool light glow, dreamy edges,
+//    breathing surfaces and faint trails when strong. Deliberately unlike the beer look.)
 //   Intensity 0..1  how drunk: wobble, double vision, blurred edges, tunnel, washed-out colours,
 //                   and afterimages - the picture drags behind when you turn.
 // PrevSampler is last frame's output (see post/drunk.json), which makes the afterimages once drunk.
@@ -59,8 +61,10 @@ void main() {
     float ang = Dissoc * 0.35 * sin(t * 0.15) * length(c) * 2.0;
     c = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * c;
     uv = 0.5 + c * (1.0 - 0.08 * Dissoc);
-    // Weed: the view breathes very slowly (about one breath every 12 s).
-    uv = 0.5 + (uv - 0.5) * (1.0 - 0.012 * High * (1.0 + sin(t * 0.5)));
+    // Weed, from a strong high on: surfaces seem to breathe - a wide, slow swell across the
+    // picture, about one breath every 10 s. Nothing like the beer wobble, and no double vision.
+    float stoned = smoothstep(0.45, 1.0, High);
+    uv += vec2(sin(uv.y * 3.0 + t * 0.6), sin(uv.x * 2.5 + t * 0.5 + 1.3)) * 0.0035 * stoned;
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -101,10 +105,21 @@ void main() {
     float hole = clamp((Dissoc - 0.6) / 0.4, 0.0, 1.0);
     col *= 1.0 - smoothstep(0.12, 0.7, length(d)) * 0.85 * hole;
 
-    // Weed: soft, warm and rich - everything looks a bit more interesting.
-    col = mix(col, ring(uv, px * 2.0), 0.15 * High);
+    // Weed: colours pop and details look more interesting (broad local contrast, not the hard
+    // Koks sharpening), wide pupils let lights glow cool-white, and the eyes fix on the middle
+    // while the edges go dreamy - soft, with a faint colour fringe.
+    // Clamped, so small bright lights do not get a dark ring around them.
+    col += clamp((col - ring(uv, px * 7.0)) * 0.45, -0.01, 0.12) * High;
     lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(vec3(lum), col, 1.0 + 0.3 * High) * mix(vec3(1.0), vec3(1.05, 1.03, 0.92), High);
+    float sat = length(col - vec3(lum));
+    col = mix(vec3(lum), col, 1.0 + (0.6 - 0.8 * clamp(sat, 0.0, 0.5)) * High); // vibrance: dull colours gain most
+    vec3 glow = spill(uv, px * 3.0, 0.1) + spill(uv, px * 7.0, 0.5) * 1.2 + spill(uv, px * 12.0, 0.3) * 1.4;
+    col += glow * vec3(0.9, 1.0, 1.0) * 0.8 * High;
+    col += (1.0 - col) * col * 0.12 * High; // shadows open up a little
+    float dream = smoothstep(0.25, 0.75, length(d)) * High;
+    col = mix(col, ring(uv, px * 4.0), 0.45 * dream);
+    col.r = mix(col.r, tap(uv + d * 0.006).r, 0.5 * dream);
+    col.b = mix(col.b, tap(uv - d * 0.006).b, 0.5 * dream);
 
     // Greening out: pale and green, the edges going dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
@@ -125,7 +140,8 @@ void main() {
     // Trail is 0 on the first frames of a fresh chain, whose previous frame is still black.
     // Only when properly drunk: in the party zone the camera never rests (aim drift, sway, view
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
-    col = mix(col, prev, (0.6 * k * heavy + 0.35 * Dissoc) * Trail);
+    // Weed: at a strong high, faint trails behind movement.
+    col = mix(col, prev, (0.6 * k * heavy + 0.35 * Dissoc + 0.25 * stoned) * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
