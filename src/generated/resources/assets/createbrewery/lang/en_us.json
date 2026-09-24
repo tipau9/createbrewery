@@ -27,6 +27,7 @@
   "effect.createbrewery.delirium": "Größenwahn",
   "effect.createbrewery.hangover": "Kater des Todes",
   "effect.createbrewery.hiccups": "Schluckauf",
+  "effect.createbrewery.inebriation": "Trunkenheit",
   "effect.createbrewery.stumble": "Schlingerkurs",
   "fluid.createbrewery.beer": "Beer",
   "fluid.createbrewery.hopped_wort": "Hopped Wort",

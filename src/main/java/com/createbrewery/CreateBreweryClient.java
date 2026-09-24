@@ -6,6 +6,7 @@ import net.createmod.ponder.foundation.PonderIndex;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -26,63 +27,80 @@ public class CreateBreweryClient {
         NeoForge.EVENT_BUS.addListener(CreateBreweryClient::onRenderGui);
     }
 
+    private static int getIntoxicationStage(Player player) {
+        MobEffectInstance inebriation = player.getEffect(ModEffects.INEBRIATION);
+        if (inebriation != null) {
+            return inebriation.getAmplifier() + 1; // 1, 2, 3, 4+
+        }
+        if (player.hasEffect(ModEffects.HANGOVER)) return 4;
+        if (player.hasEffect(ModEffects.DELIRIUM)) return 3;
+        if (player.hasEffect(ModEffects.STUMBLE)) return 2;
+        if (player.hasEffect(ModEffects.HICCUPS)) return 1;
+        return 0;
+    }
+
     /**
-     * 1. Camera Sway & Seegang: Roll side-to-side, pitch nodding, and wandering yaw gaze.
+     * 1. Camera Sway & Seegang: Scales progressively with each beer!
      */
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && !mc.isPaused()) {
-            boolean hasStumble = mc.player.hasEffect(ModEffects.STUMBLE);
-            boolean hasHangover = mc.player.hasEffect(ModEffects.HANGOVER);
-            boolean hasDelirium = mc.player.hasEffect(ModEffects.DELIRIUM);
-
-            if (hasStumble || hasHangover || hasDelirium) {
-                float intensity = 1.0f;
-                if (hasStumble) intensity += 0.5f;
-                if (hasDelirium) intensity += 0.5f;
-
+            int stage = getIntoxicationStage(mc.player);
+            if (stage > 0) {
                 float tick = mc.player.tickCount + (float) event.getPartialTick();
-                // Roll sway (ocean ship rolling)
-                float roll = (float) Math.sin(tick * 0.06f) * (8.5f * intensity);
+
+                // Roll: 2.5 deg (1 beer) up to 14 deg (4+ beers)
+                float maxRoll = switch (stage) {
+                    case 1 -> 2.8f;
+                    case 2 -> 6.0f;
+                    case 3 -> 9.5f;
+                    default -> 14.0f;
+                };
+                float roll = (float) Math.sin(tick * 0.055f) * maxRoll;
                 event.setRoll(event.getRoll() + roll);
 
-                // Drowsy pitch nodding
-                float pitchDrift = (float) Math.sin(tick * 0.04f) * (2.5f * intensity);
-                event.setPitch(event.getPitch() + pitchDrift);
-
-                // Wandering eyes yaw drift
-                float yawDrift = (float) Math.cos(tick * 0.035f) * (3.2f * intensity);
-                event.setYaw(event.getYaw() + yawDrift);
+                // Drowsy pitch & yaw drift only starting at Stage 2+
+                if (stage >= 2) {
+                    float driftFactor = (stage == 2) ? 1.0f : ((stage == 3) ? 2.2f : 3.5f);
+                    float pitchDrift = (float) Math.sin(tick * 0.04f) * (1.2f * driftFactor);
+                    float yawDrift = (float) Math.cos(tick * 0.035f) * (1.5f * driftFactor);
+                    event.setPitch(event.getPitch() + pitchDrift);
+                    event.setYaw(event.getYaw() + yawDrift);
+                }
             }
         }
     }
 
     /**
-     * 2. Dynamic FOV Pulsing: Throbbing tunnel vision (like headache pressure / adrenaline).
+     * 2. Dynamic FOV Pulsing: Throbbing lens zoom, scaling with alcohol level.
      */
     public static void onComputeFov(ComputeFovModifierEvent event) {
         Player player = event.getPlayer();
         if (player != null) {
-            boolean hasStumble = player.hasEffect(ModEffects.STUMBLE);
-            boolean hasHangover = player.hasEffect(ModEffects.HANGOVER);
-            boolean hasDelirium = player.hasEffect(ModEffects.DELIRIUM);
-            boolean hasHiccups = player.hasEffect(ModEffects.HICCUPS);
-
-            if (hasStumble || hasHangover || hasDelirium || hasHiccups) {
+            int stage = getIntoxicationStage(player);
+            if (stage > 0) {
+                float pulseIntensity = switch (stage) {
+                    case 1 -> 0.03f; // barely noticeable
+                    case 2 -> 0.07f;
+                    case 3 -> 0.12f;
+                    default -> 0.17f; // heavy throbbing headache
+                };
                 float tick = player.tickCount;
-                float pulse = (float) Math.sin(tick * 0.08f) * 0.12f;
+                float pulse = (float) Math.sin(tick * 0.08f) * pulseIntensity;
                 event.setNewFovModifier(event.getNewFovModifier() + pulse);
             }
         }
     }
 
     /**
-     * 3. Post-Processing Blur Shader: Out-of-focus vision when hungover or delirious.
+     * 3. Post-Processing Blur Shader: Kicks in at Stage 3 (3. Bier) and Stage 4 (Kater).
      */
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            boolean needsShader = mc.player.hasEffect(ModEffects.HANGOVER) || mc.player.hasEffect(ModEffects.DELIRIUM);
+            int stage = getIntoxicationStage(mc.player);
+            boolean needsShader = (stage >= 3);
+
             if (needsShader && !shaderActive) {
                 mc.gameRenderer.loadEffect(BLUR_SHADER);
                 shaderActive = true;
@@ -96,26 +114,25 @@ public class CreateBreweryClient {
     }
 
     /**
-     * 4. Heavy Eyelids & Vignette Overlay: Dark translucent eyelids drooping down from top and bottom.
+     * 4. Heavy Eyelids Overlay: Starts drooping gently at Stage 2, deeply at Stage 3 & 4.
      */
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && !mc.options.hideGui) {
-            boolean hasHangover = mc.player.hasEffect(ModEffects.HANGOVER);
-            boolean hasStumble = mc.player.hasEffect(ModEffects.STUMBLE);
-            boolean hasDelirium = mc.player.hasEffect(ModEffects.DELIRIUM);
-
-            if (hasHangover || hasStumble || hasDelirium) {
+            int stage = getIntoxicationStage(mc.player);
+            if (stage >= 2) {
                 GuiGraphics graphics = event.getGuiGraphics();
                 int width = graphics.guiWidth();
                 int height = graphics.guiHeight();
 
                 float tick = mc.player.tickCount;
-                // Eyelids breathing/drooping down & up
                 float eyelidPhase = (float) ((Math.sin(tick * 0.045f) + 1.0f) * 0.5f);
-                int eyelidHeight = (int) (16 + eyelidPhase * 28);
 
-                // Top eyelid (solid dark fading to transparent)
+                int baseHeight = (stage == 2) ? 10 : ((stage == 3) ? 18 : 28);
+                int swayHeight = (stage == 2) ? 12 : ((stage == 3) ? 22 : 35);
+                int eyelidHeight = (int) (baseHeight + eyelidPhase * swayHeight);
+
+                // Top eyelid (gradient to transparent)
                 graphics.fillGradient(0, 0, width, eyelidHeight, 0xD0080402, 0x00080402);
                 // Bottom eyelid
                 graphics.fillGradient(0, height - eyelidHeight, width, height, 0x00080402, 0xD0080402);

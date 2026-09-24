@@ -22,43 +22,53 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 public class BreweryCommonEvents {
 
     /**
-     * Chat Distortion: Slur messages when drunk/hungover (inspired by BreweryX)
+     * Chat Distortion: Slur messages when drunk, scaling with inebriation stage!
      */
     @SubscribeEvent
     public static void onServerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
-        boolean isDrunk = player.hasEffect(ModEffects.DELIRIUM) 
-                       || player.hasEffect(ModEffects.STUMBLE) 
-                       || player.hasEffect(ModEffects.HANGOVER)
-                       || player.hasEffect(ModEffects.HICCUPS);
+        MobEffectInstance inebriation = player.getEffect(ModEffects.INEBRIATION);
 
-        if (isDrunk) {
+        if (inebriation != null) {
+            int stage = inebriation.getAmplifier(); // 0 = I, 1 = II, 2 = III, 3 = IV
             String original = event.getRawText();
-            String slurred = slurText(original, player.getRandom());
+            String slurred = slurText(original, player.getRandom(), stage);
+            event.setMessage(Component.literal(slurred));
+        } else if (player.hasEffect(ModEffects.HANGOVER)) {
+            // Hungover player also mumbles occasionally
+            String original = event.getRawText();
+            String slurred = slurText(original, player.getRandom(), 1);
             event.setMessage(Component.literal(slurred));
         }
     }
 
-    private static String slurText(String text, RandomSource random) {
+    private static String slurText(String text, RandomSource random, int stage) {
+        if (stage == 0 && random.nextFloat() > 0.35f) {
+            return text; // Level I: only 35% chance to slur slightly
+        }
+
         StringBuilder sb = new StringBuilder();
+        float stretchChance = 0.15f + (stage * 0.15f);
+
         for (char c : text.toCharArray()) {
             char lower = Character.toLowerCase(c);
-            if (lower == 's') {
+            if (lower == 's' && stage >= 1) {
                 sb.append(random.nextBoolean() ? "shh" : "sch");
-            } else if (lower == 'z') {
+            } else if (lower == 'z' && stage >= 2) {
                 sb.append("tss");
-            } else if (lower == 'a' || lower == 'e' || lower == 'o' || lower == 'u') {
-                sb.append(c);
-                if (random.nextFloat() < 0.45f) {
-                    sb.append(c).append(c); // stretch vowel: "haallloo"
+            } else if ((lower == 'a' || lower == 'e' || lower == 'o' || lower == 'u') && random.nextFloat() < stretchChance) {
+                sb.append(c).append(c);
+                if (stage >= 2 && random.nextFloat() < 0.4f) {
+                    sb.append(c); // triple vowel: "haallloo"
                 }
             } else {
                 sb.append(c);
             }
         }
 
-        // Randomly insert drunk hiccup / burp
-        if (random.nextFloat() < 0.65f) {
+        // Random hiccup / burp at end of message (more frequent at higher stages)
+        float hiccupChance = 0.25f + (stage * 0.22f);
+        if (random.nextFloat() < hiccupChance) {
             String[] hiccups = { " *hick*", " *r\u00fclps*", "... *hicks*", " *hik!*", " ...waasss?" };
             sb.append(hiccups[random.nextInt(hiccups.length)]);
         }
@@ -67,8 +77,7 @@ public class BreweryCommonEvents {
     }
 
     /**
-     * Sobering Up: Drinking water only SHORTENS remaining alcohol effect durations,
-     * requiring multiple drinks to sober up completely.
+     * Sobering Up: Drinking water steps down the inebriation tier and shortens effect durations.
      */
     @SubscribeEvent
     public static void onFinishDrinking(LivingEntityUseItemEvent.Finish event) {
@@ -77,20 +86,34 @@ public class BreweryCommonEvents {
             if (stack.is(Items.POTION)) {
                 PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
                 if (contents != null && contents.is(Potions.WATER)) {
-                    boolean hadEffect = player.hasEffect(ModEffects.HANGOVER)
-                                     || player.hasEffect(ModEffects.STUMBLE)
-                                     || player.hasEffect(ModEffects.HICCUPS)
-                                     || player.hasEffect(ModEffects.DELIRIUM);
+                    MobEffectInstance inebriation = player.getEffect(ModEffects.INEBRIATION);
+                    boolean hasOtherEffects = player.hasEffect(ModEffects.HANGOVER)
+                                           || player.hasEffect(ModEffects.STUMBLE)
+                                           || player.hasEffect(ModEffects.HICCUPS)
+                                           || player.hasEffect(ModEffects.DELIRIUM);
 
-                    if (hadEffect) {
-                        // Shorten duration by 240 ticks (12 seconds) per bottle
-                        int reductionTicks = 240;
-                        reduceDuration(player, ModEffects.HANGOVER, reductionTicks);
-                        reduceDuration(player, ModEffects.STUMBLE, reductionTicks);
-                        reduceDuration(player, ModEffects.HICCUPS, reductionTicks);
-                        reduceDuration(player, ModEffects.DELIRIUM, reductionTicks);
+                    if (inebriation != null || hasOtherEffects) {
+                        // Step down inebriation amplifier by 1, or remove if at stage 0
+                        if (inebriation != null) {
+                            int currentStage = inebriation.getAmplifier();
+                            int newDuration = Math.max(0, inebriation.getDuration() - 500);
+                            player.removeEffect(ModEffects.INEBRIATION);
 
-                        boolean stillDrunk = player.hasEffect(ModEffects.HANGOVER)
+                            if (currentStage > 0 && newDuration > 0) {
+                                player.addEffect(new MobEffectInstance(
+                                    ModEffects.INEBRIATION, newDuration, currentStage - 1, false, true, true
+                                ));
+                            }
+                        }
+
+                        // Reduce duration of individual symptoms by 260 ticks
+                        reduceDuration(player, ModEffects.HANGOVER, 260);
+                        reduceDuration(player, ModEffects.STUMBLE, 260);
+                        reduceDuration(player, ModEffects.HICCUPS, 260);
+                        reduceDuration(player, ModEffects.DELIRIUM, 260);
+
+                        boolean stillDrunk = player.hasEffect(ModEffects.INEBRIATION)
+                                          || player.hasEffect(ModEffects.HANGOVER)
                                           || player.hasEffect(ModEffects.STUMBLE)
                                           || player.hasEffect(ModEffects.HICCUPS)
                                           || player.hasEffect(ModEffects.DELIRIUM);
@@ -102,10 +125,10 @@ public class BreweryCommonEvents {
                             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8f, 1.8f);
                             player.displayClientMessage(
-                                Component.literal("\u00a7a\u00a7lVollst\u00e4ndig ern\u00fcchtert! \u00a72Das Wasser hat den Alkohol endg\u00fcltig neutralisiert."), true);
+                                Component.literal("\u00a7a\u00a7lVollst\u00e4ndig ern\u00fcchtert! \u00a72Der Alkohol ist endg\u00fcltig aus deinem Blut."), true);
                         } else {
                             player.displayClientMessage(
-                                Component.literal("\u00a7b\u00a7lEin Schluck Wasser... \u00a77Der Rausch l\u00e4sst etwas nach (-12s), aber du bist noch benebelt!"), true);
+                                Component.literal("\u00a7b\u00a7lEin Schluck Wasser... \u00a77Dein Kopf wird etwas klarer (Trunkenheitsstufe gesunken)!"), true);
                         }
                     }
                 }

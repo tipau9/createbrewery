@@ -11,6 +11,9 @@ public class ModEffects {
     public static final DeferredRegister<MobEffect> EFFECTS =
         DeferredRegister.create(BuiltInRegistries.MOB_EFFECT, CreateBrewery.MOD_ID);
 
+    public static final DeferredHolder<MobEffect, InebriationEffect> INEBRIATION =
+        EFFECTS.register("inebriation", InebriationEffect::new);
+
     public static final DeferredHolder<MobEffect, HangoverEffect> HANGOVER =
         EFFECTS.register("hangover", HangoverEffect::new);
 

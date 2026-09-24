@@ -22,6 +22,7 @@ public class CreateBrewery {
         ModBlocks.register();
         ModBlockEntities.register();
         com.createbrewery.effect.ModEffects.register(modEventBus);
+        REGISTRATE.addRawLang("effect.createbrewery.inebriation", "Trunkenheit");
         REGISTRATE.addRawLang("effect.createbrewery.hangover", "Kater des Todes");
         REGISTRATE.addRawLang("effect.createbrewery.hiccups", "Schluckauf");
         REGISTRATE.addRawLang("effect.createbrewery.stumble", "Schlingerkurs");
