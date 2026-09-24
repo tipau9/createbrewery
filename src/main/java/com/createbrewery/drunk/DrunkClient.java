@@ -542,13 +542,14 @@ public final class DrunkClient {
             // Collapsed: the world goes grey-dark, fading in over a second and out at the end.
             float fade = Math.min(1f, Math.min((DrugServer.HEART_ATTACK_TICKS - failing.getDuration()) / 20f,
                 failing.getDuration() / 40f));
-            g.fill(0, 0, w, h, ((int) (fade * 170) << 24) | 0x0A0004);
+            g.fill(0, 0, w, h, ((int) (fade * 170 * screen()) << 24) | 0x0A0004);
         }
         if (player.hasEffect(ModEffects.ASPIRATION)) {
             // Choking: sick green closing in, steady.
+            int a = (int) (160 * screen());
             int edge = h / 3;
-            g.fillGradient(0, 0, w, edge, 0xA04A5A10, 0x004A5A10);
-            g.fillGradient(0, h - edge, w, h, 0x004A5A10, 0xA04A5A10);
+            g.fillGradient(0, 0, w, edge, (a << 24) | 0x4A5A10, 0x004A5A10);
+            g.fillGradient(0, h - edge, w, h, 0x004A5A10, (a << 24) | 0x4A5A10);
         }
 
         MobEffectInstance hangover = player.getEffect(ModEffects.HANGOVER);

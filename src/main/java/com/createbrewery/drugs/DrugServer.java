@@ -117,7 +117,11 @@ public final class DrugServer {
         if (kind == Kind.COKE) player.removeEffect(ModEffects.COKE_CRASH); // a new line pushes the crash back
         // Keta: the K-Loch from the third dose - or the second, with weed deepening it.
         int holeAt = player.hasEffect(ModEffects.WEED_HIGH) ? 1 : 2;
-        if (kind == Kind.KETA && level >= holeAt) player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, 0, false, false, true));
+        if (kind == Kind.KETA && level >= holeAt) {
+            // Already in the hole: amplifier 1 marks a top-up, so it deepens instead of coming up again.
+            int deeper = player.hasEffect(ModEffects.K_HOLE) ? 1 : 0;
+            player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, deeper, false, false, true));
+        }
         if (kind == Kind.WEED && level >= 2) greenOut(player);
         // Erst saufen, dann kiffen: weed on top of alcohol tips the circulation over far more easily.
         if (kind == Kind.WEED && DrunkServer.state(player).blood >= Intoxication.MERRY

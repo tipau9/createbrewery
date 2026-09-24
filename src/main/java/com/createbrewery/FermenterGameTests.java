@@ -609,4 +609,33 @@ public class FermenterGameTests {
             "Koks hit at full strength at once");
         helper.succeed();
     }
+
+    /** More Keta in the K-Loch deepens it; it does not start the come-up again. */
+    @GameTest(template = TEMPLATE)
+    public static void moreKetaDeepensTheKHole(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        var keta = com.createbrewery.drugs.DrugServer.Kind.KETA;
+        for (int i = 0; i < 3; i++) com.createbrewery.drugs.DrugServer.take(player, keta);
+        // Deep in the hole already, past its come-up.
+        player.removeEffect(com.createbrewery.effect.ModEffects.K_HOLE);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.K_HOLE,
+            com.createbrewery.drugs.DrugServer.K_HOLE_TICKS - 200));
+        com.createbrewery.drugs.DrugServer.take(player, keta);
+        helper.assertTrue(com.createbrewery.drugs.DrugEffect.strength(player, com.createbrewery.effect.ModEffects.K_HOLE) > 0.9f,
+            "another dose pulled the K-Loch back to its come-up");
+        helper.succeed();
+    }
+
+    /** Choking with no air left hurts (the aspiration damage type is registered). */
+    @GameTest(template = TEMPLATE)
+    public static void chokingHurts(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.ASPIRATION,
+            com.createbrewery.drugs.DrugServer.ASPIRATION_TICKS));
+        player.setAirSupply(0);
+        float before = player.getHealth();
+        com.createbrewery.drugs.DrugServer.aspirationTick(player, 0);
+        helper.assertTrue(player.getHealth() < before, "choking did not hurt");
+        helper.succeed();
+    }
 }
