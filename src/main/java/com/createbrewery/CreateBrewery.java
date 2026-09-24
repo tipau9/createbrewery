@@ -29,6 +29,10 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.goggles.fermenter.idle", "Idle");
         REGISTRATE.addRawLang("createbrewery.goggles.fermenter.progress", "Fermenting: %s%%");
         REGISTRATE.addRawLang("createbrewery.goggles.fermenter.remaining", "%s days remaining");
+        REGISTRATE.addRawLang("createbrewery.recipe.fermenting", "Fermenting");
+        REGISTRATE.addRawLang("createbrewery.jei.fermenting.one_day", "1 day");
+        REGISTRATE.addRawLang("createbrewery.jei.fermenting.days", "%s days");
+        REGISTRATE.addRawLang("createbrewery.jei.fermenting.days_decimal", "%s days");
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(ModRecipeProvider::gatherData);
         ModLootModifiers.register(modEventBus);

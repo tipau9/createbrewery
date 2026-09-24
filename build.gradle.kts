@@ -58,6 +58,7 @@ neoForge {
 repositories {
     maven("https://maven.createmod.net")            // Create, Ponder, Flywheel
     maven("https://maven.ithundxr.dev/snapshots")   // Registrate
+    maven("https://maven.blamejared.com")           // JEI
 }
 
 dependencies {
@@ -66,6 +67,9 @@ dependencies {
     compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${property("minecraft_version")}:${property("flywheel_version")}")
     runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${property("minecraft_version")}:${property("flywheel_version")}")
     implementation("com.tterrag.registrate:Registrate:${property("registrate_version")}")
+
+    compileOnly("mezz.jei:jei-${property("minecraft_version")}-neoforge-api:${property("jei_version")}")
+    runtimeOnly("mezz.jei:jei-${property("minecraft_version")}-neoforge:${property("jei_version")}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // Required to actually launch the JUnit Platform. Without it, the first unit
