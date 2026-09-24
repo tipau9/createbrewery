@@ -78,7 +78,7 @@ public class ModItems {
     public static final ItemEntry<DrugItem> JOINT = REGISTRATE
         .item("joint", p -> new DrugItem(p, DrugServer.Kind.WEED))
         .lang("Joint")
-        .properties(p -> p.stacksTo(16))
+        .properties(p -> p.durability(DrugServer.HITS_PER_JOINT))
         .register();
 
     public static void register() {}

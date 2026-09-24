@@ -30,8 +30,13 @@ public final class Pharmacology {
      * The strain on the heart does not share this discount - see {@link #heartLoad}.
      */
     public static float dosesFelt(int amplifier) {
-        if (amplifier < 0) return 0f;
-        return (1f - (float) Math.pow(0.5, amplifier + 1)) / (1f - 0.0625f);
+        return amplifier < 0 ? 0f : feltFor(amplifier + 1);
+    }
+
+    /** The same for a fractional number of doses (a few hits of a joint), capped at 1. */
+    public static float feltFor(float doses) {
+        if (doses <= 0f) return 0f;
+        return Math.min(1f, (1f - (float) Math.pow(0.5, doses)) / (1f - 0.0625f));
     }
 
     /**

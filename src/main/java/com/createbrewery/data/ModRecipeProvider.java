@@ -217,7 +217,7 @@ public class ModRecipeProvider {
                 .requires(Items.SLIME_BALL)
                 .unlockedBy("has_amethyst_shard", has(Items.AMETHYST_SHARD))
                 .save(output, CreateBrewery.ID("keta"));
-            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.JOINT.get(), 2)
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.JOINT.get(), 1)
                 .requires(Items.PAPER)
                 .requires(ModItems.HOP_CONES.get())
                 .requires(Items.DRIED_KELP)

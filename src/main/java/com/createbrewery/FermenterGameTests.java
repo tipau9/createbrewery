@@ -552,9 +552,9 @@ public class FermenterGameTests {
         com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.KETA);
         com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.KETA);
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.K_HOLE), "weed did not pull the K-Loch closer");
-        com.createbrewery.drugs.DrugServer.take(player, weed);
-        com.createbrewery.drugs.DrugServer.take(player, weed);
-        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.GREENING_OUT), "three joints did not green out");
+        // Two and a half joints, hit by hit: the circulation gives up for sure.
+        for (int i = 1; i < 15; i++) com.createbrewery.drugs.DrugServer.take(player, weed);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.GREENING_OUT), "two and a half joints did not green out");
         helper.succeed();
     }
 
@@ -636,6 +636,22 @@ public class FermenterGameTests {
         float before = player.getHealth();
         com.createbrewery.drugs.DrugServer.aspirationTick(player, 0);
         helper.assertTrue(player.getHealth() < before, "choking did not hurt");
+        helper.succeed();
+    }
+
+    /** A joint is smoked hit by hit: one durability per hit, gone after the last. */
+    @GameTest(template = TEMPLATE)
+    public static void jointWearsDownHitByHit(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
+        net.minecraft.world.item.ItemStack joint = new net.minecraft.world.item.ItemStack(com.createbrewery.ModItems.JOINT.get());
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, joint);
+        joint.finishUsingItem(helper.getLevel(), player);
+        helper.assertTrue(joint.getDamageValue() == 1, "a hit did not wear the joint");
+        for (int i = 1; i < com.createbrewery.drugs.DrugServer.HITS_PER_JOINT; i++) joint.finishUsingItem(helper.getLevel(), player);
+        helper.assertTrue(joint.isEmpty(), "the joint did not burn down");
+        float joints = com.createbrewery.drugs.DrugServer.joints(player);
+        helper.assertTrue(Math.abs(joints - 1f) < 0.01f, "one joint should be one joint's worth, was " + joints);
         helper.succeed();
     }
 }

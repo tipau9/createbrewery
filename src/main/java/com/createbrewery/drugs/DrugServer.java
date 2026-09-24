@@ -80,7 +80,11 @@ public final class DrugServer {
     public static final int ASPIRATION_TICKS = 200;
 
     public static final int WEED_TICKS = 4800;
-    public static final int GREENING_TICKS = 500;
+    public static final int GREENING_TICKS = 800;
+    /** A joint lasts this many hits (its durability); each hit is one amplifier step of the high. */
+    public static final int HITS_PER_JOINT = 6;
+    /** Three joints' worth of hits in the body at most. */
+    private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
     public enum Kind { COKE, KETA, WEED }
 
@@ -99,8 +103,32 @@ public final class DrugServer {
         return !Config.SPEC.isLoaded() || Config.ENABLE_DRUGS.get();
     }
 
-    /** A line goes up the nose, or a joint is smoked. Stacks with what is still active. */
+    /** Joints' worth of weed in the body: 1 after a whole joint, 0.5 after three hits. */
+    public static float joints(LivingEntity entity) {
+        MobEffectInstance weed = entity.getEffect(ModEffects.WEED_HIGH);
+        return weed == null ? 0f : (weed.getAmplifier() + 1) / (float) HITS_PER_JOINT;
+    }
+
+    /** One hit of a joint: a sixth of it. The high builds hit by hit, and so does the nausea. */
+    public static void hit(Player player) {
+        MobEffectInstance before = player.getEffect(ModEffects.WEED_HIGH);
+        int hits = before == null ? 0 : Math.min(MAX_HITS - 1, before.getAmplifier() + 1);
+        player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, WEED_TICKS, hits, false, false, true));
+        float joints = joints(player);
+        // The circulation gives up from the second joint on, and past two and a half for sure.
+        float sick = joints >= 2.5f ? 1f : joints > 2f ? 0.45f : joints > 1.5f ? 0.15f : 0f;
+        // Erst saufen, dann kiffen: weed on top of alcohol tips it over far more easily.
+        if (DrunkServer.state(player).blood >= Intoxication.MERRY) sick = Math.max(sick, 0.15f + 0.1f * joints);
+        if (player.getRandom().nextFloat() < sick) greenOut(player);
+        smoke(player);
+    }
+
+    /** A line goes up the nose, or a joint is smoked (see {@link #hit}). Stacks with what is still active. */
     public static void take(Player player, Kind kind) {
+        if (kind == Kind.WEED) {
+            hit(player);
+            return;
+        }
         Holder<MobEffect> high = switch (kind) {
             case COKE -> ModEffects.COKE_HIGH;
             case KETA -> ModEffects.KETA_HIGH;
@@ -121,15 +149,6 @@ public final class DrugServer {
             // Already in the hole: amplifier 1 marks a top-up, so it deepens instead of coming up again.
             int deeper = player.hasEffect(ModEffects.K_HOLE) ? 1 : 0;
             player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, deeper, false, false, true));
-        }
-        if (kind == Kind.WEED && level >= 2) greenOut(player);
-        // Erst saufen, dann kiffen: weed on top of alcohol tips the circulation over far more easily.
-        if (kind == Kind.WEED && DrunkServer.state(player).blood >= Intoxication.MERRY
-            && player.getRandom().nextFloat() < 0.5f) greenOut(player);
-
-        if (kind == Kind.WEED) {
-            smoke(player);
-            return;
         }
         if (player.level() instanceof ServerLevel level1) {
             // The lining gives up: often with the other powder still in there, and line after line.
@@ -153,7 +172,7 @@ public final class DrugServer {
                 player.getZ() + look.z * 0.35, 0, look.x + (player.getRandom().nextDouble() - 0.5) * 0.4,
                 0.25, look.z + (player.getRandom().nextDouble() - 0.5) * 0.4, speed);
         }
-        if (player.getRandom().nextFloat() < 0.4f) {
+        if (player.getRandom().nextFloat() < 0.25f) {
             level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.COUGH.get(),
                 SoundSource.PLAYERS, 1.0f, 0.9f + player.getRandom().nextFloat() * 0.2f);
         }
@@ -231,14 +250,20 @@ public final class DrugServer {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.GIGGLE.get(),
                 SoundSource.PLAYERS, 1.0f, 0.95f + player.getRandom().nextFloat() * 0.1f);
         }
-        // Alcohol after weed is gentler than weed after alcohol (see take), but not harmless.
+        // Alcohol after weed is gentler than weed after alcohol (see hit), but not harmless; and
+        // with two joints in you the nausea can come any time.
+        float joints = joints(player);
         float blood = DrunkServer.state(player).blood;
-        if (blood >= Intoxication.MERRY && player.getRandom().nextFloat() < 0.01f + 0.01f * level) greenOut(player);
+        float sick = (blood >= Intoxication.MERRY ? 0.01f + 0.01f * joints : 0f) + (joints > 1.5f ? 0.01f * joints : 0f);
+        if (player.getRandom().nextFloat() < sick) greenOut(player);
     }
 
-    /** Greening out, every 20 ticks: queasy, and it may all come back up. */
+    /** Greening out, every 20 ticks: waves of nausea, and it keeps coming back up. */
     public static void greeningTick(LivingEntity entity, int level) {
-        if (entity instanceof Player player && player.getRandom().nextFloat() < 0.04f) DrunkServer.vomit(player);
+        if (!(entity instanceof Player player)) return;
+        float strength = DrugEffect.strength(player, ModEffects.GREENING_OUT);
+        player.causeFoodExhaustion(0.5f * strength);
+        if (player.getRandom().nextFloat() < 0.12f * strength) DrunkServer.vomit(player);
     }
 
     /** The munchies: food tastes twice as good and fills more. */
@@ -292,7 +317,7 @@ public final class DrugServer {
             amp(player, ModEffects.COKE_HIGH), DrugEffect.strength(player, ModEffects.COKE_HIGH),
             hole ? Math.max(1, amp(player, ModEffects.KETA_HIGH)) : amp(player, ModEffects.KETA_HIGH),
             Math.max(DrugEffect.strength(player, ModEffects.KETA_HIGH), DrugEffect.strength(player, ModEffects.K_HOLE)),
-            DrugEffect.strength(player, ModEffects.WEED_HIGH), s.blood,
+            DrugEffect.felt(player, ModEffects.WEED_HIGH), s.blood,
             player.isSprinting(), player.level().dimensionType().ultraWarm());
         if (target <= 0f && s.heart <= 0f) return;
         // Up within seconds, back down over a minute.

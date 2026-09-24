@@ -65,6 +65,8 @@ void main() {
     // picture, about one breath every 10 s. Nothing like the beer wobble, and no double vision.
     float stoned = smoothstep(0.45, 1.0, High);
     uv += vec2(sin(uv.y * 3.0 + t * 0.6), sin(uv.x * 2.5 + t * 0.5 + 1.3)) * 0.0035 * stoned;
+    // Greening out: the stomach turns and the picture heaves with it, slowly (about 0.15 Hz).
+    uv.y += sin(t * 0.9) * 0.006 * Green * (0.5 + uv.x);
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -109,22 +111,22 @@ void main() {
     // Koks sharpening), wide pupils let lights glow cool-white, and the eyes fix on the middle
     // while the edges go dreamy - soft, with a faint colour fringe.
     // Clamped, so small bright lights do not get a dark ring around them.
-    col += clamp((col - ring(uv, px * 7.0)) * 0.45, -0.01, 0.12) * High;
+    col += clamp((col - ring(uv, px * 7.0)) * 0.6, -0.01, 0.16) * High;
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     float sat = length(col - vec3(lum));
-    col = mix(vec3(lum), col, 1.0 + (0.6 - 0.8 * clamp(sat, 0.0, 0.5)) * High); // vibrance: dull colours gain most
+    col = mix(vec3(lum), col, 1.0 + (0.9 - 1.0 * clamp(sat, 0.0, 0.5)) * High); // vibrance: dull colours gain most
     vec3 glow = spill(uv, px * 3.0, 0.1) + spill(uv, px * 7.0, 0.5) * 1.2 + spill(uv, px * 12.0, 0.3) * 1.4;
-    col += glow * vec3(0.9, 1.0, 1.0) * 0.8 * High;
+    col += glow * vec3(0.9, 1.0, 1.0) * 1.1 * High;
     col += (1.0 - col) * col * 0.12 * High; // shadows open up a little
     float dream = smoothstep(0.25, 0.75, length(d)) * High;
     col = mix(col, ring(uv, px * 4.0), 0.45 * dream);
     col.r = mix(col.r, tap(uv + d * 0.006).r, 0.5 * dream);
     col.b = mix(col.b, tap(uv - d * 0.006).b, 0.5 * dream);
 
-    // Greening out: pale and green, the edges going dark.
+    // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(col, vec3(lum), 0.35 * Green) * mix(vec3(1.0), vec3(0.85, 1.05, 0.8), Green);
-    col *= 1.0 - smoothstep(0.25, 0.8, length(d)) * 0.45 * Green;
+    col = mix(col, vec3(lum), 0.55 * Green) * mix(vec3(1.0), vec3(0.82, 1.06, 0.72), Green);
+    col *= 1.0 - smoothstep(0.2, 0.8, length(d)) * 0.6 * Green;
 
     // Too much: washed-out, sickly warm colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

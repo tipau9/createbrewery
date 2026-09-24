@@ -176,7 +176,10 @@ public final class DrunkClient {
             chain.close();
             chain = null;
         }
-        if (player != null && !mc.isPaused()) bodySounds(mc, player);
+        if (player != null && !mc.isPaused()) {
+            bodySounds(mc, player);
+            moreMusic(mc, player);
+        }
         hearing(mc);
     }
 
@@ -193,7 +196,7 @@ public final class DrunkClient {
     private static void bodySounds(Minecraft mc, LocalPlayer player) {
         // Paranoia: from the second joint, or weed with Koks, footsteps behind you - nobody is there.
         MobEffectInstance weed = player.getEffect(ModEffects.WEED_HIGH);
-        boolean paranoid = weed != null && (weed.getAmplifier() >= 1 || player.hasEffect(ModEffects.COKE_HIGH));
+        boolean paranoid = weed != null && (DrugServer.joints(player) > 1f || player.hasEffect(ModEffects.COKE_HIGH));
         if (paranoid && player.tickCount >= nextFootstep) {
             Vec3 behind = player.position().subtract(player.getLookAngle().multiply(3.0, 0.0, 3.0));
             mc.getSoundManager().play(new SimpleSoundInstance(net.minecraft.sounds.SoundEvents.GRAVEL_STEP,
@@ -326,9 +329,14 @@ public final class DrunkClient {
         // and records are stopped later by their instance (the music manager, a jukebox), which a
         // wrapper would hide - the listener gain makes those louder instead.
         SoundSource source = sound.getSource();
+        if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
         if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
-            event.setSound(new EnhancedSound(sound, 1f + 0.3f * high, 1f - 0.04f * high));
+            // The listener gain already raises everything; ambience and weather get more on top,
+            // everything else is pulled back so that music and ambience stand out.
+            boolean ambience = source == SoundSource.AMBIENT || source == SoundSource.WEATHER;
+            float louder = ambience ? 1f + 0.8f * high : (1f + 0.3f * high) / listenerBoost();
+            event.setSound(new EnhancedSound(sound, louder, 1f - 0.04f * high));
         }
     }
 
@@ -354,6 +362,26 @@ public final class DrunkClient {
         }
     }
 
+    /** High: music and ambience up to about 2x (+6 dB), which is where the listener gain goes. */
+    private static float listenerBoost() {
+        return 1f + 1.0f * high;
+    }
+
+    /**
+     * High: music sounds better, so you want more of it - the game's music keeps playing instead of
+     * waiting minutes between tracks. Checked every 10 s, and only while nothing is playing - no
+     * track, no jukebox (see {@link #lastMusic}).
+     */
+    private static void moreMusic(Minecraft mc, LocalPlayer player) {
+        if (high < 0.35f || player.tickCount % 200 != 0) return;
+        if (lastMusic != null && mc.getSoundManager().isActive(lastMusic)) return;
+        var music = mc.getSituationalMusic();
+        if (music != null) mc.getMusicManager().startPlaying(music);
+    }
+
+    /** The last music track or record that started; never wrapped, so it can be asked whether it still plays. */
+    private static SoundInstance lastMusic;
+
     /** Whether the listener gain is currently raised (see {@link #hearing}). */
     private static boolean hearingBoosted;
     private static boolean hearingFailed;
@@ -367,7 +395,7 @@ public final class DrunkClient {
         if (hearingFailed || (high <= 0.001f && !hearingBoosted)) return;
         try {
             float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
-            org.lwjgl.openal.AL10.alListenerf(org.lwjgl.openal.AL10.AL_GAIN, master * (1f + 0.35f * high));
+            org.lwjgl.openal.AL10.alListenerf(org.lwjgl.openal.AL10.AL_GAIN, master * listenerBoost());
             hearingBoosted = high > 0.001f;
         } catch (RuntimeException | LinkageError e) {
             hearingFailed = true; // no sound device: nothing to make louder
@@ -431,8 +459,8 @@ public final class DrunkClient {
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
         // The whole body sways while retching - slowly, about twice a second, never a fast shake.
         roll += (float) Math.sin(t * 14.0) * 2f * retch(player, (float) event.getPartialTick());
-        // Greening out: the head swims in slow circles.
-        roll += noise(t * 0.3, 41) * 6f * green;
+        // Greening out: the head swims in slow, wide circles.
+        roll += noise(t * 0.3, 41) * 13f * green;
         event.setRoll(event.getRoll() + roll * screen());
     }
 
@@ -490,9 +518,10 @@ public final class DrunkClient {
             input.right = left;
         }
         if (green > 0f) {
-            // Greening out: the legs are jelly.
-            input.forwardImpulse *= 1f - 0.4f * green;
-            input.leftImpulse *= 1f - 0.4f * green;
+            // Greening out: the legs are jelly and pull you sideways.
+            input.forwardImpulse *= 1f - 0.55f * green;
+            input.leftImpulse = input.leftImpulse * (1f - 0.55f * green)
+                + noise(seconds(player, 0f) * 0.5, 43) * 0.35f * green * Math.abs(input.forwardImpulse);
         }
         if (dissoc > 0f) {
             // Keta: the legs are somewhere far away; in the K-Loch they barely move at all.
@@ -616,6 +645,14 @@ public final class DrunkClient {
                 failing.getDuration() / 40f));
             g.fill(0, 0, w, h, ((int) (fade * 170 * screen()) << 24) | 0x0A0004);
         }
+        if (green > 0.01f) {
+            // Nausea: a pale, clammy green creeping in from the edges, rising and ebbing in slow waves.
+            float wave = 0.75f + 0.25f * noise(t * 0.4, 47);
+            int a = (int) (green * wave * 130 * screen());
+            int edge = h / 3;
+            g.fillGradient(0, 0, w, edge, (a << 24) | 0x5C6E1E, 0x005C6E1E);
+            g.fillGradient(0, h - edge, w, h, 0x005C6E1E, (a << 24) | 0x5C6E1E);
+        }
         if (player.hasEffect(ModEffects.ASPIRATION)) {
             // Choking: sick green closing in, steady.
             int a = (int) (160 * screen());
@@ -691,5 +728,19 @@ public final class DrunkClient {
                 return true;
             }
         }, ModEffects.INEBRIATION);
+        // Weed counts hits, not levels: "Bekifft" with how many joints' worth, not "Bekifft XIV".
+        event.registerMobEffect(new IClientMobEffectExtensions() {
+            @Override
+            public boolean renderInventoryText(MobEffectInstance instance, EffectRenderingInventoryScreen<?> screen,
+                                               GuiGraphics g, int x, int y, int blitOffset) {
+                Minecraft mc = Minecraft.getInstance();
+                int secs = instance.getDuration() / 20;
+                float joints = (instance.getAmplifier() + 1) / (float) DrugServer.HITS_PER_JOINT;
+                g.drawString(mc.font, instance.getEffect().value().getDisplayName(), x + 28, y + 6, 0xFFFFFF);
+                g.drawString(mc.font, String.format(Locale.GERMAN, "%.1f Joints · %d:%02d", joints, secs / 60, secs % 60),
+                    x + 28, y + 16, 0x7F7F7F);
+                return true;
+            }
+        }, ModEffects.WEED_HIGH);
     }
 }

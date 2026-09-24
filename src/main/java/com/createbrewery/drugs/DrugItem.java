@@ -26,7 +26,7 @@ public class DrugItem extends Item {
 
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
-        return kind == DrugServer.Kind.WEED ? 40 : 24; // a long drag on the joint
+        return kind == DrugServer.Kind.WEED ? 30 : 24; // a long drag on the joint
     }
 
     @Override
@@ -41,9 +41,14 @@ public class DrugItem extends Item {
         if (!(entity instanceof Player player)) return stack;
         if (!level.isClientSide) {
             DrugServer.take(player, kind);
-            player.getCooldowns().addCooldown(this, COOLDOWN);
+            // A joint is smoked hit by hit: one hit off its durability, a short breath between hits.
+            player.getCooldowns().addCooldown(this, kind == DrugServer.Kind.WEED ? 30 : COOLDOWN);
         }
-        if (!player.getAbilities().instabuild) stack.shrink(1);
+        if (kind == DrugServer.Kind.WEED) {
+            stack.hurtAndBreak(1, entity, LivingEntity.getSlotForHand(entity.getUsedItemHand()));
+        } else if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
+        }
         return stack;
     }
 }

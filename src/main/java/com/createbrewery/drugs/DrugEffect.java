@@ -32,6 +32,8 @@ public class DrugEffect extends MobEffect {
     private final List<Scaled> scaled = new ArrayList<>();
     /** Whether doses stack (lines, joints); single events like the K-Loch always act in full. */
     private boolean stacking;
+    /** Amplifier steps that make one dose: 1 for a line, a joint's hits for weed. */
+    private int perDose = 1;
 
     public DrugEffect(MobEffectCategory category, int colour, int interval, BiConsumer<LivingEntity, Integer> serverTick,
                       int total, int onset, int fade) {
@@ -51,7 +53,13 @@ public class DrugEffect extends MobEffect {
 
     /** Doses stack up, each adding less (see {@link Pharmacology#dosesFelt}). */
     public DrugEffect stacks() {
+        return stacks(1);
+    }
+
+    /** Doses stack, and every {@code perDose} amplifier steps make one full dose (hits of a joint). */
+    public DrugEffect stacks(int perDose) {
         stacking = true;
+        this.perDose = perDose;
         return this;
     }
 
@@ -68,8 +76,8 @@ public class DrugEffect extends MobEffect {
     public static float felt(LivingEntity entity, Holder<MobEffect> effect) {
         MobEffectInstance instance = entity.getEffect(effect);
         if (instance == null) return 0f;
-        boolean stacking = effect.value() instanceof DrugEffect drug && drug.stacking;
-        return strength(entity, effect) * (stacking ? Pharmacology.dosesFelt(instance.getAmplifier()) : 1f);
+        if (!(effect.value() instanceof DrugEffect drug) || !drug.stacking) return strength(entity, effect);
+        return strength(entity, effect) * Pharmacology.feltFor((instance.getAmplifier() + 1) / (float) drug.perDose);
     }
 
     @Override
