@@ -110,6 +110,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenMouse);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenKey);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onPlaySound);
+        NeoForge.EVENT_BUS.addListener(DrunkClient::onSoundSource);
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -181,8 +182,10 @@ public final class DrunkClient {
         if (player != null && !mc.isPaused()) {
             bodySounds(mc, player);
             moreMusic(mc, player);
+            echoes(mc, player);
         }
         hearing(mc);
+        muffle = 1f - 0.55f * high;
     }
 
     /**
@@ -332,13 +335,108 @@ public final class DrunkClient {
         // wrapper would hide - the listener gain makes those louder instead.
         SoundSource source = sound.getSource();
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
+        if (sound instanceof Echo) return;
+        // Your own steps, blocks and bites ring on for a moment.
+        if (high > 0.2f && (source == SoundSource.PLAYERS || source == SoundSource.BLOCKS)
+            && !(sound instanceof TickableSoundInstance) && !sound.isLooping()
+            && player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 9.0 && pendingEchoes.size() < 16) {
+            pendingEchoes.add(new PendingEcho(sound, player.tickCount + 4, 0.3f * high));
+        }
         if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
             // The listener gain already raises everything; ambience and weather get more on top,
             // everything else is pulled back so that music and ambience stand out.
             boolean ambience = source == SoundSource.AMBIENT || source == SoundSource.WEATHER;
             float louder = ambience ? 1f + 0.8f * high : (1f + 0.3f * high) / listenerBoost();
-            event.setSound(new EnhancedSound(sound, louder, 1f - 0.04f * high));
+            event.setSound(new EnhancedSound(sound, louder, 1f - 0.06f * high));
+        }
+    }
+
+    /** A sound heard again a moment later, softer. */
+    private record PendingEcho(SoundInstance sound, int at, float volume) {}
+    private static final java.util.List<PendingEcho> pendingEchoes = new java.util.ArrayList<>();
+
+    /**
+     * Played from the client tick, not with playDelayed from inside the sound event: the sound
+     * engine may be walking its own delayed queue right then.
+     */
+    private static void echoes(Minecraft mc, LocalPlayer player) {
+        for (var it = pendingEchoes.iterator(); it.hasNext(); ) {
+            PendingEcho echo = it.next();
+            if (player.tickCount < echo.at()) continue;
+            it.remove();
+            Sound heard = echo.sound().getSound();
+            if (heard != null) mc.getSoundManager().play(new Echo(echo.sound(), heard, echo.volume()));
+        }
+        if (pendingEchoes.size() > 32) pendingEchoes.clear(); // a stalled tick count must not grow it forever
+    }
+
+    /** The same variant as the original (not a new random one), softer. */
+    private record Echo(SoundInstance sound, Sound heard, float volume) implements SoundInstance {
+        @Override public ResourceLocation getLocation() { return sound.getLocation(); }
+        @Override public WeighedSoundEvents resolve(SoundManager manager) { return manager.getSoundEvent(sound.getLocation()); }
+        @Override public Sound getSound() { return heard; }
+        @Override public SoundSource getSource() { return sound.getSource(); }
+        @Override public boolean isLooping() { return false; }
+        @Override public boolean isRelative() { return sound.isRelative(); }
+        @Override public int getDelay() { return 0; }
+        @Override public float getVolume() { return sound.getVolume() * volume; }
+        @Override public float getPitch() { return sound.getPitch(); }
+        @Override public double getX() { return sound.getX(); }
+        @Override public double getY() { return sound.getY(); }
+        @Override public double getZ() { return sound.getZ(); }
+        @Override public Attenuation getAttenuation() { return sound.getAttenuation(); }
+        @Override public boolean canStartSilent() { return false; }
+        @Override public boolean canPlaySound() { return true; }
+        @Override public CompletableFuture<AudioStream> getStream(SoundBufferLibrary buffers, Sound s, boolean looping) {
+            return sound.getStream(buffers, s, looping);
+        }
+    }
+
+    /** High-frequency gain for sounds around you: 1 sober, lower when high. Read on the sound thread. */
+    private static volatile float muffle = 1f;
+    private static int muffleFilter = -1;
+    private static boolean muffleFailed;
+    private static java.lang.reflect.Field channelSource;
+
+    /**
+     * High: steps, tools and mobs sound softer, as through thick headphones (an OpenAL low-pass).
+     * Music, ambience and weather stay clear and loud. Every source is set, the filter or none,
+     * because OpenAL reuses sources. Runs on the sound thread, like everything touching a channel.
+     */
+    private static void onSoundSource(net.neoforged.neoforge.client.event.sound.PlaySoundSourceEvent event) {
+        if (muffleFailed) return;
+        try {
+            if (channelSource == null) {
+                channelSource = com.mojang.blaze3d.audio.Channel.class.getDeclaredField("source");
+                channelSource.setAccessible(true);
+            }
+            int source = channelSource.getInt(event.getChannel());
+            SoundSource category = event.getSound().getSource();
+            float gainHF = muffle;
+            boolean around = category == SoundSource.PLAYERS || category == SoundSource.BLOCKS
+                || category == SoundSource.NEUTRAL || category == SoundSource.HOSTILE;
+            if (!around || gainHF >= 0.99f) {
+                if (muffleFilter >= 0) org.lwjgl.openal.AL10.alSourcei(source, org.lwjgl.openal.EXTEfx.AL_DIRECT_FILTER,
+                    org.lwjgl.openal.EXTEfx.AL_FILTER_NULL);
+                return;
+            }
+            if (muffleFilter < 0) {
+                long device = org.lwjgl.openal.ALC10.alcGetContextsDevice(org.lwjgl.openal.ALC10.alcGetCurrentContext());
+                if (!org.lwjgl.openal.ALC10.alcIsExtensionPresent(device, "ALC_EXT_EFX")) {
+                    muffleFailed = true;
+                    return;
+                }
+                muffleFilter = org.lwjgl.openal.EXTEfx.alGenFilters();
+                org.lwjgl.openal.EXTEfx.alFilteri(muffleFilter, org.lwjgl.openal.EXTEfx.AL_FILTER_TYPE, org.lwjgl.openal.EXTEfx.AL_FILTER_LOWPASS);
+            }
+            // A filter's settings are copied when it is attached, so setting it here is per sound.
+            org.lwjgl.openal.EXTEfx.alFilterf(muffleFilter, org.lwjgl.openal.EXTEfx.AL_LOWPASS_GAIN, 1f);
+            org.lwjgl.openal.EXTEfx.alFilterf(muffleFilter, org.lwjgl.openal.EXTEfx.AL_LOWPASS_GAINHF, gainHF);
+            org.lwjgl.openal.AL10.alSourcei(source, org.lwjgl.openal.EXTEfx.AL_DIRECT_FILTER, muffleFilter);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            muffleFailed = true;
+            LOGGER.warn("Muffled hearing unavailable; the high sounds unfiltered", e);
         }
     }
 
