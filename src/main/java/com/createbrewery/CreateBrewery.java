@@ -40,13 +40,13 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.jei.fermenting.days", "%s days");
         REGISTRATE.addRawLang("createbrewery.jei.fermenting.days_decimal", "%s days");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.header", "Fermenting Beer in the Fermenter");
-        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_1", "The Fermenter turns Wort and Yeast into Beer over time.");
+        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_1", "The Fermenter turns Hopped Wort and Yeast into Beer over time.");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_2", "Unlike most Create machines, the Fermenter requires NO shaft or rotational force. It is completely passive.");
-        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_3", "Wort can be piped into the Fermenter from any side.");
+        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_3", "Hopped Wort can be piped into the Fermenter from any side.");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_4", "Yeast can be inserted with a Funnel or by hand.");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_5", "Engineer's Goggles display fermentation progress.");
-        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_6", "Fermenting: 25% (1 day remaining)");
-        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_7", "Fermenting: 50% (1 day remaining)");
+        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_6", "Fermenting: 20% (0.8 days remaining)");
+        REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_7", "Fermenting: 60% (0.4 days remaining)");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_8", "Fermenting: 100% (Ready)");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_9", "Finished Beer can then be piped out and bottled.");
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.header", "Brewing Heat Requirements");

@@ -32,7 +32,7 @@ public class BreweryScenes {
 
         // Intro
         scene.overlay().showText(70)
-            .text("The Fermenter turns Wort and Yeast into Beer over time.")
+            .text("The Fermenter turns Hopped Wort and Yeast into Beer over time.")
             .pointAt(util.vector().blockSurface(fermenter, Direction.WEST))
             .placeNearTarget()
             .attachKeyFrame();
@@ -47,12 +47,12 @@ public class BreweryScenes {
             .attachKeyFrame();
         scene.idle(100);
 
-        // Wort piped in
+        // Hopped wort piped in
         scene.world().setBlock(pipeIn, AllBlocks.FLUID_PIPE.getDefaultState(), false);
         scene.world().showSection(util.select().position(pipeIn), Direction.EAST);
         scene.idle(15);
         scene.overlay().showText(60)
-            .text("Wort can be piped into the Fermenter from any side.")
+            .text("Hopped Wort can be piped into the Fermenter from any side.")
             .pointAt(util.vector().topOf(pipeIn))
             .placeNearTarget()
             .attachKeyFrame();
@@ -82,14 +82,14 @@ public class BreweryScenes {
 
         scene.overlay().showText(30)
             .colored(PonderPalette.MEDIUM)
-            .text("Fermenting: 25% (1 day remaining)")
+            .text("Fermenting: 20% (0.8 days remaining)")
             .pointAt(util.vector().blockSurface(fermenter, Direction.WEST))
             .placeNearTarget();
         scene.idle(35);
 
         scene.overlay().showText(30)
             .colored(PonderPalette.MEDIUM)
-            .text("Fermenting: 50% (1 day remaining)")
+            .text("Fermenting: 60% (0.4 days remaining)")
             .pointAt(util.vector().blockSurface(fermenter, Direction.WEST))
             .placeNearTarget();
         scene.idle(35);
