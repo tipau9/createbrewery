@@ -1,12 +1,15 @@
 package com.createbrewery.event;
 
 import com.createbrewery.effect.ModEffects;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -56,7 +59,7 @@ public class BreweryCommonEvents {
 
         // Randomly insert drunk hiccup / burp
         if (random.nextFloat() < 0.65f) {
-            String[] hiccups = { " *hick*", " *rülps*", "... *hicks*", " *hik!*", " ...waasss?" };
+            String[] hiccups = { " *hick*", " *r\u00fclps*", "... *hicks*", " *hik!*", " ...waasss?" };
             sb.append(hiccups[random.nextInt(hiccups.length)]);
         }
 
@@ -64,7 +67,8 @@ public class BreweryCommonEvents {
     }
 
     /**
-     * Sobering Up: Drinking water cleanses or reduces alcohol effects (inspired by Growthcraft/Rustic)
+     * Sobering Up: Drinking water only SHORTENS remaining alcohol effect durations,
+     * requiring multiple drinks to sober up completely.
      */
     @SubscribeEvent
     public static void onFinishDrinking(LivingEntityUseItemEvent.Finish event) {
@@ -79,18 +83,50 @@ public class BreweryCommonEvents {
                                      || player.hasEffect(ModEffects.DELIRIUM);
 
                     if (hadEffect) {
-                        player.removeEffect(ModEffects.HANGOVER);
-                        player.removeEffect(ModEffects.STUMBLE);
-                        player.removeEffect(ModEffects.HICCUPS);
-                        player.removeEffect(ModEffects.DELIRIUM);
+                        // Shorten duration by 240 ticks (12 seconds) per bottle
+                        int reductionTicks = 240;
+                        reduceDuration(player, ModEffects.HANGOVER, reductionTicks);
+                        reduceDuration(player, ModEffects.STUMBLE, reductionTicks);
+                        reduceDuration(player, ModEffects.HICCUPS, reductionTicks);
+                        reduceDuration(player, ModEffects.DELIRIUM, reductionTicks);
+
+                        boolean stillDrunk = player.hasEffect(ModEffects.HANGOVER)
+                                          || player.hasEffect(ModEffects.STUMBLE)
+                                          || player.hasEffect(ModEffects.HICCUPS)
+                                          || player.hasEffect(ModEffects.DELIRIUM);
 
                         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8f, 1.8f);
+                            SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 1.1f);
 
-                        player.displayClientMessage(
-                            Component.literal("\u00a7b\u00a7lErfrischend! \u00a7aDas kalte Wasser vertreibt Kater und Rausch."), false);
+                        if (!stillDrunk) {
+                            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                                SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8f, 1.8f);
+                            player.displayClientMessage(
+                                Component.literal("\u00a7a\u00a7lVollst\u00e4ndig ern\u00fcchtert! \u00a72Das Wasser hat den Alkohol endg\u00fcltig neutralisiert."), true);
+                        } else {
+                            player.displayClientMessage(
+                                Component.literal("\u00a7b\u00a7lEin Schluck Wasser... \u00a77Der Rausch l\u00e4sst etwas nach (-12s), aber du bist noch benebelt!"), true);
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    private static void reduceDuration(Player player, Holder<MobEffect> effectHolder, int reductionTicks) {
+        MobEffectInstance current = player.getEffect(effectHolder);
+        if (current != null) {
+            int newDuration = current.getDuration() - reductionTicks;
+            int amplifier = current.getAmplifier();
+            boolean ambient = current.isAmbient();
+            boolean visible = current.isVisible();
+            boolean showIcon = current.showIcon();
+
+            player.removeEffect(effectHolder);
+            if (newDuration > 0) {
+                player.addEffect(new MobEffectInstance(
+                    effectHolder, newDuration, amplifier, ambient, visible, showIcon
+                ));
             }
         }
     }
