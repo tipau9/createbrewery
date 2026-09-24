@@ -21,6 +21,8 @@ public final class DrunkState {
 
     /** Server-only bookkeeping: whether the client last saw a non-zero state. */
     transient boolean clientSawAlcohol;
+    /** Server-only: game time of the last drink, to spot two players clinking glasses. */
+    transient long lastDrinkTime = Long.MIN_VALUE / 2;
 
     public DrunkState() {}
 

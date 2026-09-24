@@ -442,4 +442,20 @@ public class FermenterGameTests {
         helper.assertTrue(pig.getHealth() < before, "poisoning did not hurt");
         helper.succeed();
     }
+
+    /** The party and vomiting effects tick for their whole duration without crashing. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 100)
+    public static void partyAndVomitEffectsRunThrough(GameTestHelper helper) {
+        net.minecraft.world.entity.animal.Pig pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        pig.setHealth(5f);
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.VOMITING,
+            com.createbrewery.effect.VomitingEffect.DURATION));
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.GOOD_MOOD, 200));
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.CHEERS, 201));
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(!pig.hasEffect(com.createbrewery.effect.ModEffects.VOMITING), "vomiting did not end");
+            helper.assertTrue(pig.getHealth() > 5f, "cheers did not heal");
+            helper.succeed();
+        });
+    }
 }

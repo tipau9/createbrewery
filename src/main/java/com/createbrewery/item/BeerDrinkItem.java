@@ -2,9 +2,12 @@ package com.createbrewery.item;
 
 import com.createbrewery.drunk.DrunkServer;
 import com.createbrewery.drunk.Intoxication;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -13,6 +16,7 @@ import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -22,6 +26,8 @@ import java.util.function.Supplier;
  */
 public class BeerDrinkItem extends Item {
     private final Supplier<? extends ItemLike> returnItemSupplier;
+    /** Filled on first use, once all items are registered. */
+    private static List<Item> alcoholicItems;
 
     public BeerDrinkItem(Properties properties, Supplier<? extends ItemLike> returnItemSupplier) {
         super(properties);
@@ -44,29 +50,58 @@ public class BeerDrinkItem extends Item {
     }
 
     @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (player.getCooldowns().isOnCooldown(this)) {
+            return InteractionResultHolder.fail(stack);
+        }
+        return super.use(level, player, hand);
+    }
+
+    @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
         ItemStack result = super.finishUsingItem(stack, level, entity);
 
-        if (entity instanceof Player player && !level.isClientSide) {
-            float after = DrunkServer.state(player).total() + Intoxication.PER_BEER;
-            DrunkServer.drink(player, Intoxication.PER_BEER);
-            reactToDrink(player, level, after);
+        if (entity instanceof Player player) {
+            // Apply cooldown on BOTH client and server (like Ender Pearl) so the white
+            // sweep animation displays immediately and rapid chugging is blocked.
+            startCooldown(player);
 
-            if (!player.getAbilities().instabuild && returnItemSupplier != null) {
-                ItemLike returnItem = returnItemSupplier.get();
-                if (returnItem != null) {
-                    ItemStack returnStack = new ItemStack(returnItem);
-                    if (result.isEmpty()) {
-                        return returnStack;
-                    }
-                    if (!player.getInventory().add(returnStack)) {
-                        player.drop(returnStack, false);
+            if (!level.isClientSide) {
+                float after = DrunkServer.state(player).total() + Intoxication.PER_BEER;
+                DrunkServer.drink(player, Intoxication.PER_BEER);
+                reactToDrink(player, level, after);
+
+                if (!player.getAbilities().instabuild && returnItemSupplier != null) {
+                    ItemLike returnItem = returnItemSupplier.get();
+                    if (returnItem != null) {
+                        ItemStack returnStack = new ItemStack(returnItem);
+                        if (result.isEmpty()) {
+                            return returnStack;
+                        }
+                        if (!player.getInventory().add(returnStack)) {
+                            player.drop(returnStack, false);
+                        }
                     }
                 }
             }
         }
 
         return result;
+    }
+
+    /**
+     * One shared cooldown for every alcoholic drink (like an Ender Pearl):
+     * after a beer, no drink can be chugged immediately. Shows the white sweep animation.
+     */
+    private void startCooldown(Player player) {
+        player.getCooldowns().addCooldown(this, Intoxication.DRINK_COOLDOWN);
+        if (alcoholicItems == null) {
+            alcoholicItems = BuiltInRegistries.ITEM.stream().filter(i -> i instanceof BeerDrinkItem).toList();
+        }
+        for (Item item : alcoholicItems) {
+            player.getCooldowns().addCooldown(item, Intoxication.DRINK_COOLDOWN);
+        }
     }
 
     /** The burp gets deeper and louder with every beer. */

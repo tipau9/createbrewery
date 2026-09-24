@@ -3,6 +3,7 @@ package com.createbrewery.drunk;
 import com.createbrewery.CreateBrewery;
 import com.createbrewery.effect.HiccupsEffect;
 import com.createbrewery.effect.ModEffects;
+import com.createbrewery.effect.VomitingEffect;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -51,6 +52,8 @@ public final class DrunkClient {
     private static float blood;
     /** Aim offset already applied to the player; drift is applied as the change of this each frame. */
     private static float appliedYaw, appliedPitch;
+    /** Same for the head bending down while throwing up. */
+    private static float appliedRetch;
     /** Set once the shader failed to load (old GPU, shaderpack...): never try again this session. */
     private static boolean shaderFailed;
 
@@ -127,10 +130,11 @@ public final class DrunkClient {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null) {
-            appliedYaw = appliedPitch = 0f;
+            appliedYaw = appliedPitch = appliedRetch = 0f;
             return;
         }
-        double t = seconds(player, event.getPartialTick().getGameTimeDeltaPartialTick(true));
+        float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        double t = seconds(player, partial);
 
         PostChain current = mc.gameRenderer.currentEffect();
         if (isOurs(current)) {
@@ -142,14 +146,28 @@ public final class DrunkClient {
         float w = ramp(Intoxication.MERRY);
         float yaw = noise(t * 0.35, 1) * 8f * w;
         float pitch = noise(t * 0.29, 2) * 4f * w;
+        // Throwing up folds you over: the head drops and jerks further down with every heave.
+        float retch = retch(player, partial) * 35f;
         if (mc.screen == null && !mc.isPaused()) {
             float dYaw = yaw - appliedYaw;
-            float dPitch = pitch - appliedPitch;
+            float dPitch = pitch - appliedPitch + retch - appliedRetch;
             if (dYaw != 0f || dPitch != 0f) player.turn(dYaw / 0.15, dPitch / 0.15);
         }
         // Tracked even while a screen is open, so closing it does not snap the view.
         appliedYaw = yaw;
         appliedPitch = pitch;
+        appliedRetch = retch;
+    }
+
+    /** 0..1 how far the body is doubled over right now; 0 when not throwing up. */
+    private static float retch(LocalPlayer player, float partial) {
+        MobEffectInstance vomiting = player.getEffect(ModEffects.VOMITING);
+        if (vomiting == null) return 0f;
+        float d = Math.max(0f, vomiting.getDuration() - partial);
+        float phase = (d % VomitingEffect.HEAVE) / VomitingEffect.HEAVE;
+        float heave = (float) Math.pow(Math.sin(phase * Math.PI), 4);
+        float envelope = Math.min(1f, d / 10f) * Math.min(1f, (VomitingEffect.DURATION - d) / 6f);
+        return envelope * (0.55f + 0.45f * heave);
     }
 
     // ---- view ----
@@ -160,6 +178,8 @@ public final class DrunkClient {
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
+        // The whole body shudders while retching.
+        roll += (float) Math.sin(t * 55.0) * 2.5f * retch(player, (float) event.getPartialTick());
         event.setRoll(event.getRoll() + roll);
     }
 
@@ -184,6 +204,14 @@ public final class DrunkClient {
             input.forwardImpulse = 1f;
             input.leftImpulse = noise(seconds(player, 0f) * 0.7, 9) * 0.6f;
             input.jumping = player.horizontalCollision && player.onGround();
+            player.setSprinting(false);
+            return;
+        }
+        if (player.hasEffect(ModEffects.VOMITING)) {
+            // Doubled over: barely shuffling, no jumping.
+            input.forwardImpulse *= 0.15f;
+            input.leftImpulse *= 0.15f;
+            input.jumping = false;
             player.setSprinting(false);
             return;
         }
@@ -257,6 +285,16 @@ public final class DrunkClient {
             g.fillGradient(0, h - px - feather, w, h - px, 0x00000000, 0xF5000000);
         }
 
+        float retch = retch(player, event.getPartialTick().getGameTimeDeltaPartialTick(true));
+        if (retch > 0f) {
+            // Sick green creeping in from the edges, and the eyes going dark in the middle of a heave.
+            int a = (int) (retch * 150);
+            int edge = h / 3;
+            g.fillGradient(0, 0, w, edge, (a << 24) | 0x4A5A10, 0x004A5A10);
+            g.fillGradient(0, h - edge, w, h, 0x004A5A10, (a << 24) | 0x4A5A10);
+            g.fill(0, 0, w, h, ((int) (retch * 60) << 24) | 0x303A08);
+        }
+
         MobEffectInstance hangover = player.getEffect(ModEffects.HANGOVER);
         if (hangover != null) {
             // Throbbing headache: the edges of the view darken with every heartbeat.
@@ -295,9 +333,11 @@ public final class DrunkClient {
                 if (mc.player == null) return false;
                 DrunkState s = mc.player.getData(ModAttachments.DRUNK);
                 int secs = Intoxication.ticksUntilSober(s.blood, s.stomach) / 20;
+                // The blood level itself, with an arrow while the stomach is still feeding it.
+                String rising = s.stomach > 0.02f ? " ↑" : "";
                 g.drawString(mc.font, instance.getEffect().value().getDisplayName(), x + 28, y + 6, 0xFFFFFF);
-                g.drawString(mc.font, String.format(Locale.GERMAN, "%.1f‰ · noch %d:%02d",
-                    s.total(), secs / 60, secs % 60), x + 28, y + 16, 0x7F7F7F);
+                g.drawString(mc.font, String.format(Locale.GERMAN, "%.2f‰%s · %d:%02d",
+                    s.blood, rising, secs / 60, secs % 60), x + 28, y + 16, 0x7F7F7F);
                 return true;
             }
         }, ModEffects.INEBRIATION);

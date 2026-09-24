@@ -4,22 +4,24 @@ package com.createbrewery.drunk;
  * Pure blood-alcohol maths, no Minecraft types, so it can be unit-tested headlessly
  * (same pattern as {@code FermentationProgress}).
  *
- * <p>Everything is in per-mille (‰) blood alcohol. A drink does not hit the blood at once: it
- * lands in the stomach and is absorbed over roughly 20 seconds, so a beer "kicks in" rather
- * than switching the player's state instantly. The liver then removes alcohol at a fixed rate,
- * compressed from the real ~0.15‰/hour to 0.1‰ per 30 seconds so a session plays out in minutes.
+ * <p>Everything is in per-mille (‰) blood alcohol and runs on Minecraft time, where one hour is
+ * 1000 ticks (50 s). With that clock the real pharmacology fits as-is: a drink is absorbed from
+ * the stomach first-order with a half-life of about 15 minutes, so the level peaks 30-60 minutes
+ * after drinking, slower on a full stomach; the liver removes a fixed 0.15‰ per hour (Widmark).
  */
 public final class Intoxication {
     private Intoxication() {}
 
     /** One beer. Six beers reach the blackout zone, the seventh poisons you. */
     public static final float PER_BEER = 0.5f;
-    /** Absorption: a fixed share of the stomach per tick, but never slower than {@link #ABSORB_MIN_PER_TICK}. */
-    public static final float ABSORB_SHARE_PER_TICK = 1f / 120f;
-    /** Floor so the last sip does not trickle in forever. One beer is in the blood after ~10 s. */
-    public static final float ABSORB_MIN_PER_TICK = 0.002f;
-    /** ‰ removed from the blood per tick: 0.1‰ per 600 ticks (30 s). */
-    public static final float ELIMINATE_PER_TICK = 0.1f / 600f;
+    /** Share of the stomach absorbed per tick on an empty stomach: half-life 250 ticks (15 MC minutes). */
+    public static final float ABSORB_SHARE_PER_TICK = 0.693f / 250f;
+    /** Floor so the last sip does not trickle in forever. */
+    public static final float ABSORB_MIN_PER_TICK = 0.0002f;
+    /** ‰ removed from the blood per tick: 0.15‰ per Minecraft hour (1000 ticks). */
+    public static final float ELIMINATE_PER_TICK = 0.15f / 1000f;
+    /** Shared cooldown between two alcoholic drinks, like an Ender Pearl (20 ticks = 1 s). */
+    public static final int DRINK_COOLDOWN = 20;
 
     // Symptom thresholds, in ‰. Each beer (0.5‰) crosses roughly one of them.
     public static final float TIPSY = 0.3f;        // beer 1: sway, warm vision
@@ -32,10 +34,21 @@ public final class Intoxication {
     /** A peak at or above this earns a hangover once the player sobers up or sleeps. */
     public static final float HANGOVER_PEAK = 1.3f;
 
-    /** How much of the stomach content reaches the blood this tick. */
+    /** How much of the stomach content reaches the blood this tick, on an empty stomach. */
     public static float absorbed(float stomach) {
+        return absorbed(stomach, 0);
+    }
+
+    /** Same, but food slows it down: a full stomach (food 20) absorbs at half speed. */
+    public static float absorbed(float stomach, int foodLevel) {
         if (stomach <= 0f) return 0f;
-        return Math.min(stomach, Math.max(stomach * ABSORB_SHARE_PER_TICK, ABSORB_MIN_PER_TICK));
+        float fed = 1f - 0.5f * Math.max(0, Math.min(20, foodLevel)) / 20f;
+        return Math.min(stomach, Math.max(stomach * ABSORB_SHARE_PER_TICK * fed, ABSORB_MIN_PER_TICK));
+    }
+
+    /** Party zone: one or two beers make you better company, not worse. */
+    public static boolean inGoodMood(float blood) {
+        return blood >= TIPSY && blood < DRUNK;
     }
 
     /** Blood level after one tick of elimination; never negative. */

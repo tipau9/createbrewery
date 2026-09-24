@@ -8,15 +8,25 @@ import static org.junit.jupiter.api.Assertions.*;
 class IntoxicationTest {
 
     @Test
-    void oneBeerIsFullyAbsorbedWithinFifteenSeconds() {
+    void absorptionPeaksGraduallyLikeARealDrink() {
         float stomach = Intoxication.PER_BEER, blood = 0f;
-        for (int i = 0; i < 300; i++) {
+        int halfIn = -1, allIn = -1;
+        for (int i = 1; i <= 4000; i++) {
             float a = Intoxication.absorbed(stomach);
             stomach -= a;
             blood += a;
+            if (halfIn < 0 && blood >= Intoxication.PER_BEER / 2) halfIn = i;
+            if (allIn < 0 && stomach <= 0f) allIn = i;
         }
-        assertEquals(0f, stomach, 1e-4f);
-        assertEquals(Intoxication.PER_BEER, blood, 1e-4f);
+        // Half of a beer is in the blood after ~15 MC minutes, nearly all after an MC hour.
+        assertTrue(halfIn > 200 && halfIn < 300, "half absorbed at " + halfIn);
+        assertTrue(allIn > 800 && allIn < 2500, "fully absorbed at " + allIn);
+    }
+
+    @Test
+    void fullStomachSlowsAbsorption() {
+        assertTrue(Intoxication.absorbed(1f, 20) < Intoxication.absorbed(1f, 0));
+        assertEquals(Intoxication.absorbed(1f, 0) / 2f, Intoxication.absorbed(1f, 20), 1e-6f);
     }
 
     @Test
@@ -34,9 +44,9 @@ class IntoxicationTest {
     }
 
     @Test
-    void oneBeerWearsOffInTwoAndAHalfMinutes() {
-        assertEquals(3000, Intoxication.ticksUntilSober(Intoxication.PER_BEER, 0f), 1);
-        assertEquals(3000, Intoxication.ticksUntilSober(0f, Intoxication.PER_BEER), 1);
+    void oneBeerWearsOffInAboutThreeMinecraftHours() {
+        assertEquals(3334, Intoxication.ticksUntilSober(Intoxication.PER_BEER, 0f), 1);
+        assertEquals(3334, Intoxication.ticksUntilSober(0f, Intoxication.PER_BEER), 1);
         assertEquals(0, Intoxication.ticksUntilSober(0f, 0f));
     }
 
@@ -65,6 +75,14 @@ class IntoxicationTest {
             assertTrue(v >= prev);
             prev = v;
         }
+    }
+
+    @Test
+    void goodMoodOnlyForTheFirstBeers() {
+        assertFalse(Intoxication.inGoodMood(0.1f));
+        assertTrue(Intoxication.inGoodMood(0.5f));
+        assertTrue(Intoxication.inGoodMood(1.0f));
+        assertFalse(Intoxication.inGoodMood(1.5f));
     }
 
     @Test

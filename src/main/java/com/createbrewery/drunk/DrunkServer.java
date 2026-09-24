@@ -1,10 +1,11 @@
 package com.createbrewery.drunk;
 
 import com.createbrewery.CreateBrewery;
-import com.createbrewery.ModItems;
 import com.createbrewery.effect.ModEffects;
+import com.createbrewery.effect.VomitingEffect;
+import org.joml.Vector3f;
 import net.minecraft.core.Holder;
-import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -18,11 +19,13 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
@@ -52,12 +55,47 @@ public final class DrunkServer {
         return player.getData(ModAttachments.DRUNK);
     }
 
-    /** A beer lands in the stomach; the blood follows over the next ~10 seconds. */
+    /** A beer lands in the stomach; the blood follows over the next Minecraft hour (~50 s). */
     public static void drink(Player player, float perMille) {
         DrunkState s = state(player);
         s.stomach += perMille;
+        s.lastDrinkTime = player.level().getGameTime();
         showIndicator(player);
+        cheers(player, s);
         sync(player, s);
+    }
+
+    /**
+     * Prost! Two players drinking within 5 seconds of each other, close enough to clink glasses,
+     * both earn Geselligkeit. Drinking alone gets you nothing of the sort.
+     */
+    private static void cheers(Player player, DrunkState s) {
+        if (!(player.level() instanceof ServerLevel level)) return;
+        for (Player other : level.getEntitiesOfClass(Player.class, player.getBoundingBox().inflate(6.0), p -> p != player)) {
+            if (s.lastDrinkTime - state(other).lastDrinkTime > 100) continue;
+            for (Player p : new Player[] { player, other }) {
+                p.addEffect(new MobEffectInstance(ModEffects.CHEERS, 1200, 0, false, true, true));
+                level.sendParticles(ParticleTypes.HEART, p.getX(), p.getEyeY() + 0.5, p.getZ(), 3, 0.3, 0.2, 0.3, 0.0);
+                level.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.getX(), p.getEyeY(), p.getZ(), 10, 0.4, 0.3, 0.4, 0.0);
+            }
+            Vec3 mid = player.getEyePosition().add(other.getEyePosition()).scale(0.5);
+            level.playSound(null, mid.x, mid.y, mid.z, SoundEvents.AMETHYST_CLUSTER_HIT, SoundSource.PLAYERS, 1.2f, 1.6f);
+            level.playSound(null, mid.x, mid.y, mid.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.5f, 1.2f);
+        }
+    }
+
+    /** Bierlaune makes you dance: every jump throws music notes. */
+    @SubscribeEvent
+    public static void onJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof Player player && player.level() instanceof ServerLevel level
+            && player.hasEffect(ModEffects.GOOD_MOOD)) {
+            // With count 0 the NOTE particle takes its colour (0..1 over 24 notes) from the x offset.
+            for (int i = 0; i < 3; i++) {
+                level.sendParticles(ParticleTypes.NOTE, player.getX() + (player.getRandom().nextDouble() - 0.5),
+                    player.getY() + 2.1, player.getZ() + (player.getRandom().nextDouble() - 0.5),
+                    0, player.getRandom().nextInt(25) / 24.0, 0, 0, 1);
+            }
+        }
     }
 
     /** Water dilutes what is still in the stomach and takes the edge off the blood level. */
@@ -76,7 +114,7 @@ public final class DrunkServer {
         DrunkState s = state(player);
         if (s.isEmpty() && !s.clientSawAlcohol) return; // sober: nothing to do
 
-        float absorbed = Intoxication.absorbed(s.stomach);
+        float absorbed = Intoxication.absorbed(s.stomach, player.getFoodData().getFoodLevel());
         s.stomach -= absorbed;
         s.blood = Intoxication.eliminated(s.blood + absorbed);
         s.peak = Math.max(s.peak, s.blood);
@@ -103,6 +141,7 @@ public final class DrunkServer {
         float bac = s.blood;
         showIndicator(player);
 
+        if (Intoxication.inGoodMood(bac)) refresh(player, ModEffects.GOOD_MOOD, 0);
         if (bac >= Intoxication.DRUNK) refresh(player, ModEffects.DELIRIUM, bac >= Intoxication.SMASHED ? 1 : 0);
         if (bac >= Intoxication.WASTED) refresh(player, ModEffects.STUMBLE, bac >= Intoxication.SMASHED ? 1 : 0);
 
@@ -122,7 +161,7 @@ public final class DrunkServer {
         }
 
         float vomitChance = poisoned ? 0.03f : bac >= Intoxication.SMASHED ? 0.012f : 0.006f;
-        if (bac >= Intoxication.WASTED && random.nextFloat() < vomitChance) {
+        if (bac >= Intoxication.WASTED && !player.hasEffect(ModEffects.VOMITING) && random.nextFloat() < vomitChance) {
             vomit(player, s);
         }
 
@@ -133,7 +172,8 @@ public final class DrunkServer {
 
     /**
      * Throwing up: empties the stomach (the one real upside - unabsorbed alcohol never reaches
-     * the blood), costs most of the player's food, and leaves a brown mess on the ground.
+     * the blood) and costs most of the player's food. The heaving itself is the Kotzanfall
+     * effect; what lands on the ground stays there as a puddle for half a minute.
      */
     private static void vomit(Player player, DrunkState s) {
         s.stomach = 0f;
@@ -141,18 +181,22 @@ public final class DrunkServer {
         food.setFoodLevel(Math.max(0, food.getFoodLevel() - 6));
         food.setSaturation(0f);
 
-        Vec3 look = player.getLookAngle();
+        player.setSprinting(false);
         player.setDeltaMovement(player.getDeltaMovement().multiply(0.2, 1.0, 0.2));
         player.hurtMarked = true;
+        player.addEffect(new MobEffectInstance(ModEffects.VOMITING, VomitingEffect.DURATION, 0, false, false, true));
+
         if (player.level() instanceof ServerLevel level) {
-            level.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, ModItems.SPENT_GRAIN.asStack()),
-                player.getX() + look.x * 0.5, player.getEyeY() - 0.3, player.getZ() + look.z * 0.5,
-                40, 0.15, 0.1, 0.15, 0.12);
+            Vec3 look = player.getLookAngle();
+            AreaEffectCloud puddle = new AreaEffectCloud(level,
+                player.getX() + look.x * 1.1, player.getY(), player.getZ() + look.z * 1.1);
+            puddle.setParticle(new DustParticleOptions(new Vector3f(0.5f, 0.46f, 0.12f), 1.0f));
+            puddle.setRadius(0.9f);
+            puddle.setRadiusPerTick(0f);
+            puddle.setWaitTime(15);
+            puddle.setDuration(600);
+            level.addFreshEntity(puddle);
         }
-        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 1.3f, 0.45f);
-        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.HONEY_BLOCK_SLIDE, SoundSource.PLAYERS, 1.0f, 0.6f);
     }
 
     @SubscribeEvent
