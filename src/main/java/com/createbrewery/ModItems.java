@@ -1,5 +1,7 @@
 package com.createbrewery;
 
+import com.createbrewery.drugs.DrugItem;
+import com.createbrewery.drugs.DrugServer;
 import com.createbrewery.item.BeerDrinkItem;
 import com.createbrewery.item.IbuprofenItem;
 import com.simibubi.create.foundation.data.CreateRegistrate;
@@ -59,6 +61,18 @@ public class ModItems {
         .item("ibuprofen", IbuprofenItem::new)
         .lang("Ibu 400")
         .properties(p -> p.stacksTo(20))
+        .register();
+
+    public static final ItemEntry<DrugItem> KOKS = REGISTRATE
+        .item("koks", p -> new DrugItem(p, DrugServer.Kind.COKE))
+        .lang("Koks")
+        .properties(p -> p.stacksTo(16))
+        .register();
+
+    public static final ItemEntry<DrugItem> KETA = REGISTRATE
+        .item("keta", p -> new DrugItem(p, DrugServer.Kind.KETA))
+        .lang("Keta")
+        .properties(p -> p.stacksTo(16))
         .register();
 
     public static void register() {}

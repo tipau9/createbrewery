@@ -30,6 +30,9 @@ public final class ModParticles {
     /** Bubbling blobs of the puddle left on the ground. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> VOMIT_PUDDLE = simple("vomit_puddle");
 
+    /** A puff of white powder. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POWDER = simple("powder");
+
     private static DeferredHolder<ParticleType<?>, SimpleParticleType> simple(String name) {
         return PARTICLES.register(name, () -> new SimpleParticleType(false));
     }

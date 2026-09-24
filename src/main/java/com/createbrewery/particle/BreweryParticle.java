@@ -35,6 +35,7 @@ public class BreweryParticle extends TextureSheetParticle {
     public static final Style NOTE = new Style(-0.015f, 0.92f, 26, 36, 0.16f, 0f, 0.008f, false, true, true, false, false, true);
     public static final Style CHUNK = new Style(0.9f, 0.98f, 40, 60, 0.09f, 0.15f, 0f, false, false, false, true, true, true);
     public static final Style SPLASH = new Style(0.6f, 0.95f, 8, 12, 0.06f, 0f, 0f, true, false, false, true, false, false);
+    public static final Style POWDER = new Style(-0.005f, 0.85f, 14, 24, 0.05f, 0.1f, 0.003f, false, false, false, false, false, true);
     public static final Style PUDDLE = new Style(0f, 0.5f, 24, 40, 0.14f, 0f, 0f, false, false, false, true, false, true);
 
     private static final float[][] PARTY_COLOURS = {
@@ -126,5 +127,6 @@ public class BreweryParticle extends TextureSheetParticle {
         event.registerSpriteSet(ModParticles.VOMIT_CHUNK.get(), s -> provider(s, CHUNK));
         event.registerSpriteSet(ModParticles.VOMIT_SPLASH.get(), s -> provider(s, SPLASH));
         event.registerSpriteSet(ModParticles.VOMIT_PUDDLE.get(), s -> provider(s, PUDDLE));
+        event.registerSpriteSet(ModParticles.POWDER.get(), s -> provider(s, POWDER));
     }
 }

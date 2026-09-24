@@ -34,5 +34,12 @@
     "sounds": [
       "createbrewery:ear_ringing"
     ]
+  },
+  "sniff": {
+    "subtitle": "subtitles.createbrewery.sniff",
+    "sounds": [
+      "createbrewery:sniff1",
+      "createbrewery:sniff2"
+    ]
   }
 }

@@ -71,7 +71,25 @@ public final class DrunkServer {
 
     /** How drunk the player feels: blood level lessened by tolerance. For chat, visuals, symptoms. */
     public static float felt(Player player) {
-        return state(player).felt();
+        return feltFor(player, state(player));
+    }
+
+    /**
+     * Felt level including drugs, on either side (effects are synced): Koks masks the alcohol
+     * (you feel a quarter less drunk - and drink on), Keta amplifies it by a third.
+     */
+    public static float feltFor(net.minecraft.world.entity.LivingEntity entity, DrunkState s) {
+        float felt = s.felt();
+        if (entity.hasEffect(ModEffects.COKE_HIGH)) felt *= 0.75f;
+        if (entity.hasEffect(ModEffects.KETA_HIGH) || entity.hasEffect(ModEffects.K_HOLE)) felt *= 1.3f;
+        return felt;
+    }
+
+    /** Pass out right now (Keta on top of alcohol), unless already out. */
+    public static void blackout(Player player) {
+        if (!player.hasEffect(ModEffects.BLACKOUT)) {
+            player.addEffect(new MobEffectInstance(ModEffects.BLACKOUT, BLACKOUT_TICKS, 0, false, false, true));
+        }
     }
 
     /** Sober time since the last update wears the tolerance off (also covers time offline on a server). */
@@ -205,7 +223,7 @@ public final class DrunkServer {
 
     private static void symptoms(Player player, DrunkState s, RandomSource random) {
         // Symptoms follow how drunk the body feels; poisoning (below) follows the real level.
-        float bac = s.felt();
+        float bac = feltFor(player, s);
         showIndicator(player);
 
         if (Intoxication.inGoodMood(bac)) refresh(player, ModEffects.GOOD_MOOD, 0);

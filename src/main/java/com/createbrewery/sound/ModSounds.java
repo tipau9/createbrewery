@@ -20,6 +20,7 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> HEARTBEAT = sound("heartbeat");
     public static final DeferredHolder<SoundEvent, SoundEvent> BEER_OPEN = sound("beer_open");
     public static final DeferredHolder<SoundEvent, SoundEvent> EAR_RINGING = sound("ear_ringing");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SNIFF = sound("sniff");
 
     private static DeferredHolder<SoundEvent, SoundEvent> sound(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(

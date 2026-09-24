@@ -36,6 +36,13 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.cheers", "Geselligkeit");
         REGISTRATE.addRawLang("effect.createbrewery.vomiting", "Kotzanfall");
         REGISTRATE.addRawLang("effect.createbrewery.painkiller", "Schmerzmittel");
+        REGISTRATE.addRawLang("effect.createbrewery.coke_high", "Koks-Rausch");
+        REGISTRATE.addRawLang("effect.createbrewery.coke_crash", "Absturz");
+        REGISTRATE.addRawLang("effect.createbrewery.keta_high", "Keta-Rausch");
+        REGISTRATE.addRawLang("effect.createbrewery.k_hole", "K-Loch");
+        REGISTRATE.addRawLang("effect.createbrewery.dazed", "Benommen");
+        REGISTRATE.addRawLang("death.attack.createbrewery.heart_attack", "%1$s hatte einen Herzinfarkt");
+        REGISTRATE.addRawLang("subtitles.createbrewery.sniff", "Schniefen");
         REGISTRATE.addRawLang("death.attack.createbrewery.stomach_bleeding", "%1$s hat Ibu mit Bier runtergespült");
         REGISTRATE.addRawLang("death.attack.createbrewery.painkiller_overdose", "%1$s hat zu viele Ibus geschluckt");
         REGISTRATE.addRawLang("subtitles.createbrewery.glass_clink", "Gläser klirren");
@@ -83,6 +90,7 @@ public class CreateBrewery {
         ModVillagerTrades.register();
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.event.BreweryCommonEvents.class);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.drunk.DrunkServer.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.drugs.DrugServer.class);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_SPEC);
     }

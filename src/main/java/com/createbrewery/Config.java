@@ -6,6 +6,7 @@ public class Config {
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.DoubleValue FERMENTATION_DURATION_MULTIPLIER;
     public static final ModConfigSpec.BooleanValue ENABLE_CANS;
+    public static final ModConfigSpec.BooleanValue ENABLE_DRUGS;
     public static final ModConfigSpec CLIENT_SPEC;
     public static final ModConfigSpec.DoubleValue SCREEN_EFFECTS;
 
@@ -17,6 +18,9 @@ public class Config {
         ENABLE_CANS = builder
             .comment("Enable metal cans as an alternative to glass bottles.")
             .define("enableCans", true);
+        ENABLE_DRUGS = builder
+            .comment("Enable Koks and Keta. When off, the items exist but cannot be used.")
+            .define("enableDrugs", true);
         SPEC = builder.build();
 
         ModConfigSpec.Builder client = new ModConfigSpec.Builder();

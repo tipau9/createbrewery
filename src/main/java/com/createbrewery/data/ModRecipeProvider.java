@@ -203,6 +203,20 @@ public class ModRecipeProvider {
                 .requires(Items.IRON_NUGGET)
                 .unlockedBy("has_sugar", has(Items.SUGAR))
                 .save(output, CreateBrewery.ID("ibuprofen"));
+
+            // Made-up game recipes, nothing like a real process.
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.KOKS.get(), 2)
+                .requires(Items.SUGAR)
+                .requires(Items.BONE_MEAL)
+                .requires(Items.GLOWSTONE_DUST)
+                .unlockedBy("has_glowstone_dust", has(Items.GLOWSTONE_DUST))
+                .save(output, CreateBrewery.ID("koks"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.KETA.get(), 2)
+                .requires(Items.AMETHYST_SHARD)
+                .requires(Items.SUGAR)
+                .requires(Items.SLIME_BALL)
+                .unlockedBy("has_amethyst_shard", has(Items.AMETHYST_SHARD))
+                .save(output, CreateBrewery.ID("keta"));
         }
     }
 }

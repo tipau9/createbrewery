@@ -14,6 +14,9 @@ uniform float Intensity;
 uniform float Mood;
 uniform float DrunkTime;
 uniform float Trail;
+uniform float Stim;    // Koks: 0..1
+uniform float Gray;    // the crash after Koks: 0..1
+uniform float Dissoc;  // Keta: 0..1, 1 = K-Loch
 
 in vec2 texCoord;
 
@@ -49,6 +52,12 @@ void main() {
     vec2 px = 1.0 / OutSize;
     vec2 uv = texCoord;
 
+    // Keta: the world slowly swirls and drifts away from you. Very slow - under 0.1 Hz.
+    vec2 c = uv - 0.5;
+    float ang = Dissoc * 0.35 * sin(t * 0.15) * length(c) * 2.0;
+    c = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * c;
+    uv = 0.5 + c * (1.0 - 0.08 * Dissoc);
+
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
     float heavy = smoothstep(0.45, 0.8, k);
@@ -74,6 +83,20 @@ void main() {
     col = mix(vec3(lum), col, 1.0 + 0.35 * m);
     col *= mix(vec3(1.0), vec3(1.06, 1.02, 0.9), m);
 
+    // Koks: everything over-sharp, bright and hard-edged.
+    col += (col - ring(uv, px * 1.5)) * 0.9 * Stim;
+    col = (col - 0.5) * (1.0 + 0.25 * Stim) + 0.5 + 0.03 * Stim;
+
+    // The crash: grey and dull.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.65 * Gray) * (1.0 - 0.15 * Gray);
+
+    // Keta: cold, faded, far away; in the K-Loch the edges close in to a dark hole.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.45 * Dissoc) * mix(vec3(1.0), vec3(0.85, 0.93, 1.08), Dissoc);
+    float hole = clamp((Dissoc - 0.6) / 0.4, 0.0, 1.0);
+    col *= 1.0 - smoothstep(0.12, 0.7, length(d)) * 0.85 * hole;
+
     // Too much: washed-out, sickly warm colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.25 * k);
@@ -88,7 +111,7 @@ void main() {
     // Trail is 0 on the first frames of a fresh chain, whose previous frame is still black.
     // Only when properly drunk: in the party zone the camera never rests (aim drift, sway, view
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
-    col = mix(col, prev, 0.6 * k * heavy * Trail);
+    col = mix(col, prev, (0.6 * k * heavy + 0.35 * Dissoc) * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

@@ -3,6 +3,7 @@
   "values": [
     "createbrewery:alcohol_poisoning",
     "createbrewery:painkiller_overdose",
-    "createbrewery:stomach_bleeding"
+    "createbrewery:stomach_bleeding",
+    "createbrewery:heart_attack"
   ]
 }

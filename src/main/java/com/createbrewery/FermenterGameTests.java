@@ -467,13 +467,13 @@ public class FermenterGameTests {
         for (var p : java.util.List.of(com.createbrewery.particle.ModParticles.BEER_FOAM, com.createbrewery.particle.ModParticles.CHEERS_SPARK,
                 com.createbrewery.particle.ModParticles.CONFETTI, com.createbrewery.particle.ModParticles.PARTY_NOTE,
                 com.createbrewery.particle.ModParticles.VOMIT_CHUNK, com.createbrewery.particle.ModParticles.VOMIT_SPLASH,
-                com.createbrewery.particle.ModParticles.VOMIT_PUDDLE)) {
+                com.createbrewery.particle.ModParticles.VOMIT_PUDDLE, com.createbrewery.particle.ModParticles.POWDER)) {
             helper.assertTrue(p.isBound(), "particle not registered: " + p.getId());
             level.sendParticles(p.get(), pos.getX(), pos.getY(), pos.getZ(), 3, 0.1, 0.1, 0.1, 0.01);
         }
         for (var s : java.util.List.of(com.createbrewery.sound.ModSounds.GLASS_CLINK, com.createbrewery.sound.ModSounds.HICCUP,
                 com.createbrewery.sound.ModSounds.HEARTBEAT, com.createbrewery.sound.ModSounds.BEER_OPEN,
-                com.createbrewery.sound.ModSounds.EAR_RINGING)) {
+                com.createbrewery.sound.ModSounds.EAR_RINGING, com.createbrewery.sound.ModSounds.SNIFF)) {
             helper.assertTrue(s.isBound(), "sound not registered: " + s.getId());
             level.playSound(null, pos, s.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1f, 1f);
         }
@@ -507,5 +507,22 @@ public class FermenterGameTests {
         com.createbrewery.drunk.DrunkServer.irritateStomach(player);
         helper.assertTrue(player.getHealth() < before, "Ibu and alcohol did not hurt");
         helper.succeed();
+    }
+
+    /** Every high ends in its comedown, and the heart-attack damage type hurts. */
+    @GameTest(template = TEMPLATE)
+    public static void drugHighsEndInComedown(GameTestHelper helper) {
+        var coke = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        var keta = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 3, 2, 3);
+        coke.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.COKE_HIGH, 5));
+        keta.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.KETA_HIGH, 5));
+        float before = coke.getHealth();
+        coke.hurt(com.createbrewery.drugs.DrugServer.heartAttack(helper.getLevel()), 2f);
+        helper.assertTrue(coke.getHealth() < before, "heart attack did not hurt");
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(coke.hasEffect(com.createbrewery.effect.ModEffects.COKE_CRASH), "no crash after Koks");
+            helper.assertTrue(keta.hasEffect(com.createbrewery.effect.ModEffects.DAZED), "not dazed after Keta");
+            helper.succeed();
+        });
     }
 }
