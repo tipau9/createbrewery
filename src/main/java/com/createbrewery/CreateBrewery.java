@@ -21,6 +21,11 @@ public class CreateBrewery {
         ModItems.register();
         ModBlocks.register();
         ModBlockEntities.register();
+        com.createbrewery.effect.ModEffects.register(modEventBus);
+        REGISTRATE.addRawLang("effect.createbrewery.hangover", "Kater des Todes");
+        REGISTRATE.addRawLang("effect.createbrewery.hiccups", "Schluckauf");
+        REGISTRATE.addRawLang("effect.createbrewery.stumble", "Schlingerkurs");
+        REGISTRATE.addRawLang("effect.createbrewery.delirium", "Größenwahn");
         // Hand-written strings with no registry object of their own to hang a .lang() call
         // off of. addRawLang feeds the same RegistrateLangProvider as every other entry, so
         // this stays in the one generated en_us.json rather than a hand file that would
@@ -56,6 +61,7 @@ public class CreateBrewery {
         ModLootModifiers.register(modEventBus);
         ModDataMaps.register(modEventBus);
         ModVillagerTrades.register();
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.event.BreweryCommonEvents.class);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
