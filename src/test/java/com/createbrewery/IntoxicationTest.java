@@ -44,23 +44,21 @@ class IntoxicationTest {
     }
 
     @Test
-    void oneBeerWearsOffInAboutThreeMinecraftHours() {
-        assertEquals(3334, Intoxication.ticksUntilSober(Intoxication.PER_BEER, 0f), 1);
-        assertEquals(3334, Intoxication.ticksUntilSober(0f, Intoxication.PER_BEER), 1);
+    void oneBeerWearsOffInAboutTwoMinecraftHours() {
+        assertEquals(2000, Intoxication.ticksUntilSober(Intoxication.PER_BEER, 0f), 1);
+        assertEquals(2000, Intoxication.ticksUntilSober(0f, Intoxication.PER_BEER), 1);
         assertEquals(0, Intoxication.ticksUntilSober(0f, 0f));
     }
 
     @Test
-    void eachBeerCrossesTheNextThreshold() {
+    void thresholdsNeedRealisticAmountsOfBeer() {
         float[] thresholds = { Intoxication.TIPSY, Intoxication.MERRY, Intoxication.DRUNK,
-            Intoxication.WASTED, Intoxication.SMASHED, Intoxication.BLACKOUT };
-        for (int beer = 1; beer <= thresholds.length; beer++) {
-            float bac = beer * Intoxication.PER_BEER;
-            assertTrue(bac >= thresholds[beer - 1], "beer " + beer + " should reach threshold " + thresholds[beer - 1]);
-            assertTrue((beer - 1) * Intoxication.PER_BEER < thresholds[beer - 1], "beer " + (beer - 1) + " should stay below it");
-        }
-        assertTrue(7 * Intoxication.PER_BEER >= Intoxication.POISONING, "the 7th beer poisons");
-        assertTrue(6 * Intoxication.PER_BEER < Intoxication.POISONING, "six beers do not");
+            Intoxication.WASTED, Intoxication.SMASHED, Intoxication.BLACKOUT, Intoxication.POISONING };
+        for (int i = 1; i < thresholds.length; i++) assertTrue(thresholds[i] > thresholds[i - 1]);
+        assertTrue(Intoxication.PER_BEER >= Intoxication.TIPSY, "one beer makes you tipsy");
+        assertTrue(3 * Intoxication.PER_BEER >= Intoxication.MERRY, "three make you merry");
+        assertTrue(4 * Intoxication.PER_BEER < Intoxication.DRUNK, "four are not yet drunk");
+        assertTrue(10 * Intoxication.PER_BEER < Intoxication.POISONING, "ten do not poison");
     }
 
     @Test
@@ -75,6 +73,16 @@ class IntoxicationTest {
             assertTrue(v >= prev);
             prev = v;
         }
+    }
+
+    @Test
+    void hangoverSetsInOnTheWayDown() {
+        assertFalse(Intoxication.hangoverStarts(0.2f, 0f, 0.5f), "too little for a hangover");
+        assertFalse(Intoxication.hangoverStarts(0.6f, 0f, 1.2f), "still drunk");
+        assertFalse(Intoxication.hangoverStarts(0.2f, 0.3f, 1.2f), "still absorbing");
+        assertTrue(Intoxication.hangoverStarts(0.2f, 0f, 1.2f));
+        assertEquals(0, Intoxication.hangoverLevel(1.2f));
+        assertEquals(1, Intoxication.hangoverLevel(2.5f));
     }
 
     @Test
@@ -95,7 +103,7 @@ class IntoxicationTest {
 
     @Test
     void firstBeersAreAlreadyFelt() {
-        assertTrue(Intoxication.visualIntensity(2 * Intoxication.PER_BEER) > 0.45f);
+        assertTrue(Intoxication.visualIntensity(3 * Intoxication.PER_BEER) > 0.45f);
     }
 
     @Test
@@ -115,7 +123,7 @@ class IntoxicationTest {
 
     @Test
     void onlyAHeavySessionEarnsAHangover() {
-        assertEquals(0, Intoxication.hangoverTicks(1.0f));
+        assertEquals(0, Intoxication.hangoverTicks(0.5f));
         assertTrue(Intoxication.hangoverTicks(Intoxication.HANGOVER_PEAK) > 0);
         assertTrue(Intoxication.hangoverTicks(3.0f) > Intoxication.hangoverTicks(1.5f));
     }

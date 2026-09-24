@@ -19,6 +19,7 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -194,6 +195,14 @@ public class ModRecipeProvider {
                     100)
                 .unlockedBy("has_green_malt", has(ModItems.GREEN_MALT.get()))
                 .save(output, CreateBrewery.ID("kilning"));
+
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.IBUPROFEN.get(), 4)
+                .requires(Items.PAPER)
+                .requires(Items.SUGAR)
+                .requires(Items.BONE_MEAL)
+                .requires(Items.IRON_NUGGET)
+                .unlockedBy("has_sugar", has(Items.SUGAR))
+                .save(output, CreateBrewery.ID("ibuprofen"));
         }
     }
 }

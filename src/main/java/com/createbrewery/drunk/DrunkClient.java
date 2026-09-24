@@ -411,6 +411,23 @@ public final class DrunkClient {
                 g.fill(0, 0, w, h, (glare << 24) | 0xFFF8E0);
             }
         }
+
+        drawPerMille(mc, player, g);
+    }
+
+    /**
+     * The per-mille reading above the hotbar while there is any alcohol in you, coloured by how
+     * bad it is, with an arrow while the stomach is still feeding the blood. Drawn in Pre after
+     * the eyelids so it stays readable, and under the blackout, which hides everything.
+     */
+    private static void drawPerMille(Minecraft mc, LocalPlayer player, GuiGraphics g) {
+        DrunkState s = player.getData(ModAttachments.DRUNK);
+        if (s.total() < 0.005f) return;
+        String text = String.format(Locale.GERMAN, "%.2f ‰%s", s.blood, s.stomach > 0.02f ? " ↑" : "");
+        int colour = s.blood < Intoxication.TIPSY ? 0xB0E8B0
+            : s.blood < Intoxication.DRUNK ? 0xFFD35A
+            : s.blood < Intoxication.POISONING ? 0xFF8A30 : 0xFF3A3A;
+        g.drawString(mc.font, text, (g.guiWidth() - mc.font.width(text)) / 2, g.guiHeight() - 82, colour, true);
     }
 
     private static void onGuiPost(RenderGuiEvent.Post event) {

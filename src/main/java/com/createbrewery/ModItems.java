@@ -1,6 +1,7 @@
 package com.createbrewery;
 
 import com.createbrewery.item.BeerDrinkItem;
+import com.createbrewery.item.IbuprofenItem;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.tterrag.registrate.util.entry.ItemEntry;
 import net.minecraft.world.item.Item;
@@ -52,6 +53,12 @@ public class ModItems {
         .item("sealed_can", p -> new BeerDrinkItem(p, ModItems.EMPTY_CAN::get))
         .properties(p -> p.stacksTo(16).food(ModFoods.BEER))
         .tag(BEER, BREWERY_BEER, C_BEVERAGES, C_FOODS)
+        .register();
+
+    public static final ItemEntry<IbuprofenItem> IBUPROFEN = REGISTRATE
+        .item("ibuprofen", IbuprofenItem::new)
+        .lang("Ibu 400")
+        .properties(p -> p.stacksTo(20))
         .register();
 
     public static void register() {}

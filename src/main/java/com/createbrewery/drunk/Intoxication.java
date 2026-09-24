@@ -12,8 +12,11 @@ package com.createbrewery.drunk;
 public final class Intoxication {
     private Intoxication() {}
 
-    /** One beer. Six beers reach the blackout zone, the seventh poisons you. */
-    public static final float PER_BEER = 0.5f;
+    /**
+     * One beer (0.5 l, 5 %): about 0.3 per mille for an adult man, as in real life. Tipsy after
+     * one, merry after three, properly drunk after five; poisoning takes a dozen.
+     */
+    public static final float PER_BEER = 0.3f;
     /** Share of the stomach absorbed per tick on an empty stomach: half-life 250 ticks (15 MC minutes). */
     public static final float ABSORB_SHARE_PER_TICK = 0.693f / 250f;
     /** Floor so the last sip does not trickle in forever. */
@@ -23,7 +26,7 @@ public final class Intoxication {
     /** Shared cooldown between two alcoholic drinks, like an Ender Pearl (20 ticks = 1 s). */
     public static final int DRINK_COOLDOWN = 20;
 
-    // Symptom thresholds, in ‰. Each beer (0.5‰) crosses roughly one of them.
+    // Symptom thresholds, in ‰.
     public static final float TIPSY = 0.3f;        // beer 1: sway, warm vision
     public static final float MERRY = 0.8f;        // beer 2: weaving walk, aim drift, hiccups, slurring
     public static final float DRUNK = 1.3f;        // beer 3: double vision, eyelids, delirium + aggro
@@ -31,8 +34,10 @@ public final class Intoxication {
     public static final float SMASHED = 2.4f;      // beer 5: micro-sleep
     public static final float BLACKOUT = 2.9f;     // beer 6: blackouts
     public static final float POISONING = 3.3f;     // beer 7: alcohol poisoning, damage over time
-    /** A peak at or above this earns a hangover once the player sobers up or sleeps. */
-    public static final float HANGOVER_PEAK = 1.3f;
+    /** A peak at or above this earns a hangover (a real session, about three beers). */
+    public static final float HANGOVER_PEAK = 0.8f;
+    /** On the way down, the hangover starts once the blood level falls below this. */
+    public static final float HANGOVER_ONSET = 0.3f;
 
     /** How much of the stomach content reaches the blood this tick, on an empty stomach. */
     public static float absorbed(float stomach) {
@@ -109,6 +114,17 @@ public final class Intoxication {
     /** Hangover length in ticks for a given peak; 0 if the peak was too low to earn one. */
     public static int hangoverTicks(float peak) {
         if (peak < HANGOVER_PEAK) return 0;
-        return (int) (peak * 2400f); // 1.3‰ -> ~2.6 min, 3.0‰ -> 6 min
+        return (int) (peak * 3000f); // 0.8 -> 2 min, 2.0 -> 5 min, 3.0 -> 7.5 min
     }
+
+    /** 0 = normal hangover, 1 = the really bad one after a heavy night. */
+    public static int hangoverLevel(float peak) {
+        return peak >= 2.0f ? 1 : 0;
+    }
+
+    /** Coming down from a real session: time for the hangover to set in. */
+    public static boolean hangoverStarts(float blood, float stomach, float peak) {
+        return peak >= HANGOVER_PEAK && blood < HANGOVER_ONSET && stomach < 0.05f;
+    }
+
 }

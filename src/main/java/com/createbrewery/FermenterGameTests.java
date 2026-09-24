@@ -479,4 +479,23 @@ public class FermenterGameTests {
         }
         helper.succeed();
     }
+
+    /** Once the painkiller kicks in it clears the hangover; before that it does not. */
+    @GameTest(template = TEMPLATE)
+    public static void painkillerClearsHangoverAfterOnset(GameTestHelper helper) {
+        var early = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        var late = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 3, 2, 3);
+        for (var pig : java.util.List.of(early, late)) {
+            pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.HANGOVER, 2000));
+        }
+        early.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.PAINKILLER,
+            com.createbrewery.effect.PainkillerEffect.DURATION));
+        late.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.PAINKILLER,
+            com.createbrewery.effect.PainkillerEffect.DURATION - com.createbrewery.effect.PainkillerEffect.ONSET));
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(early.hasEffect(com.createbrewery.effect.ModEffects.HANGOVER), "worked before its onset");
+            helper.assertTrue(!late.hasEffect(com.createbrewery.effect.ModEffects.HANGOVER), "did not clear the hangover");
+            helper.succeed();
+        });
+    }
 }

@@ -41,6 +41,9 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, VomitingEffect> VOMITING =
         EFFECTS.register("vomiting", VomitingEffect::new);
 
+    public static final DeferredHolder<MobEffect, PainkillerEffect> PAINKILLER =
+        EFFECTS.register("painkiller", PainkillerEffect::new);
+
     public static void register(IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
     }

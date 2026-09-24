@@ -35,6 +35,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.good_mood", "Bierlaune");
         REGISTRATE.addRawLang("effect.createbrewery.cheers", "Geselligkeit");
         REGISTRATE.addRawLang("effect.createbrewery.vomiting", "Kotzanfall");
+        REGISTRATE.addRawLang("effect.createbrewery.painkiller", "Schmerzmittel");
+        REGISTRATE.addRawLang("death.attack.createbrewery.painkiller_overdose", "%1$s hat zu viele Ibus geschluckt");
         REGISTRATE.addRawLang("subtitles.createbrewery.glass_clink", "Gläser klirren");
         REGISTRATE.addRawLang("subtitles.createbrewery.hiccup", "Hicks");
         REGISTRATE.addRawLang("subtitles.createbrewery.heartbeat", "Herzklopfen");

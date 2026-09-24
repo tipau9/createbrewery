@@ -2,6 +2,7 @@ package com.createbrewery.drunk;
 
 import com.createbrewery.CreateBrewery;
 import com.createbrewery.effect.ModEffects;
+import com.createbrewery.effect.PainkillerEffect;
 import com.createbrewery.effect.VomitingEffect;
 import com.createbrewery.particle.ModParticles;
 import com.createbrewery.sound.ModSounds;
@@ -44,6 +45,19 @@ public final class DrunkServer {
     private static final int BLACKOUT_TICKS = 240;
     private static final ResourceKey<DamageType> POISON_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "alcohol_poisoning"));
+
+    private static final ResourceKey<DamageType> OVERDOSE_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "painkiller_overdose"));
+
+    /** Damage from swallowing too many painkillers. */
+    public static DamageSource overdoseSource(Level level) {
+        return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(OVERDOSE_DAMAGE));
+    }
+
+    /** Throw up now, e.g. a painkiller on top of too much alcohol. */
+    public static void vomit(Player player) {
+        if (!player.hasEffect(ModEffects.VOMITING)) vomit(player, state(player));
+    }
 
     /** Damage from alcohol poisoning: ignores armour, no knockback, own death message. */
     public static DamageSource poisonSource(Level level) {
@@ -120,6 +134,7 @@ public final class DrunkServer {
             soberUp(player, s);
             return;
         }
+        if (Intoxication.hangoverStarts(s.blood, s.stomach, s.peak)) startHangover(player, s);
         if (player.tickCount % 20 == 0) symptoms(player, s, player.getRandom());
         if (player.tickCount % 10 == 0) sync(player, s);
     }
@@ -128,10 +143,22 @@ public final class DrunkServer {
         s.blood = 0f;
         s.stomach = 0f;
         player.removeEffect(ModEffects.INEBRIATION);
-        int hangover = Intoxication.hangoverTicks(s.peak);
-        s.peak = 0f;
-        if (hangover > 0) player.addEffect(new MobEffectInstance(ModEffects.HANGOVER, hangover, 0));
+        startHangover(player, s);
         sync(player, s);
+    }
+
+    /**
+     * The Kater, earned by the session's peak. It starts while the last of the alcohol wears off
+     * (or on waking up after sleeping it off). A working painkiller prevents it; either way the
+     * peak is spent, so the same session never gives two hangovers.
+     */
+    private static void startHangover(Player player, DrunkState s) {
+        int ticks = Intoxication.hangoverTicks(s.peak);
+        int level = Intoxication.hangoverLevel(s.peak);
+        s.peak = 0f;
+        if (ticks > 0 && !PainkillerEffect.working(player)) {
+            player.addEffect(new MobEffectInstance(ModEffects.HANGOVER, ticks, level));
+        }
     }
 
     private static void symptoms(Player player, DrunkState s, RandomSource random) {
