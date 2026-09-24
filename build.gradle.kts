@@ -68,6 +68,10 @@ dependencies {
     implementation("com.tterrag.registrate:Registrate:${property("registrate_version")}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    // Required to actually launch the JUnit Platform. Without it, the first unit
+    // test in the repo fails with "Could not start Gradle Test Executor 1: Failed
+    // to load JUnit Platform." Gradle does not pull this in implicitly.
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
 }
 
 tasks.withType<JavaCompile>().configureEach {
