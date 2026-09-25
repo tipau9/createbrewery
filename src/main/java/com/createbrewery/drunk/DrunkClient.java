@@ -168,7 +168,6 @@ public final class DrunkClient {
         rolling = ease(rolling, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING));
         tweak = ease(tweak, player == null ? 0f : DrugEffect.felt(player, ModEffects.TWEAK));
         opiate = ease(opiate, player == null ? 0f : Math.min(1f, DrugEffect.felt(player, ModEffects.NOD)
-            + 0.4f * DrugEffect.felt(player, ModEffects.CALM)
             + (player.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) ? 0.5f : 0f))
             * (player.hasEffect(ModEffects.SPEEDBALL) ? 0.4f : 1f));
         // Lachgas hits within a breath: faster than the other channels.
@@ -211,12 +210,13 @@ public final class DrunkClient {
             RollClient.tick(mc, player);
             TweakClient.tick(mc, player);
             NodClient.tick(mc, player);
+            BenzoClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || BenzoClient.rebound > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -472,6 +472,8 @@ public final class DrunkClient {
             chain.setUniform("Breath", NodClient.breath);
             chain.setUniform("Air", NodClient.air * screen());
             chain.setUniform("Sick", NodClient.sick * screen());
+            chain.setUniform("Calm", BenzoClient.calm * screen());
+            chain.setUniform("Rebound", BenzoClient.rebound * screen());
             chain.setUniform("Wah", wah * screen());
             chain.setUniform("Stare", TripClient.stare * screen());
             chain.setUniform("Harsh", TripClient.harsh);
@@ -533,6 +535,14 @@ public final class DrunkClient {
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
         if (sound instanceof Echo || sound instanceof Phantom) return;
         synaesthesia(player, sound);
+        // Xanax: the monsters just do not matter much - and afterwards, the rebound, everything
+        // is too loud.
+        float benzo = 1f - 0.5f * BenzoClient.calm + 0.4f * BenzoClient.rebound;
+        if (Math.abs(benzo - 1f) > 0.05f && !(sound instanceof TickableSoundInstance)
+            && (source == SoundSource.HOSTILE || BenzoClient.rebound > 0.05f && source != SoundSource.MUSIC && source != SoundSource.RECORDS)) {
+            event.setSound(new EnhancedSound(sound, source == SoundSource.HOSTILE ? benzo : 1f + 0.4f * BenzoClient.rebound, 1f));
+            return;
+        }
         // DMT: every sound bends down and stretches, as if from very far away.
         if (breakthrough > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
             event.setSound(new EnhancedSound(sound, 1f, 1f - 0.4f * breakthrough));
@@ -1097,7 +1107,7 @@ public final class DrunkClient {
             }
         }
         // Heroin: on the nod the eyes sink shut and jerk open again (NodClient); Xanax makes them heavy.
-        lid = Math.max(lid, Math.max(NodClient.lid, 0.1f * opiate) * screen());
+        lid = Math.max(lid, Math.max(Math.max(NodClient.lid, 0.1f * opiate), BenzoClient.lid) * screen());
         if (lid > 0f) {
             int px = (int) (h * lid);
             int feather = h / 8;
@@ -1190,6 +1200,7 @@ public final class DrunkClient {
     private static void onGuiPost(RenderGuiEvent.Post event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
+        BenzoClient.drawGap(event.getGuiGraphics());
         MobEffectInstance blackout = player.getEffect(ModEffects.BLACKOUT);
         if (blackout == null) return;
         // Filmriss: pitch black, the world only fades back in during the last second and a half.

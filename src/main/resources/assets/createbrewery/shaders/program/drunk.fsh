@@ -35,6 +35,8 @@ uniform float Dream;   // Heroin: on the nod, a dream behind the closed eyes, 0.
 uniform float Breath;  // Heroin: each slow breath, 0..1 (1 = breathing in)
 uniform float Air;     // Heroin: the breath failing - blue and dark between breaths, 0..1
 uniform float Sick;    // Heroin withdrawal (cold turkey): cold, clammy, gooseflesh, 0..1
+uniform float Calm;    // Xanax: flat, soft, grey-lilac and a little out of focus, 0..1
+uniform float Rebound; // after Xanax: the fear back doubled - too sharp, pulse at the edges, 0..1
 uniform float Wah;     // Lachgas: 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
 uniform float Beat;    // MDMA: how much the music is in the body, 0..1
@@ -645,6 +647,15 @@ void main() {
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum) * vec3(0.88, 0.96, 1.05), 0.4 * Sick) * (1.0 + 0.05 * Sick);
     col *= 1.0 - 0.07 * Sick * step(0.85, hash(floor(uv * OutSize / 3.0)));
+    // Xanax: blurred, and nothing stands out - colour and contrast flatten, a cool grey-lilac.
+    col = mix(col, ring(uv, px * 2.5), 0.55 * Calm);
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.4 * Calm);
+    col = mix(col, vec3(0.45), 0.2 * Calm) * mix(vec3(1.0), vec3(0.97, 0.95, 1.06), Calm);
+    // The rebound: everything too sharp and too bright, and a fast pulse at the edges.
+    col += (col - ring(uv, px * 1.5)) * 0.7 * Rebound;
+    col = (col - 0.5) * (1.0 + 0.2 * Rebound) + 0.5;
+    col *= 1.0 - smoothstep(0.25, 0.8, length(d)) * (0.25 + 0.2 * pow(max(0.0, sin(t * 7.5)), 8.0)) * Rebound;
     // On the nod: a dream behind the closed eyes - the world turning slowly, soft and golden,
     // like a memory, with lights drifting through it.
     if (Dream > 0.0) {

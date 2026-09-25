@@ -156,6 +156,25 @@ public final class Intoxication {
         return 0;
     }
 
+    /**
+     * Xanax: slow, flat speech that loses the thread - pauses between words, no exclamation marks,
+     * and often it just stops halfway.
+     */
+    public static String trailOff(String text, java.util.Random random) {
+        String[] words = text.replace('!', '.').split(" ");
+        int keep = random.nextFloat() < 0.4f ? Math.max(1, (int) (words.length * (0.4f + 0.3f * random.nextFloat()))) : words.length;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < keep; i++) {
+            if (i > 0) sb.append(random.nextFloat() < 0.3f ? "… " : " ");
+            sb.append(words[i]);
+        }
+        if (keep < words.length) {
+            String[] lost = {"…", "… äh…", "… was wollt ich sagen?", "… egal."};
+            sb.append(lost[random.nextInt(lost.length)]);
+        }
+        return sb.toString();
+    }
+
     /** Hangover length in ticks for a given peak; 0 if the peak was too low to earn one. */
     public static int hangoverTicks(float peak) {
         if (peak < HANGOVER_PEAK) return 0;
