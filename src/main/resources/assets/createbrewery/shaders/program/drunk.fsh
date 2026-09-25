@@ -70,6 +70,10 @@ float hash(vec2 p) {
 }
 
 // Camera-relative world position of a screen point at the given depth.
+vec3 hash3(vec3 p) {
+    return vec3(hash(p.xy + p.z * 7.13), hash(p.yz + p.x * 3.31), hash(p.zx + p.y * 5.97));
+}
+
 vec3 worldAt(vec2 uv, float depth) {
     vec4 w = InvViewProj * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
     return w.xyz / w.w;
@@ -127,7 +131,7 @@ void main() {
     vec2 flow = vec2(sin(uv.y * 14.0 + t * 0.8 + luma0 * 6.0), cos(uv.x * 12.0 + t * 0.7 + luma0 * 6.0));
     uv += flow * px * (2.0 + 5.0 * peak) * Trip;
     // Mushrooms: the world slowly melts downwards. Peyote: heat shimmer, like over desert sand.
-    uv.y += sin(uv.x * 20.0 + t * 0.4) * 0.004 * Trip * Organic;
+    uv.y += sin(uv.x * 20.0 + t * 0.4) * 0.004 * Trip * Organic * (1.0 - World);
     uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert;
     // A bad trip: the picture pulls nervously towards the middle, again and again.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.015 * BadTrip * (0.5 + 0.5 * sin(t * 4.0)));
@@ -143,7 +147,12 @@ void main() {
     float sky = step(0.99999, depth0);
     float solid = (1.0 - sky) * World;
     float breathe = sin(wp.x * 0.8 + t * 0.9) * sin(wp.z * 0.8 - t * 0.7) + 0.5 * sin(wp.y * 1.1 + t * 0.6);
-    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * solid;
+    // Mushrooms: the breath follows a slow heartbeat, about fifty a minute.
+    float beat = 1.0 + 0.8 * Organic * pow(0.5 + 0.5 * sin(t * 5.2), 8.0);
+    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * solid * beat;
+    // ...and surfaces run downwards like wet paint, in streaks that stay on their blocks.
+    float run = 0.5 + 0.5 * sin(wp.x * 3.1 + 2.0 * sin(wp.z * 2.3) + t * 0.3);
+    uv.y += run * run * 0.006 * Trip * Organic * solid;
     // Stare at one spot and it starts to melt: the middle of the view slowly turns and drips.
     float st = Stare * Trip;
     vec2 sc = (uv - 0.5) * vec2(aspect, 1.0);
@@ -233,7 +242,9 @@ void main() {
     float kr = length(kc);
     float seg = 6.2831853 / 8.0;
     float ka = abs(mod(atan(kc.y, kc.x) + t * 0.05, seg) - seg * 0.5);
-    col = mix(col, tap(0.5 + vec2(cos(ka), sin(ka)) * kr), 0.3 * peak);
+    // Mushrooms fold it into a slow spiral instead, like a snail shell or a fern.
+    float sa = atan(kc.y, kc.x) + log(kr + 0.001) * 2.0 - t * 0.1;
+    col = mix(col, tap(0.5 + mix(vec2(cos(ka), sin(ka)), vec2(cos(sa), sin(sa)), Organic) * kr), 0.3 * peak);
     float lattice = smoothstep(0.92, 1.0, abs(sin(kr * 60.0 - t * 1.5) * sin(ka * 16.0)));
     vec3 rainbow = 0.5 + 0.5 * sin(vec3(t, t * 1.3 + 2.0, t * 0.7 + 4.0) + kr * 20.0);
     col += rainbow * lattice * 0.12 * peak;
@@ -243,6 +254,24 @@ void main() {
     float contour = smoothstep(0.8, 1.0, abs(sin(wpat * 3.14159)));
     vec3 wrainbow = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + wpat * 0.3 + t * 0.05));
     col += wrainbow * contour * 0.16 * Trip * solid * exp(-dist / 40.0);
+    // Mushrooms: a glowing mycelium grows over everything - thin veins between cells anchored in
+    // the world, with light pulsing along them.
+    float fungal = Organic * Trip * solid;
+    if (fungal > 0.01) {
+        vec3 cell = wp * 1.3;
+        vec3 cid = floor(cell);
+        float f1 = 9.0, f2 = 9.0;
+        for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {
+            vec3 o = vec3(float(x), float(y), float(z));
+            vec3 p = o + hash3(cid + o) - fract(cell);
+            float dd = dot(p, p);
+            if (dd < f1) { f2 = f1; f1 = dd; } else if (dd < f2) f2 = dd;
+        }
+        float vein = 1.0 - smoothstep(0.0, 0.07, sqrt(f2) - sqrt(f1));
+        float pulse = 0.5 + 0.5 * sin(dot(wp, vec3(0.7, 0.3, 0.5)) * 2.0 - t * 3.0);
+        vec3 glowCol = mix(vec3(0.3, 0.95, 1.0), vec3(0.75, 0.4, 1.0), 0.5 + 0.5 * sin(t * 0.2 + wp.y));
+        col += glowCol * vein * (0.3 + 0.7 * pulse) * 0.35 * fungal * exp(-dist / 25.0);
+    }
     // At the peak, every edge of the world glows in neon.
     float dc = distAt(uv);
     float dx = abs(distAt(uv + vec2(px.x, 0.0)) + distAt(uv - vec2(px.x, 0.0)) - 2.0 * dc);
@@ -270,8 +299,9 @@ void main() {
     // A bad place makes it harsh: hard contrast, bloody light.
     col = (col - 0.5) * (1.0 + 0.3 * Harsh * Trip) + 0.5;
     col *= mix(vec3(1.0), vec3(1.12, 0.9, 0.85), Harsh * Trip);
-    // Palettes: mushrooms lean green and earthy, peyote warm and golden.
-    col *= mix(vec3(1.0), vec3(0.9, 1.1, 0.95), Organic * Trip);
+    // Palettes: mushrooms earthy - shadows sink into violet, highlights go gold-green. Peyote warm and golden.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col *= mix(vec3(1.0), mix(vec3(0.95, 0.85, 1.12), vec3(1.0, 1.1, 0.88), smoothstep(0.2, 0.7, lum)), Organic * Trip);
     col *= mix(vec3(1.0), vec3(1.12, 1.0, 0.82), Desert * Trip);
     // The bad trip: drained and reddish, with the edges throbbing dark like a pulse.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

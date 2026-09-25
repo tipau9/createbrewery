@@ -33,6 +33,12 @@ import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLivingEvent;
+import net.neoforged.neoforge.client.event.RenderNameTagEvent;
+import net.neoforged.neoforge.common.util.TriState;
+import com.createbrewery.sound.ModSounds;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.animal.Animal;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import org.joml.Matrix4f;
@@ -52,6 +58,9 @@ import java.util.List;
  *   <li>Thoughts above the hotbar; chat and item names come in scrambled rainbow letters.</li>
  *   <li>The third tab: at the peak you leave your body and look down on yourself for a while.</li>
  *   <li>Bad trip: monsters heard behind you, and hits that never landed.</li>
+ *   <li>Mushrooms: spores in the air, animals that speak their minds, the forest playing flute,
+ *       laughing fits, chills on the come-up, and with a heroic dose in silent darkness the
+ *       world grows in over you.</li>
  * </ul>
  */
 public final class TripClient {
@@ -73,6 +82,11 @@ public final class TripClient {
     /** The hand wobble already applied this frame; the off hand is drawn on the same pose and undoes it first. */
     private static final Matrix4f handApplied = new Matrix4f();
     private static int frame, handFrame = -1;
+    /** Mushrooms: ticks left of a laughing fit, the come-up chills, and the heroic dose overgrowing the view. */
+    private static int laugh;
+    static float chill;
+    private static float overgrown;
+    private static boolean forestSpoke;
 
     public static void init() {
         NeoForge.EVENT_BUS.addListener(TripClient::onChat);
@@ -82,6 +96,7 @@ public final class TripClient {
         NeoForge.EVENT_BUS.addListener(TripClient::onFrame);
         NeoForge.EVENT_BUS.addListener(TripClient::onCameraDistance);
         NeoForge.EVENT_BUS.addListener(TripClient::onGui);
+        NeoForge.EVENT_BUS.addListener(TripClient::onNameTag);
     }
 
     private static float peak() {
@@ -105,6 +120,12 @@ public final class TripClient {
         hum(mc, player);
         phantomMonsters(mc, player, bad);
         phantomHits(mc, player, bad);
+        mushrooms(mc, player, trip * DrunkClient.organic);
+    }
+
+    /** 0..1 how hard you are laughing right now. */
+    static float laughing() {
+        return Math.min(1f, laugh / 20f);
     }
 
     // ---- the world ----
@@ -180,6 +201,100 @@ public final class TripClient {
         event.setDistance(event.getDistance() + 10f * Mth.sin((float) Math.PI * obeTicks / OBE_TICKS));
     }
 
+    // ---- mushrooms ----
+
+    private static final int[] PENTATONIC = {0, 3, 5, 7, 10, 12};
+
+    private static void mushrooms(Minecraft mc, LocalPlayer player, float shroom) {
+        RandomSource r = player.getRandom();
+        chill = DrunkClient.ease(chill, Psychedelics.comingUp(player, ModEffects.SHROOM_TRIP) ? 1f : 0f);
+        boolean heroic = Psychedelics.silentDarkness(player) && DrugEffect.strength(player, ModEffects.SHROOM_TRIP) > 0.7f;
+        overgrown = heroic ? Math.min(1f, overgrown + 1f / 200f) : Math.max(0f, overgrown - 1f / 60f);
+        if (overgrown >= 1f && !forestSpoke) {
+            player.displayClientMessage(Component.literal("Ich bin der Wald.").withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
+            forestSpoke = true;
+        } else if (overgrown <= 0f) forestSpoke = false;
+        if (shroom < 0.2f || mc.level == null) {
+            laugh = 0;
+            return;
+        }
+        // Spores drift through the air; mushrooms, mycelium and moss glow.
+        if (r.nextFloat() < shroom) {
+            mc.level.addParticle(r.nextBoolean() ? ParticleTypes.SPORE_BLOSSOM_AIR : ParticleTypes.WARPED_SPORE,
+                player.getX() + (r.nextDouble() - 0.5) * 12.0, player.getY() + r.nextDouble() * 4.0,
+                player.getZ() + (r.nextDouble() - 0.5) * 12.0, 0.0, 0.0, 0.0);
+        }
+        for (int i = 0; i < 4; i++) {
+            BlockPos pos = player.blockPosition().offset(r.nextInt(13) - 6, r.nextInt(5) - 2, r.nextInt(13) - 6);
+            BlockState state = mc.level.getBlockState(pos);
+            if (state.is(Blocks.MYCELIUM) || state.is(Blocks.PODZOL) || state.is(Blocks.MOSS_BLOCK) || state.is(Blocks.BROWN_MUSHROOM)
+                || state.is(Blocks.RED_MUSHROOM) || state.is(Blocks.BROWN_MUSHROOM_BLOCK) || state.is(Blocks.RED_MUSHROOM_BLOCK)) {
+                mc.level.addParticle(ParticleTypes.GLOW, pos.getX() + r.nextDouble(), pos.getY() + 1.05, pos.getZ() + r.nextDouble(), 0.0, 0.02, 0.0);
+            }
+            // The forest plays flute: now and then a soft note from a tree nearby.
+            if ((state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES)) && r.nextFloat() < 0.01f * shroom) {
+                mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.NOTE_BLOCK_FLUTE.value(), SoundSource.RECORDS, 0.3f * shroom,
+                    (float) Math.pow(2.0, (PENTATONIC[r.nextInt(PENTATONIC.length)] - 6) / 12.0), r, pos.getX(), pos.getY(), pos.getZ()));
+            }
+        }
+        // Laughing fits: out of nowhere, for a few seconds, you cannot stop - and cannot run.
+        if (laugh <= 0 && shroom > 0.4f && r.nextFloat() < 1f / 1500f) laugh = 100;
+        if (laugh > 0) {
+            laugh--;
+            player.setSprinting(false);
+            if (laugh % 8 == 0) mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.GIGGLE.get(), 1.05f + r.nextFloat() * 0.2f, 0.8f));
+        }
+    }
+
+    private static final String[] ANIMALS = {"Muh. Also… wir sind alle eins.", "Ich sehe dich. Wirklich.", "Hast du auch Gras gegessen?",
+        "Keine Angst. Wir wissen Bescheid.", "Das Netz unter der Erde grüßt dich.", "Warum rennst du immer so?",
+        "Ich bin auch nur ein Würfel.", "Die Sonne ist warm. Mehr gibt es nicht.", "Psst. Die Bäume hören zu."};
+
+    /** Mushrooms: animals nearby speak their minds, now and then. */
+    private static void onNameTag(RenderNameTagEvent event) {
+        float shroom = DrunkClient.trip * DrunkClient.organic;
+        if (shroom < 0.35f || !(event.getEntity() instanceof Animal animal)) return;
+        long slot = animal.getId() + animal.tickCount / 200;
+        if (slot % 3 != 0) return;
+        event.setContent(Component.literal(ANIMALS[(int) Math.floorMod(slot * 31 + animal.getId(), ANIMALS.length)])
+            .withStyle(ChatFormatting.ITALIC, ChatFormatting.GREEN));
+        event.setCanRender(TriState.TRUE);
+    }
+
+    private static final ResourceLocation FROST = ResourceLocation.withDefaultNamespace("textures/misc/powder_snow_outline.png");
+    private static final ResourceLocation VINE = ResourceLocation.withDefaultNamespace("textures/block/vine.png");
+
+    /** Chills at the edges of the view during the come-up, vines growing in with the heroic dose. */
+    private static void mushroomOverlay(GuiGraphics g) {
+        int w = g.guiWidth(), h = g.guiHeight();
+        float frost = 0.35f * chill * DrunkClient.screen();
+        if (frost <= 0.01f && overgrown <= 0f) return;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        if (frost > 0.01f) {
+            g.setColor(1f, 1f, 1f, frost);
+            g.blit(FROST, 0, 0, 0f, 0f, w, h, w, h);
+        }
+        if (overgrown > 0f) {
+            g.setColor(0.3f, 0.55f, 0.22f, Math.min(1f, overgrown * 1.5f));
+            int size = 32, rows = Mth.ceil(overgrown * 4f);
+            for (int row = 0; row < rows; row++) {
+                // The innermost row slides in as it grows.
+                int in = row * size - (row == rows - 1 ? (int) ((rows - overgrown * 4f) * size) : 0);
+                for (int x = 0; x < w; x += size) {
+                    g.blit(VINE, x, in, 0f, 0f, size, size, size, size);
+                    g.blit(VINE, x, h - size - in, 0f, 0f, size, size, size, size);
+                }
+                for (int y = 0; y < h; y += size) {
+                    g.blit(VINE, in, y, 0f, 0f, size, size, size, size);
+                    g.blit(VINE, w - size - in, y, 0f, 0f, size, size, size, size);
+                }
+            }
+        }
+        g.setColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
+    }
+
     // ---- sounds ----
 
     private static final int[] SCALE = {-12, -10, -8, -5, -3, 0, 2, 4, 7, 9, 12};
@@ -228,8 +343,9 @@ public final class TripClient {
     }
 
     private static void onGui(RenderGuiEvent.Pre event) {
-        if (hurtFlash <= 0f) return;
         GuiGraphics g = event.getGuiGraphics();
+        mushroomOverlay(g);
+        if (hurtFlash <= 0f) return;
         g.fill(0, 0, g.guiWidth(), g.guiHeight(), ((int) (hurtFlash * 90 * DrunkClient.screen()) << 24) | 0x8A0000);
     }
 
@@ -246,6 +362,12 @@ public final class TripClient {
     private static final String[] BAD = {"Irgendwas stimmt nicht.", "Da war was. Hinter mir.", "Das hört nie wieder auf.",
         "Ich hätte das nicht nehmen sollen.", "Ruhig atmen. Es ist nur die Droge.", "Die Wände kommen näher.",
         "Die wissen, dass ich hier bin."};
+    private static final String[] SHROOM_COMING_UP = {"*gähn*", "Mir ist irgendwie kalt.", "Mein Bauch fühlt sich komisch an.",
+        "Warum bin ich so müde?"};
+    private static final String[] SHROOM_TRIPPING = {"Die Bäume reden miteinander.", "Ich hab euch alle so lieb.",
+        "Warum ist Gras eigentlich so lustig?", "Hihi. Hihihi.", "Der Boden lebt.", "Alles wächst. Auch ich."};
+    private static final String[] SHROOM_PEAK = {"Wir sind ein Netz. Unter der Erde.", "Ich weine… aber schön.",
+        "Der Wald hat mich die ganze Zeit angeschaut.", "Ich bin nur ein Pilz, der träumt, dass er ein Mensch ist."};
     private static final String[] AFTER = {"Was für ein Tag.", "Alles fühlt sich friedlich an.", "Die Welt ist schön, eigentlich.",
         "Ich sollte öfter die Sonne anschauen."};
 
@@ -254,7 +376,9 @@ public final class TripClient {
         if (player.tickCount < nextThought) return;
         boolean comingUp = Psychedelics.comingUp(player, ModEffects.LSD_TRIP) || Psychedelics.comingUp(player, ModEffects.SHROOM_TRIP)
             || Psychedelics.comingUp(player, ModEffects.MESCALINE_TRIP);
-        String[] pool = bad > 0.3f ? BAD : peak() > 0.3f ? PEAK : comingUp ? COMING_UP : trip > 0.2f ? TRIPPING
+        boolean shroom = DrunkClient.organic > 0.5f;
+        String[] pool = bad > 0.3f ? BAD : peak() > 0.3f ? (shroom ? SHROOM_PEAK : PEAK)
+            : comingUp ? (shroom ? SHROOM_COMING_UP : COMING_UP) : trip > 0.2f ? (shroom ? SHROOM_TRIPPING : TRIPPING)
             : DrunkClient.afterglow > 0.3f ? AFTER : null;
         if (pool == null) {
             nextThought = player.tickCount + 200;

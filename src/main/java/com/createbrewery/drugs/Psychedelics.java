@@ -115,6 +115,18 @@ public final class Psychedelics {
         if (lsd != null && lsd.getAmplifier() >= MAX_LEVEL && DrugEffect.strength(player, ModEffects.LSD_TRIP) > 0.9f) {
             DrugServer.award(player, "ego_tod", "dissolved");
         }
+        if (silentDarkness(player) && shroom > 0.9f) DrugServer.award(player, "heldendosis", "overgrown");
+    }
+
+    /**
+     * McKenna's heroic dose: three mushrooms, in silent darkness, lying still. Then the dark is no
+     * bad setting - it is the point.
+     */
+    public static boolean silentDarkness(Player player) {
+        MobEffectInstance shroom = player.getEffect(ModEffects.SHROOM_TRIP);
+        return shroom != null && shroom.getAmplifier() >= MAX_LEVEL
+            && player.level().getMaxLocalRawBrightness(player.blockPosition()) < 6
+            && player.getDeltaMovement().horizontalDistanceSqr() < 0.001;
     }
 
     /** Bad trip, every second: the heart speeds up with the fear, and it feeds on the setting. */
@@ -143,7 +155,7 @@ public final class Psychedelics {
      */
     public static float badSetting(Player player) {
         float bad = 0f;
-        if (player.level().getMaxLocalRawBrightness(player.blockPosition()) < 6) bad += 1f;
+        if (player.level().getMaxLocalRawBrightness(player.blockPosition()) < 6 && !silentDarkness(player)) bad += 1f;
         if (player.getHealth() < player.getMaxHealth() * 0.5f) bad += 1f;
         if (!player.level().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(10.0),
             e -> e instanceof Enemy).isEmpty()) bad += 1f;

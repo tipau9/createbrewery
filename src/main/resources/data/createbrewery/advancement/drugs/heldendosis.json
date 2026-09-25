@@ -1,0 +1,28 @@
+{
+  "parent": "createbrewery:drugs/pilze",
+  "display": {
+    "icon": {
+      "id": "createbrewery:magic_mushroom"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.heldendosis.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.heldendosis.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "overgrown": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "overgrown"
+    ]
+  ]
+}

@@ -135,6 +135,7 @@ public class CreateBrewery {
         advancement("lsd", "Farben haben jetzt Geräusche", "Leg dir eine LSD-Pappe auf die Zunge");
         advancement("ego_tod", "Ego-Tod", "Erreiche den Gipfel einer Heldendosis LSD");
         advancement("pilze", "Fun Guy", "Iss einen Zauberpilz");
+        advancement("heldendosis", "Heroische Dosis", "Iss drei Zauberpilze und bleib still im Dunkeln");
         advancement("meskalin", "Wüstenprophet", "Kau einen Peyote-Kaktus");
         advancement("horrortrip", "Falsches Set, falsches Setting", "Rutsch in einen Horrortrip");
         advancement("dmt", "Durch den Vorhang", "Rauch DMT");

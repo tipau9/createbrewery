@@ -804,7 +804,8 @@ public final class DrunkClient {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f)) return;
+        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -818,6 +819,9 @@ public final class DrunkClient {
         roll += noise(t * 12.0, 53) * 1.2f * sick;
         // Lachgas: dizzy - the head tips over, as if about to fall.
         roll += noise(t * 0.8, 61) * 15f * wah;
+        // Mushrooms: shaking with laughter, and the chills of the come-up.
+        roll += (float) Math.sin(t * 22.0) * 2.5f * TripClient.laughing();
+        roll += noise(t * 14.0, 71) * 0.8f * TripClient.chill;
         event.setRoll(event.getRoll() + roll * screen());
     }
 
