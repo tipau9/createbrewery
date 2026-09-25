@@ -7,6 +7,7 @@ import com.createbrewery.ModRecipeTypes;
 import com.createbrewery.recipe.FermentingRecipe;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.api.data.recipe.FillingRecipeGen;
+import com.simibubi.create.api.data.recipe.HauntingRecipeGen;
 import com.simibubi.create.api.data.recipe.MillingRecipeGen;
 import com.simibubi.create.api.data.recipe.MixingRecipeGen;
 import com.simibubi.create.api.data.recipe.PressingRecipeGen;
@@ -57,6 +58,7 @@ public class ModRecipeProvider {
         generator.addProvider(server, new Pressing(output, registries));
         generator.addProvider(server, new Filling(output, registries));
         generator.addProvider(server, new Fermenting(output, registries));
+        generator.addProvider(server, new Haunting(output, registries));
         generator.addProvider(server, new Vanilla(output, registries));
     }
 
@@ -109,6 +111,35 @@ public class ModRecipeProvider {
                 .output(ModItems.YEAST.get(), 2)
                 .requiresHeat(HeatCondition.NONE)
                 .duration(200));
+
+            // The Apotheke: made-up game recipes, nothing like a real process.
+            create("heroin", b -> b
+                .require(Items.POPPY).require(Items.POPPY).require(Items.POPPY)
+                .require(Items.GLASS_BOTTLE)
+                .output(ModItems.HEROIN.get())
+                .requiresHeat(HeatCondition.HEATED));
+            create("lsd", b -> b
+                .require(Items.PAPER).require(Items.PURPLE_DYE).require(Items.ENDER_EYE)
+                .output(ModItems.LSD.get(), 9));
+            create("mdma", b -> b
+                .require(Items.AMETHYST_SHARD).require(Items.SUGAR).require(Items.PINK_DYE)
+                .output(ModItems.MDMA.get(), 3));
+            create("dmt", b -> b
+                .require(Items.CHORUS_FRUIT).require(Items.GLOW_BERRIES).require(Items.GLASS_BOTTLE)
+                .output(ModItems.DMT.get())
+                .requiresHeat(HeatCondition.SUPERHEATED));
+            create("meth", b -> b
+                .require(Items.SUGAR).require(Items.REDSTONE).require(Items.BLUE_DYE)
+                .output(ModItems.METH.get(), 2)
+                .requiresHeat(HeatCondition.SUPERHEATED));
+            create("xanax", b -> b
+                .require(Items.BONE_MEAL).require(Items.SUGAR).require(Items.LAPIS_LAZULI)
+                .output(ModItems.XANAX.get(), 4));
+            create("lachgas", b -> b
+                .require(Items.GUNPOWDER).require(Items.SUGAR)
+                .require(Fluids.WATER, 250)
+                .output(ModFluids.LACHGAS.get(), 250)
+                .requiresHeat(HeatCondition.HEATED));
         }
     }
 
@@ -158,6 +189,11 @@ public class ModRecipeProvider {
                 .require(ModItems.EMPTY_CAN.get())
                 .require(ModFluids.BEER.get(), 250)
                 .output(ModItems.SEALED_CAN.get()));
+
+            create("filling_lachgas_balloon", b -> b
+                .require(ModItems.BALLOON.get())
+                .require(ModFluids.LACHGAS.get(), 250)
+                .output(ModItems.LACHGAS_BALLOON.get()));
         }
     }
 
@@ -176,6 +212,20 @@ public class ModRecipeProvider {
         @Override
         protected IRecipeTypeInfo getRecipeType() {
             return ModRecipeTypes.FERMENTING;
+        }
+    }
+
+    /** Encased Fan through soul fire: ordinary plants turn into something else. */
+    public static class Haunting extends HauntingRecipeGen {
+        public Haunting(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            super(output, registries, CreateBrewery.MOD_ID);
+
+            create("magic_mushroom", b -> b
+                .require(Items.BROWN_MUSHROOM)
+                .output(ModItems.MAGIC_MUSHROOM.get()));
+            create("peyote", b -> b
+                .require(Items.CACTUS)
+                .output(ModItems.PEYOTE.get()));
         }
     }
 
@@ -223,6 +273,11 @@ public class ModRecipeProvider {
                 .requires(Items.DRIED_KELP)
                 .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
                 .save(output, CreateBrewery.ID("joint"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.BALLOON.get(), 4)
+                .requires(Items.SLIME_BALL)
+                .requires(Items.RED_DYE)
+                .unlockedBy("has_slime_ball", has(Items.SLIME_BALL))
+                .save(output, CreateBrewery.ID("balloon"));
         }
     }
 }

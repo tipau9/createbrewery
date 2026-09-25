@@ -26,6 +26,17 @@ public class ModVillagerTrades {
 
     public static void register() {
         NeoForge.EVENT_BUS.addListener(ModVillagerTrades::onVillagerTrades);
+        NeoForge.EVENT_BUS.addListener(ModVillagerTrades::onWandererTrades);
+    }
+
+    /** The wandering trader deals on the side: now and then he has something from the Apotheke. */
+    private static void onWandererTrades(net.neoforged.neoforge.event.village.WandererTradesEvent event) {
+        List<VillagerTrades.ItemListing> rare = event.getRareTrades();
+        rare.add(new BasicItemListing(6, new ItemStack(ModItems.LSD.get(), 3), 4, 1));
+        rare.add(new BasicItemListing(4, new ItemStack(ModItems.MAGIC_MUSHROOM.get(), 4), 4, 1));
+        rare.add(new BasicItemListing(5, new ItemStack(ModItems.MDMA.get(), 2), 4, 1));
+        rare.add(new BasicItemListing(10, new ItemStack(ModItems.DMT.get()), 2, 1));
+        rare.add(new BasicItemListing(8, new ItemStack(ModItems.HEROIN.get()), 2, 1));
     }
 
     private static void onVillagerTrades(VillagerTradesEvent event) {

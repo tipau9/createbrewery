@@ -1,0 +1,18 @@
+{
+  "type": "create:filling",
+  "ingredients": [
+    {
+      "item": "createbrewery:balloon"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 250,
+      "fluid": "createbrewery:lachgas"
+    }
+  ],
+  "results": [
+    {
+      "id": "createbrewery:lachgas_balloon"
+    }
+  ]
+}
