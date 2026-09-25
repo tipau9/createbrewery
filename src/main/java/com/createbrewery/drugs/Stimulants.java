@@ -15,6 +15,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
@@ -24,7 +26,7 @@ import net.minecraft.world.entity.player.Player;
  * <p>MDMA (Ecstasy): warm, open, everyone is your friend (hearts over everyone near you), music
  * is everything, the jaw clenches. The danger is heat: dancing on it drives the body temperature
  * up, and past a point it overheats (Hitzschlag). Water and rest cool it. Days later, the
- * serotonin is gone: the Tiefpunkt.
+ * serotonin is gone: the Tiefpunkt. Sneak up close to anyone for a hug - yes, even a creeper.
  *
  * <p>Meth (Crystal): like Koks, but for half a day - fast, tireless, no hunger, no sleep, and by
  * far the hardest on the heart. Awake long enough on it, the mind starts to slip (Psychose): the
@@ -56,7 +58,7 @@ public final class Stimulants {
         player.removeEffect(mdma ? ModEffects.COMEDOWN : ModEffects.METH_CRASH);
     }
 
-    /** MDMA, every second: love for everyone around, and the jaw grinding. */
+    /** MDMA, every second: love for everyone around, the jaw grinding, and hugs. */
     public static void rollTick(LivingEntity entity, int level) {
         if (!(entity instanceof Player player) || !(player.level() instanceof ServerLevel server)) return;
         float felt = DrugEffect.felt(player, ModEffects.ROLLING);
@@ -70,6 +72,18 @@ public final class Stimulants {
         if (player.getRandom().nextFloat() < 0.06f * felt) {
             server.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GRINDSTONE_USE,
                 SoundSource.PLAYERS, 0.25f, 1.8f + player.getRandom().nextFloat() * 0.2f);
+        }
+        // Sneaking right up to someone is a hug: warmth for both, and hearts everywhere.
+        if (player.isShiftKeyDown() && felt > 0.2f) {
+            for (LivingEntity other : server.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(0.8), e -> e != player)) {
+                server.sendParticles(ParticleTypes.HEART, other.getX(), other.getY() + other.getBbHeight() * 0.8, other.getZ(),
+                    5, 0.4, 0.3, 0.4, 0.0);
+                server.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CAT_PURR, SoundSource.PLAYERS, 0.8f, 1.1f);
+                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, false, false, true));
+                other.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, false, false, true));
+                if (other instanceof Creeper) DrugServer.award(player, "kuschelmonster", "hugged");
+                break;
+            }
         }
     }
 

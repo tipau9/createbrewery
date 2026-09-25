@@ -1,0 +1,28 @@
+{
+  "parent": "createbrewery:drugs/mdma",
+  "display": {
+    "icon": {
+      "id": "minecraft:creeper_head"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.kuschelmonster.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.kuschelmonster.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "hugged": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "hugged"
+    ]
+  ]
+}

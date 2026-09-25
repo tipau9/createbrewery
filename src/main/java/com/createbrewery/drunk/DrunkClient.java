@@ -78,7 +78,8 @@ public final class DrunkClient {
     /** DMT: 0..1, 1 = the full breakthrough. */
     private static float breakthrough;
     /** MDMA and meth: 0..1 each. */
-    private static float rolling, tweak;
+    static float rolling;
+    private static float tweak;
     /** Heroin (and a little Xanax), and heroin withdrawal: 0..1 each. */
     private static float opiate, sick;
     /** Lachgas: 0..1. */
@@ -124,6 +125,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onPlaySound);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onSoundSource);
         TripClient.init();
+        RollClient.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -204,12 +206,13 @@ public final class DrunkClient {
         if (player != null && !mc.isPaused()) {
             com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad, desert);
             TripClient.tick(mc, player);
+            RollClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -439,6 +442,9 @@ public final class DrunkClient {
             chain.setUniform("BadTrip", bad * screen());
             chain.setUniform("Break", breakthrough * screen());
             chain.setUniform("Roll", rolling * screen());
+            chain.setUniform("Rush", RollClient.rush * screen());
+            chain.setUniform("Beat", RollClient.beat * screen());
+            chain.setUniform("Heat", RollClient.heat * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
             chain.setUniform("Wah", wah * screen());
@@ -500,6 +506,8 @@ public final class DrunkClient {
         // wrapper would hide - the listener gain makes those louder instead.
         SoundSource source = sound.getSource();
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
+        // Only real songs, not the notes the trips play on the records channel.
+        if (sound.getLocation().getPath().startsWith("music")) RollClient.music = sound;
         if (sound instanceof Echo || sound instanceof Phantom) return;
         synaesthesia(player, sound);
         // DMT: every sound bends down and stretches, as if from very far away.
@@ -807,7 +815,7 @@ public final class DrunkClient {
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f)) return;
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -823,6 +831,8 @@ public final class DrunkClient {
         roll += noise(t * 0.8, 61) * 15f * wah;
         // Mushrooms: shaking with laughter, and the chills of the come-up.
         roll += (float) Math.sin(t * 22.0) * 2.5f * TripClient.laughing();
+        // MDMA: goosebumps with every rush.
+        roll += noise(t * 9.0, 83) * 0.7f * RollClient.rush;
         roll += noise(t * 14.0, 71) * 0.8f * TripClient.chill;
         event.setRoll(event.getRoll() + roll * screen());
     }

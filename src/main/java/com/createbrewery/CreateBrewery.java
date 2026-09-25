@@ -143,6 +143,7 @@ public class CreateBrewery {
         advancement("maschinenelfen", "Hallo Maschinenelfen", "Durchbrich in den Hyperraum und triff seine Bewohner");
         advancement("mdma", "Alle umarmen", "Wirf eine Ecstasy-Pille ein");
         advancement("hitzschlag", "Wasser, Wasser!", "Überhitze beim Tanzen auf Ecstasy");
+        advancement("kuschelmonster", "Kuschelmonster", "Umarme auf Ecstasy einen Creeper (schleich dich ran)");
         advancement("meth", "Say My Name", "Rauch Crystal");
         advancement("psychose", "Schattenmenschen", "Bleib auf Crystal so lange wach, bis du Dinge siehst");
         advancement("heroin", "Nicht einnicken", "Setz dir einen Schuss Heroin");

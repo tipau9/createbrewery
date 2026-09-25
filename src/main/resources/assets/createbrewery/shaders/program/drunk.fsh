@@ -30,6 +30,9 @@ uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
 uniform float Nod;     // Heroin: 0..1
 uniform float Wah;     // Lachgas: 0..1
+uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
+uniform float Beat;    // MDMA: how much the music is in the body, 0..1
+uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
 uniform sampler2D DiffuseDepthSampler;
@@ -170,6 +173,13 @@ void main() {
 
     // MDMA: at its height the eyes flicker side to side (nystagmus), fast and tiny.
     uv.x += sin(t * 38.0) * 0.0012 * smoothstep(0.5, 1.0, Roll);
+    // The beat is in the picture: it pumps with it, 128 to the minute.
+    float kick = exp(-fract(t * 2.1333) * 8.0);
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.008 * Beat * kick);
+    // A rush pulls you in, gently.
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.02 * Rush);
+    // Overheated: the air itself wobbles.
+    uv += vec2(sin(uv.y * 50.0 + t * 6.0), cos(uv.x * 40.0 + t * 5.0)) * 0.0015 * Heat;
     // Meth: the picture twitches - now and then it jumps for a frame.
     float tick8 = floor(t * 8.0);
     float twitch = step(0.96, fract(sin(tick8 * 91.7) * 43758.5453));
@@ -386,6 +396,33 @@ void main() {
     float twinkle = pow(max(0.0, sin(t * 3.0 + cellHash * 40.0)), 16.0) * step(0.9, cellHash);
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col += vec3(1.0, 0.9, 1.0) * twinkle * smoothstep(0.5, 0.9, lum) * 0.8 * Roll;
+    // A rush: a warm, bright wave of pink light rolls out from the middle, colours swell.
+    float wave = smoothstep(0.15, 0.0, abs(length(d * vec2(aspect, 1.0)) - (1.0 - Rush) * 1.2));
+    col += vec3(1.0, 0.6, 0.85) * (wave * 0.35 + 0.12) * Rush;
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(lum), col, 1.0 + 0.4 * Rush);
+    // With every beat the lights flash a little brighter.
+    col += spill(uv, px * 6.0, 0.4) * vec3(1.0, 0.7, 0.9) * 1.5 * Beat * kick;
+    // At the height, rave lasers sweep down through the haze, in time with the music.
+    float laserOn = smoothstep(0.5, 0.85, Roll);
+    if (laserOn > 0.0) {
+        for (int i = 0; i < 4; i++) {
+            float fi = float(i);
+            float a = -1.5708 + 0.9 * sin(t * (0.5 + 0.13 * fi) + fi * 1.7);
+            vec2 beam = vec2(cos(a), sin(a));
+            vec2 from = (uv - vec2(0.2 + 0.2 * fi, 1.05)) * vec2(aspect, 1.0);
+            float across = abs(from.x * beam.y - from.y * beam.x);
+            float ahead = step(0.0, dot(from, beam));
+            // Each bar of four beats the colours move on.
+            vec3 beamCol = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + fi * 0.25 + floor(t * 2.1333 / 4.0) * 0.37));
+            col += beamCol * ahead * laserOn * (smoothstep(0.004, 0.0, across) * 0.5 * (0.4 + 0.6 * kick) * (1.0 + Beat)
+                + smoothstep(0.05, 0.0, across) * 0.06);
+        }
+    }
+    // Overheated: washed out, flushed red, and the edges throb with a racing pulse.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum) * vec3(1.2, 0.9, 0.85), 0.35 * Heat);
+    col *= 1.0 - smoothstep(0.2, 0.8, length(d)) * (0.45 + 0.25 * sin(t * 14.0)) * Heat;
     // Meth: cold, clinical light, and colours tear apart at the edges.
     col *= mix(vec3(1.0), vec3(0.92, 1.0, 1.1), Tweak);
     col.r = mix(col.r, tap(uv + d * 0.01).r, 0.6 * Tweak);
@@ -422,6 +459,8 @@ void main() {
     // Afterimages: blend in the previous finished frame. Done last, so the steady picture is
     // exactly the processed one and only movement smears.
     vec3 prev = texture(PrevSampler, texCoord).rgb;
+    // MDMA: lights leave glowing streaks, like glowsticks swung in the dark.
+    col = max(col, prev * 0.92 * smoothstep(0.65, 0.95, dot(prev, vec3(0.299, 0.587, 0.114))) * Roll * Trail);
     // Trail is 0 on the first frames of a fresh chain, whose previous frame is still black.
     // Only when properly drunk: in the party zone the camera never rests (aim drift, sway, view
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
