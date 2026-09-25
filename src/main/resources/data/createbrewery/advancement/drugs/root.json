@@ -87,6 +87,22 @@
           "items": "createbrewery:dmt"
         }
       }
+    },
+    "mdma": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:mdma"
+        }
+      }
+    },
+    "meth": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:meth"
+        }
+      }
     }
   },
   "requirements": [
@@ -99,7 +115,9 @@
       "lsd",
       "pilze",
       "meskalin",
-      "dmt"
+      "dmt",
+      "mdma",
+      "meth"
     ]
   ]
 }

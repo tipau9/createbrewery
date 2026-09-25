@@ -75,6 +75,8 @@ public final class DrunkClient {
     private static float trip, organic, desert, bad;
     /** DMT: 0..1, 1 = the full breakthrough. */
     private static float breakthrough;
+    /** MDMA and meth: 0..1 each. */
+    private static float roll, tweak;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
     private static int lastCokeBeat;
@@ -152,8 +154,12 @@ public final class DrunkClient {
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
         // Every drug comes up, holds and fades (DrugEffect.strength); the screen follows that curve.
-        stim = ease(stim, player == null ? 0f : DrugEffect.felt(player, ModEffects.COKE_HIGH));
-        gray = ease(gray, player == null ? 0f : 0.7f * DrugEffect.strength(player, ModEffects.COKE_CRASH));
+        roll = ease(roll, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING));
+        tweak = ease(tweak, player == null ? 0f : DrugEffect.felt(player, ModEffects.TWEAK));
+        // Meth sharpens like Koks, only harder and for longer.
+        stim = ease(stim, player == null ? 0f : Math.max(DrugEffect.felt(player, ModEffects.COKE_HIGH), tweak));
+        gray = ease(gray, player == null ? 0f : Math.max(0.7f * DrugEffect.strength(player, ModEffects.COKE_CRASH),
+            Math.max(0.5f * DrugEffect.strength(player, ModEffects.COMEDOWN), 0.8f * DrugEffect.strength(player, ModEffects.METH_CRASH))));
         float keta = player == null ? 0f : Math.max(DrugEffect.strength(player, ModEffects.K_HOLE),
             // Koks masks the Keta: it feels clearer than it is (the K-Loch does not care).
             0.85f * DrugEffect.felt(player, ModEffects.KETA_HIGH) * (1f - 0.4f * DrugEffect.strength(player, ModEffects.COKE_HIGH)));
@@ -173,14 +179,16 @@ public final class DrunkClient {
             organic = ease(organic, shroom / all);
             desert = ease(desert, mesc / all);
         }
-        bad = ease(bad, player == null ? 0f : DrugEffect.strength(player, ModEffects.BAD_TRIP));
+        // A meth psychosis looks and feels like a bad trip, shadow people included.
+        bad = ease(bad, player == null ? 0f : Math.max(DrugEffect.strength(player, ModEffects.BAD_TRIP),
+            DrugEffect.strength(player, ModEffects.PSYCHOSIS)));
         breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
         if (player != null && !mc.isPaused()) com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad);
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || roll > 0.01f || tweak > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -400,6 +408,8 @@ public final class DrunkClient {
             chain.setUniform("Desert", desert);
             chain.setUniform("BadTrip", bad * screen());
             chain.setUniform("Break", breakthrough * screen());
+            chain.setUniform("Roll", roll * screen());
+            chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -612,9 +622,14 @@ public final class DrunkClient {
         }
     }
 
+    /** Weed or MDMA: how much the music matters right now. */
+    private static float loud() {
+        return Math.max(high, roll);
+    }
+
     /** High: music and ambience up to about 2x (+6 dB), which is where the listener gain goes. */
     private static float listenerBoost() {
-        return 1f + 1.0f * high;
+        return 1f + 1.0f * loud();
     }
 
     /**
@@ -623,7 +638,7 @@ public final class DrunkClient {
      * track, no jukebox (see {@link #lastMusic}).
      */
     private static void moreMusic(Minecraft mc, LocalPlayer player) {
-        if (high < 0.35f || player.tickCount % 200 != 0) return;
+        if (loud() < 0.35f || player.tickCount % 200 != 0) return;
         if (lastMusic != null && mc.getSoundManager().isActive(lastMusic)) return;
         var music = mc.getSituationalMusic();
         if (music != null) mc.getMusicManager().startPlaying(music);
@@ -642,11 +657,11 @@ public final class DrunkClient {
      * volume, which OpenAL lets rise above 1.
      */
     private static void hearing(Minecraft mc) {
-        if (hearingFailed || (high <= 0.001f && !hearingBoosted)) return;
+        if (hearingFailed || (loud() <= 0.001f && !hearingBoosted)) return;
         try {
             float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
             org.lwjgl.openal.AL10.alListenerf(org.lwjgl.openal.AL10.AL_GAIN, master * listenerBoost());
-            hearingBoosted = high > 0.001f;
+            hearingBoosted = loud() > 0.001f;
         } catch (RuntimeException | LinkageError e) {
             hearingFailed = true; // no sound device: nothing to make louder
         }

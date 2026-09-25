@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/mdma",
+  "display": {
+    "icon": {
+      "id": "createbrewery:mdma"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.hitzschlag.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.hitzschlag.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "heat": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:hyperthermia": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "heat"
+    ]
+  ]
+}

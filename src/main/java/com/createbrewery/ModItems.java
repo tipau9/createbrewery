@@ -105,5 +105,17 @@ public class ModItems {
         .properties(p -> p.stacksTo(16))
         .register();
 
+    public static final ItemEntry<DrugItem> MDMA = REGISTRATE
+        .item("mdma", p -> new DrugItem(p, DrugServer.Kind.MDMA))
+        .lang("Ecstasy-Pille")
+        .properties(p -> p.stacksTo(64))
+        .register();
+
+    public static final ItemEntry<DrugItem> METH = REGISTRATE
+        .item("meth", p -> new DrugItem(p, DrugServer.Kind.METH))
+        .lang("Crystal")
+        .properties(p -> p.stacksTo(64))
+        .register();
+
     public static void register() {}
 }

@@ -87,6 +87,22 @@
           "items": "createbrewery:dmt"
         }
       }
+    },
+    "mdma": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:mdma"
+        }
+      }
+    },
+    "meth": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:meth"
+        }
+      }
     }
   },
   "requirements": [
@@ -116,6 +132,12 @@
     ],
     [
       "dmt"
+    ],
+    [
+      "mdma"
+    ],
+    [
+      "meth"
     ]
   ]
 }

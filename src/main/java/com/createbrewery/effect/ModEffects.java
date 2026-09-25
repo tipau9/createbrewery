@@ -5,6 +5,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import com.createbrewery.drugs.DrugEffect;
 import com.createbrewery.drugs.DrugServer;
 import com.createbrewery.drugs.Psychedelics;
+import com.createbrewery.drugs.Stimulants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -148,6 +149,37 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, MobEffect> BAD_TRIP = EFFECTS.register("bad_trip", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x5A1030, 20, Psychedelics::badTripTick, Psychedelics.BAD_TRIP_TICKS, 100, 400)
             .scaled(Attributes.MOVEMENT_SPEED, id("bad_trip_speed"), 0.1));
+
+    // ---- MDMA and Meth (see drugs/Stimulants) ----
+
+    public static final DeferredHolder<MobEffect, MobEffect> ROLLING = EFFECTS.register("rolling", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xFF7EB6, 20, Stimulants::rollTick, Stimulants.MDMA_TICKS, 900, 1800).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("rolling_speed"), 0.1));
+
+    /** Tiefpunkt: the serotonin is used up. Sad, weak, grey. */
+    public static final DeferredHolder<MobEffect, MobEffect> COMEDOWN = EFFECTS.register("comedown", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x6A6A8A, 0, null, 0, 0, 600)
+            .scaled(Attributes.MOVEMENT_SPEED, id("comedown_speed"), -0.1)
+            .scaled(Attributes.ATTACK_DAMAGE, id("comedown_damage"), -0.25));
+
+    public static final DeferredHolder<MobEffect, MobEffect> TWEAK = EFFECTS.register("tweak", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x9FE3FF, 20, Stimulants::tweakTick, Stimulants.METH_TICKS, 200, 3000).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("tweak_speed"), 0.2)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("tweak_mining"), 0.5)
+            .scaled(Attributes.ATTACK_SPEED, id("tweak_attack_speed"), 0.3));
+
+    public static final DeferredHolder<MobEffect, MobEffect> METH_CRASH = EFFECTS.register("meth_crash", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x44485A, 20, DrugServer::crashTick, 0, 0, 800)
+            .scaled(Attributes.MOVEMENT_SPEED, id("meth_crash_speed"), -0.3)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("meth_crash_mining"), -0.4));
+
+    /** Hitzschlag: overheated from dancing on MDMA. Water, shade and rest. */
+    public static final DeferredHolder<MobEffect, MobEffect> HYPERTHERMIA = EFFECTS.register("hyperthermia", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xFF5A1E, 20, Stimulants::hyperthermiaTick, 0, 0, 0));
+
+    /** Psychose: too long awake on meth. The client shows it like a bad trip, shadow people included. */
+    public static final DeferredHolder<MobEffect, MobEffect> PSYCHOSIS = EFFECTS.register("psychosis", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x3A2A4A, 0, null, Stimulants.PSYCHOSIS_TICKS, 100, 400));
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);

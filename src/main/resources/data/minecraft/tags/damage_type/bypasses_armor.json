@@ -6,6 +6,8 @@
     "createbrewery:stomach_bleeding",
     "createbrewery:heart_attack",
     "createbrewery:nosebleed",
-    "createbrewery:aspiration"
+    "createbrewery:aspiration",
+    "createbrewery:hyperthermia",
+    "createbrewery:skin_picking"
   ]
 }

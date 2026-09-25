@@ -27,6 +27,10 @@ public final class DrunkState {
     transient boolean clientSawAlcohol;
     /** Server-only: load on the heart from drugs (see Pharmacology#heartLoad). Not saved: it rebuilds in seconds. */
     public transient float heart;
+    /** Server-only: body heat above normal from MDMA and meth (see Pharmacology#heatStep). */
+    public transient float heat;
+    /** Server-only: seconds awake on meth, towards psychosis. */
+    public transient int awake;
     /** Server-only: game time of the last drink, to spot two players clinking glasses. */
     transient long lastDrinkTime = Long.MIN_VALUE / 2;
 

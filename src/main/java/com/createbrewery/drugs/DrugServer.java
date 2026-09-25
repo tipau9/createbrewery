@@ -91,7 +91,7 @@ public final class DrugServer {
     /** Three joints' worth of hits in the body at most. */
     private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
-    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT }
+    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT, MDMA, METH }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
@@ -138,6 +138,10 @@ public final class DrugServer {
         }
         if (kind == Kind.LSD || kind == Kind.SHROOMS || kind == Kind.MESCALINE || kind == Kind.DMT) {
             Psychedelics.take(player, kind);
+            return;
+        }
+        if (kind == Kind.MDMA || kind == Kind.METH) {
+            Stimulants.take(player, kind);
             return;
         }
         Holder<MobEffect> high = switch (kind) {
@@ -318,7 +322,9 @@ public final class DrugServer {
 
     /** A drink after smoking: the dry mouth is gone, and it feels amazing. */
     public static void quench(Player player, net.minecraft.world.item.ItemStack drink) {
-        if (drink.getUseAnimation() != net.minecraft.world.item.UseAnim.DRINK || !player.hasEffect(ModEffects.COTTONMOUTH)) return;
+        if (drink.getUseAnimation() != net.minecraft.world.item.UseAnim.DRINK) return;
+        Stimulants.cool(player);
+        if (!player.hasEffect(ModEffects.COTTONMOUTH)) return;
         player.removeEffect(ModEffects.COTTONMOUTH);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
             net.minecraft.sounds.SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 0.8f);
@@ -335,6 +341,7 @@ public final class DrugServer {
         LivingEntity entity = event.getEntity();
         if (instance == null || entity.level().isClientSide) return;
         Psychedelics.expired(entity, instance);
+        Stimulants.expired(entity, instance);
         // After a CK session everything lasts half again as long.
         float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
         if (instance.is(ModEffects.COKE_HIGH)) {
@@ -357,7 +364,7 @@ public final class DrugServer {
     /** Wide awake on Koks: no sleeping. */
     @SubscribeEvent
     public static void onSleep(CanPlayerSleepEvent event) {
-        if (event.getEntity().hasEffect(ModEffects.COKE_HIGH)) {
+        if (event.getEntity().hasEffect(ModEffects.COKE_HIGH) || event.getEntity().hasEffect(ModEffects.TWEAK)) {
             event.setProblem(Player.BedSleepingProblem.OTHER_PROBLEM);
         }
     }
@@ -371,6 +378,7 @@ public final class DrugServer {
         if (!player.level().isClientSide && player.tickCount % 20 == 0) {
             heartTick(player);
             weedBody(player);
+            Stimulants.body(player);
         }
     }
 
@@ -397,7 +405,7 @@ public final class DrugServer {
             hole ? Math.max(1, amp(player, ModEffects.KETA_HIGH)) : amp(player, ModEffects.KETA_HIGH),
             Math.max(DrugEffect.strength(player, ModEffects.KETA_HIGH), DrugEffect.strength(player, ModEffects.K_HOLE)),
             DrugEffect.felt(player, ModEffects.WEED_HIGH), s.blood,
-            player.isSprinting(), player.level().dimensionType().ultraWarm());
+            player.isSprinting(), player.level().dimensionType().ultraWarm()) + Stimulants.heartLoad(player);
         if (target <= 0f && s.heart <= 0f) return;
         // Up within seconds, back down over a minute.
         s.heart += (target - s.heart) * (target > s.heart ? 0.2f : 0.05f);

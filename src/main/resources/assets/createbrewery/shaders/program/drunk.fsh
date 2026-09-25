@@ -26,6 +26,8 @@ uniform float Organic; // share of the trip that is mushrooms: green, melting
 uniform float Desert;  // share that is peyote: warm, shimmering
 uniform float BadTrip; // fear: 0..1
 uniform float Break;   // DMT breakthrough: 0..1
+uniform float Roll;    // MDMA: 0..1
+uniform float Tweak;   // Meth: 0..1
 
 in vec2 texCoord;
 
@@ -102,6 +104,13 @@ void main() {
     uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert;
     // A bad trip: the picture pulls nervously towards the middle, again and again.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.015 * BadTrip * (0.5 + 0.5 * sin(t * 4.0)));
+
+    // MDMA: at its height the eyes flicker side to side (nystagmus), fast and tiny.
+    uv.x += sin(t * 38.0) * 0.0012 * smoothstep(0.5, 1.0, Roll);
+    // Meth: the picture twitches - now and then it jumps for a frame.
+    float tick8 = floor(t * 8.0);
+    float twitch = step(0.96, fract(sin(tick8 * 91.7) * 43758.5453));
+    uv += (vec2(fract(sin(tick8 * 12.9) * 437.58), fract(sin(tick8 * 78.2) * 437.58)) - 0.5) * 0.012 * twitch * Tweak;
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -190,6 +199,19 @@ void main() {
     col = mix(col, hueShift(col, t * 0.8) * 1.3, 0.6 * Break);
     col = mix(col, neon, 0.35 * Break * smoothstep(0.6, 0.0, br));
     col += neon * smoothstep(0.85, 1.0, petals) * 0.25 * Break;
+
+    // MDMA: everything soft and warm, lights bloom pink-gold, and bright things sparkle.
+    col += (spill(uv, px * 3.0, 0.3) + spill(uv, px * 8.0, 0.7) * 1.2) * vec3(1.0, 0.75, 0.85) * 1.2 * Roll;
+    col *= mix(vec3(1.0), vec3(1.08, 1.0, 1.04), Roll);
+    vec2 cell = floor(uv * OutSize / 5.0);
+    float cellHash = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+    float twinkle = pow(max(0.0, sin(t * 3.0 + cellHash * 40.0)), 16.0) * step(0.9, cellHash);
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col += vec3(1.0, 0.9, 1.0) * twinkle * smoothstep(0.5, 0.9, lum) * 0.8 * Roll;
+    // Meth: cold, clinical light, and colours tear apart at the edges.
+    col *= mix(vec3(1.0), vec3(0.92, 1.0, 1.1), Tweak);
+    col.r = mix(col.r, tap(uv + d * 0.01).r, 0.6 * Tweak);
+    col.b = mix(col.b, tap(uv - d * 0.01).b, 0.6 * Tweak);
 
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

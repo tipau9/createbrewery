@@ -767,4 +767,21 @@ public class FermenterGameTests {
             "a second hit restarted the come-up");
         helper.succeed();
     }
+
+    /** MDMA and meth both end in a comedown, and meth blocks sleep until it does. */
+    @GameTest(template = TEMPLATE)
+    public static void stimulantsComeDown(GameTestHelper helper) {
+        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.ROLLING, 5));
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.TWEAK, 5));
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.METH);
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.METH);
+        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.TWEAK).getAmplifier() == 1, "meth does not stack");
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(pig.hasEffect(com.createbrewery.effect.ModEffects.COMEDOWN), "no Tiefpunkt after MDMA");
+            helper.assertTrue(pig.hasEffect(com.createbrewery.effect.ModEffects.METH_CRASH), "no crash after meth");
+            helper.succeed();
+        });
+    }
 }

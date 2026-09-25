@@ -27,6 +27,8 @@
         { "name": "Organic",   "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Desert",    "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "BadTrip",   "type": "float",     "count": 1,  "values": [ 0.0 ] },
-        { "name": "Break",     "type": "float",     "count": 1,  "values": [ 0.0 ] }
+        { "name": "Break",     "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Roll",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Tweak",     "type": "float",     "count": 1,  "values": [ 0.0 ] }
     ]
 }

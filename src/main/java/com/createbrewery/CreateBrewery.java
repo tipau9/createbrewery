@@ -49,6 +49,14 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.psy_tolerance", "Toleranz");
         REGISTRATE.addRawLang("effect.createbrewery.bad_trip", "Horrortrip");
         REGISTRATE.addRawLang("effect.createbrewery.breakthrough", "Durchbruch");
+        REGISTRATE.addRawLang("effect.createbrewery.rolling", "Ecstasy-Rausch");
+        REGISTRATE.addRawLang("effect.createbrewery.comedown", "Tiefpunkt");
+        REGISTRATE.addRawLang("effect.createbrewery.tweak", "Crystal-Rausch");
+        REGISTRATE.addRawLang("effect.createbrewery.meth_crash", "Crystal-Absturz");
+        REGISTRATE.addRawLang("effect.createbrewery.hyperthermia", "Hitzschlag");
+        REGISTRATE.addRawLang("effect.createbrewery.psychosis", "Psychose");
+        REGISTRATE.addRawLang("death.attack.createbrewery.hyperthermia", "%1$s hat sich zu Tode getanzt");
+        REGISTRATE.addRawLang("death.attack.createbrewery.skin_picking", "%1$s hat sich blutig gekratzt");
         REGISTRATE.addRawLang("subtitles.createbrewery.cough", "Husten");
         REGISTRATE.addRawLang("subtitles.createbrewery.giggle", "Kichern");
         REGISTRATE.addRawLang("effect.createbrewery.ck_mix", "CK-Mix");
@@ -117,6 +125,10 @@ public class CreateBrewery {
         advancement("horrortrip", "Falsches Set, falsches Setting", "Rutsch in einen Horrortrip");
         advancement("dmt", "Durch den Vorhang", "Rauch DMT");
         advancement("maschinenelfen", "Hallo Maschinenelfen", "Durchbrich in den Hyperraum und triff seine Bewohner");
+        advancement("mdma", "Alle umarmen", "Wirf eine Ecstasy-Pille ein");
+        advancement("hitzschlag", "Wasser, Wasser!", "Überhitze beim Tanzen auf Ecstasy");
+        advancement("meth", "Say My Name", "Rauch Crystal");
+        advancement("psychose", "Schattenmenschen", "Bleib auf Crystal so lange wach, bis du Dinge siehst");
         advancement("apotheke_leer", "Apotheke leergeräumt", "Nimm jede Droge mindestens einmal");
         // advancements:end
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
