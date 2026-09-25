@@ -37,6 +37,8 @@ uniform float Level;   // how loud the song is right now, against its own loudes
 uniform float Hats;    // hi-hats, claps and snares heard right now, 0..1
 uniform float Wiggle;  // MDMA: the eyes flicker (nystagmus), in bursts, 0..1
 uniform float Zap;     // the Tiefpunkt after MDMA: a brain zap, a jolt of a few frames, 0..1
+uniform float Faded;   // MDMA wearing off: the closed-eye patterns of the offset, 0..1
+uniform float Scene;   // MDMA, very high: the place turns into a dance floor for a while, 0..1
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
@@ -178,6 +180,8 @@ void main() {
 
     // MDMA: now and then the eyes flicker side to side for a few seconds (nystagmus).
     uv.x += sin(t * 60.0) * 0.004 * Wiggle;
+    // At high doses surfaces drift and breathe a little too - much less than on a trip.
+    uv += vec2(breathe, 0.7 * breathe) * px * 1.5 * smoothstep(0.6, 1.0, Roll) * solid;
     // A brain zap: the picture jumps sideways for a moment.
     uv.x += (hash(vec2(floor(t * 30.0), 3.7)) - 0.5) * 0.04 * Zap;
     // The beat is in the picture: it pumps with every kick of the song playing.
@@ -206,6 +210,9 @@ void main() {
     // Double vision: a second image drifts apart and back together.
     vec2 ghost = vec2(sin(t * 0.7) + 0.35 * sin(t * 1.9), 0.4 * cos(t * 0.53)) * 0.022 * k;
     vec3 col = mix(tap(uv), tap(uv + ghost), 0.5 * heavy);
+    // MDMA, high doses: the eyes no longer quite agree - a faint second image, just beside.
+    float mdmaDouble = smoothstep(0.7, 1.0, Roll);
+    if (mdmaDouble > 0.0) col = mix(col, tap(uv + vec2(0.005 + 0.002 * sin(t * 0.4), 0.0012)), 0.3 * mdmaDouble);
 
     // Edges lose focus first.
     vec2 d = uv - 0.5;
@@ -455,6 +462,65 @@ void main() {
     col *= 1.0 - smoothstep(0.3, 0.9, length(d)) * 0.25 * Beat * (1.0 - Level);
     // Eye wiggles: the picture blurs into a faint flickering double.
     col = mix(col, tap(uv + vec2(0.006 * sin(t * 60.0 + 1.5), 0.0)), 0.35 * Wiggle);
+    if (Roll > 0.01) {
+        lum = dot(col, vec3(0.299, 0.587, 0.114));
+        float dark = 1.0 - smoothstep(0.05, 0.35, lum);
+        // Wide pupils: more light gets in - the dark opens up, bright things glare.
+        col = pow(max(col, 0.0), vec3(1.0 - 0.2 * Roll)) * (1.0 + 0.08 * Roll);
+        // Hard to focus: now and then everything goes soft for a few seconds.
+        float blur = smoothstep(0.5, 1.0, Roll) * smoothstep(0.3, 0.9, sin(t * 0.37) * sin(t * 0.23 + 1.0) * 2.0);
+        col = mix(col, ring(uv, px * 3.5), 0.6 * blur);
+
+        // Symmetrical texture repetition: at high doses rough surfaces (grass, bark, carpet)
+        // mirror over themselves, most at the edge of the view, and finer the longer you stare.
+        float detail = length(col - ring(uv, px * 2.0));
+        float symm = smoothstep(0.55, 1.0, Roll) * smoothstep(0.2, 0.55, length(d)) * (0.35 + 0.65 * Stare)
+            * smoothstep(0.03, 0.12, detail) * solid;
+        if (symm > 0.01) {
+            vec2 cellSize = px * 24.0 / (1.0 + 1.5 * Stare);
+            vec2 cellId = floor(uv / cellSize);
+            vec2 mirrored = (cellId + 0.5 - abs(fract(uv / cellSize) - 0.5)) * cellSize;
+            col = mix(col, tap(mirrored) * (1.0 + 0.1 * Roll), 0.6 * symm);
+        }
+
+        // Pattern recognition: stare at a wall or a cloud and a friendly face shows in it, drawn
+        // out of the texture itself. Look away and it is gone.
+        float faceAmt = smoothstep(0.4, 0.9, Stare) * smoothstep(0.4, 0.8, Roll);
+        if (faceAmt > 0.01) {
+            vec2 fc = (uv - vec2(0.54, 0.53)) * vec2(aspect, 1.0) / 0.12;
+            float eyes = smoothstep(0.24, 0.12, min(length(fc - vec2(-0.36, 0.25)), length(fc - vec2(0.36, 0.25))));
+            float smile = smoothstep(0.09, 0.0, abs(length(fc - vec2(0.0, 0.2)) - 0.62)) * step(fc.y, -0.12);
+            float face = max(eyes, smile) * smoothstep(1.3, 0.9, length(fc));
+            col *= 1.0 - face * faceAmt * (0.25 + 2.0 * min(detail, 0.15));
+        }
+
+        // Geometry: a flat veil just before the eyes - dim, organic, blue-grey, mostly seen in the
+        // dark. Faint at the height of high doses; it comes on as it wears off, like closed-eye
+        // visuals. Below it, noise and slow clouds of colour.
+        float geo = Roll * (0.3 * smoothstep(0.6, 1.0, Roll) + Faded) * (0.3 + 0.7 * dark);
+        if (geo > 0.01) {
+            vec2 g = (uv - 0.5) * vec2(aspect, 1.0) * 7.0;
+            g += 0.6 * vec2(sin(g.y * 1.3 + t * 0.2), cos(g.x * 1.1 - t * 0.17));
+            float lines = abs(sin(g.x) * sin(g.y) + 0.5 * sin(length(g) * 2.0 - t * 0.3));
+            col += smoothstep(0.12, 0.0, lines) * vec3(0.35, 0.45, 0.7) * 0.35 * geo;
+            float cloud = smoothstep(0.5, 1.0, sin(g.x * 0.4 + t * 0.3) * sin(g.y * 0.5 - t * 0.25));
+            col += cloud * (0.5 + 0.5 * cos(6.2831853 * (vec3(0.6, 0.7, 0.8) + t * 0.05))) * 0.12 * geo;
+            col += (hash(uv * OutSize + floor(t * 20.0)) - 0.5) * 0.06 * geo;
+        }
+
+        // Very high doses: the place turns into a dance floor for a while - the floor under you
+        // lights up in tiles that change and flash with the music.
+        if (Scene > 0.01) {
+            vec3 n = normalize(cross(dFdx(rel), dFdy(rel)));
+            float floorMask = smoothstep(0.8, 0.95, abs(n.y)) * step(rel.y, -0.5) * exp(-dist / 30.0);
+            vec2 tile = floor(wp.xz + 0.001);
+            float h = hash(tile + floor(t * 2.0) * 1.37);
+            vec3 tileCol = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + h));
+            vec2 inTile = abs(fract(wp.xz) - 0.5);
+            float lit = step(0.5, h) * smoothstep(0.5, 0.44, max(inTile.x, inTile.y));
+            col += tileCol * lit * floorMask * solid * Scene * (0.25 + 0.5 * Kick);
+        }
+    }
     // Brain zap: a grey-white flash, like a shock.
     col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114)) * 1.6 + 0.1), 0.6 * Zap);
     // Overheated: washed out, flushed red, and the edges throb with a racing pulse.
@@ -511,7 +577,8 @@ void main() {
     vec4 was = PrevViewProj * vec4(worldAt(texCoord, texture(DiffuseDepthSampler, texCoord).r) + CamDelta, 1.0);
     vec2 wasUv = was.xy / was.w * 0.5 + 0.5;
     float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
-    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip) * Trail * World * onScreen);
+    // MDMA: tracers too, shorter - distinct from medium doses on.
+    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip + 0.45 * smoothstep(0.4, 1.0, Roll)) * Trail * World * onScreen);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

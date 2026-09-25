@@ -451,6 +451,8 @@ public final class DrunkClient {
             chain.setUniform("Hats", MusicPulse.hats);
             chain.setUniform("Wiggle", RollClient.wiggle * screen());
             chain.setUniform("Zap", RollClient.zap * screen());
+            chain.setUniform("Faded", RollClient.faded * screen());
+            chain.setUniform("Scene", RollClient.scene * screen());
             chain.setUniform("Heat", RollClient.heat * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
@@ -857,6 +859,8 @@ public final class DrunkClient {
         drugs += (float) (Math.sin(sec * 0.9) * 0.035 * trip + noise(sec * 2.2, 11) * 0.03 * bad) * screen();
         // ...and the walls close in on it.
         drugs -= 0.12f * bad * screen();
+        // MDMA, very high: for a while the view seems to come from further back.
+        drugs += 0.15f * RollClient.perspective * screen();
         if (drugs != 1f) event.setNewFovModifier(event.getNewFovModifier() * drugs);
         if (blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.
@@ -1060,6 +1064,7 @@ public final class DrunkClient {
         double t = seconds(player, event.getPartialTick().getGameTimeDeltaPartialTick(true));
 
         drawShadow(player, g, w, h);
+        RollClient.drawDancer(player, g, w, h);
 
         float lid = 0f;
         if (blood >= Intoxication.DRUNK) {

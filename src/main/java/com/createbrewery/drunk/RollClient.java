@@ -29,6 +29,8 @@ import net.neoforged.neoforge.common.util.TriState;
  *   <li>Music gets into the body: while any song plays nearby (see {@link MusicPulse}), the picture
  *       pumps with its real kicks, lights flare, colours swell with it and the hats sparkle.</li>
  *   <li>At the height the eyes wiggle for a few seconds at a time (nystagmus).</li>
+ *   <li>High doses: a dancer at the corner of the eye, the view shifting back, and for a while
+ *       the floor becomes a dance floor. Wearing off, closed-eye patterns (see drunk.fsh).</li>
  *   <li>Soft things underfoot (wool, carpet, moss) feel wonderful.</li>
  *   <li>Everyone is lovely: chat comes with a heart, and monsters are just "Kumpel".</li>
  *   <li>Dancing on it heats you up: the view flushes and throbs. Water and rest cool it.</li>
@@ -39,7 +41,7 @@ import net.neoforged.neoforge.common.util.TriState;
 public final class RollClient {
     private RollClient() {}
 
-    static float rush, beat, heat, wiggle, zap;
+    static float rush, beat, heat, wiggle, zap, faded, scene, perspective;
 
     private static int rushTicks = -1, nextRush = 400, nextThought = 300, wiggleTicks, nextWiggle = 600;
     private static float sweat, lastWalk;
@@ -83,6 +85,18 @@ public final class RollClient {
         if (wiggleTicks > 0) wiggleTicks--;
         wiggle += ((wiggleTicks > 0 ? roll : 0f) - wiggle) * 0.3f;
 
+        // Wearing off: closed-eye patterns come in.
+        faded = DrunkClient.ease(faded, roll > 0.05f && fading(player) ? 1f : 0f);
+        // Very high doses: now and then the place becomes a dance floor, or the view seems to
+        // come from further back (perspective shift) - each for some seconds.
+        if (sceneTicks <= 0 && roll > 0.8f && r.nextFloat() < 1f / 1200f) sceneTicks = 200 + r.nextInt(200);
+        if (sceneTicks > 0) sceneTicks--;
+        scene = DrunkClient.ease(scene, sceneTicks > 0 ? 1f : 0f);
+        if (perspectiveTicks <= 0 && roll > 0.75f && r.nextFloat() < 1f / 1500f) perspectiveTicks = 100 + r.nextInt(100);
+        if (perspectiveTicks > 0) perspectiveTicks--;
+        perspective = DrunkClient.ease(perspective, perspectiveTicks > 0 ? 1f : 0f);
+        dancers(player, roll, r);
+
         // Brain zaps in the Tiefpunkt: a short electric jolt through the head, now and then.
         zap *= 0.5f;
         if (DrugEffect.strength(player, ModEffects.COMEDOWN) > 0.2f && r.nextFloat() < 1f / 900f) {
@@ -110,6 +124,48 @@ public final class RollClient {
         lastWalk = player.walkDist;
 
         thoughts(player, roll);
+    }
+
+    private static int sceneTicks, perspectiveTicks, dancerAge = -1;
+    private static float dancerYaw, dancerAlpha;
+    private static boolean dancerGoing;
+
+    /**
+     * Something at the edge of the view: a figure dancing along - a friendly one, this is MDMA.
+     * Look at it and it is gone, it was only the corner of the eye.
+     */
+    private static void dancers(LocalPlayer player, float roll, RandomSource r) {
+        if (dancerAge < 0 && roll > 0.6f && r.nextFloat() < (MusicPulse.playing() ? 1f / 400f : 1f / 900f)) {
+            dancerYaw = player.getYRot() + (r.nextBoolean() ? 60f : -60f);
+            dancerAge = 0;
+            dancerGoing = false;
+        }
+        if (dancerAge < 0) return;
+        dancerAge++;
+        float rel = net.minecraft.util.Mth.wrapDegrees(dancerYaw - player.getYRot());
+        if (Math.abs(rel) < 40f || Math.abs(rel) > 100f || dancerAge > 160 || roll < 0.5f) dancerGoing = true;
+        dancerAlpha = dancerGoing ? dancerAlpha - 1f / 6f : Math.min(1f, dancerAlpha + 1f / 25f);
+        if (dancerGoing && dancerAlpha <= 0f) {
+            dancerAlpha = 0f;
+            dancerAge = -1;
+        }
+    }
+
+    private static final net.minecraft.resources.ResourceLocation FIGURE = net.minecraft.resources.ResourceLocation
+        .fromNamespaceAndPath(com.createbrewery.CreateBrewery.MOD_ID, "textures/misc/shadow_figure.png");
+
+    /** From the HUD: the dancer at the edge of the view, bobbing with the music. */
+    static void drawDancer(LocalPlayer player, net.minecraft.client.gui.GuiGraphics g, int w, int h) {
+        if (dancerAge < 0 || dancerAlpha <= 0f) return;
+        float rel = net.minecraft.util.Mth.wrapDegrees(dancerYaw - player.getYRot());
+        int fh = (int) (h * 0.5f), fw = fh / 2;
+        int x = rel > 0 ? w - fw * 2 / 3 : -fw / 3;
+        int bob = (int) (MusicPulse.kick * h * 0.03f + Math.sin(player.tickCount * 0.4) * h * 0.01f);
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        g.setColor(1f, 0.55f, 0.85f, dancerAlpha * 0.4f * DrunkClient.screen());
+        g.blit(FIGURE, x, (h - fh) / 2 + h / 12 - bob, fw, fh, 0f, 0f, 64, 128, 64, 128);
+        g.setColor(1f, 1f, 1f, 1f);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     private static boolean soft(BlockState state) {
