@@ -476,9 +476,9 @@ void main() {
     // Techno: the room sits in the dark between the kicks and each one lights it like a strobe
     // hit - once per kick, never faster.
     col *= 1.0 - 0.25 * techno * (1.0 - min(kick, 1.0));
-    col += vec3(0.9, 0.95, 1.0) * 0.25 * pow(min(kick, 1.0), 3.0) * techno;
+    col += vec3(0.9, 0.95, 1.0) * 0.22 * pow(min(kick, 1.0), 3.0) * techno;
     // At the peak a white strobe hit on every kick, whatever the tempo.
-    col += vec3(1.0) * 0.3 * pow(min(kick, 1.0), 3.0) * Peak;
+    col += vec3(1.0) * 0.25 * pow(min(kick, 1.0), 3.0) * Peak;
     col *= 1.0 + 0.2 * kick;
     // Colours are richer, and more so the louder the music - above all bright, neon colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
