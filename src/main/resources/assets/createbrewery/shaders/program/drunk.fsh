@@ -563,10 +563,10 @@ void main() {
     col.r = mix(col.r, tap(uv + d * 0.01).r, 0.6 * Tweak);
     col.b = mix(col.b, tap(uv - d * 0.01).b, 0.6 * Tweak);
     // Hyperfocus: what you look at is razor-sharp, the rest of the world falls away - grey and dim.
-    float aside = smoothstep(0.12, 0.5, length(d * vec2(aspect, 1.0)));
+    float aside = smoothstep(0.2, 0.7, length(d * vec2(aspect, 1.0)));
     col += (col - ring(uv, px)) * 0.8 * Tweak * (1.0 - aside);
     lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(col, vec3(lum), 0.5 * aside * Tweak) * (1.0 - 0.3 * aside * Tweak);
+    col = mix(col, vec3(lum), 0.4 * aside * Tweak) * (1.0 - 0.25 * aside * Tweak);
     // Wide pupils: bright things glare, hard and cold.
     col += spill(uv, px * 4.0, 0.2) * vec3(0.8, 0.95, 1.1) * 1.5 * Tweak;
     if (Tired > 0.0) {
@@ -583,24 +583,30 @@ void main() {
         col *= 1.0 - 0.75 * shape * sin(3.14159 * life) * Tired;
         // Meth mites: little black bugs, scuttling in fits and starts, mostly low and at the edges.
         float bugs = 0.0;
-        for (int i = 0; i < 24; i++) {
+        for (int i = 0; i < 12; i++) {
             float fi = float(i);
             if (hash(vec2(fi, 9.1)) > Tired) continue;
-            float hop = floor(t * (3.0 + 4.0 * hash(vec2(fi, 2.2))));
-            float go = fract(t * (3.0 + 4.0 * hash(vec2(fi, 2.2))));
-            vec2 from = vec2(hash(vec2(fi, hop)), hash(vec2(fi, hop + 0.5)) * hash(vec2(fi, 7.7)));
-            vec2 to = vec2(hash(vec2(fi, hop + 1.0)), hash(vec2(fi, hop + 1.5)) * hash(vec2(fi, 7.7)));
-            // Most of them stay near the edges of the view.
-            from.x = mix(from.x, step(0.5, from.x), 0.6);
-            to.x = mix(to.x, step(0.5, from.x), 0.6);
-            vec2 bug = mix(from, from + (to - from) * 0.06, smoothstep(0.0, 0.4, go));
-            vec2 dir = normalize(to - from + 1e-4);
-            vec2 rel = (uv - bug) / px;
+            // Each bug keeps to one spot for a few seconds, mostly low and at the edges of the
+            // view, and fades away before it turns up somewhere else.
+            float stay = t / 4.0 + hash(vec2(fi, 6.6));
+            float spot = floor(stay), here = fract(stay);
+            vec2 home = vec2(hash(vec2(fi, spot)), 0.05 + 0.45 * hash(vec2(fi, spot + 0.5)) * hash(vec2(fi, 7.7)));
+            home.x = mix(home.x, step(0.5, home.x), 0.6);
+            // Around it, it scuttles in fits and starts: each dash ends where the next begins.
+            float dash = t * (2.0 + 3.0 * hash(vec2(fi, 2.2)));
+            float n = floor(dash), go = fract(dash);
+            vec2 a = home + (vec2(hash(vec2(fi, n)), hash(vec2(fi, n + 0.5))) - 0.5) * 0.07;
+            vec2 b = home + (vec2(hash(vec2(fi, n + 1.0)), hash(vec2(fi, n + 1.5))) - 0.5) * 0.07;
+            vec2 bug = mix(a, b, smoothstep(0.0, 0.4, go));
+            vec2 dir = normalize((b - a) * vec2(aspect, 1.0) + 1e-5);
+            // Measured in screen heights, so the bugs are as big on any screen.
+            vec2 rel = (uv - bug) * vec2(aspect, 1.0) / 0.0035;
             float along = dot(rel, dir), across = dot(rel, vec2(-dir.y, dir.x));
             // A body, and little legs twitching as it runs.
-            float body = smoothstep(1.6, 0.8, length(vec2(along * 0.6, across)));
+            float body = smoothstep(1.6, 1.0, length(vec2(along * 0.6, across)));
             float legs = step(abs(across), 3.5) * step(abs(along), 2.0) * step(0.5, fract(along * 0.5 + go * 8.0)) * 0.6;
-            bugs = max(bugs, max(body, legs * step(1.0, abs(across))));
+            float seen = smoothstep(0.0, 0.1, here) * smoothstep(1.0, 0.9, here);
+            bugs = max(bugs, max(body, legs * step(1.0, abs(across))) * seen);
         }
         col *= 1.0 - 0.85 * bugs * Tired;
     }

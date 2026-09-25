@@ -59,6 +59,8 @@ public final class TweakClient {
         float psychosis = DrugEffect.strength(player, ModEffects.PSYCHOSIS);
         // From about three minutes up the edges of the view start to lie; ten minutes, fully.
         float sleepless = on ? Mth.clamp((awake / 20f - 180f) / 420f, 0f, 1f) * Math.max(0.5f, DrugEffect.strength(player, ModEffects.TWEAK)) : 0f;
+        // Xanax takes the fear out of it (as it keeps the psychosis away on the server).
+        sleepless *= 1f - DrugEffect.strength(player, ModEffects.CALM);
         tired = DrunkClient.ease(tired, Math.max(sleepless, psychosis));
 
         // Movement in the corner of the eye: something darts past, and is gone.
@@ -116,7 +118,7 @@ public final class TweakClient {
     private static void onLivingPre(RenderLivingEvent.Pre<?, ?> event) {
         LivingEntity e = event.getEntity();
         LocalPlayer player = Minecraft.getInstance().player;
-        if (tired < 0.4f || player == null || e == player || e.distanceToSqr(player) > 24 * 24) return;
+        if (tired < 0.4f || player == null || e == player || e == player.getVehicle() || e.distanceToSqr(player) > 24 * 24) return;
         Vec3 to = player.getEyePosition().subtract(e.getEyePosition());
         float yaw = (float) (Mth.atan2(to.z, to.x) * Mth.RAD_TO_DEG) - 90f;
         float pitch = (float) -(Mth.atan2(to.y, to.horizontalDistance()) * Mth.RAD_TO_DEG);
