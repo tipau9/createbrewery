@@ -17,6 +17,8 @@ uniform float Mood;
 uniform float DrunkTime;
 uniform float Trail;
 uniform float Stim;    // Koks: 0..1
+uniform float Coke;    // Koks alone (not meth): glossy, glinting like snow, 0..1
+uniform float Line;    // Koks: a line just now - a cold white burst, the eyes water, 0..1
 uniform float Gray;    // the crash after Koks: 0..1
 uniform float Dissoc;  // Keta: 0..1, 1 = K-Loch
 uniform float High;    // Weed: 0..1
@@ -263,6 +265,19 @@ void main() {
     // Koks: everything over-sharp, bright and hard-edged.
     col += (col - ring(uv, px * 1.5)) * 0.9 * Stim;
     col = (col - 0.5) * (1.0 + 0.25 * Stim) + 0.5 + 0.03 * Stim;
+
+    // Koks: wide pupils - light blooms white, and edges glint like snow in the sun.
+    col += spill(uv, px * 5.0, 0.15) * vec3(1.0, 1.0, 1.05) * 1.2 * Coke;
+    float edgeLum = length(col - ring(uv, px * 1.2));
+    float glint = step(0.975, hash(floor(uv * OutSize / 2.0) + floor(t * 10.0))) * smoothstep(0.08, 0.25, edgeLum);
+    col += vec3(1.0) * 0.7 * glint * Coke;
+    // A line: a cold white burst from the middle, and the eyes water - blurred, wobbling at the bottom.
+    if (Line > 0.0) {
+        float burst = smoothstep(0.75, 1.0, Line) * smoothstep(0.9, 0.0, length(d * vec2(aspect, 1.0)));
+        col = mix(col, vec3(0.97, 0.98, 1.0), 0.8 * burst);
+        float tear = Line * smoothstep(0.6, 0.0, uv.y);
+        col = mix(col, ring(uv + vec2(0.0, sin(uv.x * 30.0 + t * 3.0) * 0.004), px * 4.0), 0.8 * tear);
+    }
 
     // The crash: grey and dull.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

@@ -20,4 +20,13 @@ class TrailOffTest {
         }
         assertTrue(cut, "never lost the thread");
     }
+
+    @Test
+    void kokshypeShoutsButKeepsTheWords() {
+        Random random = new Random(3);
+        for (int i = 0; i < 50; i++) {
+            String said = Intoxication.hype("ich hab eine idee. hört zu", random);
+            assertTrue(said.toLowerCase().startsWith("ich hab eine idee! hört zu!"), said);
+        }
+    }
 }

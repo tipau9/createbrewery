@@ -38,6 +38,8 @@ public class BreweryCommonEvents {
             String original = event.getRawText();
             String slurred = slurText(original, player.getRandom(), stage);
             event.setMessage(Component.literal(slurred));
+        } else if (com.createbrewery.drugs.DrugEffect.felt(player, ModEffects.COKE_HIGH) > 0.4f) {
+            event.setMessage(Component.literal(Intoxication.hype(event.getRawText(), new java.util.Random(player.getRandom().nextLong()))));
         } else if (com.createbrewery.drugs.DrugEffect.felt(player, ModEffects.CALM) > 0.4f) {
             event.setMessage(Component.literal(Intoxication.trailOff(event.getRawText(), new java.util.Random(player.getRandom().nextLong()))));
         } else if (player.hasEffect(ModEffects.HANGOVER)) {

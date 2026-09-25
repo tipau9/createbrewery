@@ -175,6 +175,25 @@ public final class Intoxication {
         return sb.toString();
     }
 
+    /**
+     * Koks: loud and full of yourself - words in capitals, every sentence an exclamation, and
+     * often one more thing about yourself on top.
+     */
+    public static String hype(String text, java.util.Random random) {
+        StringBuilder sb = new StringBuilder();
+        for (String word : text.replace('.', '!').split(" ")) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(random.nextFloat() < 0.2f ? word.toUpperCase(java.util.Locale.GERMAN) : word);
+        }
+        if (!sb.toString().endsWith("!")) sb.append('!');
+        if (random.nextFloat() < 0.35f) {
+            String[] ego = {" Ehrlich, ich bin genial.", " Hört mir zu!", " Und noch was—", " Ich hab das voll im Griff.",
+                " Keiner kann das so wie ich."};
+            sb.append(ego[random.nextInt(ego.length)]);
+        }
+        return sb.toString();
+    }
+
     /** Hangover length in ticks for a given peak; 0 if the peak was too low to earn one. */
     public static int hangoverTicks(float peak) {
         if (peak < HANGOVER_PEAK) return 0;

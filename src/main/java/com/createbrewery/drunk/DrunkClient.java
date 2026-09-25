@@ -212,12 +212,13 @@ public final class DrunkClient {
             NodClient.tick(mc, player);
             BenzoClient.tick(mc, player);
             GasClient.tick(player);
+            CokeClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || BenzoClient.rebound > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || CokeClient.line > 0.01f || BenzoClient.rebound > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -477,6 +478,8 @@ public final class DrunkClient {
             chain.setUniform("Rebound", BenzoClient.rebound * screen());
             chain.setUniform("Wah", wah * screen());
             chain.setUniform("Gone", GasClient.gone * screen());
+            chain.setUniform("Coke", CokeClient.coke * screen());
+            chain.setUniform("Line", CokeClient.line * screen());
             chain.setUniform("Stare", TripClient.stare * screen());
             chain.setUniform("Harsh", TripClient.harsh);
             chain.setUniform("Afterglow", afterglow * screen());
@@ -1207,6 +1210,7 @@ public final class DrunkClient {
     private static void onGuiPost(RenderGuiEvent.Post event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
+        CokeClient.drawCraving(player, event.getGuiGraphics());
         BenzoClient.drawGap(event.getGuiGraphics());
         MobEffectInstance blackout = player.getEffect(ModEffects.BLACKOUT);
         if (blackout == null) return;
