@@ -454,9 +454,10 @@ public final class DrunkClient {
             chain.setUniform("Zap", RollClient.zap * screen());
             chain.setUniform("Faded", RollClient.faded * screen());
             chain.setUniform("Scene", RollClient.scene * screen());
-            chain.setUniform("Tension", MusicPulse.tension);
-            chain.setUniform("Drop", MusicPulse.drop);
-            chain.setUniform("Beats", (float) (MusicPulse.beats % 64));
+            chain.setUniform("Tension", MusicPulse.song.tension);
+            chain.setUniform("Drop", MusicPulse.song.drop);
+            chain.setUniform("Beats", (float) (MusicPulse.song.beats % 64));
+            chain.setUniform("Tempo", (float) (60.0 / MusicPulse.song.period()));
             chain.setUniform("Heat", RollClient.heat * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());

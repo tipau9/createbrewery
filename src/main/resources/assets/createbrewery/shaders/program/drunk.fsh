@@ -42,6 +42,7 @@ uniform float Scene;   // MDMA, very high: the place turns into a dance floor fo
 uniform float Tension; // the song's build-up: the kick is gone, everyone waits, 0..1 (see MusicPulse)
 uniform float Drop;    // the drop: 1 when the kick comes back after a build-up, dying away
 uniform float Beats;   // kicks counted, 0..63: the club light colour moves on with each
+uniform float Tempo;   // beats a minute of what is heard (120 until learnt)
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
@@ -189,7 +190,10 @@ void main() {
     uv.x += (hash(vec2(floor(t * 30.0), 3.7)) - 0.5) * 0.04 * Zap;
     // The beat is in the picture: it pumps with every kick of the song playing.
     float kick = Kick * Beat;
-    uv = 0.5 + (uv - 0.5) * (1.0 - 0.025 * kick);
+    // Techno (from about 125 to the minute): harder, darker, colder - short, sharp hits instead
+    // of a big soft pump, which would only turn into seasickness at four kicks a second.
+    float techno = smoothstep(118.0, 132.0, Tempo) * min(1.0, Beat * 2.0);
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.025 * (1.0 - 0.4 * techno) * kick);
     // The build-up draws you in, and the drop throws it all wide open.
     float raving = min(1.0, Beat * 2.0);
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * Tension * raving + 0.05 * Drop * Drop * raving);
@@ -459,8 +463,15 @@ void main() {
     }
     // Every kick: the lights flare in club colours that move on with each beat, the picture
     // brightens, colours punch.
-    vec3 club = mix(vec3(1.0, 0.7, 0.9), 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + Beats * 0.17)), 0.7);
+    // In techno the colour moves on once a bar, and the light is colder, whiter.
+    float lightStep = mix(Beats, floor(Beats / 4.0), techno);
+    vec3 club = mix(vec3(1.0, 0.7, 0.9), 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + lightStep * 0.17)), 0.7);
+    club = mix(club, vec3(0.85, 0.92, 1.0), 0.5 * techno);
     col += spill(uv, px * 10.0, 0.4) * club * 2.5 * kick;
+    // Techno: the room sits in the dark between the kicks and each one lights it like a strobe
+    // hit - once per kick, never faster.
+    col *= 1.0 - 0.25 * techno * (1.0 - min(kick, 1.0));
+    col += vec3(0.9, 0.95, 1.0) * 0.25 * pow(min(kick, 1.0), 3.0) * techno;
     col *= 1.0 + 0.2 * kick;
     // Colours are richer, and more so the louder the music - above all bright, neon colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

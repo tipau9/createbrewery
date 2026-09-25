@@ -52,6 +52,47 @@ class KickDetectorTest {
         assertKicks(listen(time -> drum(time) + 0.4 * Math.sin(2 * Math.PI * 50 * time))[KICK]);
     }
 
+    /**
+     * Techno at the given tempo: a punchy kick on every beat, a rolling bassline on the three
+     * sixteenths between (ducked under the kick), open hi-hats on the off-beat.
+     */
+    private static double techno(double time, double bpm) {
+        double beat = 60.0 / bpm, sixteenth = beat / 4;
+        double inBeat = time % beat, inSixteenth = time % sixteenth;
+        // Kick: the pitch falls from 120 to 50 Hz, fast decay.
+        double kick = 0.7 * Math.exp(-inBeat * 18) * Math.sin(2 * Math.PI * (50 * inBeat + 70 * (1 - Math.exp(-inBeat * 30)) / 30));
+        double bass = (int) (inBeat / sixteenth) == 0 ? 0 : 0.3 * Math.exp(-inSixteenth * 20) * Math.sin(2 * Math.PI * 65 * inSixteenth);
+        double offBeat = (time + beat / 2) % beat;
+        double hat = offBeat < 0.03 ? 0.2 * Math.sin(time * 1.3e5) * Math.sin(time * 7.7e4) : 0;
+        return kick + bass + hat;
+    }
+
+    private static void assertTechno(double bpm) {
+        float[] kick = listen(time -> techno(time, bpm))[KICK];
+        double beat = 60.0 / bpm, slice = KickDetector.SLICE;
+        for (double at = Math.ceil(1.0 / beat) * beat; at < 1.95; at += beat) {
+            int s = (int) ((at - 1.0) / slice);
+            assertTrue(Math.max(kick[s], kick[Math.min(s + 1, kick.length - 1)]) > 0.5f, bpm + " bpm: kick at " + at + ": " + kick[s]);
+            // The bass notes on the sixteenths between are not kicks.
+            for (int n = 1; n < 4; n++) {
+                int b = (int) ((at + n * beat / 4 - 1.0) / slice);
+                if (b + 1 < kick.length) assertTrue(Math.max(kick[b], kick[b + 1]) < 0.5f, bpm + " bpm: bass taken for a kick at " + (at + n * beat / 4) + ": " + kick[b] + " " + kick[b + 1]);
+            }
+        }
+    }
+
+    @Test
+    void findsTechnoKicks() {
+        assertTechno(130);
+        assertTechno(145);
+    }
+
+    @Test
+    void findsHardTechnoKicks() {
+        assertTechno(165);
+        assertTechno(180);
+    }
+
     /** A calm pad without drums: no kicks at all, but still loud enough to see. */
     @Test
     void padHasNoKicksButALevel() {

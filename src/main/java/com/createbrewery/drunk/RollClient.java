@@ -83,16 +83,16 @@ public final class RollClient {
             ? Math.min(1f, roll * (player.isSprinting() ? 1.3f : 1f)) : 0f);
 
         // The drop: after the build-up the kick comes back, and the whole body goes with it.
-        if (MusicPulse.takeDrop() && roll > 0.2f) {
+        if (MusicPulse.song.takeDrop() && roll > 0.2f) {
             rushTicks = 0;
             nextRush = player.tickCount + 600 + r.nextInt(800);
             mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2f, 0.8f * roll));
             think(player, DROP);
         }
-        if (MusicPulse.tension > 0.6f && !buildUpSaid && roll > 0.2f) {
+        if (MusicPulse.song.tension > 0.6f && !buildUpSaid && roll > 0.2f) {
             buildUpSaid = true;
             think(player, BUILD_UP);
-        } else if (MusicPulse.tension <= 0f) {
+        } else if (MusicPulse.song.tension <= 0f) {
             buildUpSaid = false;
         }
 
@@ -101,7 +101,8 @@ public final class RollClient {
         boolean jumped = wasOnGround && !player.onGround() && player.getDeltaMovement().y > 0.2;
         wasOnGround = player.onGround();
         if (jumped && roll > 0.1f && MusicPulse.playing()) {
-            if (MusicPulse.offBeat() < 0.15) {
+            // The window shrinks with the tempo: at 140 bpm anything else would count every jump.
+            if (MusicPulse.song.offBeat(System.nanoTime() / 1e9) < Math.min(0.15, 0.2 * MusicPulse.song.period())) {
                 groove = Math.min(1f, groove + 0.2f);
                 for (int i = 0; i < 4; i++) {
                     mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.NOTE, player.getX() + r.nextGaussian() * 0.4,
