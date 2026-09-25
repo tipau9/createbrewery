@@ -22,7 +22,7 @@ public class DrugItem extends Item {
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
         return switch (kind) {
-            case SHROOMS, MESCALINE, MDMA -> UseAnim.EAT; // chewed, and they taste awful
+            case SHROOMS, MESCALINE, MDMA, XANAX -> UseAnim.EAT; // chewed, and they taste awful
             default -> UseAnim.TOOT_HORN;           // raised to the face (or a tab on the tongue)
         };
     }
@@ -35,7 +35,8 @@ public class DrugItem extends Item {
             case SHROOMS -> 32;
             case MESCALINE -> 48; // tough, bitter cactus
             case DMT -> 40;       // one deep hit, held in
-            case MDMA -> 12;      // a pill, swallowed
+            case MDMA, XANAX -> 12; // a pill, swallowed
+            case HEROIN -> 36;    // finding the vein
             default -> 24;
         };
     }

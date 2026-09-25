@@ -8,6 +8,7 @@
     "createbrewery:nosebleed",
     "createbrewery:aspiration",
     "createbrewery:hyperthermia",
-    "createbrewery:skin_picking"
+    "createbrewery:skin_picking",
+    "createbrewery:overdose"
   ]
 }

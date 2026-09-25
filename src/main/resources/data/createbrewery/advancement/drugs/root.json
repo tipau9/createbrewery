@@ -103,6 +103,22 @@
           "items": "createbrewery:meth"
         }
       }
+    },
+    "heroin": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:heroin"
+        }
+      }
+    },
+    "xanax": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:xanax"
+        }
+      }
     }
   },
   "requirements": [
@@ -117,7 +133,9 @@
       "meskalin",
       "dmt",
       "mdma",
-      "meth"
+      "meth",
+      "heroin",
+      "xanax"
     ]
   ]
 }

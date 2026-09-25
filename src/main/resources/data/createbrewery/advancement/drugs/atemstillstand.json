@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/heroin",
+  "display": {
+    "icon": {
+      "id": "createbrewery:heroin"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.atemstillstand.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.atemstillstand.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "b": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:respiratory_depression": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "b"
+    ]
+  ]
+}

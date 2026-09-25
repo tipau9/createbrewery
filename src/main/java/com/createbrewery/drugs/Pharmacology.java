@@ -89,6 +89,21 @@ public final class Pharmacology {
         return Math.max(0f, heat + gain - loss);
     }
 
+    /** Breathing load from which the breath stops (Atemlähmung): the air runs out like under water. */
+    public static final float BREATH_FAILING = 1.0f;
+
+    /**
+     * How hard the drive to breathe is suppressed. Heroin is the main danger: every shot adds its
+     * full weight, so the third one on top of the others stops the breath. Xanax, alcohol and
+     * Keta add little on their own - but with an opioid in the body they multiply, which is how
+     * most real overdoses happen.
+     */
+    public static float breathLoad(int heroinAmp, float heroin, float xanax, float blood, float keta) {
+        float opioid = heroinAmp < 0 ? 0f : 0.45f * (heroinAmp + 1) * heroin;
+        float depressants = 0.3f * xanax + 0.2f * Math.max(0f, blood);
+        return opioid + depressants + 0.2f * keta + 2f * opioid * depressants;
+    }
+
     /** Chance per second that a strained heart gives out. */
     public static float heartAttackChance(float load) {
         if (load >= HEART_CRITICAL) return 0.03f + 0.12f * (load - HEART_CRITICAL);

@@ -77,6 +77,8 @@ public final class DrunkClient {
     private static float breakthrough;
     /** MDMA and meth: 0..1 each. */
     private static float roll, tweak;
+    /** Heroin (and a little Xanax), and heroin withdrawal: 0..1 each. */
+    private static float opiate, sick;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
     private static int lastCokeBeat;
@@ -156,10 +158,15 @@ public final class DrunkClient {
         // Every drug comes up, holds and fades (DrugEffect.strength); the screen follows that curve.
         roll = ease(roll, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING));
         tweak = ease(tweak, player == null ? 0f : DrugEffect.felt(player, ModEffects.TWEAK));
+        opiate = ease(opiate, player == null ? 0f : Math.min(1f, DrugEffect.felt(player, ModEffects.NOD)
+            + 0.4f * DrugEffect.felt(player, ModEffects.CALM)
+            + (player.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) ? 0.5f : 0f)));
+        sick = ease(sick, player == null ? 0f : DrugEffect.strength(player, ModEffects.WITHDRAWAL));
         // Meth sharpens like Koks, only harder and for longer.
         stim = ease(stim, player == null ? 0f : Math.max(DrugEffect.felt(player, ModEffects.COKE_HIGH), tweak));
         gray = ease(gray, player == null ? 0f : Math.max(0.7f * DrugEffect.strength(player, ModEffects.COKE_CRASH),
-            Math.max(0.5f * DrugEffect.strength(player, ModEffects.COMEDOWN), 0.8f * DrugEffect.strength(player, ModEffects.METH_CRASH))));
+            Math.max(Math.max(0.5f * DrugEffect.strength(player, ModEffects.COMEDOWN), 0.4f * sick),
+                0.8f * DrugEffect.strength(player, ModEffects.METH_CRASH))));
         float keta = player == null ? 0f : Math.max(DrugEffect.strength(player, ModEffects.K_HOLE),
             // Koks masks the Keta: it feels clearer than it is (the K-Loch does not care).
             0.85f * DrugEffect.felt(player, ModEffects.KETA_HIGH) * (1f - 0.4f * DrugEffect.strength(player, ModEffects.COKE_HIGH)));
@@ -188,7 +195,7 @@ public final class DrunkClient {
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || roll > 0.01f || tweak > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || roll > 0.01f || tweak > 0.01f || opiate > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -410,6 +417,7 @@ public final class DrunkClient {
             chain.setUniform("Break", breakthrough * screen());
             chain.setUniform("Roll", roll * screen());
             chain.setUniform("Tweak", tweak * screen());
+            chain.setUniform("Nod", opiate * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -719,7 +727,7 @@ public final class DrunkClient {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f)) return;
+        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -729,6 +737,8 @@ public final class DrunkClient {
         roll += noise(t * 0.3, 41) * 13f * green;
         // DMT: the view turns slowly, as if weightless.
         roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
+        // Entzug: the whole body shivers.
+        roll += noise(t * 12.0, 53) * 1.2f * sick;
         event.setRoll(event.getRoll() + roll * screen());
     }
 
@@ -945,13 +955,18 @@ public final class DrunkClient {
 
         drawShadow(player, g, w, h);
 
+        float lid = 0f;
         if (blood >= Intoxication.DRUNK) {
             // Heavy eyelids that keep sinking; from beer five they fall shut for a moment (micro-sleep).
             float e = ramp(Intoxication.DRUNK);
-            float lid = (0.05f + 0.2f * e) * (0.6f + 0.4f * noise(t * 0.5, 17));
+            lid = (0.05f + 0.2f * e) * (0.6f + 0.4f * noise(t * 0.5, 17));
             if (blood >= Intoxication.SMASHED) {
                 lid = Math.max(lid, nod(t) * 0.52f);
             }
+        }
+        // Heroin: nodding - the eyes sink shut and jerk open again, over and over.
+        lid = Math.max(lid, opiate * (0.1f + nod(t * 1.3) * 0.45f) * screen());
+        if (lid > 0f) {
             int px = (int) (h * lid);
             int feather = h / 8;
             g.fill(0, 0, w, px, 0xF5000000);

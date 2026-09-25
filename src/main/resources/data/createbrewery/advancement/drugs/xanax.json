@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:xanax"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.xanax.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.xanax.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "xanax": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:xanax"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "xanax"
+    ]
+  ]
+}

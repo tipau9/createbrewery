@@ -22,6 +22,8 @@ public final class DrunkState {
     public float tolerance;
     /** Game time the tolerance was last brought up to date; sober time since then wears it off. */
     public long toleranceTime;
+    /** 0..1 how used the body is to heroin; from Opioids#DEPENDENT on, going without is withdrawal. */
+    public float dependence;
 
     /** Server-only bookkeeping: whether the client last saw a non-zero state. */
     transient boolean clientSawAlcohol;
@@ -35,6 +37,11 @@ public final class DrunkState {
     transient long lastDrinkTime = Long.MIN_VALUE / 2;
 
     public DrunkState() {}
+
+    public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime, float dependence) {
+        this(blood, stomach, peak, tolerance, toleranceTime);
+        this.dependence = dependence;
+    }
 
     public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime) {
         this.blood = blood;
@@ -63,7 +70,7 @@ public final class DrunkState {
     }
 
     public boolean isEmpty() {
-        return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f;
+        return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f && dependence <= 0f;
     }
 
     public static final Codec<DrunkState> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -71,7 +78,8 @@ public final class DrunkState {
         Codec.FLOAT.fieldOf("stomach").forGetter(s -> s.stomach),
         Codec.FLOAT.fieldOf("peak").forGetter(s -> s.peak),
         Codec.FLOAT.optionalFieldOf("tolerance", 0f).forGetter(s -> s.tolerance),
-        Codec.LONG.optionalFieldOf("tolerance_time", 0L).forGetter(s -> s.toleranceTime)
+        Codec.LONG.optionalFieldOf("tolerance_time", 0L).forGetter(s -> s.toleranceTime),
+        Codec.FLOAT.optionalFieldOf("dependence", 0f).forGetter(s -> s.dependence)
     ).apply(i, DrunkState::new));
 
     public static final StreamCodec<ByteBuf, DrunkState> STREAM_CODEC = StreamCodec.composite(

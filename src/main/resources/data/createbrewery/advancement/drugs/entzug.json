@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/heroin",
+  "display": {
+    "icon": {
+      "id": "createbrewery:heroin"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.entzug.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.entzug.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "w": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:withdrawal": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "w"
+    ]
+  ]
+}

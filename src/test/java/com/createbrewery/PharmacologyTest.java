@@ -71,4 +71,14 @@ class PharmacologyTest {
         for (int s = 0; s < 20; s++) swim = Pharmacology.heatStep(swim, 1f, false, false, true);
         assertTrue(swim < dancing - 1f);
     }
+
+    @Test
+    void heroinWithBenzosStopsTheBreath() {
+        float f = Pharmacology.BREATH_FAILING;
+        assertTrue(Pharmacology.breathLoad(0, 1f, 0f, 0f, 0f) < f, "one shot");
+        assertTrue(Pharmacology.breathLoad(1, 1f, 0f, 0f, 0f) < f, "two shots");
+        assertTrue(Pharmacology.breathLoad(2, 1f, 0f, 0f, 0f) >= f, "three shots");
+        assertTrue(Pharmacology.breathLoad(0, 1f, 1f, 0f, 0f) >= f, "one shot with Xanax");
+        assertTrue(Pharmacology.breathLoad(-1, 0f, 1f, 1.3f, 0f) < f, "Xanax and three beers, no opioid");
+    }
 }

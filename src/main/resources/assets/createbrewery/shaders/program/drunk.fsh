@@ -28,6 +28,7 @@ uniform float BadTrip; // fear: 0..1
 uniform float Break;   // DMT breakthrough: 0..1
 uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
+uniform float Nod;     // Heroin: 0..1
 
 in vec2 texCoord;
 
@@ -212,6 +213,12 @@ void main() {
     col *= mix(vec3(1.0), vec3(0.92, 1.0, 1.1), Tweak);
     col.r = mix(col.r, tap(uv + d * 0.01).r, 0.6 * Tweak);
     col.b = mix(col.b, tap(uv - d * 0.01).b, 0.6 * Tweak);
+
+    // Heroin: soft, warm and dim - pinpoint pupils let little light in, and the edges sink
+    // into a warm dark like a blanket pulled up.
+    col = mix(col, ring(uv, px * 3.0), 0.5 * Nod);
+    col *= mix(vec3(1.0), vec3(1.1, 0.95, 0.8), Nod) * (1.0 - 0.25 * Nod);
+    col *= 1.0 - smoothstep(0.2, 0.8, length(d)) * 0.6 * Nod;
 
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

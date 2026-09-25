@@ -784,4 +784,21 @@ public class FermenterGameTests {
             helper.succeed();
         });
     }
+
+    /** Two shots of heroin are survivable, with Xanax on top they stop the breath; Xanax ends a bad trip. */
+    @GameTest(template = TEMPLATE)
+    public static void heroinWithXanaxStopsTheBreath(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.BAD_TRIP, 1000));
+        // Two shots, the second a top-up at full strength: still breathing.
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, 4800, 1));
+        com.createbrewery.drugs.Opioids.body(player);
+        helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "two shots stopped the breath");
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.CALM, 3000, 0));
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.XANAX);
+        helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.BAD_TRIP), "Xanax did not end the bad trip");
+        com.createbrewery.drugs.Opioids.body(player);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "heroin and Xanax did not stop the breath");
+        helper.succeed();
+    }
 }

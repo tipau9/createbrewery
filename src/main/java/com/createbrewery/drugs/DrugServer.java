@@ -91,7 +91,7 @@ public final class DrugServer {
     /** Three joints' worth of hits in the body at most. */
     private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
-    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT, MDMA, METH }
+    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT, MDMA, METH, HEROIN, XANAX }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
@@ -138,6 +138,10 @@ public final class DrugServer {
         }
         if (kind == Kind.LSD || kind == Kind.SHROOMS || kind == Kind.MESCALINE || kind == Kind.DMT) {
             Psychedelics.take(player, kind);
+            return;
+        }
+        if (kind == Kind.HEROIN || kind == Kind.XANAX) {
+            Opioids.take(player, kind);
             return;
         }
         if (kind == Kind.MDMA || kind == Kind.METH) {
@@ -379,6 +383,7 @@ public final class DrugServer {
             heartTick(player);
             weedBody(player);
             Stimulants.body(player);
+            Opioids.body(player);
         }
     }
 
@@ -434,7 +439,7 @@ public final class DrugServer {
     /** Out cold: a Filmriss, the K-Loch, or collapsed with a failing heart. */
     public static boolean unconscious(LivingEntity entity) {
         return entity.hasEffect(ModEffects.BLACKOUT) || entity.hasEffect(ModEffects.K_HOLE)
-            || entity.hasEffect(ModEffects.HEART_ATTACK);
+            || entity.hasEffect(ModEffects.HEART_ATTACK) || entity.hasEffect(ModEffects.RESPIRATORY_DEPRESSION);
     }
 
     /** Someone awake is crouched right next to you: CPR, or the recovery position. */
@@ -461,15 +466,25 @@ public final class DrugServer {
     @SubscribeEvent
     public static void onBreathe(LivingBreatheEvent event) {
         LivingEntity entity = event.getEntity();
-        if (entity.hasEffect(ModEffects.ASPIRATION) && !helped(entity)) {
+        boolean choking = entity.hasEffect(ModEffects.ASPIRATION);
+        // The breath stops more slowly than choking: the bubbles run out over about ten seconds.
+        if ((choking || entity.hasEffect(ModEffects.RESPIRATORY_DEPRESSION)) && !helped(entity)) {
             event.setCanBreathe(false);
-            event.setConsumeAirAmount(entity.getAirSupply() > 0 ? 5 : 0);
+            event.setConsumeAirAmount(entity.getAirSupply() > 0 ? (choking ? 5 : 2) : 0);
         }
     }
 
     /** The choking does its own damage (aspirationTick), not vanilla drowning every tick. */
     @SubscribeEvent
     public static void onDrown(LivingDrownEvent event) {
-        if (event.getEntity().hasEffect(ModEffects.ASPIRATION)) event.setDrowning(false);
+        if (event.getEntity().hasEffect(ModEffects.ASPIRATION) || event.getEntity().hasEffect(ModEffects.RESPIRATORY_DEPRESSION)) {
+            event.setDrowning(false);
+        }
+    }
+
+    /** Heroin: the pain barely reaches you. */
+    @SubscribeEvent
+    public static void onIncomingDamage(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (event.getEntity().hasEffect(ModEffects.NOD)) event.setAmount(event.getAmount() * Opioids.painFactor(event.getEntity()));
     }
 }

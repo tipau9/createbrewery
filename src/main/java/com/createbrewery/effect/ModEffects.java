@@ -6,6 +6,7 @@ import com.createbrewery.drugs.DrugEffect;
 import com.createbrewery.drugs.DrugServer;
 import com.createbrewery.drugs.Psychedelics;
 import com.createbrewery.drugs.Stimulants;
+import com.createbrewery.drugs.Opioids;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -180,6 +181,27 @@ public class ModEffects {
     /** Psychose: too long awake on meth. The client shows it like a bad trip, shadow people included. */
     public static final DeferredHolder<MobEffect, MobEffect> PSYCHOSIS = EFFECTS.register("psychosis", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x3A2A4A, 0, null, Stimulants.PSYCHOSIS_TICKS, 100, 400));
+
+    // ---- Heroin and Xanax (see drugs/Opioids) ----
+
+    public static final DeferredHolder<MobEffect, MobEffect> NOD = EFFECTS.register("nod", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xC8A060, 0, null, Opioids.HEROIN_TICKS, 60, 2400).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("nod_speed"), -0.2));
+
+    public static final DeferredHolder<MobEffect, MobEffect> CALM = EFFECTS.register("calm", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xB8C8E0, 20, Opioids::calmTick, Opioids.XANAX_TICKS, 400, 2000).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("calm_speed"), -0.1));
+
+    /** Atemlähmung: the breath stops. Someone crouched next to you breathes for you. */
+    public static final DeferredHolder<MobEffect, MobEffect> RESPIRATORY_DEPRESSION = EFFECTS.register("respiratory_depression", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x3050A0, 20, Opioids::breathTick, 0, 0, 0)
+            .scaled(Attributes.MOVEMENT_SPEED, id("respiratory_depression_speed"), -0.8));
+
+    /** Entzug: the body wants heroin. */
+    public static final DeferredHolder<MobEffect, MobEffect> WITHDRAWAL = EFFECTS.register("withdrawal", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x7A8A5A, 20, Opioids::withdrawalTick, 0, 0, 0)
+            .scaled(Attributes.ATTACK_DAMAGE, id("withdrawal_damage"), -0.3)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("withdrawal_mining"), -0.3));
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);
