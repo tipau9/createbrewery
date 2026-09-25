@@ -99,7 +99,7 @@ public final class Psychedelics {
         }
         // Set and setting: dark, hurt, or hunted - the trip can turn.
         float trip = tripping(player);
-        if (!player.hasEffect(ModEffects.BAD_TRIP)
+        if (!player.hasEffect(ModEffects.BAD_TRIP) && !player.hasEffect(ModEffects.CALM) // Xanax: no fear
             && player.getRandom().nextFloat() < 0.012f * trip * badSetting(player)) {
             player.addEffect(new MobEffectInstance(ModEffects.BAD_TRIP, BAD_TRIP_TICKS, 0, false, false, true));
         }

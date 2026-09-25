@@ -109,7 +109,7 @@ public final class Stimulants {
         }
         if (player.hasEffect(ModEffects.TWEAK)) {
             s.awake++;
-            if (s.awake > PSYCHOSIS_AFTER && !player.hasEffect(ModEffects.PSYCHOSIS) && player.getRandom().nextFloat() < 0.01f) {
+            if (s.awake > PSYCHOSIS_AFTER && !player.hasEffect(ModEffects.PSYCHOSIS) && !player.hasEffect(ModEffects.CALM) && player.getRandom().nextFloat() < 0.01f) {
                 player.addEffect(new MobEffectInstance(ModEffects.PSYCHOSIS, PSYCHOSIS_TICKS, 0, false, false, true));
             }
         } else if (player.isSleeping()) {

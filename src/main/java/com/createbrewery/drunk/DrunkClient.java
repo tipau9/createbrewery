@@ -76,7 +76,7 @@ public final class DrunkClient {
     /** DMT: 0..1, 1 = the full breakthrough. */
     private static float breakthrough;
     /** MDMA and meth: 0..1 each. */
-    private static float roll, tweak;
+    private static float rolling, tweak;
     /** Heroin (and a little Xanax), and heroin withdrawal: 0..1 each. */
     private static float opiate, sick;
     /** Lachgas: 0..1. */
@@ -158,7 +158,7 @@ public final class DrunkClient {
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
         // Every drug comes up, holds and fades (DrugEffect.strength); the screen follows that curve.
-        roll = ease(roll, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING));
+        rolling = ease(rolling, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING));
         tweak = ease(tweak, player == null ? 0f : DrugEffect.felt(player, ModEffects.TWEAK));
         opiate = ease(opiate, player == null ? 0f : Math.min(1f, DrugEffect.felt(player, ModEffects.NOD)
             + 0.4f * DrugEffect.felt(player, ModEffects.CALM)
@@ -200,7 +200,7 @@ public final class DrunkClient {
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || roll > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -428,7 +428,7 @@ public final class DrunkClient {
             chain.setUniform("Desert", desert);
             chain.setUniform("BadTrip", bad * screen());
             chain.setUniform("Break", breakthrough * screen());
-            chain.setUniform("Roll", roll * screen());
+            chain.setUniform("Roll", rolling * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
             chain.setUniform("Wah", wah * screen());
@@ -651,7 +651,7 @@ public final class DrunkClient {
 
     /** Weed or MDMA: how much the music matters right now. */
     private static float loud() {
-        return Math.max(high, roll);
+        return Math.max(high, rolling);
     }
 
     /** High: music and ambience up to about 2x (+6 dB), which is where the listener gain goes. */
