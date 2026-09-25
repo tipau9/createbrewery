@@ -39,6 +39,9 @@ uniform float Wiggle;  // MDMA: the eyes flicker (nystagmus), in bursts, 0..1
 uniform float Zap;     // the Tiefpunkt after MDMA: a brain zap, a jolt of a few frames, 0..1
 uniform float Faded;   // MDMA wearing off: the closed-eye patterns of the offset, 0..1
 uniform float Scene;   // MDMA, very high: the place turns into a dance floor for a while, 0..1
+uniform float Tension; // the song's build-up: the kick is gone, everyone waits, 0..1 (see MusicPulse)
+uniform float Drop;    // the drop: 1 when the kick comes back after a build-up, dying away
+uniform float Beats;   // kicks counted, 0..63: the club light colour moves on with each
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
@@ -187,6 +190,9 @@ void main() {
     // The beat is in the picture: it pumps with every kick of the song playing.
     float kick = Kick * Beat;
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.025 * kick);
+    // The build-up draws you in, and the drop throws it all wide open.
+    float raving = min(1.0, Beat * 2.0);
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * Tension * raving + 0.05 * Drop * Drop * raving);
     // A rush pulls you in, gently.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.02 * Rush);
     // Overheated: the air itself wobbles.
@@ -451,13 +457,24 @@ void main() {
         }
         col += rays * vec3(1.0, 0.85, 0.95) * 0.9 * Roll;
     }
-    // Every kick: the lights flare, the picture brightens, colours punch.
-    col += spill(uv, px * 10.0, 0.4) * vec3(1.0, 0.7, 0.9) * 2.5 * kick;
+    // Every kick: the lights flare in club colours that move on with each beat, the picture
+    // brightens, colours punch.
+    vec3 club = mix(vec3(1.0, 0.7, 0.9), 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + Beats * 0.17)), 0.7);
+    col += spill(uv, px * 10.0, 0.4) * club * 2.5 * kick;
     col *= 1.0 + 0.2 * kick;
     // Colours are richer, and more so the louder the music - above all bright, neon colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     float chroma = max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b));
     col = mix(vec3(lum), col, 1.0 + (0.25 * Roll + 0.5 * Beat * Level + 0.4 * kick) * smoothstep(0.05, 0.4, chroma));
+    // The build-up: colour drains, the edges close in, the middle gets brighter and brighter...
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.35 * Tension * raving) * (1.0 + 0.25 * Tension * raving);
+    col *= 1.0 - smoothstep(0.25, 0.8, length(d)) * 0.5 * Tension * raving;
+    // ...and the drop: a burst of light rolling out, and every colour at once.
+    float burst = smoothstep(0.2, 0.0, abs(length(d * vec2(aspect, 1.0)) - (1.0 - Drop) * 1.4));
+    col += (club * burst * 0.6 + vec3(1.0, 0.85, 0.95) * 0.35 * Drop) * Drop * raving;
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(lum), col, 1.0 + 0.8 * Drop * raving);
     // In the quiet bits the room closes in a little; when it gets loud it opens up.
     col *= 1.0 - smoothstep(0.3, 0.9, length(d)) * 0.25 * Beat * (1.0 - Level);
     // Eye wiggles: the picture blurs into a faint flickering double.

@@ -27,7 +27,9 @@ import net.neoforged.neoforge.common.util.TriState;
  * <ul>
  *   <li>Rushes: every half minute or so a wave of euphoria washes over you - light, goosebumps, a sigh.</li>
  *   <li>Music gets into the body: while any song plays nearby (see {@link MusicPulse}), the picture
- *       pumps with its real kicks, lights flare, colours swell with it and the hats sparkle.</li>
+ *       pumps with its real kicks, lights flare in club colours, colours swell with it and the
+ *       hats sparkle. Build-ups pull you in, the drop is a rush. Everything alive bounces along,
+ *       and jumping on the beat gets you into the groove, which takes it all further.</li>
  *   <li>At the height the eyes wiggle for a few seconds at a time (nystagmus).</li>
  *   <li>High doses: a dancer at the corner of the eye, the view shifting back, and for a while
  *       the floor becomes a dance floor. Wearing off, closed-eye patterns (see drunk.fsh).</li>
@@ -41,7 +43,8 @@ import net.neoforged.neoforge.common.util.TriState;
 public final class RollClient {
     private RollClient() {}
 
-    static float rush, beat, heat, wiggle, zap, faded, scene, perspective;
+    static float rush, beat, heat, wiggle, zap, faded, scene, perspective, groove;
+    private static boolean wasOnGround = true, buildUpSaid;
 
     private static int rushTicks = -1, nextRush = 400, nextThought = 300, wiggleTicks, nextWiggle = 600;
     private static float sweat, lastWalk;
@@ -49,6 +52,8 @@ public final class RollClient {
     static void init() {
         NeoForge.EVENT_BUS.addListener(RollClient::onChat);
         NeoForge.EVENT_BUS.addListener(RollClient::onNameTag);
+        NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST, false,
+            net.neoforged.neoforge.client.event.RenderLivingEvent.Pre.class, RollClient::onLivingPre);
     }
 
     /** Every client tick, from DrunkClient once its channels are eased. */
@@ -74,7 +79,40 @@ public final class RollClient {
 
         // The music, in the body: only while a song plays, and more still when dancing.
         MusicPulse.update(); // keeps the song list tidy even while nothing is drawn
-        beat = DrunkClient.ease(beat, MusicPulse.playing() ? Math.min(1f, roll * (player.isSprinting() ? 1.3f : 1f)) : 0f);
+        beat = DrunkClient.ease(beat, MusicPulse.playing()
+            ? Math.min(1f, roll * (player.isSprinting() ? 1.3f : 1f)) : 0f);
+
+        // The drop: after the build-up the kick comes back, and the whole body goes with it.
+        if (MusicPulse.takeDrop() && roll > 0.2f) {
+            rushTicks = 0;
+            nextRush = player.tickCount + 600 + r.nextInt(800);
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2f, 0.8f * roll));
+            think(player, DROP);
+        }
+        if (MusicPulse.tension > 0.6f && !buildUpSaid && roll > 0.2f) {
+            buildUpSaid = true;
+            think(player, BUILD_UP);
+        } else if (MusicPulse.tension <= 0f) {
+            buildUpSaid = false;
+        }
+
+        // Dancing: jump on the beat and you get into the groove - it carries the music further
+        // into you. Off the beat it slips away again.
+        boolean jumped = wasOnGround && !player.onGround() && player.getDeltaMovement().y > 0.2;
+        wasOnGround = player.onGround();
+        if (jumped && roll > 0.1f && MusicPulse.playing()) {
+            if (MusicPulse.offBeat() < 0.15) {
+                groove = Math.min(1f, groove + 0.2f);
+                for (int i = 0; i < 4; i++) {
+                    mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.NOTE, player.getX() + r.nextGaussian() * 0.4,
+                        player.getY() + 0.2, player.getZ() + r.nextGaussian() * 0.4, r.nextDouble(), 0.0, 0.0);
+                }
+                if (groove >= 1f && r.nextFloat() < 0.2f) think(player, GROOVE);
+            } else {
+                groove = Math.max(0f, groove - 0.15f);
+            }
+        }
+        groove = Math.max(0f, groove - (MusicPulse.playing() ? 0.004f : 0.02f));
 
         // Eye wiggles (nystagmus): at the height the eyes start to flicker for a few seconds, then
         // calm down again. Dancing to loud music brings them on more often.
@@ -182,6 +220,9 @@ public final class RollClient {
         "Ich hab keinen Hunger. Gar keinen.", "Mund so trocken…", "Wir sollten alle mal reden. Über alles."};
     private static final String[] FADING = {"Es lässt nach… nein, nein, nein.", "Noch eine halbe? Nur eine halbe.",
         "Wo ist die Tüte hin?", "Kommt da noch was?"};
+    private static final String[] DROP = {"DA IST ER!!!", "DER DROP!", "Ohhh jaaaa!", "Hände hoch!!!"};
+    private static final String[] BUILD_UP = {"Gleich… gleich kommt's…", "Warte… warte…", "Es baut sich auf…"};
+    private static final String[] GROOVE = {"Ich bin eins mit dem Beat.", "Im Takt. Alles im Takt.", "Mein Körper tanzt von allein."};
     private static final String[] ZAP = {"Bzzt. Was war das?", "Da hat's im Kopf gezuckt.", "Mein Hirn blitzt."};
     private static final String[] MORNING = {"Wie, schon hell?!", "Die Nacht war doch gerade erst…", "Wo sind die Stunden hin?"};
     private static final String[] RUSH = {"Wow… WOW.", "Da ist sie wieder, die Welle.", "Gänsehaut. Überall."};
@@ -216,6 +257,15 @@ public final class RollClient {
         player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
             .withColor(pool == LOW || pool == ZAP ? 0x8A8A9A : pool == HOT ? 0xFF6040 : 0xFF7EB6), true);
         nextThought = player.tickCount + 500 + player.getRandom().nextInt(500);
+    }
+
+    /** Everyone dances along: every living thing bounces with the kick. */
+    private static void onLivingPre(net.neoforged.neoforge.client.event.RenderLivingEvent.Pre<?, ?> event) {
+        if (beat < 0.05f || event.getEntity() == Minecraft.getInstance().player) return;
+        float k = MusicPulse.kick * Math.min(1f, beat);
+        // No push of our own: the entity dispatcher pops its pose after the renderer.
+        event.getPoseStack().translate(0.0, 0.12 * k, 0.0);
+        event.getPoseStack().scale(1f - 0.04f * k, 1f + 0.08f * k, 1f - 0.04f * k);
     }
 
     // ---- everyone is lovely ----

@@ -74,6 +74,15 @@ public final class MusicPulse {
     private static final double[] offsetAndLatency = new double[2];
     /** What is heard right now, weighted by how close the song is; see {@link #update}. */
     static float kick, level, hats;
+    /**
+     * Kicks counted (the club lights change colour with them); the build-up (0..1: the kick has
+     * dropped out, the music goes on - everyone waits); and the drop (1 the moment the kick comes
+     * back after a build-up, dying away over a second or two).
+     */
+    static int beats;
+    static float tension, drop;
+    private static double lastKick, period = 0.5;
+    private static boolean kicking, dropped;
 
     static void init() {
         NeoForge.EVENT_BUS.addListener(MusicPulse::onStream);
@@ -128,6 +137,19 @@ public final class MusicPulse {
         }
     }
 
+    /** True once after each drop. */
+    static boolean takeDrop() {
+        boolean was = dropped;
+        dropped = false;
+        return was;
+    }
+
+    /** Seconds to the nearest beat, going by the last kick and the tempo so far. */
+    static double offBeat() {
+        double since = (System.nanoTime() / 1e9 - lastKick) % period;
+        return Math.min(since, period - since);
+    }
+
     /** True while a song can be heard. Updated by {@link #update}. */
     static boolean playing() {
         return playing;
@@ -160,6 +182,24 @@ public final class MusicPulse {
         playing = heard;
         float dt = (float) Math.min(0.1, now - lastFrame);
         lastFrame = now;
+        if (k > 0.5f && !kicking) {
+            beats++;
+            double gap = now - lastKick;
+            if (gap > 0.25 && gap < 1.2) period += (gap - period) * 0.2;
+            if (tension > 0.4f) {
+                drop = 1f;
+                dropped = true;
+            }
+            tension = 0f;
+            lastKick = now;
+        }
+        kicking = k > 0.5f;
+        // Build-up: no kick for a while, but the music keeps going. Not forever - a song without
+        // drums is not one long build-up.
+        double quiet = now - lastKick;
+        if (heard && quiet > 3.0 && quiet < 20.0 && l > 0.3f) tension = Math.min(1f, tension + dt / 8f);
+        else if (!heard || quiet >= 20.0) tension = Math.max(0f, tension - dt / 2f);
+        drop *= (float) Math.exp(-dt * 1.2);
         kick = Math.max(k, kick * (float) Math.exp(-dt * 9.0));
         hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
         // Up fast, down slowly: loud bits hit at once, the quiet comes in gently.
