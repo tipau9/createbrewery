@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:magic_mushroom"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.pilze.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.pilze.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "pilze": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:magic_mushroom"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "pilze"
+    ]
+  ]
+}

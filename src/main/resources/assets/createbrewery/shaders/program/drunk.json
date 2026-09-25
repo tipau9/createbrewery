@@ -22,6 +22,10 @@
         { "name": "Gray",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Dissoc",    "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "High",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
-        { "name": "Green",     "type": "float",     "count": 1,  "values": [ 0.0 ] }
+        { "name": "Green",     "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Trip",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Organic",   "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Desert",    "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "BadTrip",   "type": "float",     "count": 1,  "values": [ 0.0 ] }
     ]
 }

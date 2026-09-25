@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:peyote"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.meskalin.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.meskalin.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "meskalin": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:peyote"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "meskalin"
+    ]
+  ]
+}

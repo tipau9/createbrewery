@@ -81,5 +81,23 @@ public class ModItems {
         .properties(p -> p.durability(DrugServer.HITS_PER_JOINT))
         .register();
 
+    public static final ItemEntry<DrugItem> LSD = REGISTRATE
+        .item("lsd", p -> new DrugItem(p, DrugServer.Kind.LSD))
+        .lang("LSD-Pappe")
+        .properties(p -> p.stacksTo(64))
+        .register();
+
+    public static final ItemEntry<DrugItem> MAGIC_MUSHROOM = REGISTRATE
+        .item("magic_mushroom", p -> new DrugItem(p, DrugServer.Kind.SHROOMS))
+        .lang("Zauberpilz")
+        .properties(p -> p.stacksTo(64))
+        .register();
+
+    public static final ItemEntry<DrugItem> PEYOTE = REGISTRATE
+        .item("peyote", p -> new DrugItem(p, DrugServer.Kind.MESCALINE))
+        .lang("Peyote")
+        .properties(p -> p.stacksTo(64))
+        .register();
+
     public static void register() {}
 }

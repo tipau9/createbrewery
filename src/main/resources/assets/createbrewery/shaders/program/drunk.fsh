@@ -21,6 +21,10 @@ uniform float Gray;    // the crash after Koks: 0..1
 uniform float Dissoc;  // Keta: 0..1, 1 = K-Loch
 uniform float High;    // Weed: 0..1
 uniform float Green;   // greening out: 0..1
+uniform float Trip;    // LSD, mushrooms, peyote together: 0..1
+uniform float Organic; // share of the trip that is mushrooms: green, melting
+uniform float Desert;  // share that is peyote: warm, shimmering
+uniform float BadTrip; // fear: 0..1
 
 in vec2 texCoord;
 
@@ -36,6 +40,13 @@ vec3 ring(vec2 uv, vec2 r) {
           + tap(uv + vec2(0.0, r.y)) + tap(uv - vec2(0.0, r.y))
           + tap(uv + r * 0.707) + tap(uv - r * 0.707)
           + tap(uv + vec2(r.x, -r.y) * 0.707) + tap(uv + vec2(-r.x, r.y) * 0.707)) / 8.0;
+}
+
+// Turns a colour around the grey axis by angle a (radians): the hue shifts, brightness stays.
+vec3 hueShift(vec3 c, float a) {
+    const vec3 k = vec3(0.57735);
+    float ca = cos(a);
+    return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca);
 }
 
 // Light spilling over from bright spots within radius r: only what is really bright counts.
@@ -67,6 +78,18 @@ void main() {
     uv += vec2(sin(uv.y * 3.0 + t * 0.6), sin(uv.x * 2.5 + t * 0.5 + 1.3)) * 0.0035 * stoned;
     // Greening out: the stomach turns and the picture heaves with it, slowly (about 0.15 Hz).
     uv.y += sin(t * 0.9) * 0.006 * Green * (0.5 + uv.x);
+
+    // Psychedelics: surfaces breathe and crawl. Brightness steers the flow, so the patterns seem
+    // to grow out of the textures instead of floating over them.
+    float peak = smoothstep(0.55, 1.0, Trip);
+    float luma0 = dot(tap(uv), vec3(0.299, 0.587, 0.114));
+    vec2 flow = vec2(sin(uv.y * 14.0 + t * 0.8 + luma0 * 6.0), cos(uv.x * 12.0 + t * 0.7 + luma0 * 6.0));
+    uv += flow * px * (2.0 + 5.0 * peak) * Trip;
+    // Mushrooms: the world slowly melts downwards. Peyote: heat shimmer, like over desert sand.
+    uv.y += sin(uv.x * 20.0 + t * 0.4) * 0.004 * Trip * Organic;
+    uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert;
+    // A bad trip: the picture pulls nervously towards the middle, again and again.
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.015 * BadTrip * (0.5 + 0.5 * sin(t * 4.0)));
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -125,6 +148,30 @@ void main() {
     col.r = mix(col.r, tap(uv + d * 0.006).r, 0.5 * dream);
     col.b = mix(col.b, tap(uv - d * 0.006).b, 0.5 * dream);
 
+    // Psychedelics: colours intensify and slowly cycle, most in what is already colourful.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    sat = length(col - vec3(lum));
+    float shift = Trip * (0.6 * sin(t * 0.25) + 1.2 * peak * sin(t * 0.11 + lum * 4.0));
+    col = mix(col, hueShift(col, shift), clamp(sat * 3.0, 0.0, 1.0));
+    col = mix(vec3(lum), col, 1.0 + 0.8 * Trip);
+    // At the peak, geometry: a slowly turning kaleidoscope of the picture itself shines through,
+    // with a fine lattice of rainbow lines.
+    vec2 kc = uv - 0.5;
+    float kr = length(kc);
+    float seg = 6.2831853 / 8.0;
+    float ka = abs(mod(atan(kc.y, kc.x) + t * 0.05, seg) - seg * 0.5);
+    col = mix(col, tap(0.5 + vec2(cos(ka), sin(ka)) * kr), 0.3 * peak);
+    float lattice = smoothstep(0.92, 1.0, abs(sin(kr * 60.0 - t * 1.5) * sin(ka * 16.0)));
+    vec3 rainbow = 0.5 + 0.5 * sin(vec3(t, t * 1.3 + 2.0, t * 0.7 + 4.0) + kr * 20.0);
+    col += rainbow * lattice * 0.12 * peak;
+    // Palettes: mushrooms lean green and earthy, peyote warm and golden.
+    col *= mix(vec3(1.0), vec3(0.9, 1.1, 0.95), Organic * Trip);
+    col *= mix(vec3(1.0), vec3(1.12, 1.0, 0.82), Desert * Trip);
+    // The bad trip: drained and reddish, with the edges throbbing dark like a pulse.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.5 * BadTrip) * mix(vec3(1.0), vec3(1.1, 0.85, 0.85), BadTrip);
+    col *= 1.0 - smoothstep(0.15, 0.75, length(d)) * (0.5 + 0.3 * sin(t * 5.0)) * BadTrip;
+
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.55 * Green) * mix(vec3(1.0), vec3(0.82, 1.06, 0.72), Green);
@@ -145,7 +192,8 @@ void main() {
     // Only when properly drunk: in the party zone the camera never rests (aim drift, sway, view
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
     // Weed: faint trails behind movement from a mild high on, stronger when stoned.
-    col = mix(col, prev, (0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned) * Trail);
+    // Tripping: long tracers behind everything that moves.
+    col = mix(col, prev, min(0.85, 0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned + 0.4 * Trip) * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

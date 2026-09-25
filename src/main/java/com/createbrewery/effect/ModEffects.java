@@ -4,6 +4,7 @@ import com.createbrewery.CreateBrewery;
 import net.minecraft.core.registries.BuiltInRegistries;
 import com.createbrewery.drugs.DrugEffect;
 import com.createbrewery.drugs.DrugServer;
+import com.createbrewery.drugs.Psychedelics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -119,6 +120,29 @@ public class ModEffects {
                 net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
             .addAttributeModifier(Attributes.MAX_ABSORPTION, id("snack_bliss_absorption"), 4.0,
                 net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+
+    // ---- LSD, Pilze, Meskalin (see drugs/Psychedelics) ----
+
+    // Real trips last 6-12 hours; here 6-12 minutes, with a slow come-up of one to two.
+
+    public static final DeferredHolder<MobEffect, MobEffect> LSD_TRIP = EFFECTS.register("lsd_trip", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xE040FB, 20, Psychedelics::tripTick, Psychedelics.LSD_TICKS, 1800, 3600).stacks());
+
+    public static final DeferredHolder<MobEffect, MobEffect> SHROOM_TRIP = EFFECTS.register("shroom_trip", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x7CC47A, 20, Psychedelics::tripTick, Psychedelics.SHROOM_TICKS, 1200, 2400).stacks()
+            .scaled(Attributes.MOVEMENT_SPEED, id("shroom_speed"), -0.06));
+
+    public static final DeferredHolder<MobEffect, MobEffect> MESCALINE_TRIP = EFFECTS.register("mescaline_trip", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xE8A13A, 20, Psychedelics::tripTick, Psychedelics.MESCALINE_TICKS, 2400, 3600).stacks());
+
+    /** Toleranz: after a trip, any psychedelic does little for about a day. */
+    public static final DeferredHolder<MobEffect, MobEffect> PSY_TOLERANCE = EFFECTS.register("psy_tolerance", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x8E7CA8, 0, null, 0, 0, 0));
+
+    /** Horrortrip: fear takes over. Somewhere bright and safe, it passes faster. */
+    public static final DeferredHolder<MobEffect, MobEffect> BAD_TRIP = EFFECTS.register("bad_trip", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x5A1030, 20, Psychedelics::badTripTick, Psychedelics.BAD_TRIP_TICKS, 100, 400)
+            .scaled(Attributes.MOVEMENT_SPEED, id("bad_trip_speed"), 0.1));
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);

@@ -43,6 +43,11 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.dazed", "Benommen");
         REGISTRATE.addRawLang("effect.createbrewery.weed_high", "Bekifft");
         REGISTRATE.addRawLang("effect.createbrewery.greening_out", "Kreislauf am Ende");
+        REGISTRATE.addRawLang("effect.createbrewery.lsd_trip", "LSD-Trip");
+        REGISTRATE.addRawLang("effect.createbrewery.shroom_trip", "Pilz-Trip");
+        REGISTRATE.addRawLang("effect.createbrewery.mescaline_trip", "Meskalin-Trip");
+        REGISTRATE.addRawLang("effect.createbrewery.psy_tolerance", "Toleranz");
+        REGISTRATE.addRawLang("effect.createbrewery.bad_trip", "Horrortrip");
         REGISTRATE.addRawLang("subtitles.createbrewery.cough", "Husten");
         REGISTRATE.addRawLang("subtitles.createbrewery.giggle", "Kichern");
         REGISTRATE.addRawLang("effect.createbrewery.ck_mix", "CK-Mix");
@@ -104,6 +109,11 @@ public class CreateBrewery {
         advancement("k_loch", "Willkommen im K-Loch", "Nimm so viel Keta, dass du im K-Loch landest");
         advancement("ck", "Schnee und Pferde", "Hab Koks und Keta gleichzeitig im Blut");
         advancement("ibu", "Hilft gegen alles", "Nimm eine Ibu");
+        advancement("lsd", "Farben haben jetzt Geräusche", "Leg dir eine LSD-Pappe auf die Zunge");
+        advancement("ego_tod", "Ego-Tod", "Erreiche den Gipfel einer Heldendosis LSD");
+        advancement("pilze", "Fun Guy", "Iss einen Zauberpilz");
+        advancement("meskalin", "Wüstenprophet", "Kau einen Peyote-Kaktus");
+        advancement("horrortrip", "Falsches Set, falsches Setting", "Rutsch in einen Horrortrip");
         advancement("apotheke_leer", "Apotheke leergeräumt", "Nimm jede Droge mindestens einmal");
         // advancements:end
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {

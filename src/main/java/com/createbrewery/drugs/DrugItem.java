@@ -21,12 +21,21 @@ public class DrugItem extends Item {
 
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.TOOT_HORN; // raised to the face
+        return switch (kind) {
+            case SHROOMS, MESCALINE -> UseAnim.EAT; // chewed, and they taste awful
+            default -> UseAnim.TOOT_HORN;           // raised to the face (or a tab on the tongue)
+        };
     }
 
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
-        return kind == DrugServer.Kind.WEED ? 30 : 24; // a long drag on the joint
+        return switch (kind) {
+            case WEED -> 30;      // a long drag on the joint
+            case LSD -> 16;       // a tab on the tongue
+            case SHROOMS -> 32;
+            case MESCALINE -> 48; // tough, bitter cactus
+            default -> 24;
+        };
     }
 
     @Override

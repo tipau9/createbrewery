@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:lsd"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.lsd.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.lsd.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "lsd": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:lsd"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "lsd"
+    ]
+  ]
+}

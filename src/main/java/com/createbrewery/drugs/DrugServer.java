@@ -91,7 +91,7 @@ public final class DrugServer {
     /** Three joints' worth of hits in the body at most. */
     private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
-    public enum Kind { COKE, KETA, WEED }
+    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
@@ -136,15 +136,19 @@ public final class DrugServer {
             hit(player);
             return;
         }
+        if (kind == Kind.LSD || kind == Kind.SHROOMS || kind == Kind.MESCALINE) {
+            Psychedelics.take(player, kind);
+            return;
+        }
         Holder<MobEffect> high = switch (kind) {
             case COKE -> ModEffects.COKE_HIGH;
             case KETA -> ModEffects.KETA_HIGH;
-            case WEED -> ModEffects.WEED_HIGH;
+            default -> ModEffects.WEED_HIGH;
         };
         int ticks = switch (kind) {
             case COKE -> COKE_TICKS;
             case KETA -> KETA_TICKS;
-            case WEED -> WEED_TICKS;
+            default -> WEED_TICKS;
         };
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
@@ -330,6 +334,7 @@ public final class DrugServer {
         MobEffectInstance instance = event.getEffectInstance();
         LivingEntity entity = event.getEntity();
         if (instance == null || entity.level().isClientSide) return;
+        Psychedelics.expired(entity, instance);
         // After a CK session everything lasts half again as long.
         float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
         if (instance.is(ModEffects.COKE_HIGH)) {

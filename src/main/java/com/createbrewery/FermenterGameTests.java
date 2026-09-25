@@ -736,4 +736,21 @@ public class FermenterGameTests {
         helper.assertTrue(player.getFoodData().getFoodLevel() == 18, "the bliss fed on its own, food " + player.getFoodData().getFoodLevel());
         helper.succeed();
     }
+
+    /** A trip ends in a day of tolerance for every psychedelic, and a tolerant dose starts at half and only fades. */
+    @GameTest(template = TEMPLATE)
+    public static void psychedelicsShareTolerance(GameTestHelper helper) {
+        // Mock players do not tick their effects; a pig does.
+        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.LSD_TRIP, 5));
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.PSY_TOLERANCE, 1000));
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(pig.hasEffect(com.createbrewery.effect.ModEffects.PSY_TOLERANCE), "no tolerance after LSD");
+            com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.SHROOMS);
+            float felt = com.createbrewery.drugs.DrugEffect.felt(player, com.createbrewery.effect.ModEffects.SHROOM_TRIP);
+            helper.assertTrue(felt > 0f && felt <= 0.5f, "tolerant mushrooms hit at " + felt);
+            helper.succeed();
+        });
+    }
 }

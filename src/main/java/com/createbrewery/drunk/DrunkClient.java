@@ -71,6 +71,8 @@ public final class DrunkClient {
     private static float blood;
     /** Koks, the crash after it, and Keta, eased like the blood level (0..1 each). */
     private static float stim, gray, dissoc, high, green;
+    /** Psychedelics: how hard the trip hits, which share of it is mushrooms or peyote, and fear. */
+    private static float trip, organic, desert, bad;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
     private static int lastCokeBeat;
@@ -159,10 +161,22 @@ public final class DrunkClient {
         dissoc = ease(dissoc, Math.min(1f, keta));
         high = ease(high, player == null ? 0f : DrugEffect.felt(player, ModEffects.WEED_HIGH));
         green = ease(green, player == null ? 0f : DrugEffect.strength(player, ModEffects.GREENING_OUT));
+        float lsd = player == null ? 0f : DrugEffect.felt(player, ModEffects.LSD_TRIP);
+        float shroom = player == null ? 0f : DrugEffect.felt(player, ModEffects.SHROOM_TRIP);
+        float mesc = player == null ? 0f : DrugEffect.felt(player, ModEffects.MESCALINE_TRIP);
+        float all = lsd + shroom + mesc;
+        trip = ease(trip, Math.min(1f, all));
+        // The palette only shifts while something is active, so it does not snap when the trip ends.
+        if (all > 0.001f) {
+            organic = ease(organic, shroom / all);
+            desert = ease(desert, mesc / all);
+        }
+        bad = ease(bad, player == null ? 0f : DrugEffect.strength(player, ModEffects.BAD_TRIP));
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
-                || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f);
+                || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
+                || trip > 0.01f || bad > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -377,6 +391,10 @@ public final class DrunkClient {
             chain.setUniform("Dissoc", dissoc * screen());
             chain.setUniform("High", high * screen());
             chain.setUniform("Green", green * screen());
+            chain.setUniform("Trip", trip * screen());
+            chain.setUniform("Organic", organic);
+            chain.setUniform("Desert", desert);
+            chain.setUniform("BadTrip", bad * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -433,6 +451,7 @@ public final class DrunkClient {
         SoundSource source = sound.getSource();
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
         if (sound instanceof Echo || sound instanceof Phantom) return;
+        synaesthesia(player, sound);
         // Your own mining, placing and bites ring on for a moment (not every footstep).
         if (high > 0.2f && (source == SoundSource.PLAYERS || source == SoundSource.BLOCKS)
             && !sound.getLocation().getPath().endsWith(".step")
@@ -447,6 +466,25 @@ public final class DrunkClient {
             boolean ambience = source == SoundSource.AMBIENT || source == SoundSource.WEATHER;
             float louder = ambience ? 1f + 0.8f * high : (1f + 0.3f * high) / listenerBoost();
             event.setSound(new EnhancedSound(sound, louder, 1f - 0.06f * high));
+        }
+    }
+
+    /**
+     * Tripping, sounds can be seen: a burst of coloured notes where they come from, its colour
+     * following the pitch of the sound.
+     */
+    private static void synaesthesia(LocalPlayer player, SoundInstance sound) {
+        Minecraft mc = Minecraft.getInstance();
+        if (trip < 0.25f || mc.level == null || sound.isRelative() || sound.getSource() == SoundSource.MUSIC
+            || player.getRandom().nextFloat() > trip * 0.7f) return;
+        double x = sound.getX(), y = sound.getY(), z = sound.getZ();
+        if (player.distanceToSqr(x, y, z) > 24 * 24) return;
+        float hue = Math.abs(sound.getLocation().hashCode() % 24) / 24f;
+        int n = 1 + (int) (trip * 4);
+        for (int i = 0; i < n; i++) {
+            mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.NOTE,
+                x + (player.getRandom().nextDouble() - 0.5), y + 0.3 + player.getRandom().nextDouble() * 0.6,
+                z + (player.getRandom().nextDouble() - 0.5), (hue + i * 0.07) % 1f, 0.0, 0.0);
         }
     }
 
@@ -672,6 +710,9 @@ public final class DrunkClient {
         MobEffectInstance racing = event.getPlayer().getEffect(ModEffects.TACHYCARDIA);
         float tunnel = racing == null ? 0f : 0.03f * (racing.getAmplifier() + 1);
         float drugs = 1f + (0.12f * dissoc - 0.04f * stim - tunnel) * screen();
+        // Tripping, the whole view breathes in and out; a bad trip makes it gasp.
+        double sec = event.getPlayer().tickCount / 20.0;
+        drugs += (float) (Math.sin(sec * 0.9) * 0.035 * trip + noise(sec * 2.2, 11) * 0.03 * bad) * screen();
         if (drugs != 1f) event.setNewFovModifier(event.getNewFovModifier() * drugs);
         if (blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.

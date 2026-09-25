@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/lsd",
+  "display": {
+    "icon": {
+      "id": "createbrewery:lsd"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.horrortrip.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.horrortrip.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "bad": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:bad_trip": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "bad"
+    ]
+  ]
+}

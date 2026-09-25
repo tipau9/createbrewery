@@ -63,6 +63,10 @@ public class DrugEffect extends MobEffect {
         return this;
     }
 
+    public int total() { return total; }
+    public int onset() { return onset; }
+    public int fade() { return fade; }
+
     /** 0..1 how strongly {@code effect} acts on {@code entity} right now; 0 if absent. Works on both sides. */
     public static float strength(LivingEntity entity, Holder<MobEffect> effect) {
         MobEffectInstance instance = entity.getEffect(effect);

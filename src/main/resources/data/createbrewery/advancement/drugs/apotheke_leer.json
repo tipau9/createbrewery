@@ -55,6 +55,30 @@
           "items": "createbrewery:ibuprofen"
         }
       }
+    },
+    "lsd": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:lsd"
+        }
+      }
+    },
+    "pilze": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:magic_mushroom"
+        }
+      }
+    },
+    "meskalin": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:peyote"
+        }
+      }
     }
   },
   "requirements": [
@@ -72,6 +96,15 @@
     ],
     [
       "ibu"
+    ],
+    [
+      "lsd"
+    ],
+    [
+      "pilze"
+    ],
+    [
+      "meskalin"
     ]
   ]
 }
