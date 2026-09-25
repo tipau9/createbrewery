@@ -210,12 +210,13 @@ public final class DrunkClient {
             TripClient.tick(mc, player);
             RollClient.tick(mc, player);
             TweakClient.tick(mc, player);
+            NodClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -239,7 +240,8 @@ public final class DrunkClient {
             echoes(mc, player);
         }
         hearing(mc);
-        muffle = 1f - 0.55f * high;
+        // High, and on heroin even more: the world as if through cotton wool.
+        muffle = Math.min(1f - 0.55f * high, 1f - 0.6f * opiate);
     }
 
     /**
@@ -465,6 +467,11 @@ public final class DrunkClient {
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Tired", TweakClient.tired * screen());
             chain.setUniform("Nod", opiate * screen());
+            chain.setUniform("Flood", NodClient.flood * screen());
+            chain.setUniform("Dream", NodClient.dream * screen());
+            chain.setUniform("Breath", NodClient.breath);
+            chain.setUniform("Air", NodClient.air * screen());
+            chain.setUniform("Sick", NodClient.sick * screen());
             chain.setUniform("Wah", wah * screen());
             chain.setUniform("Stare", TripClient.stare * screen());
             chain.setUniform("Harsh", TripClient.harsh);
@@ -831,7 +838,7 @@ public final class DrunkClient {
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f)) return;
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -853,6 +860,8 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 1.3) * 1.2f * MusicPulse.kick * RollClient.beat;
         // At the peak every kick slams the head.
         roll += noise(t * 30.0, 89) * 7f * MusicPulse.kick * RollClient.beat * RollClient.peak;
+        // Heroin: waking from a nod with a jolt.
+        roll += noise(t * 30.0, 101) * 4f * NodClient.jerk;
         // A brain zap jerks the head.
         roll += noise(t * 40.0, 97) * 4f * RollClient.zap;
         roll += noise(t * 14.0, 71) * 0.8f * TripClient.chill;
@@ -1087,15 +1096,17 @@ public final class DrunkClient {
                 lid = Math.max(lid, nod(t) * 0.52f);
             }
         }
-        // Heroin: nodding - the eyes sink shut and jerk open again, over and over.
-        lid = Math.max(lid, opiate * (0.1f + nod(t * 1.3) * 0.45f) * screen());
+        // Heroin: on the nod the eyes sink shut and jerk open again (NodClient); Xanax makes them heavy.
+        lid = Math.max(lid, Math.max(NodClient.lid, 0.1f * opiate) * screen());
         if (lid > 0f) {
             int px = (int) (h * lid);
             int feather = h / 8;
-            g.fill(0, 0, w, px, 0xF5000000);
-            g.fillGradient(0, px, w, px + feather, 0xF5000000, 0x00000000);
-            g.fill(0, h - px, w, h, 0xF5000000);
-            g.fillGradient(0, h - px - feather, w, h - px, 0x00000000, 0xF5000000);
+            // Behind closed eyes, the nod's dream shows through.
+            int dark = (int) (0xF5 * (1f - 0.75f * NodClient.dream * screen())) << 24;
+            g.fill(0, 0, w, px, dark);
+            g.fillGradient(0, px, w, px + feather, dark, 0x00000000);
+            g.fill(0, h - px, w, h, dark);
+            g.fillGradient(0, h - px - feather, w, h - px, 0x00000000, dark);
         }
 
         float retch = retch(player, event.getPartialTick().getGameTimeDeltaPartialTick(true));

@@ -30,6 +30,11 @@ uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
 uniform float Tired;   // Meth, awake too long (or psychotic): the edges of the view lie, 0..1
 uniform float Nod;     // Heroin: 0..1
+uniform float Flood;   // Heroin: the rush after a shot, warmth rolling up from below, 0..1
+uniform float Dream;   // Heroin: on the nod, a dream behind the closed eyes, 0..1
+uniform float Breath;  // Heroin: each slow breath, 0..1 (1 = breathing in)
+uniform float Air;     // Heroin: the breath failing - blue and dark between breaths, 0..1
+uniform float Sick;    // Heroin withdrawal (cold turkey): cold, clammy, gooseflesh, 0..1
 uniform float Wah;     // Lachgas: 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
 uniform float Beat;    // MDMA: how much the music is in the body, 0..1
@@ -211,6 +216,8 @@ void main() {
     float tick8 = floor(t * 8.0);
     float twitch = step(0.96, fract(sin(tick8 * 91.7) * 43758.5453));
     uv += (vec2(fract(sin(tick8 * 12.9) * 437.58), fract(sin(tick8 * 78.2) * 437.58)) - 0.5) * 0.012 * twitch * Tweak;
+    // Cold turkey: the legs will not keep still, and neither does the view.
+    uv += (vec2(hash(vec2(floor(t * 20.0), 1.0)), hash(vec2(floor(t * 20.0), 2.0))) - 0.5) * 0.002 * Sick;
     // ...and the eyes vibrate: a fine, fast buzz up and down, all the time (clenched jaw, nystagmus).
     uv.y += sin(t * 95.0) * 0.0012 * Tweak;
     // Sleepless, surfaces start to crawl: tiny patches shift about, a few times a second.
@@ -616,6 +623,45 @@ void main() {
     col = mix(col, ring(uv, px * 3.0), 0.5 * Nod);
     col *= mix(vec3(1.0), vec3(1.1, 0.95, 0.8), Nod) * (1.0 - 0.25 * Nod);
     col *= 1.0 - smoothstep(0.2, 0.8, length(d)) * 0.6 * Nod;
+    // Pinpoint pupils: light no longer glares - the bright things sink.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col *= 1.0 - 0.35 * smoothstep(0.55, 1.0, lum) * Nod;
+    // Every slow breath swells warm through the picture.
+    col *= 1.0 + 0.08 * Breath * Nod;
+    // The rush: warmth rolls up from the belly - golden, soft, everything melts into it.
+    float warmth = clamp(Flood * 1.6 - uv.y, 0.0, 1.0);
+    if (warmth > 0.0) {
+        col = mix(col, ring(uv, px * 5.0), 0.5 * warmth);
+        col += vec3(1.0, 0.68, 0.32) * 0.35 * warmth + spill(uv, px * 9.0, 0.3) * vec3(1.0, 0.75, 0.4) * 2.0 * warmth;
+        lum = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(vec3(lum), col, 1.0 + 0.4 * warmth);
+    }
+    // The breath failing: between breaths the colour drains to a cold blue and the dark closes in.
+    float starve = Air * (1.0 - Breath);
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum) * vec3(0.6, 0.72, 1.0), 0.6 * starve);
+    col *= 1.0 - smoothstep(0.1, 0.7, length(d)) * 0.8 * starve;
+    // Cold turkey: pale, cold and clammy, the skin all gooseflesh.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum) * vec3(0.88, 0.96, 1.05), 0.4 * Sick) * (1.0 + 0.05 * Sick);
+    col *= 1.0 - 0.07 * Sick * step(0.85, hash(floor(uv * OutSize / 3.0)));
+    // On the nod: a dream behind the closed eyes - the world turning slowly, soft and golden,
+    // like a memory, with lights drifting through it.
+    if (Dream > 0.0) {
+        vec2 q = (uv - 0.5) * vec2(aspect, 1.0);
+        float turn = 0.15 * sin(t * 0.2);
+        q = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * q * (0.8 + 0.05 * sin(t * 0.3));
+        vec3 memory = ring(0.5 + q / vec2(aspect, 1.0), px * 8.0);
+        lum = dot(memory, vec3(0.299, 0.587, 0.114));
+        memory = mix(vec3(lum), memory, 0.4) * vec3(1.15, 0.95, 0.7);
+        for (int i = 0; i < 5; i++) {
+            float fi = float(i);
+            vec2 p = vec2(0.5 + 0.35 * sin(t * 0.13 * (1.0 + fi * 0.3) + fi * 2.0), 0.5 + 0.3 * cos(t * 0.11 * (1.0 + fi * 0.2) + fi * 1.3));
+            memory += vec3(1.0, 0.8, 0.5) * 0.25 * smoothstep(0.2, 0.0, length((uv - p) * vec2(aspect, 1.0)));
+        }
+        memory *= 1.0 - smoothstep(0.2, 0.75, length(d)) * 0.7;
+        col = mix(col, memory, Dream);
+    }
 
     // Lachgas: the world shrinks to a bright tunnel, far away, echoing.
     col = mix(col, tap(0.5 + (uv - 0.5) * 0.92), 0.35 * Wah * wahPulse);

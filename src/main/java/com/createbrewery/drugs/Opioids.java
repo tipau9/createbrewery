@@ -94,6 +94,10 @@ public final class Opioids {
         if (breath >= Pharmacology.BREATH_FAILING) {
             player.addEffect(new MobEffectInstance(ModEffects.RESPIRATORY_DEPRESSION, 60, 0, false, false, true));
         }
+        // The first times the stomach turns, in the minute after the shot.
+        if (nod != null && s.dependence < 0.45f && HEROIN_TICKS - nod.getDuration() < 1200 && player.getRandom().nextFloat() < 0.01f) {
+            DrunkServer.vomit(player);
+        }
         if (nod != null || s.dependence <= 0f) return;
         if (s.dependence >= DEPENDENT) {
             player.addEffect(new MobEffectInstance(ModEffects.WITHDRAWAL, 60, 0, false, false, true));
