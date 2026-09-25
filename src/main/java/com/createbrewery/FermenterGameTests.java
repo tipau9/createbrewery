@@ -785,6 +785,17 @@ public class FermenterGameTests {
         });
     }
 
+    /** A trip ends in the afterglow. */
+    @GameTest(template = TEMPLATE)
+    public static void tripLeavesAfterglow(GameTestHelper helper) {
+        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.LSD_TRIP, 5));
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(pig.hasEffect(com.createbrewery.effect.ModEffects.AFTERGLOW), "no afterglow after the trip");
+            helper.succeed();
+        });
+    }
+
     /** Two shots of heroin are survivable, with Xanax on top they stop the breath; Xanax ends a bad trip. */
     @GameTest(template = TEMPLATE)
     public static void heroinWithXanaxStopsTheBreath(GameTestHelper helper) {

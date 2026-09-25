@@ -48,6 +48,9 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.mescaline_trip", "Meskalin-Trip");
         REGISTRATE.addRawLang("effect.createbrewery.psy_tolerance", "Toleranz");
         REGISTRATE.addRawLang("effect.createbrewery.bad_trip", "Horrortrip");
+        REGISTRATE.addRawLang("effect.createbrewery.afterglow", "Nachglühen");
+        REGISTRATE.addRawLang("effect.createbrewery.flashback", "Flashback");
+        REGISTRATE.addRawLang("effect.createbrewery.flashback_pending", "Nachhall");
         REGISTRATE.addRawLang("effect.createbrewery.breakthrough", "Durchbruch");
         REGISTRATE.addRawLang("effect.createbrewery.rolling", "Ecstasy-Rausch");
         REGISTRATE.addRawLang("effect.createbrewery.comedown", "Tiefpunkt");

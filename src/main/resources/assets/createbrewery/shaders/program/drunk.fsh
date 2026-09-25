@@ -30,6 +30,17 @@ uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
 uniform float Nod;     // Heroin: 0..1
 uniform float Wah;     // Lachgas: 0..1
+// Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
+// World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
+uniform sampler2D DiffuseDepthSampler;
+uniform mat4 InvViewProj;  // screen to camera-relative world, this frame
+uniform mat4 PrevViewProj; // camera-relative world to screen, last frame
+uniform vec3 CamPos;       // camera position, wrapped to keep float precision
+uniform vec3 CamDelta;     // how far the camera moved since last frame
+uniform float World;
+uniform float Stare;       // 0..1: how long the view has rested on one spot
+uniform float Harsh;       // 0..1: a bad place to trip (Nether, caves, night)
+uniform float Afterglow;   // 0..1: the clear, bright day after a trip
 
 in vec2 texCoord;
 
@@ -52,6 +63,20 @@ vec3 hueShift(vec3 c, float a) {
     const vec3 k = vec3(0.57735);
     float ca = cos(a);
     return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca);
+}
+
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+// Camera-relative world position of a screen point at the given depth.
+vec3 worldAt(vec2 uv, float depth) {
+    vec4 w = InvViewProj * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    return w.xyz / w.w;
+}
+
+float distAt(vec2 uv) {
+    return length(worldAt(uv, texture(DiffuseDepthSampler, uv).r));
 }
 
 // Light spilling over from bright spots within radius r: only what is really bright counts.
@@ -106,6 +131,27 @@ void main() {
     uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert;
     // A bad trip: the picture pulls nervously towards the middle, again and again.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.015 * BadTrip * (0.5 + 0.5 * sin(t * 4.0)));
+    // ...and the walls lean in: the edges of the picture are pulled towards the middle.
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.07 * BadTrip * smoothstep(0.2, 0.7, length(uv - 0.5)));
+
+    // Tripping, the world itself breathes: the waves are tied to places in the world, so a wall
+    // keeps its own slow swell as you walk past it, and far walls swell more than near ones.
+    float depth0 = texture(DiffuseDepthSampler, uv).r;
+    vec3 rel = worldAt(uv, depth0);
+    vec3 wp = rel + CamPos;
+    float dist = length(rel);
+    float sky = step(0.99999, depth0);
+    float solid = (1.0 - sky) * World;
+    float breathe = sin(wp.x * 0.8 + t * 0.9) * sin(wp.z * 0.8 - t * 0.7) + 0.5 * sin(wp.y * 1.1 + t * 0.6);
+    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * solid;
+    // Stare at one spot and it starts to melt: the middle of the view slowly turns and drips.
+    float st = Stare * Trip;
+    vec2 sc = (uv - 0.5) * vec2(aspect, 1.0);
+    float held = smoothstep(0.35, 0.0, length(sc));
+    float swirl = st * 0.9 * held * sin(t * 0.4);
+    sc = mat2(cos(swirl), -sin(swirl), sin(swirl), cos(swirl)) * sc;
+    uv = 0.5 + sc * vec2(1.0 / aspect, 1.0);
+    uv.y -= st * held * 0.012 * (1.0 + sin(uv.x * 40.0 + t * 0.7));
 
     // MDMA: at its height the eyes flicker side to side (nystagmus), fast and tiny.
     uv.x += sin(t * 38.0) * 0.0012 * smoothstep(0.5, 1.0, Roll);
@@ -191,6 +237,39 @@ void main() {
     float lattice = smoothstep(0.92, 1.0, abs(sin(kr * 60.0 - t * 1.5) * sin(ka * 16.0)));
     vec3 rainbow = 0.5 + 0.5 * sin(vec3(t, t * 1.3 + 2.0, t * 0.7 + 4.0) + kr * 20.0);
     col += rainbow * lattice * 0.12 * peak;
+    // Flowing lines drawn onto the surfaces themselves (not the screen), fading with distance.
+    float wpat = sin(wp.x * 2.0 + 2.0 * sin(wp.z * 1.3 + t * 0.5)) + sin(wp.z * 2.0 + 2.0 * sin(wp.y * 1.7 - t * 0.4))
+               + sin(wp.y * 2.0 + 2.0 * sin(wp.x * 1.1 + t * 0.3));
+    float contour = smoothstep(0.8, 1.0, abs(sin(wpat * 3.14159)));
+    vec3 wrainbow = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + wpat * 0.3 + t * 0.05));
+    col += wrainbow * contour * 0.16 * Trip * solid * exp(-dist / 40.0);
+    // At the peak, every edge of the world glows in neon.
+    float dc = distAt(uv);
+    float dx = abs(distAt(uv + vec2(px.x, 0.0)) + distAt(uv - vec2(px.x, 0.0)) - 2.0 * dc);
+    float dy = abs(distAt(uv + vec2(0.0, px.y)) + distAt(uv - vec2(0.0, px.y)) - 2.0 * dc);
+    float outline = smoothstep(0.02, 0.12, (dx + dy) / max(dc, 0.5));
+    col = mix(col, wrainbow * 1.2, outline * 0.55 * peak * solid);
+    // Grass, leaves and water wander through other colours.
+    float foliage = clamp((col.g - max(col.r, col.b)) * 6.0, 0.0, 1.0) + clamp((col.b - max(col.r, col.g)) * 4.0, 0.0, 1.0);
+    col = mix(col, hueShift(col, 2.5 * sin(t * 0.12 + (wp.x + wp.z) * 0.04)), min(1.0, foliage) * 0.8 * Trip * solid);
+    // The sky cycles through colours, and stars come out even by day.
+    vec3 dir = normalize(rel);
+    vec3 starCell = floor(dir * 150.0);
+    float star = step(0.996, hash(starCell.xy + starCell.z * 17.0)) * (0.5 + 0.5 * sin(t * 3.0 + hash(starCell.yz) * 30.0));
+    col = mix(col, hueShift(col, t * 0.3 + dir.y * 3.0) * 1.1, 0.7 * Trip * sky * World);
+    col += vec3(star) * Trip * sky * World;
+    // At the peak the picture mirrors itself, and the two halves slowly drift.
+    float mirror = peak * smoothstep(0.3, 0.9, 0.5 + 0.5 * sin(t * 0.06));
+    col = mix(col, tap(vec2(1.0 - uv.x + 0.03 * sin(t * 0.3), uv.y)), 0.45 * mirror);
+    // Visual snow: fine coloured grain over everything.
+    vec2 grainAt = floor(uv * OutSize / 2.0) + mod(floor(t * 24.0), 251.0) * 7.0;
+    col += (vec3(hash(grainAt), hash(grainAt + 3.1), hash(grainAt + 5.7)) - 0.5) * 0.07 * Trip;
+    // Once in a while at the peak, colours flip for a heartbeat (soft, never a full flash).
+    float blink = fract(t / 23.0);
+    col = mix(col, 1.0 - col, 0.45 * peak * smoothstep(0.0, 0.008, blink) * smoothstep(0.03, 0.012, blink));
+    // A bad place makes it harsh: hard contrast, bloody light.
+    col = (col - 0.5) * (1.0 + 0.3 * Harsh * Trip) + 0.5;
+    col *= mix(vec3(1.0), vec3(1.12, 0.9, 0.85), Harsh * Trip);
     // Palettes: mushrooms lean green and earthy, peyote warm and golden.
     col *= mix(vec3(1.0), vec3(0.9, 1.1, 0.95), Organic * Trip);
     col *= mix(vec3(1.0), vec3(1.12, 1.0, 0.82), Desert * Trip);
@@ -234,6 +313,11 @@ void main() {
     col = mix(col, vec3(lum), 0.55 * Green) * mix(vec3(1.0), vec3(0.82, 1.06, 0.72), Green);
     col *= 1.0 - smoothstep(0.2, 0.8, length(d)) * 0.6 * Green;
 
+    // The afterglow: the day after a trip, everything looks clear and freshly washed.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(lum), col, 1.0 + 0.3 * Afterglow);
+    col += (col - ring(uv, px * 4.0)) * 0.35 * Afterglow;
+
     // Too much: washed-out, sickly warm colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.25 * k);
@@ -250,7 +334,14 @@ void main() {
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
     // Weed: faint trails behind movement from a mild high on, stronger when stoned.
     // Tripping: long tracers behind everything that moves.
-    col = mix(col, prev, min(0.85, 0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned + 0.4 * Trip + 0.3 * Break) * Trail);
+    col = mix(col, prev, min(0.85, 0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned + 0.4 * Trip * (1.0 - World) + 0.3 * Break) * Trail);
+    // Tripping: tracers behind everything that moves - mobs, drops, other players. Last frame is
+    // looked up where this spot of the world was on screen then, so standing things stay sharp
+    // while you look around, and only real movement leaves ghost copies behind.
+    vec4 was = PrevViewProj * vec4(worldAt(texCoord, texture(DiffuseDepthSampler, texCoord).r) + CamDelta, 1.0);
+    vec2 wasUv = was.xy / was.w * 0.5 + 0.5;
+    float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
+    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.8, 0.55 * Trip) * Trail * World * onScreen);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

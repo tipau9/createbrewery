@@ -13,6 +13,10 @@
                 {
                     "name": "PrevSampler",
                     "id": "previous"
+                },
+                {
+                    "name": "DiffuseDepthSampler",
+                    "id": "minecraft:main:depth"
                 }
             ]
         },

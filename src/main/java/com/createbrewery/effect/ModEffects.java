@@ -146,6 +146,20 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, MobEffect> PSY_TOLERANCE = EFFECTS.register("psy_tolerance", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0x8E7CA8, 0, null, 0, 0, 0));
 
+    /** Nachglühen: the day after a trip - clear colours, a quiet mind, a little luck. */
+    public static final DeferredHolder<MobEffect, MobEffect> AFTERGLOW = EFFECTS.register("afterglow", () ->
+        new DrugEffect(MobEffectCategory.BENEFICIAL, 0xFFE9A8, 0, null, Psychedelics.AFTERGLOW_TICKS, 200, 3000)
+            .addAttributeModifier(Attributes.LUCK, id("afterglow_luck"), 1.0,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+
+    /** Flashback: a few seconds of the old trip, out of nowhere, days later. */
+    public static final DeferredHolder<MobEffect, MobEffect> FLASHBACK = EFFECTS.register("flashback", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xC080FF, 0, null, Psychedelics.FLASHBACK_TICKS, 40, 100));
+
+    /** Nachhall: a flashback still waiting to happen. Never shown. */
+    public static final DeferredHolder<MobEffect, MobEffect> FLASHBACK_PENDING = EFFECTS.register("flashback_pending", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x6A5A80, 0, null, 0, 0, 0));
+
     /** Horrortrip: fear takes over. Somewhere bright and safe, it passes faster. */
     public static final DeferredHolder<MobEffect, MobEffect> BAD_TRIP = EFFECTS.register("bad_trip", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x5A1030, 20, Psychedelics::badTripTick, Psychedelics.BAD_TRIP_TICKS, 100, 400)

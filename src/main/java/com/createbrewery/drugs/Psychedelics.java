@@ -40,7 +40,12 @@ public final class Psychedelics {
     /** A real breakthrough lasts ~15 minutes: here 45 seconds. */
     public static final int DMT_TICKS = 900;
     /** Three doses at most: from the third LSD tab on, the ego dissolves. */
-    private static final int MAX_LEVEL = 2;
+    public static final int MAX_LEVEL = 2;
+    /** Nachglühen: about ten minutes of clear colours after a trip. */
+    public static final int AFTERGLOW_TICKS = 12000;
+    /** Now and then, one or two days later, the trip comes back for a few seconds. */
+    public static final int FLASHBACK_TICKS = 200;
+    private static final float FLASHBACK_CHANCE = 0.3f;
 
     public static Holder<MobEffect> effect(DrugServer.Kind kind) {
         return switch (kind) {
@@ -126,26 +131,42 @@ public final class Psychedelics {
         if (DrugEffect.strength(entity, ModEffects.BREAKTHROUGH) > 0.8f) DrugServer.award(entity, "maschinenelfen", "met");
     }
 
-    private static boolean comingUp(Player player, Holder<MobEffect> trip) {
+    public static boolean comingUp(Player player, Holder<MobEffect> trip) {
         MobEffectInstance instance = player.getEffect(trip);
         if (instance == null || !(trip.value() instanceof DrugEffect drug)) return false;
         return drug.total() - instance.getDuration() < drug.onset();
     }
 
-    /** 0: a good place to trip. Up to 3: dark, hurt and hunted all at once. */
+    /**
+     * 0: a good place to trip. Up to 4: dark, hurt, hunted and in the Nether all at once. A friend
+     * close by and sunshine outside both take some of it away.
+     */
     public static float badSetting(Player player) {
         float bad = 0f;
         if (player.level().getMaxLocalRawBrightness(player.blockPosition()) < 6) bad += 1f;
         if (player.getHealth() < player.getMaxHealth() * 0.5f) bad += 1f;
         if (!player.level().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(10.0),
             e -> e instanceof Enemy).isEmpty()) bad += 1f;
-        return bad;
+        if (player.level().dimensionType().ultraWarm()) bad += 1f;
+        if (!player.level().getEntitiesOfClass(Player.class, player.getBoundingBox().inflate(8.0), p -> p != player).isEmpty()) bad -= 1f;
+        if (player.level().isDay() && player.level().canSeeSky(player.blockPosition())) bad -= 0.5f;
+        return Math.max(0f, bad);
     }
 
-    /** When a trip ends: a day of tolerance for all three. */
+    /**
+     * When a trip ends: a day of tolerance for all three, the afterglow, and sometimes a flashback
+     * waiting one or two days out (hidden until it hits).
+     */
     public static void expired(LivingEntity entity, MobEffectInstance instance) {
         if (instance.is(ModEffects.LSD_TRIP) || instance.is(ModEffects.SHROOM_TRIP) || instance.is(ModEffects.MESCALINE_TRIP)) {
             entity.addEffect(new MobEffectInstance(ModEffects.PSY_TOLERANCE, TOLERANCE_TICKS, 0, false, false, true));
+            entity.addEffect(new MobEffectInstance(ModEffects.AFTERGLOW, AFTERGLOW_TICKS, 0, false, false, true));
+            if (entity.getRandom().nextFloat() < FLASHBACK_CHANCE && !entity.hasEffect(ModEffects.FLASHBACK_PENDING)) {
+                entity.addEffect(new MobEffectInstance(ModEffects.FLASHBACK_PENDING, 24000 + entity.getRandom().nextInt(24000),
+                    0, false, false, false));
+            }
+        } else if (instance.is(ModEffects.FLASHBACK_PENDING)) {
+            entity.addEffect(new MobEffectInstance(ModEffects.FLASHBACK, FLASHBACK_TICKS, 0, false, false, true));
         }
     }
 }

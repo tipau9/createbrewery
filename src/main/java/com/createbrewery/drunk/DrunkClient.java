@@ -72,7 +72,9 @@ public final class DrunkClient {
     /** Koks, the crash after it, and Keta, eased like the blood level (0..1 each). */
     private static float stim, gray, dissoc, high, green;
     /** Psychedelics: how hard the trip hits, which share of it is mushrooms or peyote, and fear. */
-    private static float trip, organic, desert, bad;
+    static float trip, organic, desert, bad;
+    /** The clear, bright day after a trip: 0..1. */
+    static float afterglow;
     /** DMT: 0..1, 1 = the full breakthrough. */
     private static float breakthrough;
     /** MDMA and meth: 0..1 each. */
@@ -121,6 +123,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenKey);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onPlaySound);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onSoundSource);
+        TripClient.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -185,7 +188,8 @@ public final class DrunkClient {
         float lsd = player == null ? 0f : DrugEffect.felt(player, ModEffects.LSD_TRIP);
         float shroom = player == null ? 0f : DrugEffect.felt(player, ModEffects.SHROOM_TRIP);
         float mesc = player == null ? 0f : DrugEffect.felt(player, ModEffects.MESCALINE_TRIP);
-        float all = lsd + shroom + mesc;
+        // A flashback, days later: a short echo of the trip, LSD-coloured.
+        float all = lsd + shroom + mesc + (player == null ? 0f : DrugEffect.strength(player, ModEffects.FLASHBACK));
         trip = ease(trip, Math.min(1f, all * (1f + 0.4f * rolling) + (all > 0f ? 0.3f * high : 0f)));
         // The palette only shifts while something is active, so it does not snap when the trip ends.
         if (all > 0.001f) {
@@ -196,12 +200,16 @@ public final class DrunkClient {
         bad = ease(bad, player == null ? 0f : Math.max(DrugEffect.strength(player, ModEffects.BAD_TRIP),
             DrugEffect.strength(player, ModEffects.PSYCHOSIS)));
         breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
-        if (player != null && !mc.isPaused()) com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad);
+        afterglow = ease(afterglow, player == null ? 0f : DrugEffect.strength(player, ModEffects.AFTERGLOW));
+        if (player != null && !mc.isPaused()) {
+            com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad);
+            TripClient.tick(mc, player);
+        }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -240,7 +248,7 @@ public final class DrunkClient {
     }
 
     /** Moves {@code current} towards {@code target} over a couple of seconds. */
-    private static float ease(float current, float target) {
+    static float ease(float current, float target) {
         float next = current + (target - current) * 0.05f;
         return Math.abs(target - next) < 0.002f ? target : next;
     }
@@ -308,7 +316,7 @@ public final class DrunkClient {
      * Too dark to see much: night, caves, unlit rooms. Worked out here, because the client level
      * never updates its own sky darkness after loading.
      */
-    private static boolean dark(LocalPlayer player) {
+    static boolean dark(LocalPlayer player) {
         var pos = player.blockPosition();
         var level = player.level();
         float daylight = level instanceof net.minecraft.client.multiplayer.ClientLevel client ? client.getSkyDarken(1f) : 1f;
@@ -317,14 +325,15 @@ public final class DrunkClient {
     }
 
     /**
-     * Paranoia: from the second joint, with Koks, or high in the dark. Footsteps creep up from
+     * Paranoia: from the second joint, with Koks, high in the dark, or in a bad trip. Footsteps creep up from
      * behind, or something hisses - nobody is there, and it stops the moment you turn round.
      * In the dark a figure stands at the edge of the view, and dissolves when you look at it.
      */
     private static void paranoia(Minecraft mc, LocalPlayer player) {
         boolean dark = dark(player);
         boolean paranoid = player.hasEffect(ModEffects.WEED_HIGH)
-            && (DrugServer.joints(player) > 1f || player.hasEffect(ModEffects.COKE_HIGH) || (dark && high > 0.3f));
+            && (DrugServer.joints(player) > 1f || player.hasEffect(ModEffects.COKE_HIGH) || (dark && high > 0.3f))
+            || bad > 0.3f;
         if (phantomAt != null) {
             if (Math.abs(net.minecraft.util.Mth.wrapDegrees(player.getYRot() - phantomYaw)) > 110f) {
                 if (phantomSound != null) mc.getSoundManager().stop(phantomSound); // turned round: silence
@@ -433,6 +442,9 @@ public final class DrunkClient {
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
             chain.setUniform("Wah", wah * screen());
+            chain.setUniform("Stare", TripClient.stare * screen());
+            chain.setUniform("Harsh", TripClient.harsh);
+            chain.setUniform("Afterglow", afterglow * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -507,13 +519,18 @@ public final class DrunkClient {
             && player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 9.0 && pendingEchoes.size() < 16) {
             pendingEchoes.add(new PendingEcho(sound, player.tickCount + 4, 0.3f * high));
         }
+        // Tripping: every sound drifts slowly up and down in pitch, as if the air were bending.
+        float drift = 1f + 0.12f * trip * (float) Math.sin(player.tickCount * 0.02);
         if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
             // The listener gain already raises everything; ambience and weather get more on top,
             // everything else is pulled back so that music and ambience stand out.
             boolean ambience = source == SoundSource.AMBIENT || source == SoundSource.WEATHER;
             float louder = ambience ? 1f + 0.8f * high : (1f + 0.3f * high) / listenerBoost();
-            event.setSound(new EnhancedSound(sound, louder, 1f - 0.06f * high));
+            event.setSound(new EnhancedSound(sound, louder, (1f - 0.06f * high) * drift));
+        } else if (trip > 0.05f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
+            && !(sound instanceof TickableSoundInstance)) {
+            event.setSound(new EnhancedSound(sound, 1f, drift));
         }
     }
 
@@ -708,6 +725,7 @@ public final class DrunkClient {
             chainFrames = 0;
         }
         chain.setUniform("Trail", chainFrames < 3 ? 0f : 1f);
+        worldUniforms(event);
         chainFrames++;
         // Same state handling as vanilla around its own post effect.
         RenderSystem.disableBlend();
@@ -718,8 +736,47 @@ public final class DrunkClient {
         RenderSystem.enableDepthTest();
     }
 
+    /** Last frame's camera, for tracers that only follow what really moves. */
+    private static final org.joml.Matrix4f prevViewProj = new org.joml.Matrix4f();
+    private static Vec3 prevCam;
+    private static java.lang.reflect.Field chainPasses;
+    private static boolean worldFailed;
+
+    /**
+     * Hands the camera to the shader, so it can tell where in the world each pixel is. PostChain
+     * only sets float uniforms itself; matrices go straight to each pass's program.
+     */
+    @SuppressWarnings("unchecked")
+    private static void worldUniforms(RenderLevelStageEvent event) {
+        Vec3 cam = event.getCamera().getPosition();
+        org.joml.Matrix4f viewProj = new org.joml.Matrix4f(event.getProjectionMatrix()).mul(event.getModelViewMatrix());
+        if (!worldFailed) {
+            try {
+                if (chainPasses == null) {
+                    chainPasses = PostChain.class.getDeclaredField("passes");
+                    chainPasses.setAccessible(true);
+                }
+                Vec3 moved = prevCam == null || chainFrames < 3 ? Vec3.ZERO : cam.subtract(prevCam);
+                for (net.minecraft.client.renderer.PostPass pass : (java.util.List<net.minecraft.client.renderer.PostPass>) chainPasses.get(chain)) {
+                    var effect = pass.getEffect();
+                    effect.safeGetUniform("InvViewProj").set(new org.joml.Matrix4f(viewProj).invert());
+                    effect.safeGetUniform("PrevViewProj").set(chainFrames < 3 ? viewProj : prevViewProj);
+                    effect.safeGetUniform("CamDelta").set((float) moved.x, (float) moved.y, (float) moved.z);
+                    // ponytail: wrapped every 1024 blocks for float precision; the patterns jump once at each wrap.
+                    effect.safeGetUniform("CamPos").set((float) (cam.x % 1024.0), (float) (cam.y % 1024.0), (float) (cam.z % 1024.0));
+                }
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                worldFailed = true;
+                LOGGER.warn("Trip shader cannot see the world; surface patterns and tracers fall back to the screen", e);
+            }
+        }
+        chain.setUniform("World", worldFailed ? 0f : 1f);
+        prevViewProj.set(viewProj);
+        prevCam = cam;
+    }
+
     /** The player's comfort setting, 0..1. */
-    private static float screen() {
+    static float screen() {
         return Config.CLIENT_SPEC.isLoaded() ? Config.SCREEN_EFFECTS.get().floatValue() : 1f;
     }
 
@@ -773,6 +830,8 @@ public final class DrunkClient {
         // Tripping, the whole view breathes in and out; a bad trip makes it gasp.
         double sec = event.getPlayer().tickCount / 20.0;
         drugs += (float) (Math.sin(sec * 0.9) * 0.035 * trip + noise(sec * 2.2, 11) * 0.03 * bad) * screen();
+        // ...and the walls close in on it.
+        drugs -= 0.12f * bad * screen();
         if (drugs != 1f) event.setNewFovModifier(event.getNewFovModifier() * drugs);
         if (blood <= 0f) return;
         // Slow breathing of the view, at most about 7 %.
@@ -1119,5 +1178,11 @@ public final class DrunkClient {
                 return true;
             }
         }, ModEffects.WEED_HIGH);
+        event.registerMobEffect(new IClientMobEffectExtensions() {
+            @Override
+            public boolean isVisibleInInventory(MobEffectInstance instance) { return false; }
+            @Override
+            public boolean isVisibleInGui(MobEffectInstance instance) { return false; }
+        }, ModEffects.FLASHBACK_PENDING);
     }
 }
