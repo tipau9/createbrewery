@@ -47,4 +47,28 @@ class PharmacologyTest {
         assertEquals(0f, Pharmacology.heartAttackChance(1.2f));
         assertTrue(Pharmacology.heartAttackChance(2.5f) > Pharmacology.heartAttackChance(2.0f));
     }
+
+    @Test
+    void stimulantsLoadTheHeart() {
+        // One pill is fine; meth stacks hard, and heat makes it worse.
+        assertTrue(Pharmacology.stimulantLoad(1, -1, 0, 0) < Pharmacology.HEART_RACING);
+        assertTrue(Pharmacology.stimulantLoad(0, 2, 1, 0) >= Pharmacology.HEART_RACING);
+        assertTrue(Pharmacology.stimulantLoad(0, 2, 1, 1.5f) > Pharmacology.stimulantLoad(0, 2, 1, 0) + 0.4f);
+    }
+
+    @Test
+    void dancingOnMdmaOverheats() {
+        // Four minutes of dancing on a full pill in the heat: overheated. Standing still: never.
+        float dancing = 0f, resting = 0f;
+        for (int s = 0; s < 240; s++) {
+            dancing = Pharmacology.heatStep(dancing, 1f, true, true, false);
+            resting = Pharmacology.heatStep(resting, 1f, false, false, false);
+        }
+        assertTrue(dancing >= Pharmacology.OVERHEATED, "dancing reached " + dancing);
+        assertTrue(resting < Pharmacology.OVERHEATED, "resting reached " + resting);
+        // A swim cools you down within seconds.
+        float swim = dancing;
+        for (int s = 0; s < 20; s++) swim = Pharmacology.heatStep(swim, 1f, false, false, true);
+        assertTrue(swim < dancing - 1f);
+    }
 }

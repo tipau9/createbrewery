@@ -67,6 +67,28 @@ public final class Pharmacology {
         return load;
     }
 
+    /**
+     * Extra heart load from MDMA and Meth, on top of {@link #heartLoad}. Meth is by far the
+     * hardest on the heart: every stacked dose adds its full strain, and heat makes it worse.
+     */
+    public static float stimulantLoad(float mdma, int methAmp, float meth, float heat) {
+        float load = 0.35f * mdma + (methAmp < 0 ? 0f : 0.5f * (methAmp + 1) * meth);
+        return load * (1f + 0.4f * Math.max(0f, heat));
+    }
+
+    /** Body heat above normal from which you overheat (Hitzschlag) and take damage. */
+    public static final float OVERHEATED = 1.0f;
+
+    /**
+     * Body heat after one second. MDMA (and Meth) drive it up, dancing and sprinting far more,
+     * heat around you too; water and rest bring it back down. 0 is a normal body.
+     */
+    public static float heatStep(float heat, float stimulated, boolean exertion, boolean hot, boolean inWater) {
+        float gain = stimulated * (exertion ? 0.035f : 0.006f) * (hot ? 2f : 1f);
+        float loss = inWater ? 0.08f : 0.01f;
+        return Math.max(0f, heat + gain - loss);
+    }
+
     /** Chance per second that a strained heart gives out. */
     public static float heartAttackChance(float load) {
         if (load >= HEART_CRITICAL) return 0.03f + 0.12f * (load - HEART_CRITICAL);
