@@ -3,15 +3,21 @@ package com.createbrewery.drugs;
 import com.createbrewery.drunk.DrunkServer;
 import com.createbrewery.effect.ModEffects;
 import com.createbrewery.sound.ModSounds;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * LSD, Zauberpilze and Meskalin (Peyote), server side. The client draws the trip itself from
@@ -96,9 +102,13 @@ public final class Psychedelics {
         float shroom = DrugEffect.strength(player, ModEffects.SHROOM_TRIP);
         float mesc = DrugEffect.strength(player, ModEffects.MESCALINE_TRIP);
         // The come-up turns the stomach: mushrooms a little, peyote a lot.
+        boolean mescComingUp = comingUp(player, ModEffects.MESCALINE_TRIP);
         float sick = (comingUp(player, ModEffects.SHROOM_TRIP) ? 0.012f : 0f)
-            + (comingUp(player, ModEffects.MESCALINE_TRIP) ? 0.035f : 0f);
-        if (player.getRandom().nextFloat() < sick) DrunkServer.vomit(player);
+            + (mescComingUp ? 0.035f : 0f);
+        if (player.getRandom().nextFloat() < sick) {
+            DrunkServer.vomit(player);
+            if (mescComingUp) purga(player);
+        }
         // Mushrooms giggle, like weed.
         if (player.getRandom().nextFloat() < 0.02f * shroom + 0.005f * mesc) {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.GIGGLE.get(),
@@ -112,6 +122,16 @@ public final class Psychedelics {
                 * (player.hasEffect(ModEffects.WEED_HIGH) ? 2f : 1f)) {
             player.addEffect(new MobEffectInstance(ModEffects.BAD_TRIP, BAD_TRIP_TICKS, 0, false, false, true));
         }
+        // Tatewari protection: sitting or standing still at a fire in desert/badlands calms hostility
+        if (mesc > 0.3f && player.getDeltaMovement().horizontalDistanceSqr() < 0.001) {
+            if (isNearFire(player.level(), player.blockPosition())) {
+                for (Mob mob : player.level().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(12.0))) {
+                    if (mob instanceof Enemy && mob.getTarget() == player) {
+                        mob.setTarget(null);
+                    }
+                }
+            }
+        }
         // A heroic dose at its peak: the self dissolves.
         MobEffectInstance lsd = player.getEffect(ModEffects.LSD_TRIP);
         if (lsd != null && lsd.getAmplifier() >= MAX_LEVEL && DrugEffect.strength(player, ModEffects.LSD_TRIP) > 0.9f) {
@@ -122,6 +142,33 @@ public final class Psychedelics {
             || player.level().getBiome(player.blockPosition()).is(BiomeTags.IS_BADLANDS))) {
             DrugServer.award(player, "pforten", "opened");
         }
+    }
+
+    /**
+     * La Purga: in indigenous ceremonies, vomiting is the sacred cleansing that frees body and mind.
+     * Clears poisons and negative effects, leaving behind deep golden warmth and protection.
+     */
+    public static void purga(Player player) {
+        player.removeEffect(MobEffects.HUNGER);
+        player.removeEffect(MobEffects.WEAKNESS);
+        player.removeEffect(MobEffects.POISON);
+        player.removeEffect(MobEffects.CONFUSION);
+        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 6000, 0, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 0, false, false, true));
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+            SoundEvents.PLAYER_BREATH, SoundSource.PLAYERS, 1.0f, 0.9f);
+        DrugServer.award(player, "purga", "cleansed");
+    }
+
+    private static boolean isNearFire(net.minecraft.world.level.Level level, BlockPos center) {
+        if (level == null) return false;
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-3, -2, -3), center.offset(3, 2, 3))) {
+            BlockState s = level.getBlockState(pos);
+            if (s.is(Blocks.CAMPFIRE) || s.is(Blocks.SOUL_CAMPFIRE) || s.is(Blocks.FIRE) || s.is(Blocks.SOUL_FIRE) || s.is(Blocks.LAVA)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

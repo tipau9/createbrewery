@@ -25,6 +25,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -75,8 +76,10 @@ public final class TripClient {
     static float harsh;
 
     private static float lastYaw, lastPitch, lastWalk;
+    private static float hurtFlash, purgaFlash;
+    private static boolean wasAbsorption;
+    private static int sprintTicks;
     private static int stepNote, nextThought = 600, nextNoise = 300;
-    private static float hurtFlash;
     /** Out of body: ticks since it began (-1 = in the body), the view to go back to, and once per trip. */
     private static final int OBE_TICKS = 240;
     private static int obeTicks = -1;
@@ -133,6 +136,35 @@ public final class TripClient {
         stare = still ? Math.min(1f, stare + stareSpeed) : Math.max(0f, stare - 0.15f);
         harsh = DrunkClient.ease(harsh, player.level().dimensionType().ultraWarm() || DrunkClient.dark(player) ? 1f : 0f);
         hurtFlash = Math.max(0f, hurtFlash - 0.08f);
+        boolean hasAbsorption = player.hasEffect(MobEffects.ABSORPTION);
+        if (hasAbsorption && !wasAbsorption && DrunkClient.desert > 0.2f) {
+            purgaFlash = 1f;
+            player.displayClientMessage(Component.literal("Die Schwere weicht. Rein und leicht.")
+                .withStyle(ChatFormatting.ITALIC, ChatFormatting.GOLD), true);
+        }
+        wasAbsorption = hasAbsorption;
+        purgaFlash = Math.max(0f, purgaFlash - 0.03f);
+        if (DrunkClient.desert > 0.4f && player.isSprinting()) {
+            boolean inDanger = !player.level().getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class, player.getBoundingBox().inflate(12.0)).isEmpty();
+            if (!inDanger) {
+                if (++sprintTicks > 60) {
+                    player.setSprinting(false);
+                    sprintTicks = 0;
+                }
+            } else {
+                sprintTicks = 0;
+            }
+        } else {
+            sprintTicks = 0;
+        }
+        if (still && DrunkClient.desert > 0.3f && mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult bhr && mc.level != null) {
+            BlockPos bPos = bhr.getBlockPos();
+            if (player.getRandom().nextFloat() < 0.35f * DrunkClient.desert) {
+                int rgb = DESERT_COLORS[player.getRandom().nextInt(DESERT_COLORS.length)];
+                mc.level.addParticle(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0xFF000000 | rgb),
+                    bPos.getX() + player.getRandom().nextDouble(), bPos.getY() + 1.05, bPos.getZ() + player.getRandom().nextDouble(), 0.0, 0.02, 0.0);
+            }
+        }
         outOfBody(mc, player);
         thoughts(player, trip, bad);
         motes(mc, player, trip);
@@ -317,6 +349,9 @@ public final class TripClient {
                     double py = pos.getY() + 0.2 + ((player.tickCount * 2 + i * 10) % 30) * 0.04;
                     double pz = pos.getZ() + 0.5 + Math.sin(angle) * rad;
                     mc.level.addParticle(r.nextBoolean() ? ParticleTypes.FLAME : ParticleTypes.SMALL_FLAME, px, py, pz, 0.0, 0.04, 0.0);
+                    if (r.nextFloat() < 0.25f) {
+                        mc.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, py + 0.2, pz, 0.0, 0.03, 0.0);
+                    }
                 }
                 break;
             }
@@ -423,8 +458,12 @@ public final class TripClient {
     private static void onGui(RenderGuiEvent.Pre event) {
         GuiGraphics g = event.getGuiGraphics();
         mushroomOverlay(g);
-        if (hurtFlash <= 0f) return;
-        g.fill(0, 0, g.guiWidth(), g.guiHeight(), ((int) (hurtFlash * 90 * DrunkClient.screen()) << 24) | 0x8A0000);
+        if (hurtFlash > 0f) {
+            g.fill(0, 0, g.guiWidth(), g.guiHeight(), ((int) (hurtFlash * 90 * DrunkClient.screen()) << 24) | 0x8A0000);
+        }
+        if (purgaFlash > 0f) {
+            g.fill(0, 0, g.guiWidth(), g.guiHeight(), ((int) (purgaFlash * 65 * DrunkClient.screen()) << 24) | 0xE67E22);
+        }
     }
 
     // ---- the mind ----
@@ -449,9 +488,11 @@ public final class TripClient {
     private static final String[] MESC_COMING_UP = {"Dieser Geschmack…", "Mein Magen… aber es geht.",
         "Die Wüste atmet.", "Etwas Altes erwacht."};
     private static final String[] MESC_TRIPPING = {"Die Falten meiner Kleidung… unendlich.", "Die Steine sind heilig.",
-        "Goldenes Licht überall.", "Die Ahnen sind nah.", "Istigkeit."};
+        "Goldenes Licht überall.", "Die Ahnen sind nah.", "Istigkeit.",
+        "Ein einfacher Holzblock. Ein Meisterwerk der Existenz.", "Kein Grund zu rennen. Alles ist schon hier."};
     private static final String[] MESC_PEAK = {"Die Pforten der Wahrnehmung sind offen.", "Alles leuchtet von innen.",
-        "Ich sehe das Licht der Schöpfung.", "Zeitlos. Heilig. Eins."};
+        "Ich sehe das Licht der Schöpfung.", "Zeitlos. Heilig. Eins.",
+        "Die Welt tut nichts, und doch bleibt nichts ungetan."};
     private static final String[] AFTER = {"Was für ein Tag.", "Alles fühlt sich friedlich an.", "Die Welt ist schön, eigentlich.",
         "Ich sollte öfter die Sonne anschauen."};
 

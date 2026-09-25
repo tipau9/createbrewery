@@ -376,6 +376,26 @@ void main() {
     col *= mix(vec3(1.0), mix(vec3(0.95, 0.85, 1.12), vec3(1.0, 1.1, 0.88), smoothstep(0.2, 0.7, lum)), Organic * Trip);
     vec3 desertGrade = mix(vec3(0.78, 1.05, 1.05), vec3(1.2, 0.98, 0.75), smoothstep(0.15, 0.7, lum));
     col *= mix(vec3(1.0), desertGrade, Desert * Trip);
+    // Peyote: Klüver's form constants & cathedral stained glass blooming in darkness.
+    float darkEye = smoothstep(0.18, 0.01, lum) * Desert * Trip;
+    if (darkEye > 0.01) {
+        vec2 cGrid = uv * vec2(aspect, 1.0) * 14.0;
+        vec2 cHex = abs(fract(cGrid) - 0.5);
+        float hex = smoothstep(0.08, 0.01, abs(max(cHex.x * 1.5 + cHex.y, cHex.y * 2.0) - 1.0));
+        float facetIdx = fract(sin(dot(floor(cGrid), vec2(12.9898, 78.233))) * 43758.5453 + t * 0.02);
+        vec3 stainedCol = facetIdx < 0.25 ? vec3(0.85, 0.1, 0.15)
+                        : facetIdx < 0.5 ? vec3(0.1, 0.35, 0.9)
+                        : facetIdx < 0.75 ? vec3(0.1, 0.85, 0.35)
+                        : vec3(1.0, 0.82, 0.2);
+        col += stainedCol * hex * 0.45 * darkEye;
+    }
+    // Tatewari fire trance: staring deepens into a warm charcoal vignette with pulsing embers.
+    float trance = Stare * Desert * Trip;
+    if (trance > 0.01) {
+        float firePulse = 0.5 + 0.5 * sin(t * 3.14159);
+        col = mix(col, col * vec3(1.15, 0.88, 0.65), trance * 0.35);
+        col *= 1.0 - smoothstep(0.25, 0.8, length(d)) * (0.4 + 0.15 * firePulse) * trance;
+    }
     // The bad trip: drained and reddish, with the edges throbbing dark like a pulse.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.5 * BadTrip) * mix(vec3(1.0), vec3(1.1, 0.85, 0.85), BadTrip);

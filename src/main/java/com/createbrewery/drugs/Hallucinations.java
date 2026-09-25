@@ -90,18 +90,21 @@ public final class Hallucinations {
         for (Vision v : visions) {
             Entity e = v.entity;
             e.setOldPosAndRot();
-            v.angle += v.speed;
+            boolean isSpirit = e.getType() == EntityType.WOLF || e.getType() == EntityType.FOX;
+            boolean paused = isSpirit && (e.tickCount % 200 > 140);
+            double actualSpeed = paused ? 0.0 : v.speed;
+            v.angle += actualSpeed;
             double x = player.getX() + Math.cos(v.angle) * v.radius;
             double z = player.getZ() + Math.sin(v.angle) * v.radius;
             e.setPos(x, player.getY() + v.height, z);
-            // Circling ones fly along their path; still ones stare at you.
-            float yaw = v.speed != 0
+            // Circling ones walk along their path; paused/still ones stare at you.
+            float yaw = actualSpeed != 0
                 ? (float) Math.toDegrees(v.angle) + (v.speed > 0 ? 180f : 0f)
                 : (float) Math.toDegrees(Math.atan2(player.getZ() - z, player.getX() - x)) - 90f;
             e.setYRot(yaw);
             e.setYHeadRot(yaw);
             e.setYBodyRot(yaw);
-            if (e instanceof net.minecraft.world.entity.LivingEntity living && v.speed != 0) {
+            if (e instanceof net.minecraft.world.entity.LivingEntity living && actualSpeed != 0) {
                 living.walkAnimation.update((float) Math.abs(v.speed * v.radius * 2.0), 0.4f);
             }
             e.tickCount++;
