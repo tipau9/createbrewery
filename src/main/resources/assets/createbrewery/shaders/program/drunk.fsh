@@ -36,6 +36,7 @@ uniform float Kick;    // the kick drum heard right now, 0..1 (see MusicPulse); 
 uniform float Level;   // how loud the song is right now, against its own loudest, 0..1
 uniform float Hats;    // hi-hats, claps and snares heard right now, 0..1
 uniform float Wiggle;  // MDMA: the eyes flicker (nystagmus), in bursts, 0..1
+uniform float Zap;     // the Tiefpunkt after MDMA: a brain zap, a jolt of a few frames, 0..1
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
@@ -177,6 +178,8 @@ void main() {
 
     // MDMA: now and then the eyes flicker side to side for a few seconds (nystagmus).
     uv.x += sin(t * 60.0) * 0.004 * Wiggle;
+    // A brain zap: the picture jumps sideways for a moment.
+    uv.x += (hash(vec2(floor(t * 30.0), 3.7)) - 0.5) * 0.04 * Zap;
     // The beat is in the picture: it pumps with every kick of the song playing.
     float kick = Kick * Beat;
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.025 * kick);
@@ -452,6 +455,8 @@ void main() {
     col *= 1.0 - smoothstep(0.3, 0.9, length(d)) * 0.25 * Beat * (1.0 - Level);
     // Eye wiggles: the picture blurs into a faint flickering double.
     col = mix(col, tap(uv + vec2(0.006 * sin(t * 60.0 + 1.5), 0.0)), 0.35 * Wiggle);
+    // Brain zap: a grey-white flash, like a shock.
+    col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114)) * 1.6 + 0.1), 0.6 * Zap);
     // Overheated: washed out, flushed red, and the edges throb with a racing pulse.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum) * vec3(1.2, 0.9, 0.85), 0.35 * Heat);

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.createbrewery.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ChannelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -27,6 +27,7 @@ import net.minecraft.world.entity.player.Player;
  * is everything, the jaw clenches. The danger is heat: dancing on it drives the body temperature
  * up, and past a point it overheats (Hitzschlag). Water and rest cool it. Days later, the
  * serotonin is gone: the Tiefpunkt. Sneak up close to anyone for a hug - yes, even a creeper.
+ * Coming up the stomach turns; rolling it hurts less, you can dance all night and cannot sleep.
  *
  * <p>Meth (Crystal): like Koks, but for half a day - fast, tireless, no hunger, no sleep, and by
  * far the hardest on the heart. Awake long enough on it, the mind starts to slip (Psychose): the
@@ -72,6 +73,14 @@ public final class Stimulants {
         if (player.getRandom().nextFloat() < 0.06f * felt) {
             server.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GRINDSTONE_USE,
                 SoundSource.PLAYERS, 0.25f, 1.8f + player.getRandom().nextFloat() * 0.2f);
+        }
+        // Coming up, the stomach turns for a moment.
+        if (Psychedelics.comingUp(player, ModEffects.ROLLING) && player.getRandom().nextFloat() < 0.02f) {
+            player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80, 0, false, false, false));
+        }
+        // Dancing all night: sprinting barely tires.
+        if (player.isSprinting() && felt > 0.3f) {
+            player.getFoodData().setExhaustion(Math.max(0f, player.getFoodData().getExhaustionLevel() - 0.3f * felt));
         }
         // Sneaking right up to someone is a hug: warmth for both, and hearts everywhere.
         if (player.isShiftKeyDown() && felt > 0.2f) {

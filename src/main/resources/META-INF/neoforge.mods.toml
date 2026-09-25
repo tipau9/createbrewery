@@ -8,6 +8,9 @@ version = "${mod_version}"
 displayName = "Create Brewery"
 description = "Realistic, fully automatable beer production built on Create."
 
+[[mixins]]
+config = "createbrewery.mixins.json"
+
 [[dependencies.createbrewery]]
 modId = "neoforge"
 type = "required"

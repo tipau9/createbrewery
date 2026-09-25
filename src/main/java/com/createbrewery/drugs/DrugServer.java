@@ -392,10 +392,11 @@ public final class DrugServer {
         if (advancement != null) player.getAdvancements().award(advancement, criterion);
     }
 
-    /** Wide awake on Koks: no sleeping. */
+    /** Wide awake on Koks, Meth and Ecstasy: no sleeping. */
     @SubscribeEvent
     public static void onSleep(CanPlayerSleepEvent event) {
-        if (event.getEntity().hasEffect(ModEffects.COKE_HIGH) || event.getEntity().hasEffect(ModEffects.TWEAK)) {
+        if (event.getEntity().hasEffect(ModEffects.COKE_HIGH) || event.getEntity().hasEffect(ModEffects.TWEAK)
+            || event.getEntity().hasEffect(ModEffects.ROLLING)) {
             event.setProblem(Player.BedSleepingProblem.OTHER_PROBLEM);
         }
     }
@@ -511,9 +512,12 @@ public final class DrugServer {
         }
     }
 
-    /** Heroin: the pain barely reaches you. */
+    /** Heroin: the pain barely reaches you. Ecstasy: it hurts less, too. */
     @SubscribeEvent
     public static void onIncomingDamage(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
         if (event.getEntity().hasEffect(ModEffects.NOD)) event.setAmount(event.getAmount() * Opioids.painFactor(event.getEntity()));
+        if (event.getEntity().hasEffect(ModEffects.ROLLING)) {
+            event.setAmount(event.getAmount() * (1f - 0.3f * DrugEffect.felt(event.getEntity(), ModEffects.ROLLING)));
+        }
     }
 }

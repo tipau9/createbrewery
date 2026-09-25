@@ -32,13 +32,14 @@ import net.neoforged.neoforge.common.util.TriState;
  *   <li>Soft things underfoot (wool, carpet, moss) feel wonderful.</li>
  *   <li>Everyone is lovely: chat comes with a heart, and monsters are just "Kumpel".</li>
  *   <li>Dancing on it heats you up: the view flushes and throbs. Water and rest cool it.</li>
- *   <li>Thoughts, and the empty days after (Tiefpunkt).</li>
+ *   <li>Thoughts - the urge to take more as it fades, the night flying by - and the empty days
+ *       after (Tiefpunkt), with brain zaps.</li>
  * </ul>
  */
 public final class RollClient {
     private RollClient() {}
 
-    static float rush, beat, heat, wiggle;
+    static float rush, beat, heat, wiggle, zap;
 
     private static int rushTicks = -1, nextRush = 400, nextThought = 300, wiggleTicks, nextWiggle = 600;
     private static float sweat, lastWalk;
@@ -82,6 +83,17 @@ public final class RollClient {
         if (wiggleTicks > 0) wiggleTicks--;
         wiggle += ((wiggleTicks > 0 ? roll : 0f) - wiggle) * 0.3f;
 
+        // Brain zaps in the Tiefpunkt: a short electric jolt through the head, now and then.
+        zap *= 0.5f;
+        if (DrugEffect.strength(player, ModEffects.COMEDOWN) > 0.2f && r.nextFloat() < 1f / 900f) {
+            zap = 1f;
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.REDSTONE_TORCH_BURNOUT, 2f, 0.4f));
+            if (r.nextBoolean()) think(player, ZAP);
+        }
+
+        // Time flies: the night is over before it began.
+        if (roll > 0.3f && mc.level != null && mc.level.getDayTime() % 24000L == 23000L) think(player, MORNING);
+
         // Dancing heats you up; water and rest cool you down. The real heat is on the server
         // (Stimulants#body), which only tells us once it is too late (Hitzschlag), so this guesses ahead.
         boolean dancing = roll > 0.1f && player.isSprinting();
@@ -110,7 +122,12 @@ public final class RollClient {
         "Wirkt das schon? Ich glaub… ja."};
     private static final String[] ROLLING = {"Ich liebe euch alle!", "Die Musik… ich BIN die Musik.", "Mein Kiefer macht, was er will.",
         "Warum hab ich nie gesagt, wie toll du bist?", "Alles ist gut. Wirklich alles.", "Fühlt sich das gut an…",
-        "Ich will jeden umarmen.", "Hat jemand Kaugummi?"};
+        "Ich will jeden umarmen.", "Hat jemand Kaugummi?", "*gähn* …warum gähn ich die ganze Zeit?",
+        "Ich hab keinen Hunger. Gar keinen.", "Mund so trocken…", "Wir sollten alle mal reden. Über alles."};
+    private static final String[] FADING = {"Es lässt nach… nein, nein, nein.", "Noch eine halbe? Nur eine halbe.",
+        "Wo ist die Tüte hin?", "Kommt da noch was?"};
+    private static final String[] ZAP = {"Bzzt. Was war das?", "Da hat's im Kopf gezuckt.", "Mein Hirn blitzt."};
+    private static final String[] MORNING = {"Wie, schon hell?!", "Die Nacht war doch gerade erst…", "Wo sind die Stunden hin?"};
     private static final String[] RUSH = {"Wow… WOW.", "Da ist sie wieder, die Welle.", "Gänsehaut. Überall."};
     private static final String[] SOFT = {"Ist das weich…", "Ich könnte den ganzen Tag über Wolle laufen.", "Dieser Teppich. DIESER TEPPICH."};
     private static final String[] HOT = {"Wasser… brauch Wasser.", "Ist das heiß hier drin.", "Kurz Pause machen. Nur kurz."};
@@ -123,6 +140,7 @@ public final class RollClient {
         String[] pool = sweat > 0.6f || heat > 0.5f ? HOT
             : DrunkClient.trip > 0.2f ? null
             : roll > 0.05f && Psychedelics.comingUp(player, ModEffects.ROLLING) ? COMING_UP
+            : roll > 0.1f && fading(player) ? FADING
             : roll > 0.3f ? ROLLING
             : DrugEffect.strength(player, ModEffects.COMEDOWN) > 0.3f ? LOW : null;
         if (pool == null) {
@@ -132,9 +150,15 @@ public final class RollClient {
         think(player, pool);
     }
 
+    /** The last one and a half minutes of it: the offset, when the urge to take more comes. */
+    private static boolean fading(LocalPlayer player) {
+        var instance = player.getEffect(ModEffects.ROLLING);
+        return instance != null && instance.getDuration() < 1800;
+    }
+
     private static void think(LocalPlayer player, String[] pool) {
         player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
-            .withColor(pool == LOW ? 0x8A8A9A : pool == HOT ? 0xFF6040 : 0xFF7EB6), true);
+            .withColor(pool == LOW || pool == ZAP ? 0x8A8A9A : pool == HOT ? 0xFF6040 : 0xFF7EB6), true);
         nextThought = player.tickCount + 500 + player.getRandom().nextInt(500);
     }
 
