@@ -139,7 +139,8 @@ public final class TripClient {
             BlockState state = mc.level.getBlockState(pos);
             if (!(state.is(BlockTags.FLOWERS) || state.is(BlockTags.LEAVES) || state.is(Blocks.SHORT_GRASS)
                 || state.is(Blocks.TALL_GRASS)) || r.nextFloat() > trip) continue;
-            int rgb = Mth.hsvToRgb(r.nextFloat(), 0.7f, 1f);
+            // LSD: every colour. Mushrooms: greens and golds.
+            int rgb = Mth.hsvToRgb(DrunkClient.organic > 0.5f ? 0.12f + 0.3f * r.nextFloat() : r.nextFloat(), 0.7f, 1f);
             mc.level.addParticle(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0xFF000000 | rgb),
                 pos.getX() + r.nextDouble(), pos.getY() + 0.3 + r.nextDouble() * 0.6, pos.getZ() + r.nextDouble(), 0.0, 0.03, 0.0);
         }
@@ -152,7 +153,7 @@ public final class TripClient {
         var entity = event.getEntity();
         double t = (entity.tickCount + event.getPartialTick()) / 20.0;
         float s = 1f + 0.06f * trip * (float) Math.sin(t * 1.6 + entity.getId());
-        float stretch = 1f + 0.2f * peak() * Math.max(0f, (float) Math.sin(t * 0.37 + entity.getId() * 1.3));
+        float stretch = 1f + 0.2f * peak() * (1f - DrunkClient.organic) * Math.max(0f, (float) Math.sin(t * 0.37 + entity.getId() * 1.3));
         // No push of our own: the entity dispatcher pops its pose after the renderer, scale included.
         event.getPoseStack().scale(s / (float) Math.sqrt(stretch), s * stretch, s / (float) Math.sqrt(stretch));
     }
@@ -301,7 +302,8 @@ public final class TripClient {
 
     /** Every step rings a note, walking up the scale and back down. */
     private static void stepNotes(Minecraft mc, LocalPlayer player, float trip) {
-        if (trip >= 0.25f && player.onGround() && (int) player.walkDist != (int) lastWalk) {
+        // LSD's synaesthesia; mushrooms hear the forest instead.
+        if (trip >= 0.25f && DrunkClient.organic < 0.5f && player.onGround() && (int) player.walkDist != (int) lastWalk) {
             int i = stepNote++ % (2 * SCALE.length - 2);
             if (i >= SCALE.length) i = 2 * SCALE.length - 2 - i;
             mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.NOTE_BLOCK_HARP.value(), SoundSource.RECORDS,
@@ -312,7 +314,7 @@ public final class TripClient {
 
     /** At the peak: a low hum under everything, and now and then a chime from nowhere. */
     private static void hum(Minecraft mc, LocalPlayer player) {
-        float peak = peak();
+        float peak = peak() * (1f - DrunkClient.organic);
         if (peak <= 0.05f) return;
         if (player.tickCount % 80 == 0) mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.BEACON_AMBIENT, 0.5f, 0.35f * peak));
         if (player.getRandom().nextFloat() < 0.01f * peak) {
@@ -404,7 +406,10 @@ public final class TripClient {
         float hue = (Util.getMillis() % 6000L) / 6000f;
         MutableComponent out = Component.empty();
         for (int i = 0; i < c.length; i++) {
-            out.append(Component.literal(String.valueOf(c[i])).withColor(Mth.hsvToRgb((hue + i * 0.04f) % 1f, 0.55f, 1f)));
+            // Mushrooms keep the letters in earthy greens and golds instead of the full rainbow.
+            float h = (hue + i * 0.04f) % 1f;
+            if (DrunkClient.organic > 0.5f) h = 0.12f + 0.3f * (0.5f + 0.5f * Mth.sin(h * 6.2832f));
+            out.append(Component.literal(String.valueOf(c[i])).withColor(Mth.hsvToRgb(h, 0.55f, 1f)));
         }
         return out;
     }

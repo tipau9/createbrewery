@@ -233,9 +233,15 @@ void main() {
     // Psychedelics: colours intensify and slowly cycle, most in what is already colourful.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     sat = length(col - vec3(lum));
-    float shift = Trip * (0.6 * sin(t * 0.25) + 1.2 * peak * sin(t * 0.11 + lum * 4.0));
+    // Everything electric here is LSD's; mushrooms (Organic) get a soft, living look of their own.
+    float lsdLook = 1.0 - Organic;
+    float shift = Trip * lsdLook * (0.6 * sin(t * 0.25) + 1.2 * peak * sin(t * 0.11 + lum * 4.0));
     col = mix(col, hueShift(col, shift), clamp(sat * 3.0, 0.0, 1.0));
-    col = mix(vec3(lum), col, 1.0 + 0.8 * Trip);
+    col = mix(vec3(lum), col, 1.0 + (0.8 - 0.5 * Organic) * Trip);
+    // Mushrooms: soft focus, and every light blooms into a warm, gentle glow.
+    float soft = Organic * Trip;
+    col = mix(col, ring(uv, px * 3.0), 0.3 * soft);
+    col += (spill(uv, px * 5.0, 0.2) + spill(uv, px * 10.0, 0.6) * 1.3) * vec3(1.0, 0.92, 0.7) * 1.2 * soft;
     // At the peak, geometry: a slowly turning kaleidoscope of the picture itself shines through,
     // with a fine lattice of rainbow lines.
     vec2 kc = uv - 0.5;
@@ -247,13 +253,13 @@ void main() {
     col = mix(col, tap(0.5 + mix(vec2(cos(ka), sin(ka)), vec2(cos(sa), sin(sa)), Organic) * kr), 0.3 * peak);
     float lattice = smoothstep(0.92, 1.0, abs(sin(kr * 60.0 - t * 1.5) * sin(ka * 16.0)));
     vec3 rainbow = 0.5 + 0.5 * sin(vec3(t, t * 1.3 + 2.0, t * 0.7 + 4.0) + kr * 20.0);
-    col += rainbow * lattice * 0.12 * peak;
+    col += rainbow * lattice * 0.12 * peak * lsdLook;
     // Flowing lines drawn onto the surfaces themselves (not the screen), fading with distance.
     float wpat = sin(wp.x * 2.0 + 2.0 * sin(wp.z * 1.3 + t * 0.5)) + sin(wp.z * 2.0 + 2.0 * sin(wp.y * 1.7 - t * 0.4))
                + sin(wp.y * 2.0 + 2.0 * sin(wp.x * 1.1 + t * 0.3));
     float contour = smoothstep(0.8, 1.0, abs(sin(wpat * 3.14159)));
     vec3 wrainbow = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + wpat * 0.3 + t * 0.05));
-    col += wrainbow * contour * 0.16 * Trip * solid * exp(-dist / 40.0);
+    col += wrainbow * contour * 0.16 * Trip * lsdLook * solid * exp(-dist / 40.0);
     // Mushrooms: a glowing mycelium grows over everything - thin veins between cells anchored in
     // the world, with light pulsing along them.
     float fungal = Organic * Trip * solid;
@@ -277,25 +283,31 @@ void main() {
     float dx = abs(distAt(uv + vec2(px.x, 0.0)) + distAt(uv - vec2(px.x, 0.0)) - 2.0 * dc);
     float dy = abs(distAt(uv + vec2(0.0, px.y)) + distAt(uv - vec2(0.0, px.y)) - 2.0 * dc);
     float outline = smoothstep(0.02, 0.12, (dx + dy) / max(dc, 0.5));
-    col = mix(col, wrainbow * 1.2, outline * 0.55 * peak * solid);
+    col = mix(col, wrainbow * 1.2, outline * 0.55 * peak * lsdLook * solid);
     // Grass, leaves and water wander through other colours.
     float foliage = clamp((col.g - max(col.r, col.b)) * 6.0, 0.0, 1.0) + clamp((col.b - max(col.r, col.g)) * 4.0, 0.0, 1.0);
-    col = mix(col, hueShift(col, 2.5 * sin(t * 0.12 + (wp.x + wp.z) * 0.04)), min(1.0, foliage) * 0.8 * Trip * solid);
+    col = mix(col, hueShift(col, 2.5 * sin(t * 0.12 + (wp.x + wp.z) * 0.04)), min(1.0, foliage) * 0.8 * Trip * lsdLook * solid);
+    // Mushrooms: plants look alive instead - lush, deep and glowing from within, pulsing slowly.
+    float alive = min(1.0, foliage) * Organic * Trip * solid * (0.75 + 0.25 * sin(t * 1.1 + wp.x * 0.3 + wp.z * 0.2));
+    col = mix(col, col * vec3(0.8, 1.3, 0.85) + vec3(0.02, 0.07, 0.03), 0.7 * alive);
     // The sky cycles through colours, and stars come out even by day.
     vec3 dir = normalize(rel);
     vec3 starCell = floor(dir * 150.0);
     float star = step(0.996, hash(starCell.xy + starCell.z * 17.0)) * (0.5 + 0.5 * sin(t * 3.0 + hash(starCell.yz) * 30.0));
-    col = mix(col, hueShift(col, t * 0.3 + dir.y * 3.0) * 1.1, 0.7 * Trip * sky * World);
-    col += vec3(star) * Trip * sky * World;
+    col = mix(col, hueShift(col, t * 0.3 + dir.y * 3.0) * 1.1, 0.7 * Trip * lsdLook * sky * World);
+    col += vec3(star) * Trip * lsdLook * sky * World;
+    // Mushrooms: soft veils of green and violet light drift across the sky, like an aurora.
+    float aurora = smoothstep(0.05, 0.5, dir.y) * pow(0.5 + 0.5 * sin(dir.x * 5.0 + 2.0 * sin(dir.z * 4.0 + t * 0.25) + t * 0.15), 3.0);
+    col += mix(vec3(0.15, 0.9, 0.55), vec3(0.6, 0.3, 0.9), 0.5 + 0.5 * sin(dir.z * 3.0 + t * 0.1)) * aurora * 0.45 * Organic * Trip * sky * World;
     // At the peak the picture mirrors itself, and the two halves slowly drift.
     float mirror = peak * smoothstep(0.3, 0.9, 0.5 + 0.5 * sin(t * 0.06));
-    col = mix(col, tap(vec2(1.0 - uv.x + 0.03 * sin(t * 0.3), uv.y)), 0.45 * mirror);
+    col = mix(col, tap(vec2(1.0 - uv.x + 0.03 * sin(t * 0.3), uv.y)), 0.45 * mirror * lsdLook);
     // Visual snow: fine coloured grain over everything.
     vec2 grainAt = floor(uv * OutSize / 2.0) + mod(floor(t * 24.0), 251.0) * 7.0;
-    col += (vec3(hash(grainAt), hash(grainAt + 3.1), hash(grainAt + 5.7)) - 0.5) * 0.07 * Trip;
+    col += (vec3(hash(grainAt), hash(grainAt + 3.1), hash(grainAt + 5.7)) - 0.5) * 0.07 * Trip * lsdLook;
     // Once in a while at the peak, colours flip for a heartbeat (soft, never a full flash).
     float blink = fract(t / 23.0);
-    col = mix(col, 1.0 - col, 0.45 * peak * smoothstep(0.0, 0.008, blink) * smoothstep(0.03, 0.012, blink));
+    col = mix(col, 1.0 - col, 0.45 * peak * lsdLook * smoothstep(0.0, 0.008, blink) * smoothstep(0.03, 0.012, blink));
     // A bad place makes it harsh: hard contrast, bloody light.
     col = (col - 0.5) * (1.0 + 0.3 * Harsh * Trip) + 0.5;
     col *= mix(vec3(1.0), vec3(1.12, 0.9, 0.85), Harsh * Trip);

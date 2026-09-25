@@ -520,7 +520,8 @@ public final class DrunkClient {
             pendingEchoes.add(new PendingEcho(sound, player.tickCount + 4, 0.3f * high));
         }
         // Tripping: every sound drifts slowly up and down in pitch, as if the air were bending.
-        float drift = 1f + 0.12f * trip * (float) Math.sin(player.tickCount * 0.02);
+        // Mushrooms instead make everything a little deeper and warmer.
+        float drift = (1f + 0.12f * trip * (1f - organic) * (float) Math.sin(player.tickCount * 0.02)) * (1f - 0.06f * trip * organic);
         if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
             // The listener gain already raises everything; ambience and weather get more on top,
