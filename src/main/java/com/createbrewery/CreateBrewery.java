@@ -60,6 +60,11 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.respiratory_depression", "Atemlähmung");
         REGISTRATE.addRawLang("effect.createbrewery.withdrawal", "Entzug");
         REGISTRATE.addRawLang("effect.createbrewery.wah", "Lachgas");
+        REGISTRATE.addRawLang("effect.createbrewery.candyflip", "Candyflip");
+        REGISTRATE.addRawLang("effect.createbrewery.speedball", "Speedball");
+        REGISTRATE.addRawLang("effect.createbrewery.stoned_trip", "Nachgelegt");
+        REGISTRATE.addRawLang("effect.createbrewery.nitrous_peak", "Gipfelsturm");
+        REGISTRATE.addRawLang("effect.createbrewery.dehydrated", "Ausgetrocknet");
         REGISTRATE.addRawLang("death.attack.createbrewery.overdose", "%1$s hat aufgehört zu atmen");
         REGISTRATE.addRawLang("death.attack.createbrewery.hyperthermia", "%1$s hat sich zu Tode getanzt");
         REGISTRATE.addRawLang("death.attack.createbrewery.skin_picking", "%1$s hat sich blutig gekratzt");
@@ -140,6 +145,11 @@ public class CreateBrewery {
         advancement("entzug", "Der Affe sitzt dir im Nacken", "Mach einen Entzug durch");
         advancement("xanax", "Alles egal", "Nimm eine Xanax");
         advancement("lachgas", "Wah Wah", "Atme einen Ballon Lachgas ein");
+        advancement("candyflip", "Candyflip", "Wirf Ecstasy auf einem Trip ein");
+        advancement("dehydriert", "Ausgetrocknet", "Trink Alkohol auf Ecstasy");
+        advancement("speedball", "Speedball", "Misch Heroin mit Koks oder Crystal");
+        advancement("nachgelegt", "Nachgelegt", "Kiff auf einem Trip");
+        advancement("gipfelsturm", "Gipfelsturm", "Atme Lachgas auf einem Trip ein");
         advancement("apotheke_leer", "Apotheke leergeräumt", "Nimm jede Droge mindestens einmal");
         // advancements:end
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {

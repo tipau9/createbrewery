@@ -162,7 +162,8 @@ public final class DrunkClient {
         tweak = ease(tweak, player == null ? 0f : DrugEffect.felt(player, ModEffects.TWEAK));
         opiate = ease(opiate, player == null ? 0f : Math.min(1f, DrugEffect.felt(player, ModEffects.NOD)
             + 0.4f * DrugEffect.felt(player, ModEffects.CALM)
-            + (player.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) ? 0.5f : 0f)));
+            + (player.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) ? 0.5f : 0f))
+            * (player.hasEffect(ModEffects.SPEEDBALL) ? 0.4f : 1f));
         // Lachgas hits within a breath: faster than the other channels.
         float wahTarget = player == null ? 0f : DrugEffect.strength(player, ModEffects.WAH);
         wah = Math.abs(wahTarget - wah) < 0.01f ? wahTarget : wah + (wahTarget - wah) * 0.3f;
@@ -185,7 +186,7 @@ public final class DrunkClient {
         float shroom = player == null ? 0f : DrugEffect.felt(player, ModEffects.SHROOM_TRIP);
         float mesc = player == null ? 0f : DrugEffect.felt(player, ModEffects.MESCALINE_TRIP);
         float all = lsd + shroom + mesc;
-        trip = ease(trip, Math.min(1f, all));
+        trip = ease(trip, Math.min(1f, all * (1f + 0.4f * rolling) + (all > 0f ? 0.3f * high : 0f)));
         // The palette only shifts while something is active, so it does not snap when the trip ends.
         if (all > 0.001f) {
             organic = ease(organic, shroom / all);

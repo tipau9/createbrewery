@@ -208,6 +208,19 @@ public class ModEffects {
         new DrugEffect(MobEffectCategory.NEUTRAL, 0xC8DCFF, 20, DrugServer::wahTick, DrugServer.WAH_TICKS, 20, 160)
             .scaled(Attributes.MOVEMENT_SPEED, id("wah_speed"), -0.4));
 
+    // ---- Named mixes (see drugs/Mixes): shown while both are in the body ----
+
+    public static final DeferredHolder<MobEffect, MobEffect> CANDYFLIP = EFFECTS.register("candyflip", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xFF9AE0, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> SPEEDBALL = EFFECTS.register("speedball", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xB03020, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> STONED_TRIP = EFFECTS.register("stoned_trip", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x8FCF5A, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> NITROUS_PEAK = EFFECTS.register("nitrous_peak", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x9AF0FF, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> DEHYDRATED = EFFECTS.register("dehydrated", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xD8A060, 0, null, 0, 0, 0));
+
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);
     }

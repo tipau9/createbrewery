@@ -100,7 +100,9 @@ public final class Psychedelics {
         // Set and setting: dark, hurt, or hunted - the trip can turn.
         float trip = tripping(player);
         if (!player.hasEffect(ModEffects.BAD_TRIP) && !player.hasEffect(ModEffects.CALM) // Xanax: no fear
-            && player.getRandom().nextFloat() < 0.012f * trip * badSetting(player)) {
+            && !player.hasEffect(ModEffects.ROLLING) // Candyflip: MDMA keeps the fear away
+            && player.getRandom().nextFloat() < 0.012f * trip * badSetting(player)
+                * (player.hasEffect(ModEffects.WEED_HIGH) ? 2f : 1f)) {
             player.addEffect(new MobEffectInstance(ModEffects.BAD_TRIP, BAD_TRIP_TICKS, 0, false, false, true));
         }
         // A heroic dose at its peak: the self dissolves.

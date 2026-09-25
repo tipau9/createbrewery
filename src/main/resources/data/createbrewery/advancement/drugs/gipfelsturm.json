@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/lachgas",
+  "display": {
+    "icon": {
+      "id": "createbrewery:lachgas_balloon"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.gipfelsturm.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.gipfelsturm.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "m": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:nitrous_peak": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "m"
+    ]
+  ]
+}

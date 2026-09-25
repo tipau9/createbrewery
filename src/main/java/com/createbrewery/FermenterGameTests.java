@@ -801,4 +801,27 @@ public class FermenterGameTests {
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "heroin and Xanax did not stop the breath");
         helper.succeed();
     }
+
+    /** Named mixes show while both are active; Lachgas on a trip breaks through for a moment. */
+    @GameTest(template = TEMPLATE)
+    public static void mixesAreSpotted(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        var fx = new Object() {
+            void add(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> e) {
+                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(e, 2000, 1));
+            }
+        };
+        fx.add(com.createbrewery.effect.ModEffects.LSD_TRIP);
+        fx.add(com.createbrewery.effect.ModEffects.ROLLING);
+        fx.add(com.createbrewery.effect.ModEffects.WAH);
+        fx.add(com.createbrewery.effect.ModEffects.NOD);
+        fx.add(com.createbrewery.effect.ModEffects.TWEAK);
+        com.createbrewery.drugs.Mixes.tick(player);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.CANDYFLIP), "no Candyflip");
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.SPEEDBALL), "no Speedball");
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.NITROUS_PEAK), "no Gipfelsturm");
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.BREAKTHROUGH), "Lachgas on a trip did not break through");
+        helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.STONED_TRIP), "Nachgelegt without weed");
+        helper.succeed();
+    }
 }

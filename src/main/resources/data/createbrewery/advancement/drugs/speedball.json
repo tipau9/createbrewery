@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/heroin",
+  "display": {
+    "icon": {
+      "id": "createbrewery:heroin"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.speedball.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.speedball.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "m": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:speedball": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "m"
+    ]
+  ]
+}

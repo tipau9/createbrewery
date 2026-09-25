@@ -89,7 +89,8 @@ public final class Opioids {
         boolean hole = player.hasEffect(ModEffects.K_HOLE);
         float breath = Pharmacology.breathLoad(nod == null ? -1 : nod.getAmplifier(), DrugEffect.strength(player, ModEffects.NOD),
             DrugEffect.felt(player, ModEffects.CALM), s.blood,
-            hole ? 1f : DrugEffect.strength(player, ModEffects.KETA_HIGH));
+            hole ? 1f : DrugEffect.strength(player, ModEffects.KETA_HIGH))
+            + (Mixes.speedball(player) ? 0.3f : 0f);
         if (breath >= Pharmacology.BREATH_FAILING) {
             player.addEffect(new MobEffectInstance(ModEffects.RESPIRATORY_DEPRESSION, 60, 0, false, false, true));
         }

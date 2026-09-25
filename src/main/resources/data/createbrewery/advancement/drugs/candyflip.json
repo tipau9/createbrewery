@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/mdma",
+  "display": {
+    "icon": {
+      "id": "createbrewery:mdma"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.candyflip.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.candyflip.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "m": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:candyflip": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "m"
+    ]
+  ]
+}

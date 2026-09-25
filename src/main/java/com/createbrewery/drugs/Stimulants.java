@@ -102,7 +102,7 @@ public final class Stimulants {
         if (rolling > 0f || tweak > 0f || s.heat > 0f) {
             boolean hot = player.level().dimensionType().ultraWarm()
                 || player.level().getBiome(player.blockPosition()).value().getBaseTemperature() > 1.0f;
-            s.heat = Pharmacology.heatStep(s.heat, rolling + 0.5f * tweak, player.isSprinting(), hot, player.isInWaterOrRain());
+            s.heat = Pharmacology.heatStep(s.heat, rolling * (Mixes.dehydrating(player) ? 1.6f : 1f) + 0.5f * tweak, player.isSprinting(), hot, player.isInWaterOrRain());
             if (s.heat >= Pharmacology.OVERHEATED) {
                 player.addEffect(new MobEffectInstance(ModEffects.HYPERTHERMIA, 40, 0, false, false, true));
             }

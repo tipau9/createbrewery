@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/mdma",
+  "display": {
+    "icon": {
+      "id": "minecraft:glass_bottle"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.dehydriert.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.dehydriert.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "m": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:dehydrated": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "m"
+    ]
+  ]
+}

@@ -372,6 +372,7 @@ public final class DrugServer {
         if (instance == null || entity.level().isClientSide) return;
         Psychedelics.expired(entity, instance);
         Stimulants.expired(entity, instance);
+        Mixes.expired(entity, instance);
         // After a CK session everything lasts half again as long.
         float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
         if (instance.is(ModEffects.COKE_HIGH)) {
@@ -410,6 +411,7 @@ public final class DrugServer {
             weedBody(player);
             Stimulants.body(player);
             Opioids.body(player);
+            Mixes.tick(player);
         }
     }
 
