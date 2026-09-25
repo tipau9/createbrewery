@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:koks"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.koks.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.koks.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "koks": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:koks"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "koks"
+    ]
+  ]
+}

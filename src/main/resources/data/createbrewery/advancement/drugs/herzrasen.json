@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/koks",
+  "display": {
+    "icon": {
+      "id": "createbrewery:koks"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.herzrasen.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.herzrasen.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "t": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:tachycardia": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "t"
+    ]
+  ]
+}

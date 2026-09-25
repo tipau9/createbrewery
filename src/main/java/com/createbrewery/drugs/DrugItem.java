@@ -39,6 +39,10 @@ public class DrugItem extends Item {
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
         if (!(entity instanceof Player player)) return stack;
+        // Advancements: before the stack shrinks, or the last dose reads as air.
+        if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            net.minecraft.advancements.CriteriaTriggers.CONSUME_ITEM.trigger(sp, stack);
+        }
         if (!level.isClientSide) {
             DrugServer.take(player, kind);
             // A joint is smoked hit by hit: one hit off its durability, a short breath between hits.

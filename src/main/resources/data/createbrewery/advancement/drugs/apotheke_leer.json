@@ -1,0 +1,77 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:nether_star"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.apotheke_leer.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.apotheke_leer.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "bier": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "#createbrewery:beer"
+        }
+      }
+    },
+    "joint": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:joint"
+        }
+      }
+    },
+    "koks": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:koks"
+        }
+      }
+    },
+    "keta": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:keta"
+        }
+      }
+    },
+    "ibu": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:ibuprofen"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "bier"
+    ],
+    [
+      "joint"
+    ],
+    [
+      "koks"
+    ],
+    [
+      "keta"
+    ],
+    [
+      "ibu"
+    ]
+  ]
+}

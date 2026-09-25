@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/keta",
+  "display": {
+    "icon": {
+      "id": "createbrewery:keta"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.k_loch.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.k_loch.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "k": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:k_hole": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "k"
+    ]
+  ]
+}

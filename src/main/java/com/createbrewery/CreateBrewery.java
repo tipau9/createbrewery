@@ -90,6 +90,22 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_2", "Mashing (Grist + Water -> Wort) requires standard HEAT (Kindled Blaze Burner).");
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_3", "Boiling (Wort + Hops -> Hopped Wort) requires SUPERHEATED heat (fed with Blaze Cake).");
         REGISTRATE.addRawLang("createbrewery.ponder.brewing_heat.text_4", "Remember: Mashing needs standard heat, while Boiling hops must be Superheated!");
+        // The "Apotheke" advancement tab: JSON in data/createbrewery/advancement/drugs.
+        // advancements:begin
+        advancement("root", "Apotheke", "Nimm irgendeine Droge");
+        advancement("bier", "Feierabendbier", "Trink ein Bier");
+        advancement("joint", "Erstmal einen bauen", "Zieh an einem Joint");
+        advancement("greening_out", "Kreislauf am Ende", "Rauch so viel, dass dir der Kreislauf wegkippt");
+        advancement("koks", "Nasenpuder", "Zieh eine Line Koks");
+        advancement("herzrasen", "Bumm Bumm Bumm", "Bring dein Herz zum Rasen");
+        advancement("herzinfarkt", "Das war zu viel", "Erleide einen Herzinfarkt");
+        advancement("zweites_leben", "Zweites Leben", "Überlebe einen Herzinfarkt");
+        advancement("keta", "Pferdebetäubung", "Zieh eine Line Keta");
+        advancement("k_loch", "Willkommen im K-Loch", "Nimm so viel Keta, dass du im K-Loch landest");
+        advancement("ck", "Schnee und Pferde", "Hab Koks und Keta gleichzeitig im Blut");
+        advancement("ibu", "Hilft gegen alles", "Nimm eine Ibu");
+        advancement("apotheke_leer", "Apotheke leergeräumt", "Nimm jede Droge mindestens einmal");
+        // advancements:end
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(CreateBreweryClient::onClientSetup);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
@@ -105,6 +121,11 @@ public class CreateBrewery {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.drugs.DrugServer.class);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_SPEC);
+    }
+
+    private static void advancement(String path, String title, String description) {
+        REGISTRATE.addRawLang("advancements.createbrewery.drugs." + path + ".title", title);
+        REGISTRATE.addRawLang("advancements.createbrewery.drugs." + path + ".description", description);
     }
 
     public static ResourceLocation ID(String path) {

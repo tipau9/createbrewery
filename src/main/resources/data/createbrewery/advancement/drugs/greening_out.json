@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/joint",
+  "display": {
+    "icon": {
+      "id": "createbrewery:joint"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.greening_out.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.greening_out.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "g": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:greening_out": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "g"
+    ]
+  ]
+}

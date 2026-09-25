@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/herzrasen",
+  "display": {
+    "icon": {
+      "id": "createbrewery:koks"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.herzinfarkt.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.herzinfarkt.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "h": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:heart_attack": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "h"
+    ]
+  ]
+}

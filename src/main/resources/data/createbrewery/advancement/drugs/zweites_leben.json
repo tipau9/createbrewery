@@ -1,0 +1,28 @@
+{
+  "parent": "createbrewery:drugs/herzinfarkt",
+  "display": {
+    "icon": {
+      "id": "minecraft:totem_of_undying"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.zweites_leben.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.zweites_leben.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "survived": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "survived"
+    ]
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/keta",
+  "display": {
+    "icon": {
+      "id": "createbrewery:koks"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.ck.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.ck.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "ck": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "createbrewery:ck_mix": {}
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "ck"
+    ]
+  ]
+}

@@ -49,6 +49,9 @@ public class IbuprofenItem extends Item {
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
         if (!(entity instanceof Player player)) return stack;
+        if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            net.minecraft.advancements.CriteriaTriggers.CONSUME_ITEM.trigger(sp, stack);
+        }
         if (!level.isClientSide) {
             MobEffectInstance before = player.getEffect(ModEffects.PAINKILLER);
             int pills = before == null ? 0 : before.getAmplifier() + 1;

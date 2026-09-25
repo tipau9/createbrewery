@@ -336,7 +336,17 @@ public final class DrugServer {
             entity.addEffect(new MobEffectInstance(ModEffects.COKE_CRASH, (int) ((1200 + 600 * instance.getAmplifier()) * worse), 0));
         } else if (instance.is(ModEffects.KETA_HIGH) || instance.is(ModEffects.K_HOLE)) {
             entity.addEffect(new MobEffectInstance(ModEffects.DAZED, (int) (1200 * worse), 0));
+        } else if (instance.is(ModEffects.HEART_ATTACK) && entity.isAlive()) {
+            award(entity, "zweites_leben", "survived");
         }
+    }
+
+    /** Grants an "Apotheke" advancement criterion that no vanilla trigger can express. */
+    public static void award(LivingEntity entity, String path, String criterion) {
+        if (!(entity instanceof net.minecraft.server.level.ServerPlayer player)) return;
+        var advancement = player.server.getAdvancements()
+            .get(ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "drugs/" + path));
+        if (advancement != null) player.getAdvancements().award(advancement, criterion);
     }
 
     /** Wide awake on Koks: no sleeping. */

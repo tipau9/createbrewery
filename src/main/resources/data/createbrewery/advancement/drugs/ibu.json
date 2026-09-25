@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:ibuprofen"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.ibu.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.ibu.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "ibu": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:ibuprofen"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "ibu"
+    ]
+  ]
+}
