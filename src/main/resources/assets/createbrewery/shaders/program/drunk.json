@@ -44,6 +44,7 @@
         { "name": "Scene",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Tension",      "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Drop",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "Peak",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Beats",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Tempo",        "type": "float",      "count": 1,  "values": [ 120.0 ] },
         { "name": "Heat",         "type": "float",      "count": 1,  "values": [ 0.0 ] },

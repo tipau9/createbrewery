@@ -57,6 +57,8 @@ public final class MusicPulse {
         volatile SoundInstance sound;
         volatile boolean ignored;
         int kicks;
+        /** The gain the game set, and the one set here on top of it (-1: none yet). */
+        float gain, louder = -1f;
 
         Track(int source, AudioFormat format) {
             this.source = source;
@@ -151,6 +153,7 @@ public final class MusicPulse {
                 LOGGER.info("MDMA heard {}: {} kicks", t.sound.getLocation(), t.kicks);
                 continue;
             }
+            louder(t);
             float near = player == null ? 0f : closeness(t.sound, player);
             heard |= near > 0.05f;
             Now at = heardNow(t);
@@ -168,6 +171,17 @@ public final class MusicPulse {
         hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
         // Up fast, down slowly: loud bits hit at once, the quiet comes in gently.
         level += (l - level) * (1f - (float) Math.exp(-dt * (l > level ? 25.0 : 4.0)));
+    }
+
+    /** At the peak the music sounds louder: up to twice the gain the game gave it. */
+    private static void louder(Track t) {
+        if (!AL10.alIsSource(t.source)) return;
+        float now = AL10.alGetSourcef(t.source, AL10.AL_GAIN);
+        // Whatever the game set since (volume slider, a moving sound) is the new base.
+        if (Math.abs(now - t.louder) > 1e-4f) t.gain = now;
+        t.louder = t.gain * (1f + RollClient.peak);
+        AL10.alSourcef(t.source, AL10.AL_MAX_GAIN, 2f);
+        AL10.alSourcef(t.source, AL10.AL_GAIN, t.louder);
     }
 
     /** What is audible right now, or null if nothing is known yet. */

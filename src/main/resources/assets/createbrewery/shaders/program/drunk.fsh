@@ -41,6 +41,7 @@ uniform float Faded;   // MDMA wearing off: the closed-eye patterns of the offse
 uniform float Scene;   // MDMA, very high: the place turns into a dance floor for a while, 0..1
 uniform float Tension; // the song's build-up: the kick is gone, everyone waits, 0..1 (see MusicPulse)
 uniform float Drop;    // the drop: 1 when the kick comes back after a build-up, dying away
+uniform float Peak;    // MDMA, the peak stage (third dose): the music takes over, 0..1
 uniform float Beats;   // kicks counted, 0..63: the club light colour moves on with each
 uniform float Tempo;   // beats a minute of what is heard (120 until learnt)
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
@@ -194,6 +195,10 @@ void main() {
     // of a big soft pump, which would only turn into seasickness at four kicks a second.
     float techno = smoothstep(118.0, 132.0, Tempo) * min(1.0, Beat * 2.0);
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.025 * (1.0 - 0.4 * techno) * kick);
+    // The peak: every kick slams the whole picture - a hard jolt, a new way each beat.
+    float slam = Peak * min(kick, 1.5);
+    vec2 jolt = fract(sin(vec2(Beats * 12.9898, Beats * 78.233)) * 43758.5453) - 0.5;
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * slam) + jolt * 0.035 * slam;
     // The build-up draws you in, and the drop throws it all wide open.
     float raving = min(1.0, Beat * 2.0);
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * Tension * raving + 0.05 * Drop * Drop * raving);
@@ -472,6 +477,8 @@ void main() {
     // hit - once per kick, never faster.
     col *= 1.0 - 0.25 * techno * (1.0 - min(kick, 1.0));
     col += vec3(0.9, 0.95, 1.0) * 0.25 * pow(min(kick, 1.0), 3.0) * techno;
+    // At the peak a white strobe hit on every kick, whatever the tempo.
+    col += vec3(1.0) * 0.3 * pow(min(kick, 1.0), 3.0) * Peak;
     col *= 1.0 + 0.2 * kick;
     // Colours are richer, and more so the louder the music - above all bright, neon colours.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

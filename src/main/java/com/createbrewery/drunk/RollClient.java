@@ -31,6 +31,8 @@ import net.neoforged.neoforge.common.util.TriState;
  *       hats sparkle. Build-ups pull you in, the drop is a rush. Everything alive bounces along,
  *       and jumping on the beat gets you into the groove, which takes it all further.</li>
  *   <li>At the height the eyes wiggle for a few seconds at a time (nystagmus).</li>
+ *   <li>The peak: on the third dose the music takes over completely - it sounds louder, every
+ *       kick slams the whole view, and everything that moves with the music moves twice as hard.</li>
  *   <li>High doses: a dancer at the corner of the eye, the view shifting back, and for a while
  *       the floor becomes a dance floor. Wearing off, closed-eye patterns (see drunk.fsh).</li>
  *   <li>Soft things underfoot (wool, carpet, moss) feel wonderful.</li>
@@ -44,7 +46,9 @@ public final class RollClient {
     private RollClient() {}
 
     static float rush, beat, heat, wiggle, zap, faded, scene, perspective, groove;
-    private static boolean wasOnGround = true, buildUpSaid;
+    /** The peak stage, 0..1: the third dose at its height (see {@link MusicPulse} and drunk.fsh). */
+    static float peak;
+    private static boolean wasOnGround = true, buildUpSaid, peakSaid;
 
     private static int rushTicks = -1, nextRush = 400, nextThought = 300, wiggleTicks, nextWiggle = 600;
     private static float sweat, lastWalk;
@@ -75,6 +79,17 @@ public final class RollClient {
                 rushTicks = -1;
                 rush = 0f;
             }
+        }
+
+        // The peak: the third dose, at its height.
+        var rolling = player.getEffect(ModEffects.ROLLING);
+        peak = DrunkClient.ease(peak, rolling != null && rolling.getAmplifier() >= 2
+            ? DrugEffect.strength(player, ModEffects.ROLLING) : 0f);
+        if (peak > 0.7f && !peakSaid) {
+            peakSaid = true;
+            think(player, PEAK);
+        } else if (peak < 0.1f) {
+            peakSaid = false;
         }
 
         // The music, in the body: only while a song plays, and more still when dancing.
@@ -224,6 +239,7 @@ public final class RollClient {
     private static final String[] DROP = {"DA IST ER!!!", "DER DROP!", "Ohhh jaaaa!", "Hände hoch!!!"};
     private static final String[] BUILD_UP = {"Gleich… gleich kommt's…", "Warte… warte…", "Es baut sich auf…"};
     private static final String[] GROOVE = {"Ich bin eins mit dem Beat.", "Im Takt. Alles im Takt.", "Mein Körper tanzt von allein."};
+    private static final String[] PEAK = {"ICH BIN DER BASS.", "Lauter. LAUTER!", "Alles bebt. Ich bebe.", "Die Musik ist in meinem Kopf. Ganz drin."};
     private static final String[] ZAP = {"Bzzt. Was war das?", "Da hat's im Kopf gezuckt.", "Mein Hirn blitzt."};
     private static final String[] MORNING = {"Wie, schon hell?!", "Die Nacht war doch gerade erst…", "Wo sind die Stunden hin?"};
     private static final String[] RUSH = {"Wow… WOW.", "Da ist sie wieder, die Welle.", "Gänsehaut. Überall."};
@@ -263,7 +279,7 @@ public final class RollClient {
     /** Everyone dances along: every living thing bounces with the kick. */
     private static void onLivingPre(net.neoforged.neoforge.client.event.RenderLivingEvent.Pre<?, ?> event) {
         if (beat < 0.05f || event.getEntity() == Minecraft.getInstance().player) return;
-        float k = MusicPulse.kick * Math.min(1f, beat);
+        float k = MusicPulse.kick * Math.min(1f, beat) * (1f + peak);
         // No push of our own: the entity dispatcher pops its pose after the renderer.
         event.getPoseStack().translate(0.0, 0.12 * k, 0.0);
         event.getPoseStack().scale(1f - 0.04f * k, 1f + 0.08f * k, 1f - 0.04f * k);

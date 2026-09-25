@@ -447,9 +447,11 @@ public final class DrunkClient {
             chain.setUniform("Beat", RollClient.beat * screen());
             MusicPulse.update();
             // In the groove every kick hits harder.
-            chain.setUniform("Kick", MusicPulse.kick * (1f + 0.5f * RollClient.groove));
+            // In the groove every kick hits harder, and at the peak harder still.
+            chain.setUniform("Kick", MusicPulse.kick * (1f + 0.5f * RollClient.groove + RollClient.peak));
+            chain.setUniform("Peak", RollClient.peak * screen());
             chain.setUniform("Level", MusicPulse.level);
-            chain.setUniform("Hats", MusicPulse.hats);
+            chain.setUniform("Hats", MusicPulse.hats * (1f + RollClient.peak));
             chain.setUniform("Wiggle", RollClient.wiggle * screen());
             chain.setUniform("Zap", RollClient.zap * screen());
             chain.setUniform("Faded", RollClient.faded * screen());
@@ -847,6 +849,8 @@ public final class DrunkClient {
         roll += noise(t * 9.0, 83) * 0.7f * RollClient.rush;
         // ...and the body moves with every kick, leaning now one way, now the other.
         roll += (float) Math.sin(t * 1.3) * 1.2f * MusicPulse.kick * RollClient.beat;
+        // At the peak every kick slams the head.
+        roll += noise(t * 30.0, 89) * 7f * MusicPulse.kick * RollClient.beat * RollClient.peak;
         // A brain zap jerks the head.
         roll += noise(t * 40.0, 97) * 4f * RollClient.zap;
         roll += noise(t * 14.0, 71) * 0.8f * TripClient.chill;
