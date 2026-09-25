@@ -35,9 +35,10 @@ public final class MusicPulse {
     /** Channel#attachBufferStream already queued this many one-second buffers before we see the stream. */
     private static final int QUEUED_AHEAD = 4;
 
-    private record Chunk(double start, float[] kick) {
+    /** From {@link KickDetector#slices}: per slice the kick, the level and the hats. */
+    private record Chunk(double start, float[][] heard) {
         double end() {
-            return start + kick.length * SLICE;
+            return start + heard[0].length * SLICE;
         }
     }
 
@@ -46,6 +47,8 @@ public final class MusicPulse {
         final ConcurrentLinkedDeque<Chunk> chunks = new ConcurrentLinkedDeque<>();
         double nextStart = now() + QUEUED_AHEAD;
         final KickDetector detector = new KickDetector();
+        int kicks;
+        double seconds;
 
         Track(SoundInstance sound) {
             this.sound = sound;
@@ -55,9 +58,10 @@ public final class MusicPulse {
     private static final List<Track> tracks = new CopyOnWriteArrayList<>();
     private static Field channelStream;
     private static boolean failed;
-    private static float shown;
     private static double lastFrame;
     private static boolean playing;
+    /** What is heard right now, weighted by how close the song is; see {@link #update}. */
+    static float kick, level, hats;
 
     static void init() {
         NeoForge.EVENT_BUS.addListener(MusicPulse::onStream);
@@ -81,6 +85,8 @@ public final class MusicPulse {
             Track track = new Track(sound);
             channelStream.set(event.getChannel(), new Listening(stream, track));
             tracks.add(track);
+            AudioFormat format = stream.getFormat();
+            LOGGER.info("MDMA hears {} ({} Hz, {} ch)", sound.getLocation(), format.getSampleRate(), format.getChannels());
         } catch (ReflectiveOperationException | RuntimeException e) {
             failed = true;
             LOGGER.warn("Cannot listen to music; MDMA falls back to a steady beat", e);
@@ -109,31 +115,34 @@ public final class MusicPulse {
 
     private static void analyse(Track t, AudioFormat format, ByteBuffer pcm) {
         int bytes = pcm.remaining();
-        float[] kick = t.detector.slices(format, pcm);
+        float[][] heard = t.detector.slices(format, pcm);
+        for (float k : heard[KickDetector.KICK]) if (k > 0.5f) t.kicks++;
+        t.seconds += heard[0].length * SLICE;
         // Played back to back; if the stream stalled, it starts as soon as it arrives.
         double start = Math.max(t.nextStart, now());
-        t.chunks.addLast(new Chunk(start, kick));
+        t.chunks.addLast(new Chunk(start, heard));
         t.nextStart = start + bytes / (2.0 * Math.max(1, format.getChannels())) / format.getSampleRate();
     }
 
-    /** True while a song can be heard. Updated by {@link #kick}. */
+    /** True while a song can be heard. Updated by {@link #update}. */
     static boolean playing() {
         return playing;
     }
 
     /**
-     * 0..1: the kick you hear right now, flashing up and dying away quickly. Without music, a
-     * steady 128 to the minute from the given time (seconds).
+     * Once a frame: what is heard right now. Kicks and hats flash up and die away quickly, the
+     * level follows smoothly. All 0 without music - no music, no beat.
      */
-    static float kick(float time) {
+    static void update() {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         double now = now();
-        float hit = 0f;
+        float k = 0f, l = 0f, h = 0f;
         boolean heard = false;
         for (Track t : tracks) {
             if (!mc.getSoundManager().isActive(t.sound)) {
                 tracks.remove(t);
+                LOGGER.info("MDMA heard {}: {} kicks in {} s", t.sound.getLocation(), t.kicks, (int) t.seconds);
                 continue;
             }
             float near = player == null ? 0f : closeness(t.sound, player);
@@ -141,15 +150,17 @@ public final class MusicPulse {
             Chunk c;
             while ((c = t.chunks.peekFirst()) != null && c.end() < now) t.chunks.pollFirst();
             if (c == null || c.start() > now) continue;
-            int i = Math.min(c.kick().length - 1, (int) ((now - c.start()) / SLICE));
-            hit = Math.max(hit, c.kick()[i] * near);
+            int i = Math.min(c.heard()[0].length - 1, (int) ((now - c.start()) / SLICE));
+            k = Math.max(k, c.heard()[KickDetector.KICK][i] * near);
+            l = Math.max(l, c.heard()[KickDetector.LEVEL][i] * near);
+            h = Math.max(h, c.heard()[KickDetector.HATS][i] * near);
         }
         playing = heard;
-        double dt = Math.min(0.1, now - lastFrame);
+        float dt = (float) Math.min(0.1, now - lastFrame);
         lastFrame = now;
-        shown = Math.max(hit, shown * (float) Math.exp(-dt * 9.0));
-        if (heard) return shown;
-        return (float) Math.exp(-(time * 2.1333 % 1.0) * 8.0);
+        kick = Math.max(k, kick * (float) Math.exp(-dt * 9.0));
+        hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
+        level += (l - level) * (1f - (float) Math.exp(-dt * 6.0));
     }
 
     /** 1 next to the jukebox (or for music that plays everywhere), 0 out of earshot. */

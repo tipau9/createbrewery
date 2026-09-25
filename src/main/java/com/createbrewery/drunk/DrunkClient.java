@@ -445,7 +445,11 @@ public final class DrunkClient {
             chain.setUniform("Roll", rolling * screen());
             chain.setUniform("Rush", RollClient.rush * screen());
             chain.setUniform("Beat", RollClient.beat * screen());
-            chain.setUniform("Kick", MusicPulse.kick((float) (t % 3600.0)));
+            MusicPulse.update();
+            chain.setUniform("Kick", MusicPulse.kick);
+            chain.setUniform("Level", MusicPulse.level);
+            chain.setUniform("Hats", MusicPulse.hats);
+            chain.setUniform("Wiggle", RollClient.wiggle * screen());
             chain.setUniform("Heat", RollClient.heat * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
@@ -815,7 +819,7 @@ public final class DrunkClient {
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f)) return;
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -833,6 +837,8 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 22.0) * 2.5f * TripClient.laughing();
         // MDMA: goosebumps with every rush.
         roll += noise(t * 9.0, 83) * 0.7f * RollClient.rush;
+        // ...and the body moves with every kick, leaning now one way, now the other.
+        roll += (float) Math.sin(t * 1.3) * 1.2f * MusicPulse.kick * RollClient.beat;
         roll += noise(t * 14.0, 71) * 0.8f * TripClient.chill;
         event.setRoll(event.getRoll() + roll * screen());
     }

@@ -32,7 +32,10 @@ uniform float Nod;     // Heroin: 0..1
 uniform float Wah;     // Lachgas: 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
 uniform float Beat;    // MDMA: how much the music is in the body, 0..1
-uniform float Kick;    // the kick drum heard right now, 0..1 (see MusicPulse); a steady 128 bpm without music
+uniform float Kick;    // the kick drum heard right now, 0..1 (see MusicPulse); 0 without music
+uniform float Level;   // how loud the song is right now, against its own loudest, 0..1
+uniform float Hats;    // hi-hats, claps and snares heard right now, 0..1
+uniform float Wiggle;  // MDMA: the eyes flicker (nystagmus), in bursts, 0..1
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
@@ -172,11 +175,11 @@ void main() {
     uv = 0.5 + sc * vec2(1.0 / aspect, 1.0);
     uv.y -= st * held * 0.012 * (1.0 + sin(uv.x * 40.0 + t * 0.7));
 
-    // MDMA: at its height the eyes flicker side to side (nystagmus), fast and tiny.
-    uv.x += sin(t * 38.0) * 0.0012 * smoothstep(0.5, 1.0, Roll);
+    // MDMA: now and then the eyes flicker side to side for a few seconds (nystagmus).
+    uv.x += sin(t * 60.0) * 0.004 * Wiggle;
     // The beat is in the picture: it pumps with every kick of the song playing.
-    float kick = Kick;
-    uv = 0.5 + (uv - 0.5) * (1.0 - 0.008 * Beat * kick);
+    float kick = Kick * Beat;
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.025 * kick);
     // A rush pulls you in, gently.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.02 * Rush);
     // Overheated: the air itself wobbles.
@@ -410,11 +413,15 @@ void main() {
     col += neon * smoothstep(0.85, 1.0, petals) * 0.25 * Break;
 
     // MDMA: everything soft and warm, lights bloom pink-gold, and bright things sparkle.
-    col += (spill(uv, px * 3.0, 0.3) + spill(uv, px * 8.0, 0.7) * 1.2) * vec3(1.0, 0.75, 0.85) * 1.2 * Roll;
+    // The glow breathes with the loudness of the music.
+    col += (spill(uv, px * 3.0, 0.3) + spill(uv, px * 8.0, 0.7) * 1.2) * vec3(1.0, 0.75, 0.85) * 1.2 * Roll * (1.0 + 0.8 * Beat * Level);
     col *= mix(vec3(1.0), vec3(1.08, 1.0, 1.04), Roll);
     vec2 cell = floor(uv * OutSize / 5.0);
     float cellHash = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
     float twinkle = pow(max(0.0, sin(t * 3.0 + cellHash * 40.0)), 16.0) * step(0.9, cellHash);
+    // With music the sparkles go off on the hi-hats instead, a different handful each time.
+    float hatSpark = step(0.9, cellHash) * step(0.6, fract(cellHash * 17.0 + floor(t * 6.0) * 0.37)) * Hats * 1.5;
+    twinkle = mix(twinkle, hatSpark, Beat);
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col += vec3(1.0, 0.9, 1.0) * twinkle * smoothstep(0.5, 0.9, lum) * 0.8 * Roll;
     // A rush: a warm, bright wave of pink light rolls out from the middle, colours swell.
@@ -422,24 +429,29 @@ void main() {
     col += vec3(1.0, 0.6, 0.85) * (wave * 0.35 + 0.12) * Rush;
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(vec3(lum), col, 1.0 + 0.4 * Rush);
-    // With every beat the lights flash a little brighter.
-    col += spill(uv, px * 6.0, 0.4) * vec3(1.0, 0.7, 0.9) * 1.5 * Beat * kick;
-    // At the height, rave lasers sweep down through the haze, in time with the music.
-    float laserOn = smoothstep(0.5, 0.85, Roll);
-    if (laserOn > 0.0) {
-        for (int i = 0; i < 4; i++) {
-            float fi = float(i);
-            float a = -1.5708 + 0.9 * sin(t * (0.5 + 0.13 * fi) + fi * 1.7);
-            vec2 beam = vec2(cos(a), sin(a));
-            vec2 from = (uv - vec2(0.2 + 0.2 * fi, 1.05)) * vec2(aspect, 1.0);
-            float across = abs(from.x * beam.y - from.y * beam.x);
-            float ahead = step(0.0, dot(from, beam));
-            // Each bar of four beats the colours move on.
-            vec3 beamCol = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + fi * 0.25 + floor(t * 2.1333 / 4.0) * 0.37));
-            col += beamCol * ahead * laserOn * (smoothstep(0.004, 0.0, across) * 0.5 * (0.4 + 0.6 * kick) * (1.0 + Beat)
-                + smoothstep(0.05, 0.0, across) * 0.06);
+    // Wide pupils: lights are too bright, with long thin starburst rays, flaring on every kick.
+    if (Roll > 0.01) {
+        vec3 rays = vec3(0.0);
+        float rayLen = (0.025 + 0.04 * kick) * Roll;
+        for (int i = 1; i <= 4; i++) {
+            float f = float(i) / 4.0;
+            vec2 o = vec2(rayLen * f / aspect, rayLen * f);
+            rays += (max(tap(uv + vec2(o.x, 0.0)) - 0.85, 0.0) + max(tap(uv - vec2(o.x, 0.0)) - 0.85, 0.0)
+                   + max(tap(uv + vec2(0.0, o.y)) - 0.85, 0.0) + max(tap(uv - vec2(0.0, o.y)) - 0.85, 0.0)) * (1.0 - f);
         }
+        col += rays * vec3(1.0, 0.85, 0.95) * 0.9 * Roll;
     }
+    // Every kick: the lights flare, the picture brightens, colours punch.
+    col += spill(uv, px * 10.0, 0.4) * vec3(1.0, 0.7, 0.9) * 2.5 * kick;
+    col *= 1.0 + 0.2 * kick;
+    // Colours are richer, and more so the louder the music - above all bright, neon colours.
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    float chroma = max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b));
+    col = mix(vec3(lum), col, 1.0 + (0.25 * Roll + 0.5 * Beat * Level + 0.4 * kick) * smoothstep(0.05, 0.4, chroma));
+    // In the quiet bits the room closes in a little; when it gets loud it opens up.
+    col *= 1.0 - smoothstep(0.3, 0.9, length(d)) * 0.25 * Beat * (1.0 - Level);
+    // Eye wiggles: the picture blurs into a faint flickering double.
+    col = mix(col, tap(uv + vec2(0.006 * sin(t * 60.0 + 1.5), 0.0)), 0.35 * Wiggle);
     // Overheated: washed out, flushed red, and the edges throb with a racing pulse.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum) * vec3(1.2, 0.9, 0.85), 0.35 * Heat);

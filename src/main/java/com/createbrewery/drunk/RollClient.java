@@ -22,12 +22,13 @@ import net.neoforged.neoforge.common.util.TriState;
 
 /**
  * MDMA beyond the pink glow, client only. Reads {@link DrunkClient#rolling}; the shader reads
- * {@link #rush}, {@link #beat} and {@link #heat}.
+ * {@link #rush}, {@link #beat}, {@link #heat} and {@link #wiggle}.
  *
  * <ul>
  *   <li>Rushes: every half minute or so a wave of euphoria washes over you - light, goosebumps, a sigh.</li>
  *   <li>Music gets into the body: while any song plays nearby (see {@link MusicPulse}), the picture
- *       pumps with its real kicks and rave lasers sweep.</li>
+ *       pumps with its real kicks, lights flare, colours swell with it and the hats sparkle.</li>
+ *   <li>At the height the eyes wiggle for a few seconds at a time (nystagmus).</li>
  *   <li>Soft things underfoot (wool, carpet, moss) feel wonderful.</li>
  *   <li>Everyone is lovely: chat comes with a heart, and monsters are just "Kumpel".</li>
  *   <li>Dancing on it heats you up: the view flushes and throbs. Water and rest cool it.</li>
@@ -37,9 +38,9 @@ import net.neoforged.neoforge.common.util.TriState;
 public final class RollClient {
     private RollClient() {}
 
-    static float rush, beat, heat;
+    static float rush, beat, heat, wiggle;
 
-    private static int rushTicks = -1, nextRush = 400, nextThought = 300;
+    private static int rushTicks = -1, nextRush = 400, nextThought = 300, wiggleTicks, nextWiggle = 600;
     private static float sweat, lastWalk;
 
     static void init() {
@@ -68,9 +69,18 @@ public final class RollClient {
             }
         }
 
-        // The music, in the body: strongest while a song plays, and more still when dancing.
-        MusicPulse.kick(0f); // keeps the song list tidy even while nothing is drawn
-        beat = DrunkClient.ease(beat, Math.min(1f, roll * (MusicPulse.playing() ? 1f : 0.25f) * (player.isSprinting() ? 1.3f : 1f)));
+        // The music, in the body: only while a song plays, and more still when dancing.
+        MusicPulse.update(); // keeps the song list tidy even while nothing is drawn
+        beat = DrunkClient.ease(beat, MusicPulse.playing() ? Math.min(1f, roll * (player.isSprinting() ? 1.3f : 1f)) : 0f);
+
+        // Eye wiggles (nystagmus): at the height the eyes start to flicker for a few seconds, then
+        // calm down again. Dancing to loud music brings them on more often.
+        if (wiggleTicks <= 0 && roll > 0.5f && player.tickCount >= nextWiggle) {
+            wiggleTicks = 40 + r.nextInt(40);
+            nextWiggle = player.tickCount + (MusicPulse.playing() && player.isSprinting() ? 300 : 500) + r.nextInt(400);
+        }
+        if (wiggleTicks > 0) wiggleTicks--;
+        wiggle += ((wiggleTicks > 0 ? roll : 0f) - wiggle) * 0.3f;
 
         // Dancing heats you up; water and rest cool you down. The real heat is on the server
         // (Stimulants#body), which only tells us once it is too late (Hitzschlag), so this guesses ahead.
