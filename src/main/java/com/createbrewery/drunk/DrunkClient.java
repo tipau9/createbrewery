@@ -126,6 +126,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onSoundSource);
         TripClient.init();
         RollClient.init();
+        MusicPulse.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -444,6 +445,7 @@ public final class DrunkClient {
             chain.setUniform("Roll", rolling * screen());
             chain.setUniform("Rush", RollClient.rush * screen());
             chain.setUniform("Beat", RollClient.beat * screen());
+            chain.setUniform("Kick", MusicPulse.kick((float) (t % 3600.0)));
             chain.setUniform("Heat", RollClient.heat * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
@@ -506,8 +508,6 @@ public final class DrunkClient {
         // wrapper would hide - the listener gain makes those louder instead.
         SoundSource source = sound.getSource();
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
-        // Only real songs, not the notes the trips play on the records channel.
-        if (sound.getLocation().getPath().startsWith("music")) RollClient.music = sound;
         if (sound instanceof Echo || sound instanceof Phantom) return;
         synaesthesia(player, sound);
         // DMT: every sound bends down and stretches, as if from very far away.

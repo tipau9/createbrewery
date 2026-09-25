@@ -7,7 +7,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -27,7 +26,8 @@ import net.neoforged.neoforge.common.util.TriState;
  *
  * <ul>
  *   <li>Rushes: every half minute or so a wave of euphoria washes over you - light, goosebumps, a sigh.</li>
- *   <li>Music gets into the body: while a song plays, the picture pumps with the beat and rave lasers sweep.</li>
+ *   <li>Music gets into the body: while any song plays nearby (see {@link MusicPulse}), the picture
+ *       pumps with its real kicks and rave lasers sweep.</li>
  *   <li>Soft things underfoot (wool, carpet, moss) feel wonderful.</li>
  *   <li>Everyone is lovely: chat comes with a heart, and monsters are just "Kumpel".</li>
  *   <li>Dancing on it heats you up: the view flushes and throbs. Water and rest cool it.</li>
@@ -38,8 +38,6 @@ public final class RollClient {
     private RollClient() {}
 
     static float rush, beat, heat;
-    /** The last song that started (music or a record), to know whether one is still playing. */
-    static SoundInstance music;
 
     private static int rushTicks = -1, nextRush = 400, nextThought = 300;
     private static float sweat, lastWalk;
@@ -71,8 +69,8 @@ public final class RollClient {
         }
 
         // The music, in the body: strongest while a song plays, and more still when dancing.
-        boolean playing = music != null && mc.getSoundManager().isActive(music);
-        beat = DrunkClient.ease(beat, Math.min(1f, roll * (playing ? 1f : 0.25f) * (player.isSprinting() ? 1.3f : 1f)));
+        MusicPulse.kick(0f); // keeps the song list tidy even while nothing is drawn
+        beat = DrunkClient.ease(beat, Math.min(1f, roll * (MusicPulse.playing() ? 1f : 0.25f) * (player.isSprinting() ? 1.3f : 1f)));
 
         // Dancing heats you up; water and rest cool you down. The real heat is on the server
         // (Stimulants#body), which only tells us once it is too late (Hitzschlag), so this guesses ahead.

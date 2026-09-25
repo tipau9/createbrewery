@@ -32,6 +32,7 @@ uniform float Nod;     // Heroin: 0..1
 uniform float Wah;     // Lachgas: 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
 uniform float Beat;    // MDMA: how much the music is in the body, 0..1
+uniform float Kick;    // the kick drum heard right now, 0..1 (see MusicPulse); a steady 128 bpm without music
 uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // Where each pixel is in the world, so trip patterns can stick to surfaces instead of the screen.
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
@@ -173,8 +174,8 @@ void main() {
 
     // MDMA: at its height the eyes flicker side to side (nystagmus), fast and tiny.
     uv.x += sin(t * 38.0) * 0.0012 * smoothstep(0.5, 1.0, Roll);
-    // The beat is in the picture: it pumps with it, 128 to the minute.
-    float kick = exp(-fract(t * 2.1333) * 8.0);
+    // The beat is in the picture: it pumps with every kick of the song playing.
+    float kick = Kick;
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.008 * Beat * kick);
     // A rush pulls you in, gently.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.02 * Rush);
