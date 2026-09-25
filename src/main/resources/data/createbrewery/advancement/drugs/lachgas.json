@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:lachgas_balloon"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.lachgas.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.lachgas.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "lachgas": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:lachgas_balloon"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "lachgas"
+    ]
+  ]
+}

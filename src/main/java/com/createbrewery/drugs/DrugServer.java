@@ -77,6 +77,8 @@ public final class DrugServer {
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "aspiration"));
 
     public static final int HEART_ATTACK_TICKS = 300;
+    /** Lachgas lasts a minute or two in real life: here 15 seconds. */
+    public static final int WAH_TICKS = 300;
     public static final int ASPIRATION_TICKS = 200;
 
     public static final int WEED_TICKS = 4800;
@@ -91,7 +93,7 @@ public final class DrugServer {
     /** Three joints' worth of hits in the body at most. */
     private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
-    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT, MDMA, METH, HEROIN, XANAX }
+    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT, MDMA, METH, HEROIN, XANAX, LACHGAS }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
@@ -138,6 +140,13 @@ public final class DrugServer {
         }
         if (kind == Kind.LSD || kind == Kind.SHROOMS || kind == Kind.MESCALINE || kind == Kind.DMT) {
             Psychedelics.take(player, kind);
+            return;
+        }
+        if (kind == Kind.LACHGAS) {
+            // Each balloon only prolongs the high a little; three in a row and the air runs short.
+            MobEffectInstance before = player.getEffect(ModEffects.WAH);
+            player.addEffect(new MobEffectInstance(ModEffects.WAH, WAH_TICKS,
+                before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1), false, false, true));
             return;
         }
         if (kind == Kind.HEROIN || kind == Kind.XANAX) {
@@ -336,6 +345,23 @@ public final class DrugServer {
             net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.4f, 0.6f);
     }
 
+    /** Lachgas, every second: laughing fits; with the air gone from too many balloons, you faint. */
+    public static void wahTick(LivingEntity entity, int level) {
+        if (!(entity instanceof Player player)) return;
+        float strength = DrugEffect.strength(player, ModEffects.WAH);
+        if (player.getRandom().nextFloat() < 0.25f * strength) {
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.GIGGLE.get(),
+                SoundSource.PLAYERS, 1.0f, 1.1f + player.getRandom().nextFloat() * 0.2f);
+        }
+        if (player.getAirSupply() <= 0) DrunkServer.blackout(player);
+    }
+
+    /** Lachgas pushes the oxygen out: from the third balloon in a row the air runs down. */
+    private static boolean hypoxic(LivingEntity entity) {
+        MobEffectInstance wah = entity.getEffect(ModEffects.WAH);
+        return wah != null && wah.getAmplifier() >= 2;
+    }
+
     // ---- events ----
 
     /** Every high ends in something: the crash after Koks, a daze after Keta. */
@@ -468,7 +494,7 @@ public final class DrugServer {
         LivingEntity entity = event.getEntity();
         boolean choking = entity.hasEffect(ModEffects.ASPIRATION);
         // The breath stops more slowly than choking: the bubbles run out over about ten seconds.
-        if ((choking || entity.hasEffect(ModEffects.RESPIRATORY_DEPRESSION)) && !helped(entity)) {
+        if ((choking || entity.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) || hypoxic(entity)) && !helped(entity)) {
             event.setCanBreathe(false);
             event.setConsumeAirAmount(entity.getAirSupply() > 0 ? (choking ? 5 : 2) : 0);
         }
@@ -477,7 +503,8 @@ public final class DrugServer {
     /** The choking does its own damage (aspirationTick), not vanilla drowning every tick. */
     @SubscribeEvent
     public static void onDrown(LivingDrownEvent event) {
-        if (event.getEntity().hasEffect(ModEffects.ASPIRATION) || event.getEntity().hasEffect(ModEffects.RESPIRATORY_DEPRESSION)) {
+        if (event.getEntity().hasEffect(ModEffects.ASPIRATION) || event.getEntity().hasEffect(ModEffects.RESPIRATORY_DEPRESSION)
+            || hypoxic(event.getEntity())) {
             event.setDrowning(false);
         }
     }

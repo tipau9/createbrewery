@@ -79,6 +79,8 @@ public final class DrunkClient {
     private static float roll, tweak;
     /** Heroin (and a little Xanax), and heroin withdrawal: 0..1 each. */
     private static float opiate, sick;
+    /** Lachgas: 0..1. */
+    private static float wah;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
     private static int lastCokeBeat;
@@ -161,6 +163,9 @@ public final class DrunkClient {
         opiate = ease(opiate, player == null ? 0f : Math.min(1f, DrugEffect.felt(player, ModEffects.NOD)
             + 0.4f * DrugEffect.felt(player, ModEffects.CALM)
             + (player.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) ? 0.5f : 0f)));
+        // Lachgas hits within a breath: faster than the other channels.
+        float wahTarget = player == null ? 0f : DrugEffect.strength(player, ModEffects.WAH);
+        wah = Math.abs(wahTarget - wah) < 0.01f ? wahTarget : wah + (wahTarget - wah) * 0.3f;
         sick = ease(sick, player == null ? 0f : DrugEffect.strength(player, ModEffects.WITHDRAWAL));
         // Meth sharpens like Koks, only harder and for longer.
         stim = ease(stim, player == null ? 0f : Math.max(DrugEffect.felt(player, ModEffects.COKE_HIGH), tweak));
@@ -195,7 +200,7 @@ public final class DrunkClient {
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || roll > 0.01f || tweak > 0.01f || opiate > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || roll > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -214,6 +219,7 @@ public final class DrunkClient {
         }
         if (player != null && !mc.isPaused()) {
             bodySounds(mc, player);
+            wahWah(mc, player);
             moreMusic(mc, player);
             echoes(mc, player);
         }
@@ -225,6 +231,13 @@ public final class DrunkClient {
      * Sounds only the drunk player hears, inside their own head: the hangover heartbeat in step
      * with the throbbing screen edge, and ringing ears when nodding off or passing out.
      */
+    /** Lachgas: the famous throbbing wah-wah inside the head, about three times a second. */
+    private static void wahWah(Minecraft mc, LocalPlayer player) {
+        if (wah < 0.2f || player.tickCount % 7 != 0) return;
+        mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(),
+            0.55f + 0.1f * (float) Math.sin(player.tickCount * 0.3), 0.5f * wah));
+    }
+
     /** Moves {@code current} towards {@code target} over a couple of seconds. */
     private static float ease(float current, float target) {
         float next = current + (target - current) * 0.05f;
@@ -418,6 +431,7 @@ public final class DrunkClient {
             chain.setUniform("Roll", roll * screen());
             chain.setUniform("Tweak", tweak * screen());
             chain.setUniform("Nod", opiate * screen());
+            chain.setUniform("Wah", wah * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -478,6 +492,11 @@ public final class DrunkClient {
         // DMT: every sound bends down and stretches, as if from very far away.
         if (breakthrough > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
             event.setSound(new EnhancedSound(sound, 1f, 1f - 0.4f * breakthrough));
+            return;
+        }
+        // Lachgas: every sound comes in bent up or down, depending on where the wah is.
+        if (wah > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
+            event.setSound(new EnhancedSound(sound, 1f, 1f - 0.3f * wah * (float) Math.sin(player.tickCount * 0.9)));
             return;
         }
         // Your own mining, placing and bites ring on for a moment (not every footstep).
@@ -727,7 +746,7 @@ public final class DrunkClient {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f)) return;
+        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -739,6 +758,8 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
         // Entzug: the whole body shivers.
         roll += noise(t * 12.0, 53) * 1.2f * sick;
+        // Lachgas: dizzy - the head tips over, as if about to fall.
+        roll += noise(t * 0.8, 61) * 15f * wah;
         event.setRoll(event.getRoll() + roll * screen());
     }
 

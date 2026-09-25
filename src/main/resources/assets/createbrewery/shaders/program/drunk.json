@@ -30,6 +30,7 @@
         { "name": "Break",     "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Roll",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Tweak",     "type": "float",     "count": 1,  "values": [ 0.0 ] },
-        { "name": "Nod",       "type": "float",     "count": 1,  "values": [ 0.0 ] }
+        { "name": "Nod",       "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Wah",       "type": "float",     "count": 1,  "values": [ 0.0 ] }
     ]
 }

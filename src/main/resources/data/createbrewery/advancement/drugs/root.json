@@ -119,6 +119,14 @@
           "items": "createbrewery:xanax"
         }
       }
+    },
+    "lachgas": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:lachgas_balloon"
+        }
+      }
     }
   },
   "requirements": [
@@ -135,7 +143,8 @@
       "mdma",
       "meth",
       "heroin",
-      "xanax"
+      "xanax",
+      "lachgas"
     ]
   ]
 }

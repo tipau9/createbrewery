@@ -16,5 +16,9 @@ public class ModFluids {
     public static final FluidEntry<VirtualFluid> BEER =
         REGISTRATE.virtualFluid("beer").lang("Beer").register();
 
+    /** Lachgas: filled into balloons by a Spout. */
+    public static final FluidEntry<VirtualFluid> LACHGAS =
+        REGISTRATE.virtualFluid("lachgas").lang("Lachgas").register();
+
     public static void register() {}
 }

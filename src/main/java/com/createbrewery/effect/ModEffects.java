@@ -203,6 +203,11 @@ public class ModEffects {
             .scaled(Attributes.ATTACK_DAMAGE, id("withdrawal_damage"), -0.3)
             .scaled(Attributes.BLOCK_BREAK_SPEED, id("withdrawal_mining"), -0.3));
 
+    /** Lachgas: seconds of giggling, wah-wah and a world far away. */
+    public static final DeferredHolder<MobEffect, MobEffect> WAH = EFFECTS.register("wah", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0xC8DCFF, 20, DrugServer::wahTick, DrugServer.WAH_TICKS, 20, 160)
+            .scaled(Attributes.MOVEMENT_SPEED, id("wah_speed"), -0.4));
+
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);
     }

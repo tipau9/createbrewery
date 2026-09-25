@@ -129,5 +129,16 @@ public class ModItems {
         .properties(p -> p.stacksTo(64))
         .register();
 
+    /** An empty balloon, for a Spout to fill with Lachgas. */
+    public static final ItemEntry<Item> BALLOON = REGISTRATE.item("balloon", Item::new)
+        .lang("Luftballon")
+        .register();
+
+    public static final ItemEntry<DrugItem> LACHGAS_BALLOON = REGISTRATE
+        .item("lachgas_balloon", p -> new DrugItem(p, DrugServer.Kind.LACHGAS))
+        .lang("Lachgas-Ballon")
+        .properties(p -> p.stacksTo(16))
+        .register();
+
     public static void register() {}
 }

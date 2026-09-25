@@ -29,6 +29,7 @@ uniform float Break;   // DMT breakthrough: 0..1
 uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
 uniform float Nod;     // Heroin: 0..1
+uniform float Wah;     // Lachgas: 0..1
 
 in vec2 texCoord;
 
@@ -112,6 +113,10 @@ void main() {
     float tick8 = floor(t * 8.0);
     float twitch = step(0.96, fract(sin(tick8 * 91.7) * 43758.5453));
     uv += (vec2(fract(sin(tick8 * 12.9) * 437.58), fract(sin(tick8 * 78.2) * 437.58)) - 0.5) * 0.012 * twitch * Tweak;
+
+    // Lachgas: the picture pumps in and out with the wah-wah, about three times a second.
+    float wahPulse = 0.5 + 0.5 * sin(t * 18.0);
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * Wah * wahPulse);
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -219,6 +224,10 @@ void main() {
     col = mix(col, ring(uv, px * 3.0), 0.5 * Nod);
     col *= mix(vec3(1.0), vec3(1.1, 0.95, 0.8), Nod) * (1.0 - 0.25 * Nod);
     col *= 1.0 - smoothstep(0.2, 0.8, length(d)) * 0.6 * Nod;
+
+    // Lachgas: the world shrinks to a bright tunnel, far away, echoing.
+    col = mix(col, tap(0.5 + (uv - 0.5) * 0.92), 0.35 * Wah * wahPulse);
+    col *= 1.0 - smoothstep(0.15, 0.6, length(d)) * 0.8 * Wah;
 
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));

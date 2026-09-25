@@ -37,6 +37,7 @@ public class DrugItem extends Item {
             case DMT -> 40;       // one deep hit, held in
             case MDMA, XANAX -> 12; // a pill, swallowed
             case HEROIN -> 36;    // finding the vein
+            case LACHGAS -> 20;   // one deep breath from the balloon
             default -> 24;
         };
     }
