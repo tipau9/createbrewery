@@ -1,0 +1,28 @@
+{
+  "parent": "createbrewery:drugs/meskalin",
+  "display": {
+    "icon": {
+      "id": "createbrewery:peyote"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.pforten.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.pforten.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "opened": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "opened"
+    ]
+  ]
+}

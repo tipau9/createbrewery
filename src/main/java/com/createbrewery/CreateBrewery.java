@@ -137,6 +137,7 @@ public class CreateBrewery {
         advancement("pilze", "Fun Guy", "Iss einen Zauberpilz");
         advancement("heldendosis", "Heroische Dosis", "Iss drei Zauberpilze und bleib still im Dunkeln");
         advancement("meskalin", "Wüstenprophet", "Kau einen Peyote-Kaktus");
+        advancement("pforten", "Pforten der Wahrnehmung", "Erlebe die Istigkeit eines Peyote-Trips in der Wüste");
         advancement("horrortrip", "Falsches Set, falsches Setting", "Rutsch in einen Horrortrip");
         advancement("dmt", "Durch den Vorhang", "Rauch DMT");
         advancement("maschinenelfen", "Hallo Maschinenelfen", "Durchbrich in den Hyperraum und triff seine Bewohner");

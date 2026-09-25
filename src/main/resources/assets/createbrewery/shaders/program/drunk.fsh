@@ -132,7 +132,7 @@ void main() {
     uv += flow * px * (2.0 + 5.0 * peak) * Trip;
     // Mushrooms: the world slowly melts downwards. Peyote: heat shimmer, like over desert sand.
     uv.y += sin(uv.x * 20.0 + t * 0.4) * 0.004 * Trip * Organic * (1.0 - World);
-    uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert;
+    uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert * (1.0 - World);
     // A bad trip: the picture pulls nervously towards the middle, again and again.
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.015 * BadTrip * (0.5 + 0.5 * sin(t * 4.0)));
     // ...and the walls lean in: the edges of the picture are pulled towards the middle.
@@ -153,6 +153,12 @@ void main() {
     // ...and surfaces run downwards like wet paint, in streaks that stay on their blocks.
     float run = 0.5 + 0.5 * sin(wp.x * 3.1 + 2.0 * sin(wp.z * 2.3) + t * 0.3);
     uv.y += run * run * 0.006 * Trip * Organic * solid;
+    // Peyote: desert heat shimmer rising from the ground, waving upward and stronger at a distance.
+    float heatDist = smoothstep(3.0, 35.0, dist);
+    float groundShimmer = sin(wp.x * 3.0 + wp.z * 3.0 + t * 4.5 - wp.y * 5.0) * cos(wp.x * 2.0 - t * 2.5);
+    float groundFade = clamp(1.2 - rel.y * 0.2, 0.2, 1.5);
+    uv.x += groundShimmer * px.x * 4.0 * heatDist * groundFade * Trip * Desert * solid;
+    uv.y += abs(groundShimmer) * px.y * 2.5 * heatDist * groundFade * Trip * Desert * solid;
     // Stare at one spot and it starts to melt: the middle of the view slowly turns and drips.
     float st = Stare * Trip;
     vec2 sc = (uv - 0.5) * vec2(aspect, 1.0);
@@ -233,15 +239,32 @@ void main() {
     // Psychedelics: colours intensify and slowly cycle, most in what is already colourful.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     sat = length(col - vec3(lum));
-    // Everything electric here is LSD's; mushrooms (Organic) get a soft, living look of their own.
-    float lsdLook = 1.0 - Organic;
+    // Everything electric here is LSD's; mushrooms (Organic) and peyote (Desert) have their own look.
+    float lsdLook = clamp(1.0 - Organic - Desert, 0.0, 1.0);
     float shift = Trip * lsdLook * (0.6 * sin(t * 0.25) + 1.2 * peak * sin(t * 0.11 + lum * 4.0));
     col = mix(col, hueShift(col, shift), clamp(sat * 3.0, 0.0, 1.0));
-    col = mix(vec3(lum), col, 1.0 + (0.8 - 0.5 * Organic) * Trip);
+    col = mix(vec3(lum), col, 1.0 + (0.8 - 0.5 * Organic + 0.3 * Desert) * Trip);
     // Mushrooms: soft focus, and every light blooms into a warm, gentle glow.
     float soft = Organic * Trip;
     col = mix(col, ring(uv, px * 3.0), 0.3 * soft);
     col += (spill(uv, px * 5.0, 0.2) + spill(uv, px * 10.0, 0.6) * 1.3) * vec3(1.0, 0.92, 0.7) * 1.2 * soft;
+    // Peyote: wide pupils create cross-shaped starburst spill from bright lights with slow turning rays.
+    float mescBloom = Desert * Trip;
+    if (mescBloom > 0.01) {
+        vec3 starSpill = vec3(0.0);
+        float starRot = t * 0.06;
+        vec2 dir1 = vec2(cos(starRot), sin(starRot));
+        vec2 dir2 = vec2(-dir1.y, dir1.x);
+        for (int s = 1; s <= 5; s++) {
+            float off = float(s) * 3.5;
+            starSpill += max(tap(uv + dir1 * px * off) - 0.75, 0.0);
+            starSpill += max(tap(uv - dir1 * px * off) - 0.75, 0.0);
+            starSpill += max(tap(uv + dir2 * px * off) - 0.75, 0.0);
+            starSpill += max(tap(uv - dir2 * px * off) - 0.75, 0.0);
+        }
+        starSpill *= 0.1;
+        col += starSpill * vec3(1.0, 0.88, 0.55) * 1.4 * mescBloom;
+    }
     // At the peak, geometry: a slowly turning kaleidoscope of the picture itself shines through,
     // with a fine lattice of rainbow lines.
     vec2 kc = uv - 0.5;
@@ -260,6 +283,21 @@ void main() {
     float contour = smoothstep(0.8, 1.0, abs(sin(wpat * 3.14159)));
     vec3 wrainbow = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + wpat * 0.3 + t * 0.05));
     col += wrainbow * contour * 0.16 * Trip * lsdLook * solid * exp(-dist / 40.0);
+    // Peyote: Native American weaving patterns on surfaces - stepped zigzags and diamonds in red, orange, yellow, turquoise.
+    float weave = Desert * Trip * solid;
+    if (weave > 0.01) {
+        vec2 wCoord = vec2(wp.x + wp.z, wp.y * 1.4 + (wp.x - wp.z) * 0.5);
+        vec2 wFrac = abs(fract(wCoord) - 0.5);
+        float diamond = abs(wFrac.x + wFrac.y - 0.5);
+        float zigzag = abs(fract(wCoord.x * 2.0 + floor(wCoord.y * 2.0) * 0.5) - 0.5);
+        float wPattern = smoothstep(0.09, 0.02, min(diamond, zigzag));
+        float pIdx = fract((wp.x + wp.y * 0.5 + wp.z) * 0.25 + t * 0.03);
+        vec3 wCol = pIdx < 0.25 ? vec3(0.85, 0.18, 0.12)
+                  : pIdx < 0.5 ? vec3(0.96, 0.52, 0.12)
+                  : pIdx < 0.75 ? vec3(1.0, 0.82, 0.22)
+                  : vec3(0.12, 0.75, 0.68);
+        col += wCol * wPattern * 0.24 * weave * exp(-dist / 35.0);
+    }
     // Mushrooms: a glowing mycelium grows over everything - thin veins between cells anchored in
     // the world, with light pulsing along them.
     float fungal = Organic * Trip * solid;
@@ -284,6 +322,12 @@ void main() {
     float dy = abs(distAt(uv + vec2(0.0, px.y)) + distAt(uv - vec2(0.0, px.y)) - 2.0 * dc);
     float outline = smoothstep(0.02, 0.12, (dx + dy) / max(dc, 0.5));
     col = mix(col, wrainbow * 1.2, outline * 0.55 * peak * lsdLook * solid);
+    // Peyote: "Istigkeit" - things within ~5 blocks get sharper with a thin gold rim; distant things get a warm golden haze.
+    float nearObj = smoothstep(5.5, 1.2, dist) * solid;
+    col += clamp((col - ring(uv, px * 2.0)) * 0.7, -0.05, 0.2) * nearObj * Trip * Desert;
+    col = mix(col, vec3(1.0, 0.82, 0.25) * 1.3, outline * 0.65 * nearObj * Trip * Desert);
+    float farObj = smoothstep(8.0, 45.0, dist) * solid;
+    col = mix(col, mix(col, vec3(0.95, 0.75, 0.45), 0.35), farObj * 0.5 * Trip * Desert);
     // Grass, leaves and water wander through other colours.
     float foliage = clamp((col.g - max(col.r, col.b)) * 6.0, 0.0, 1.0) + clamp((col.b - max(col.r, col.g)) * 4.0, 0.0, 1.0);
     col = mix(col, hueShift(col, 2.5 * sin(t * 0.12 + (wp.x + wp.z) * 0.04)), min(1.0, foliage) * 0.8 * Trip * lsdLook * solid);
@@ -299,6 +343,12 @@ void main() {
     // Mushrooms: soft veils of green and violet light drift across the sky, like an aurora.
     float aurora = smoothstep(0.05, 0.5, dir.y) * pow(0.5 + 0.5 * sin(dir.x * 5.0 + 2.0 * sin(dir.z * 4.0 + t * 0.25) + t * 0.15), 3.0);
     col += mix(vec3(0.15, 0.9, 0.55), vec3(0.6, 0.3, 0.9), 0.5 + 0.5 * sin(dir.z * 3.0 + t * 0.1)) * aurora * 0.45 * Organic * Trip * sky * World;
+    // Peyote: golden sunset gradient by day, clear starry sky at night.
+    float horizon = smoothstep(0.45, 0.0, abs(dir.y));
+    vec3 sunsetSky = mix(vec3(1.15, 0.75, 0.35), vec3(1.25, 0.52, 0.2), horizon);
+    float daySky = smoothstep(0.1, 0.4, dot(col, vec3(0.333)));
+    col = mix(col, col * sunsetSky, 0.65 * daySky * Desert * Trip * sky * World);
+    col += vec3(star) * 1.2 * (1.0 - daySky) * Desert * Trip * sky * World;
     // At the peak the picture mirrors itself, and the two halves slowly drift.
     float mirror = peak * smoothstep(0.3, 0.9, 0.5 + 0.5 * sin(t * 0.06));
     col = mix(col, tap(vec2(1.0 - uv.x + 0.03 * sin(t * 0.3), uv.y)), 0.45 * mirror * lsdLook);
@@ -311,10 +361,11 @@ void main() {
     // A bad place makes it harsh: hard contrast, bloody light.
     col = (col - 0.5) * (1.0 + 0.3 * Harsh * Trip) + 0.5;
     col *= mix(vec3(1.0), vec3(1.12, 0.9, 0.85), Harsh * Trip);
-    // Palettes: mushrooms earthy - shadows sink into violet, highlights go gold-green. Peyote warm and golden.
+    // Palettes: mushrooms earthy - shadows sink into violet, highlights go gold-green. Peyote: turquoise shadows, orange-gold highlights.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col *= mix(vec3(1.0), mix(vec3(0.95, 0.85, 1.12), vec3(1.0, 1.1, 0.88), smoothstep(0.2, 0.7, lum)), Organic * Trip);
-    col *= mix(vec3(1.0), vec3(1.12, 1.0, 0.82), Desert * Trip);
+    vec3 desertGrade = mix(vec3(0.78, 1.05, 1.05), vec3(1.2, 0.98, 0.75), smoothstep(0.15, 0.7, lum));
+    col *= mix(vec3(1.0), desertGrade, Desert * Trip);
     // The bad trip: drained and reddish, with the edges throbbing dark like a pulse.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.5 * BadTrip) * mix(vec3(1.0), vec3(1.1, 0.85, 0.85), BadTrip);
@@ -383,7 +434,7 @@ void main() {
     vec4 was = PrevViewProj * vec4(worldAt(texCoord, texture(DiffuseDepthSampler, texCoord).r) + CamDelta, 1.0);
     vec2 wasUv = was.xy / was.w * 0.5 + 0.5;
     float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
-    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.8, 0.55 * Trip) * Trail * World * onScreen);
+    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip) * Trail * World * onScreen);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

@@ -12,6 +12,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -19,10 +20,12 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -103,6 +106,21 @@ public final class TripClient {
         return Mth.clamp((DrunkClient.trip - 0.55f) / 0.45f, 0f, 1f);
     }
 
+    static float lsdShare() {
+        return Math.max(0f, 1f - DrunkClient.organic - DrunkClient.desert);
+    }
+
+    private static boolean isNearFire(net.minecraft.world.level.Level level, BlockPos center) {
+        if (level == null) return false;
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-3, -2, -3), center.offset(3, 2, 3))) {
+            BlockState s = level.getBlockState(pos);
+            if (s.is(Blocks.CAMPFIRE) || s.is(Blocks.SOUL_CAMPFIRE) || s.is(Blocks.FIRE) || s.is(Blocks.SOUL_FIRE) || s.is(Blocks.LAVA)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Every client tick, from DrunkClient once its channels are eased. */
     static void tick(Minecraft mc, LocalPlayer player) {
         float trip = DrunkClient.trip, bad = DrunkClient.bad;
@@ -110,7 +128,9 @@ public final class TripClient {
         lastYaw = player.getYRot();
         lastPitch = player.getXRot();
         boolean still = turned < 0.6f && player.getDeltaMovement().horizontalDistanceSqr() < 0.001;
-        stare = still ? Math.min(1f, stare + 1f / 80f) : Math.max(0f, stare - 0.15f);
+        boolean nearFire = isNearFire(mc.level, player.blockPosition());
+        float stareSpeed = (nearFire && DrunkClient.desert > 0.3f ? 2f : 1f) / 80f;
+        stare = still ? Math.min(1f, stare + stareSpeed) : Math.max(0f, stare - 0.15f);
         harsh = DrunkClient.ease(harsh, player.level().dimensionType().ultraWarm() || DrunkClient.dark(player) ? 1f : 0f);
         hurtFlash = Math.max(0f, hurtFlash - 0.08f);
         outOfBody(mc, player);
@@ -121,6 +141,7 @@ public final class TripClient {
         phantomMonsters(mc, player, bad);
         phantomHits(mc, player, bad);
         mushrooms(mc, player, trip * DrunkClient.organic);
+        mescaline(mc, player, trip * DrunkClient.desert);
     }
 
     /** 0..1 how hard you are laughing right now. */
@@ -129,6 +150,8 @@ public final class TripClient {
     }
 
     // ---- the world ----
+
+    private static final int[] DESERT_COLORS = {0xD32F2F, 0xF57C00, 0xFBC02D, 0x26A69A};
 
     /** Coloured motes rising from flowers, grass and leaves around you. */
     private static void motes(Minecraft mc, LocalPlayer player, float trip) {
@@ -139,8 +162,15 @@ public final class TripClient {
             BlockState state = mc.level.getBlockState(pos);
             if (!(state.is(BlockTags.FLOWERS) || state.is(BlockTags.LEAVES) || state.is(Blocks.SHORT_GRASS)
                 || state.is(Blocks.TALL_GRASS)) || r.nextFloat() > trip) continue;
-            // LSD: every colour. Mushrooms: greens and golds.
-            int rgb = Mth.hsvToRgb(DrunkClient.organic > 0.5f ? 0.12f + 0.3f * r.nextFloat() : r.nextFloat(), 0.7f, 1f);
+            // LSD: every colour. Mushrooms: greens and golds. Peyote: red, orange, gold, turquoise.
+            int rgb;
+            if (DrunkClient.desert > 0.5f) {
+                rgb = DESERT_COLORS[r.nextInt(DESERT_COLORS.length)];
+            } else if (DrunkClient.organic > 0.5f) {
+                rgb = Mth.hsvToRgb(0.12f + 0.3f * r.nextFloat(), 0.7f, 1f);
+            } else {
+                rgb = Mth.hsvToRgb(r.nextFloat(), 0.7f, 1f);
+            }
             mc.level.addParticle(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0xFF000000 | rgb),
                 pos.getX() + r.nextDouble(), pos.getY() + 0.3 + r.nextDouble() * 0.6, pos.getZ() + r.nextDouble(), 0.0, 0.03, 0.0);
         }
@@ -153,7 +183,7 @@ public final class TripClient {
         var entity = event.getEntity();
         double t = (entity.tickCount + event.getPartialTick()) / 20.0;
         float s = 1f + 0.06f * trip * (float) Math.sin(t * 1.6 + entity.getId());
-        float stretch = 1f + 0.2f * peak() * (1f - DrunkClient.organic) * Math.max(0f, (float) Math.sin(t * 0.37 + entity.getId() * 1.3));
+        float stretch = 1f + 0.2f * peak() * lsdShare() * Math.max(0f, (float) Math.sin(t * 0.37 + entity.getId() * 1.3));
         // No push of our own: the entity dispatcher pops its pose after the renderer, scale included.
         event.getPoseStack().scale(s / (float) Math.sqrt(stretch), s * stretch, s / (float) Math.sqrt(stretch));
     }
@@ -247,6 +277,52 @@ public final class TripClient {
         }
     }
 
+    /** Peyote / Mescaline: ceremonial drum, holy fire spirals, and sand/ash dust particles. */
+    private static void mescaline(Minecraft mc, LocalPlayer player, float mesc) {
+        if (mesc < 0.2f || mc.level == null) return;
+        RandomSource r = player.getRandom();
+        // Ceremonial drum: slow heartbeat drum (~60 bpm) + occasional rattle
+        if (player.tickCount % 20 == 0) {
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BASEDRUM.value(), 0.65f, 0.45f * mesc));
+        }
+        if ((player.tickCount % 20 == 10 || r.nextFloat() < 0.12f) && r.nextFloat() < mesc) {
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_HAT.value(), 1.1f + r.nextFloat() * 0.2f, 0.25f * mesc));
+        }
+        // Sand / dust and white ash particles around player, denser in desert/badlands biomes
+        boolean desertBiome = player.level().getBiome(player.blockPosition()).is(Biomes.DESERT)
+            || player.level().getBiome(player.blockPosition()).is(BiomeTags.IS_BADLANDS);
+        int dustCount = desertBiome ? 4 : 2;
+        for (int i = 0; i < dustCount; i++) {
+            if (r.nextFloat() < mesc) {
+                double x = player.getX() + (r.nextDouble() - 0.5) * 14.0;
+                double y = player.getY() + r.nextDouble() * 3.5;
+                double z = player.getZ() + (r.nextDouble() - 0.5) * 14.0;
+                if (r.nextBoolean()) {
+                    mc.level.addParticle(new BlockParticleOption(ParticleTypes.FALLING_DUST, Blocks.SAND.defaultBlockState()),
+                        x, y, z, 0.0, -0.02, 0.0);
+                } else {
+                    mc.level.addParticle(ParticleTypes.WHITE_ASH, x, y, z, (r.nextDouble() - 0.5) * 0.02, -0.01, (r.nextDouble() - 0.5) * 0.02);
+                }
+            }
+        }
+        // Holy fire: extra flame and small flame spiral upward near fire/campfire/lava
+        BlockPos pPos = player.blockPosition();
+        for (BlockPos pos : BlockPos.betweenClosed(pPos.offset(-4, -2, -4), pPos.offset(4, 2, 4))) {
+            BlockState s = mc.level.getBlockState(pos);
+            if (s.is(Blocks.CAMPFIRE) || s.is(Blocks.SOUL_CAMPFIRE) || s.is(Blocks.FIRE) || s.is(Blocks.SOUL_FIRE) || s.is(Blocks.LAVA)) {
+                for (int i = 0; i < 2; i++) {
+                    double angle = (player.tickCount * 0.2 + i * Math.PI);
+                    double rad = 0.35 + 0.1 * Math.sin(player.tickCount * 0.15);
+                    double px = pos.getX() + 0.5 + Math.cos(angle) * rad;
+                    double py = pos.getY() + 0.2 + ((player.tickCount * 2 + i * 10) % 30) * 0.04;
+                    double pz = pos.getZ() + 0.5 + Math.sin(angle) * rad;
+                    mc.level.addParticle(r.nextBoolean() ? ParticleTypes.FLAME : ParticleTypes.SMALL_FLAME, px, py, pz, 0.0, 0.04, 0.0);
+                }
+                break;
+            }
+        }
+    }
+
     private static final String[] ANIMALS = {"Muh. Also… wir sind alle eins.", "Ich sehe dich. Wirklich.", "Hast du auch Gras gegessen?",
         "Keine Angst. Wir wissen Bescheid.", "Das Netz unter der Erde grüßt dich.", "Warum rennst du immer so?",
         "Ich bin auch nur ein Würfel.", "Die Sonne ist warm. Mehr gibt es nicht.", "Psst. Die Bäume hören zu."};
@@ -302,8 +378,8 @@ public final class TripClient {
 
     /** Every step rings a note, walking up the scale and back down. */
     private static void stepNotes(Minecraft mc, LocalPlayer player, float trip) {
-        // LSD's synaesthesia; mushrooms hear the forest instead.
-        if (trip >= 0.25f && DrunkClient.organic < 0.5f && player.onGround() && (int) player.walkDist != (int) lastWalk) {
+        // LSD's synaesthesia; mushrooms and peyote have their own sounds.
+        if (trip >= 0.25f && lsdShare() > 0.5f && player.onGround() && (int) player.walkDist != (int) lastWalk) {
             int i = stepNote++ % (2 * SCALE.length - 2);
             if (i >= SCALE.length) i = 2 * SCALE.length - 2 - i;
             mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.NOTE_BLOCK_HARP.value(), SoundSource.RECORDS,
@@ -314,7 +390,7 @@ public final class TripClient {
 
     /** At the peak: a low hum under everything, and now and then a chime from nowhere. */
     private static void hum(Minecraft mc, LocalPlayer player) {
-        float peak = peak() * (1f - DrunkClient.organic);
+        float peak = peak() * lsdShare();
         if (peak <= 0.05f) return;
         if (player.tickCount % 80 == 0) mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.BEACON_AMBIENT, 0.5f, 0.35f * peak));
         if (player.getRandom().nextFloat() < 0.01f * peak) {
@@ -370,6 +446,12 @@ public final class TripClient {
         "Warum ist Gras eigentlich so lustig?", "Hihi. Hihihi.", "Der Boden lebt.", "Alles wächst. Auch ich."};
     private static final String[] SHROOM_PEAK = {"Wir sind ein Netz. Unter der Erde.", "Ich weine… aber schön.",
         "Der Wald hat mich die ganze Zeit angeschaut.", "Ich bin nur ein Pilz, der träumt, dass er ein Mensch ist."};
+    private static final String[] MESC_COMING_UP = {"Dieser Geschmack…", "Mein Magen… aber es geht.",
+        "Die Wüste atmet.", "Etwas Altes erwacht."};
+    private static final String[] MESC_TRIPPING = {"Die Falten meiner Kleidung… unendlich.", "Die Steine sind heilig.",
+        "Goldenes Licht überall.", "Die Ahnen sind nah.", "Istigkeit."};
+    private static final String[] MESC_PEAK = {"Die Pforten der Wahrnehmung sind offen.", "Alles leuchtet von innen.",
+        "Ich sehe das Licht der Schöpfung.", "Zeitlos. Heilig. Eins."};
     private static final String[] AFTER = {"Was für ein Tag.", "Alles fühlt sich friedlich an.", "Die Welt ist schön, eigentlich.",
         "Ich sollte öfter die Sonne anschauen."};
 
@@ -378,16 +460,19 @@ public final class TripClient {
         if (player.tickCount < nextThought) return;
         boolean comingUp = Psychedelics.comingUp(player, ModEffects.LSD_TRIP) || Psychedelics.comingUp(player, ModEffects.SHROOM_TRIP)
             || Psychedelics.comingUp(player, ModEffects.MESCALINE_TRIP);
+        boolean mesc = DrunkClient.desert > 0.5f;
         boolean shroom = DrunkClient.organic > 0.5f;
-        String[] pool = bad > 0.3f ? BAD : peak() > 0.3f ? (shroom ? SHROOM_PEAK : PEAK)
-            : comingUp ? (shroom ? SHROOM_COMING_UP : COMING_UP) : trip > 0.2f ? (shroom ? SHROOM_TRIPPING : TRIPPING)
+        String[] pool = bad > 0.3f ? BAD : peak() > 0.3f ? (mesc ? MESC_PEAK : (shroom ? SHROOM_PEAK : PEAK))
+            : comingUp ? (mesc ? MESC_COMING_UP : (shroom ? SHROOM_COMING_UP : COMING_UP))
+            : trip > 0.2f ? (mesc ? MESC_TRIPPING : (shroom ? SHROOM_TRIPPING : TRIPPING))
             : DrunkClient.afterglow > 0.3f ? AFTER : null;
         if (pool == null) {
             nextThought = player.tickCount + 200;
             return;
         }
+        ChatFormatting color = pool == BAD ? ChatFormatting.DARK_RED : mesc ? ChatFormatting.GOLD : shroom ? ChatFormatting.DARK_GREEN : ChatFormatting.LIGHT_PURPLE;
         player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)])
-            .withStyle(ChatFormatting.ITALIC, pool == BAD ? ChatFormatting.DARK_RED : ChatFormatting.LIGHT_PURPLE), true);
+            .withStyle(ChatFormatting.ITALIC, color), true);
         nextThought = player.tickCount + 500 + player.getRandom().nextInt(500);
     }
 
@@ -406,10 +491,15 @@ public final class TripClient {
         float hue = (Util.getMillis() % 6000L) / 6000f;
         MutableComponent out = Component.empty();
         for (int i = 0; i < c.length; i++) {
-            // Mushrooms keep the letters in earthy greens and golds instead of the full rainbow.
-            float h = (hue + i * 0.04f) % 1f;
-            if (DrunkClient.organic > 0.5f) h = 0.12f + 0.3f * (0.5f + 0.5f * Mth.sin(h * 6.2832f));
-            out.append(Component.literal(String.valueOf(c[i])).withColor(Mth.hsvToRgb(h, 0.55f, 1f)));
+            if (DrunkClient.desert > 0.5f) {
+                int col = DESERT_COLORS[(int) Math.floorMod((long) (hue * 4f) + i, DESERT_COLORS.length)];
+                out.append(Component.literal(String.valueOf(c[i])).withColor(col));
+            } else {
+                // Mushrooms keep the letters in earthy greens and golds instead of the full rainbow.
+                float h = (hue + i * 0.04f) % 1f;
+                if (DrunkClient.organic > 0.5f) h = 0.12f + 0.3f * (0.5f + 0.5f * Mth.sin(h * 6.2832f));
+                out.append(Component.literal(String.valueOf(c[i])).withColor(Mth.hsvToRgb(h, 0.55f, 1f)));
+            }
         }
         return out;
     }

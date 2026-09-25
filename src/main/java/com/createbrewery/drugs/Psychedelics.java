@@ -5,11 +5,13 @@ import com.createbrewery.effect.ModEffects;
 import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.biome.Biomes;
 
 /**
  * LSD, Zauberpilze and Meskalin (Peyote), server side. The client draws the trip itself from
@@ -116,6 +118,10 @@ public final class Psychedelics {
             DrugServer.award(player, "ego_tod", "dissolved");
         }
         if (silentDarkness(player) && shroom > 0.9f) DrugServer.award(player, "heldendosis", "overgrown");
+        if (mesc > 0.9f && (player.level().getBiome(player.blockPosition()).is(Biomes.DESERT)
+            || player.level().getBiome(player.blockPosition()).is(BiomeTags.IS_BADLANDS))) {
+            DrugServer.award(player, "pforten", "opened");
+        }
     }
 
     /**

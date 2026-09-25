@@ -53,7 +53,7 @@ public final class Hallucinations {
     private static Level visionLevel;
 
     /** Every client tick, with the eased channels from DrunkClient. */
-    public static void tick(LocalPlayer player, float breakthrough, float trip, float bad) {
+    public static void tick(LocalPlayer player, float breakthrough, float trip, float bad, float desert) {
         Level level = player.level();
         if (level != visionLevel) {
             visions.clear();
@@ -63,6 +63,7 @@ public final class Hallucinations {
         int now = player.tickCount;
         visions.removeIf(v -> now > v.until
             || (v.entity.getType() == EntityType.ALLAY && breakthrough < 0.1f)
+            || ((v.entity.getType() == EntityType.WOLF || v.entity.getType() == EntityType.FOX) && desert < 0.2f)
             || (v.shy && lookedAt(player, v.entity)));
 
         if (breakthrough > 0.4f && count(EntityType.ALLAY) < 7 && random.nextFloat() < 0.2f) {
@@ -79,6 +80,12 @@ public final class Hallucinations {
             double yaw = Math.toRadians(player.getYRot() + 90 + (random.nextBoolean() ? 1 : -1) * (65 + random.nextInt(30)));
             add(EntityType.ENDERMAN, level, yaw, 10 + random.nextDouble() * 6, 0, 0, now + 400, true, false);
         }
+        // Peyote: a spirit animal (wolf or fox) walks around you for 30s
+        if (desert > 0.6f && count(EntityType.WOLF) == 0 && count(EntityType.FOX) == 0 && random.nextFloat() < 0.04f) {
+            EntityType<?> spirit = random.nextBoolean() ? EntityType.WOLF : EntityType.FOX;
+            add(spirit, level, random.nextDouble() * Math.PI * 2, 4.0, 0.0,
+                (random.nextBoolean() ? 1 : -1) * 0.025, now + 600, false, true);
+        }
 
         for (Vision v : visions) {
             Entity e = v.entity;
@@ -94,6 +101,9 @@ public final class Hallucinations {
             e.setYRot(yaw);
             e.setYHeadRot(yaw);
             e.setYBodyRot(yaw);
+            if (e instanceof net.minecraft.world.entity.LivingEntity living && v.speed != 0) {
+                living.walkAnimation.update((float) Math.abs(v.speed * v.radius * 2.0), 0.4f);
+            }
             e.tickCount++;
         }
     }

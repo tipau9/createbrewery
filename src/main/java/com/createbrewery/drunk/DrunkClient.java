@@ -202,7 +202,7 @@ public final class DrunkClient {
         breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
         afterglow = ease(afterglow, player == null ? 0f : DrugEffect.strength(player, ModEffects.AFTERGLOW));
         if (player != null && !mc.isPaused()) {
-            com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad);
+            com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad, desert);
             TripClient.tick(mc, player);
         }
 
@@ -521,7 +521,8 @@ public final class DrunkClient {
         }
         // Tripping: every sound drifts slowly up and down in pitch, as if the air were bending.
         // Mushrooms instead make everything a little deeper and warmer.
-        float drift = (1f + 0.12f * trip * (1f - organic) * (float) Math.sin(player.tickCount * 0.02)) * (1f - 0.06f * trip * organic);
+        float lsdShare = Math.max(0f, 1f - organic - desert);
+        float drift = (1f + 0.12f * trip * lsdShare * (float) Math.sin(player.tickCount * 0.02)) * (1f - 0.06f * trip * organic);
         if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
             // The listener gain already raises everything; ambience and weather get more on top,
