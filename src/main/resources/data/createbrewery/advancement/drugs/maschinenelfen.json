@@ -1,0 +1,28 @@
+{
+  "parent": "createbrewery:drugs/dmt",
+  "display": {
+    "icon": {
+      "id": "minecraft:allay_spawn_egg"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.maschinenelfen.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.maschinenelfen.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "met": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "met"
+    ]
+  ]
+}

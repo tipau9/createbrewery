@@ -1,0 +1,33 @@
+{
+  "parent": "createbrewery:drugs/root",
+  "display": {
+    "icon": {
+      "id": "createbrewery:dmt"
+    },
+    "title": {
+      "translate": "advancements.createbrewery.drugs.dmt.title"
+    },
+    "description": {
+      "translate": "advancements.createbrewery.drugs.dmt.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "dmt": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:dmt"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "dmt"
+    ]
+  ]
+}

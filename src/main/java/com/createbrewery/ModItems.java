@@ -99,5 +99,11 @@ public class ModItems {
         .properties(p -> p.stacksTo(64))
         .register();
 
+    public static final ItemEntry<DrugItem> DMT = REGISTRATE
+        .item("dmt", p -> new DrugItem(p, DrugServer.Kind.DMT))
+        .lang("DMT-Pfeife")
+        .properties(p -> p.stacksTo(16))
+        .register();
+
     public static void register() {}
 }

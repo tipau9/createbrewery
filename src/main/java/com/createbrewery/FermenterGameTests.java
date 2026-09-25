@@ -753,4 +753,18 @@ public class FermenterGameTests {
             helper.succeed();
         });
     }
+
+    /** DMT breaks through within seconds and pins the body down; a second hit only prolongs it. */
+    @GameTest(template = TEMPLATE)
+    public static void dmtBreaksThroughAtOnce(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        var dmt = com.createbrewery.drugs.DrugServer.Kind.DMT;
+        com.createbrewery.drugs.DrugServer.take(player, dmt);
+        var effect = player.getEffect(com.createbrewery.effect.ModEffects.BREAKTHROUGH);
+        helper.assertTrue(effect != null && effect.getAmplifier() == 0, "no breakthrough");
+        com.createbrewery.drugs.DrugServer.take(player, dmt);
+        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.BREAKTHROUGH).getAmplifier() == 1,
+            "a second hit restarted the come-up");
+        helper.succeed();
+    }
 }

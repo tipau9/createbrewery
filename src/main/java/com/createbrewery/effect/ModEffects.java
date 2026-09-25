@@ -135,6 +135,11 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, MobEffect> MESCALINE_TRIP = EFFECTS.register("mescaline_trip", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0xE8A13A, 20, Psychedelics::tripTick, Psychedelics.MESCALINE_TICKS, 2400, 3600).stacks());
 
+    /** Durchbruch (DMT): the body stays behind while the mind leaves. */
+    public static final DeferredHolder<MobEffect, MobEffect> BREAKTHROUGH = EFFECTS.register("breakthrough", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x00E5FF, 20, Psychedelics::breakthroughTick, Psychedelics.DMT_TICKS, 60, 300)
+            .scaled(Attributes.MOVEMENT_SPEED, id("breakthrough_speed"), -0.9));
+
     /** Toleranz: after a trip, any psychedelic does little for about a day. */
     public static final DeferredHolder<MobEffect, MobEffect> PSY_TOLERANCE = EFFECTS.register("psy_tolerance", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0x8E7CA8, 0, null, 0, 0, 0));

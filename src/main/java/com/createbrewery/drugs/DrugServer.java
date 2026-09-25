@@ -91,7 +91,7 @@ public final class DrugServer {
     /** Three joints' worth of hits in the body at most. */
     private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
-    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE }
+    public enum Kind { COKE, KETA, WEED, LSD, SHROOMS, MESCALINE, DMT }
 
     public static DamageSource heartAttack(Level level) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(HEART_ATTACK));
@@ -136,7 +136,7 @@ public final class DrugServer {
             hit(player);
             return;
         }
-        if (kind == Kind.LSD || kind == Kind.SHROOMS || kind == Kind.MESCALINE) {
+        if (kind == Kind.LSD || kind == Kind.SHROOMS || kind == Kind.MESCALINE || kind == Kind.DMT) {
             Psychedelics.take(player, kind);
             return;
         }

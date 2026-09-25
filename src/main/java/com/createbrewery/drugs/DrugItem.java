@@ -34,6 +34,7 @@ public class DrugItem extends Item {
             case LSD -> 16;       // a tab on the tongue
             case SHROOMS -> 32;
             case MESCALINE -> 48; // tough, bitter cactus
+            case DMT -> 40;       // one deep hit, held in
             default -> 24;
         };
     }

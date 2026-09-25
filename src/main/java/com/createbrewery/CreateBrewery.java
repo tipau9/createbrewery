@@ -48,6 +48,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.mescaline_trip", "Meskalin-Trip");
         REGISTRATE.addRawLang("effect.createbrewery.psy_tolerance", "Toleranz");
         REGISTRATE.addRawLang("effect.createbrewery.bad_trip", "Horrortrip");
+        REGISTRATE.addRawLang("effect.createbrewery.breakthrough", "Durchbruch");
         REGISTRATE.addRawLang("subtitles.createbrewery.cough", "Husten");
         REGISTRATE.addRawLang("subtitles.createbrewery.giggle", "Kichern");
         REGISTRATE.addRawLang("effect.createbrewery.ck_mix", "CK-Mix");
@@ -114,6 +115,8 @@ public class CreateBrewery {
         advancement("pilze", "Fun Guy", "Iss einen Zauberpilz");
         advancement("meskalin", "Wüstenprophet", "Kau einen Peyote-Kaktus");
         advancement("horrortrip", "Falsches Set, falsches Setting", "Rutsch in einen Horrortrip");
+        advancement("dmt", "Durch den Vorhang", "Rauch DMT");
+        advancement("maschinenelfen", "Hallo Maschinenelfen", "Durchbrich in den Hyperraum und triff seine Bewohner");
         advancement("apotheke_leer", "Apotheke leergeräumt", "Nimm jede Droge mindestens einmal");
         // advancements:end
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {

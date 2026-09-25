@@ -25,6 +25,7 @@ uniform float Trip;    // LSD, mushrooms, peyote together: 0..1
 uniform float Organic; // share of the trip that is mushrooms: green, melting
 uniform float Desert;  // share that is peyote: warm, shimmering
 uniform float BadTrip; // fear: 0..1
+uniform float Break;   // DMT breakthrough: 0..1
 
 in vec2 texCoord;
 
@@ -66,6 +67,17 @@ void main() {
     float t = DrunkTime;
     vec2 px = 1.0 / OutSize;
     vec2 uv = texCoord;
+
+    // DMT: the world folds into a twelvefold kaleidoscope and streams towards you down a tunnel.
+    // Done first, so every other effect is drawn on the folded picture.
+    float aspect = OutSize.x / OutSize.y;
+    vec2 bc = (uv - 0.5) * vec2(aspect, 1.0);
+    float br = length(bc);
+    float bseg = 6.2831853 / 12.0;
+    float ba = abs(mod(atan(bc.y, bc.x) + t * 0.2, bseg) - bseg * 0.5);
+    float depth = fract(0.15 / (br + 0.05) + t * 0.3);
+    vec2 buv = vec2(cos(ba), sin(ba)) * mix(br, depth * 0.5, 0.6);
+    uv = mix(uv, 0.5 + buv * vec2(1.0 / aspect, 1.0), smoothstep(0.0, 0.7, Break));
 
     // Keta: the world slowly swirls and drifts away from you. Very slow - under 0.1 Hz.
     vec2 c = uv - 0.5;
@@ -172,6 +184,13 @@ void main() {
     col = mix(col, vec3(lum), 0.5 * BadTrip) * mix(vec3(1.0), vec3(1.1, 0.85, 0.85), BadTrip);
     col *= 1.0 - smoothstep(0.15, 0.75, length(d)) * (0.5 + 0.3 * sin(t * 5.0)) * BadTrip;
 
+    // DMT: impossible, saturated colour, and a chrysanthemum of light blooming in the middle.
+    float petals = sin(br * 40.0 - t * 4.0) * sin(ba * 24.0 + t);
+    vec3 neon = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + br * 2.0 - t * 0.2 + petals * 0.2));
+    col = mix(col, hueShift(col, t * 0.8) * 1.3, 0.6 * Break);
+    col = mix(col, neon, 0.35 * Break * smoothstep(0.6, 0.0, br));
+    col += neon * smoothstep(0.85, 1.0, petals) * 0.25 * Break;
+
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.55 * Green) * mix(vec3(1.0), vec3(0.82, 1.06, 0.72), Green);
@@ -193,7 +212,7 @@ void main() {
     // bobbing), and trailing ghost copies of every edge would look like constant trembling.
     // Weed: faint trails behind movement from a mild high on, stronger when stoned.
     // Tripping: long tracers behind everything that moves.
-    col = mix(col, prev, min(0.85, 0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned + 0.4 * Trip) * Trail);
+    col = mix(col, prev, min(0.85, 0.6 * k * heavy + 0.35 * Dissoc + 0.1 * High + 0.18 * stoned + 0.4 * Trip + 0.3 * Break) * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

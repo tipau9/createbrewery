@@ -24,6 +24,8 @@ import net.minecraft.world.entity.player.Player;
  *   <li>LSD: long, clear, electric colours; strongest visuals, no body load at all.</li>
  *   <li>Pilze: shorter, organic and green, the stomach turns during the come-up, and giggles.</li>
  *   <li>Meskalin: slowest and longest, warm desert colours, throwing up early is almost a rite.</li>
+ *   <li>DMT: smoked, and within seconds a complete breakthrough - the world folds away into
+ *       hyperspace and beings appear ("Maschinenelfen"). A minute later it is over. No tolerance.</li>
  * </ul>
  */
 public final class Psychedelics {
@@ -35,6 +37,8 @@ public final class Psychedelics {
     /** About a day of tolerance after a trip ends. */
     public static final int TOLERANCE_TICKS = 24000;
     public static final int BAD_TRIP_TICKS = 1200;
+    /** A real breakthrough lasts ~15 minutes: here 45 seconds. */
+    public static final int DMT_TICKS = 900;
     /** Three doses at most: from the third LSD tab on, the ego dissolves. */
     private static final int MAX_LEVEL = 2;
 
@@ -61,6 +65,12 @@ public final class Psychedelics {
     }
 
     public static void take(Player player, DrugServer.Kind kind) {
+        if (kind == DrugServer.Kind.DMT) {
+            // Held in the lungs as long as possible, then gone. A second hit only prolongs it.
+            player.addEffect(new MobEffectInstance(ModEffects.BREAKTHROUGH, DMT_TICKS,
+                player.hasEffect(ModEffects.BREAKTHROUGH) ? 1 : 0, false, false, true));
+            return;
+        }
         Holder<MobEffect> trip = effect(kind);
         MobEffectInstance before = player.getEffect(trip);
         if (player.hasEffect(ModEffects.PSY_TOLERANCE) && before == null) {
@@ -107,6 +117,11 @@ public final class Psychedelics {
         if (badSetting(player) == 0f) {
             com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.BAD_TRIP, 20);
         }
+    }
+
+    /** DMT, every second: at the peak you meet them. */
+    public static void breakthroughTick(LivingEntity entity, int level) {
+        if (DrugEffect.strength(entity, ModEffects.BREAKTHROUGH) > 0.8f) DrugServer.award(entity, "maschinenelfen", "met");
     }
 
     private static boolean comingUp(Player player, Holder<MobEffect> trip) {

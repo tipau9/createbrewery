@@ -79,6 +79,14 @@
           "items": "createbrewery:peyote"
         }
       }
+    },
+    "dmt": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "createbrewery:dmt"
+        }
+      }
     }
   },
   "requirements": [
@@ -90,7 +98,8 @@
       "ibu",
       "lsd",
       "pilze",
-      "meskalin"
+      "meskalin",
+      "dmt"
     ]
   ]
 }

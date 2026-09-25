@@ -73,6 +73,8 @@ public final class DrunkClient {
     private static float stim, gray, dissoc, high, green;
     /** Psychedelics: how hard the trip hits, which share of it is mushrooms or peyote, and fear. */
     private static float trip, organic, desert, bad;
+    /** DMT: 0..1, 1 = the full breakthrough. */
+    private static float breakthrough;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
     private static int lastCokeBeat;
@@ -172,11 +174,13 @@ public final class DrunkClient {
             desert = ease(desert, mesc / all);
         }
         bad = ease(bad, player == null ? 0f : DrugEffect.strength(player, ModEffects.BAD_TRIP));
+        breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
+        if (player != null && !mc.isPaused()) com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad);
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -395,6 +399,7 @@ public final class DrunkClient {
             chain.setUniform("Organic", organic);
             chain.setUniform("Desert", desert);
             chain.setUniform("BadTrip", bad * screen());
+            chain.setUniform("Break", breakthrough * screen());
             chain.setUniform("DrunkTime", (float) (t % 3600.0));
         }
 
@@ -452,6 +457,11 @@ public final class DrunkClient {
         if (source == SoundSource.MUSIC || source == SoundSource.RECORDS) lastMusic = sound;
         if (sound instanceof Echo || sound instanceof Phantom) return;
         synaesthesia(player, sound);
+        // DMT: every sound bends down and stretches, as if from very far away.
+        if (breakthrough > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
+            event.setSound(new EnhancedSound(sound, 1f, 1f - 0.4f * breakthrough));
+            return;
+        }
         // Your own mining, placing and bites ring on for a moment (not every footstep).
         if (high > 0.2f && (source == SoundSource.PLAYERS || source == SoundSource.BLOCKS)
             && !sound.getLocation().getPath().endsWith(".step")
@@ -644,6 +654,7 @@ public final class DrunkClient {
 
     /** Draws the drunk vision over the finished world, before the hand and the HUD. */
     private static void onRenderLevelStage(RenderLevelStageEvent event) {
+        com.createbrewery.drugs.Hallucinations.render(event);
         if (chain == null || event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
         Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
@@ -693,7 +704,7 @@ public final class DrunkClient {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || (blood <= 0f && green <= 0f)) return;
+        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -701,6 +712,8 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 14.0) * 2f * retch(player, (float) event.getPartialTick());
         // Greening out: the head swims in slow, wide circles.
         roll += noise(t * 0.3, 41) * 13f * green;
+        // DMT: the view turns slowly, as if weightless.
+        roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
         event.setRoll(event.getRoll() + roll * screen());
     }
 
@@ -761,6 +774,13 @@ public final class DrunkClient {
     }
 
     private static void steer(LocalPlayer player, Input input) {
+        if (breakthrough > 0.6f) {
+            // Broken through: the body is left behind and does nothing.
+            input.forwardImpulse = input.leftImpulse = 0f;
+            input.up = input.down = input.left = input.right = input.jumping = false;
+            player.setSprinting(false);
+            return;
+        }
         if (player.hasEffect(ModEffects.HEART_ATTACK)) {
             // Collapsed: the legs give way. A friend sneaking next to you is doing CPR.
             input.forwardImpulse = input.leftImpulse = 0f;
