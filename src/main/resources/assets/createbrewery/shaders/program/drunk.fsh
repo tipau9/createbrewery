@@ -500,17 +500,6 @@ void main() {
             col = mix(col, tap(mirrored) * (1.0 + 0.1 * Roll), 0.6 * symm);
         }
 
-        // Pattern recognition: stare at a wall or a cloud and a friendly face shows in it, drawn
-        // out of the texture itself. Look away and it is gone.
-        float faceAmt = smoothstep(0.4, 0.9, Stare) * smoothstep(0.4, 0.8, Roll);
-        if (faceAmt > 0.01) {
-            vec2 fc = (uv - vec2(0.54, 0.53)) * vec2(aspect, 1.0) / 0.12;
-            float eyes = smoothstep(0.24, 0.12, min(length(fc - vec2(-0.36, 0.25)), length(fc - vec2(0.36, 0.25))));
-            float smile = smoothstep(0.09, 0.0, abs(length(fc - vec2(0.0, 0.2)) - 0.62)) * step(fc.y, -0.12);
-            float face = max(eyes, smile) * smoothstep(1.3, 0.9, length(fc));
-            col *= 1.0 - face * faceAmt * (0.25 + 2.0 * min(detail, 0.15));
-        }
-
         // Geometry: a flat veil just before the eyes - dim, organic, blue-grey, mostly seen in the
         // dark. Faint at the height of high doses; it comes on as it wears off, like closed-eye
         // visuals. Below it, noise and slow clouds of colour.
