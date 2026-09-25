@@ -28,6 +28,7 @@ uniform float BadTrip; // fear: 0..1
 uniform float Break;   // DMT breakthrough: 0..1
 uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
+uniform float Tired;   // Meth, awake too long (or psychotic): the edges of the view lie, 0..1
 uniform float Nod;     // Heroin: 0..1
 uniform float Wah;     // Lachgas: 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
@@ -210,6 +211,10 @@ void main() {
     float tick8 = floor(t * 8.0);
     float twitch = step(0.96, fract(sin(tick8 * 91.7) * 43758.5453));
     uv += (vec2(fract(sin(tick8 * 12.9) * 437.58), fract(sin(tick8 * 78.2) * 437.58)) - 0.5) * 0.012 * twitch * Tweak;
+    // ...and the eyes vibrate: a fine, fast buzz up and down, all the time (clenched jaw, nystagmus).
+    uv.y += sin(t * 95.0) * 0.0012 * Tweak;
+    // Sleepless, surfaces start to crawl: tiny patches shift about, a few times a second.
+    uv += (vec2(hash(floor(uv * 90.0) + floor(t * 7.0)), hash(floor(uv * 90.0) + floor(t * 7.0) + 5.3)) - 0.5) * px * 2.5 * Tired * solid;
 
     // Lachgas: the picture pumps in and out with the wah-wah, about three times a second.
     float wahPulse = 0.5 + 0.5 * sin(t * 18.0);
@@ -228,6 +233,8 @@ void main() {
     // MDMA, high doses: the eyes no longer quite agree - a faint second image, just beside.
     float mdmaDouble = smoothstep(0.7, 1.0, Roll);
     if (mdmaDouble > 0.0) col = mix(col, tap(uv + vec2(0.005 + 0.002 * sin(t * 0.4), 0.0012)), 0.3 * mdmaDouble);
+    // Meth, sleepless: the eyes drift apart, a second picture up and to the side.
+    if (Tired > 0.0) col = mix(col, tap(uv + vec2(0.006, -0.004) * (0.7 + 0.3 * sin(t * 0.35))), 0.3 * Tired);
 
     // Edges lose focus first.
     vec2 d = uv - 0.5;
@@ -555,6 +562,48 @@ void main() {
     col *= mix(vec3(1.0), vec3(0.92, 1.0, 1.1), Tweak);
     col.r = mix(col.r, tap(uv + d * 0.01).r, 0.6 * Tweak);
     col.b = mix(col.b, tap(uv - d * 0.01).b, 0.6 * Tweak);
+    // Hyperfocus: what you look at is razor-sharp, the rest of the world falls away - grey and dim.
+    float aside = smoothstep(0.12, 0.5, length(d * vec2(aspect, 1.0)));
+    col += (col - ring(uv, px)) * 0.8 * Tweak * (1.0 - aside);
+    lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(lum), 0.5 * aside * Tweak) * (1.0 - 0.3 * aside * Tweak);
+    // Wide pupils: bright things glare, hard and cold.
+    col += spill(uv, px * 4.0, 0.2) * vec3(0.8, 0.95, 1.1) * 1.5 * Tweak;
+    if (Tired > 0.0) {
+        // Sleepless: the picture fizzles with grain, like a dead TV channel.
+        col += (hash(uv * OutSize + fract(t * 13.0) * 97.0) - 0.5) * 0.09 * Tired;
+        // Something at the edge of the view - a dark shape, there for a blink, never where you look.
+        float slot = floor(t * 1.7);
+        float life = fract(t * 1.7);
+        float side = hash(vec2(slot, 1.3)) < 0.5 ? -1.0 : 1.0;
+        vec2 at = vec2(0.5 + side * (0.36 + 0.1 * hash(vec2(slot, 2.1))), 0.3 + 0.4 * hash(vec2(slot, 3.7)));
+        at.x += side * (life - 0.5) * 0.08; // gliding away, out of the view
+        vec2 off = (uv - at) * vec2(aspect, 1.0) * vec2(1.0, 0.45);
+        float shape = smoothstep(0.07, 0.02, length(off)) * step(1.0 - 0.6 * Tired, hash(vec2(slot, 4.4)));
+        col *= 1.0 - 0.75 * shape * sin(3.14159 * life) * Tired;
+        // Meth mites: little black bugs, scuttling in fits and starts, mostly low and at the edges.
+        float bugs = 0.0;
+        for (int i = 0; i < 24; i++) {
+            float fi = float(i);
+            if (hash(vec2(fi, 9.1)) > Tired) continue;
+            float hop = floor(t * (3.0 + 4.0 * hash(vec2(fi, 2.2))));
+            float go = fract(t * (3.0 + 4.0 * hash(vec2(fi, 2.2))));
+            vec2 from = vec2(hash(vec2(fi, hop)), hash(vec2(fi, hop + 0.5)) * hash(vec2(fi, 7.7)));
+            vec2 to = vec2(hash(vec2(fi, hop + 1.0)), hash(vec2(fi, hop + 1.5)) * hash(vec2(fi, 7.7)));
+            // Most of them stay near the edges of the view.
+            from.x = mix(from.x, step(0.5, from.x), 0.6);
+            to.x = mix(to.x, step(0.5, from.x), 0.6);
+            vec2 bug = mix(from, from + (to - from) * 0.06, smoothstep(0.0, 0.4, go));
+            vec2 dir = normalize(to - from + 1e-4);
+            vec2 rel = (uv - bug) / px;
+            float along = dot(rel, dir), across = dot(rel, vec2(-dir.y, dir.x));
+            // A body, and little legs twitching as it runs.
+            float body = smoothstep(1.6, 0.8, length(vec2(along * 0.6, across)));
+            float legs = step(abs(across), 3.5) * step(abs(along), 2.0) * step(0.5, fract(along * 0.5 + go * 8.0)) * 0.6;
+            bugs = max(bugs, max(body, legs * step(1.0, abs(across))));
+        }
+        col *= 1.0 - 0.85 * bugs * Tired;
+    }
 
     // Heroin: soft, warm and dim - pinpoint pupils let little light in, and the edges sink
     // into a warm dark like a blanket pulled up.

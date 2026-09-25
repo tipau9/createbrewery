@@ -126,6 +126,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onSoundSource);
         TripClient.init();
         RollClient.init();
+        TweakClient.init();
         MusicPulse.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
@@ -199,21 +200,22 @@ public final class DrunkClient {
             organic = ease(organic, shroom / all);
             desert = ease(desert, mesc / all);
         }
-        // A meth psychosis looks and feels like a bad trip, shadow people included.
+        // A meth psychosis has its own look (TweakClient); the fear of a bad trip is only part of it.
         bad = ease(bad, player == null ? 0f : Math.max(DrugEffect.strength(player, ModEffects.BAD_TRIP),
-            DrugEffect.strength(player, ModEffects.PSYCHOSIS)));
+            0.4f * DrugEffect.strength(player, ModEffects.PSYCHOSIS)));
         breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
         afterglow = ease(afterglow, player == null ? 0f : DrugEffect.strength(player, ModEffects.AFTERGLOW));
         if (player != null && !mc.isPaused()) {
             com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad, desert);
             TripClient.tick(mc, player);
             RollClient.tick(mc, player);
+            TweakClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -393,7 +395,7 @@ public final class DrunkClient {
         }
     }
 
-    private static final ResourceLocation SHADOW_FIGURE =
+    static final ResourceLocation SHADOW_FIGURE =
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "textures/misc/shadow_figure.png");
 
     private static void drawShadow(LocalPlayer player, GuiGraphics g, int w, int h) {
@@ -446,7 +448,6 @@ public final class DrunkClient {
             chain.setUniform("Rush", RollClient.rush * screen());
             chain.setUniform("Beat", RollClient.beat * screen());
             MusicPulse.update();
-            // In the groove every kick hits harder.
             // In the groove every kick hits harder, and at the peak harder still.
             chain.setUniform("Kick", MusicPulse.kick * (1f + 0.5f * RollClient.groove + RollClient.peak));
             chain.setUniform("Peak", RollClient.peak * screen());
@@ -462,6 +463,7 @@ public final class DrunkClient {
             chain.setUniform("Tempo", (float) (60.0 / MusicPulse.song.period()));
             chain.setUniform("Heat", RollClient.heat * screen());
             chain.setUniform("Tweak", tweak * screen());
+            chain.setUniform("Tired", TweakClient.tired * screen());
             chain.setUniform("Nod", opiate * screen());
             chain.setUniform("Wah", wah * screen());
             chain.setUniform("Stare", TripClient.stare * screen());
@@ -1074,6 +1076,7 @@ public final class DrunkClient {
 
         drawShadow(player, g, w, h);
         RollClient.drawDancer(player, g, w, h);
+        TweakClient.drawDart(player, g, w, h, event.getPartialTick().getGameTimeDeltaPartialTick(true));
 
         float lid = 0f;
         if (blood >= Intoxication.DRUNK) {
