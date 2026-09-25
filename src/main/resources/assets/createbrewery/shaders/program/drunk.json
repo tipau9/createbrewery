@@ -52,6 +52,7 @@
         { "name": "Air",          "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Sick",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Calm",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "Gone",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Rebound",      "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Beats",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Tempo",        "type": "float",      "count": 1,  "values": [ 120.0 ] },

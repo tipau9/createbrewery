@@ -38,6 +38,7 @@ uniform float Sick;    // Heroin withdrawal (cold turkey): cold, clammy, goosefl
 uniform float Calm;    // Xanax: flat, soft, grey-lilac and a little out of focus, 0..1
 uniform float Rebound; // after Xanax: the fear back doubled - too sharp, pulse at the edges, 0..1
 uniform float Wah;     // Lachgas: 0..1
+uniform float Gone;    // Lachgas, the third balloon: the self dissolves into white, 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
 uniform float Beat;    // MDMA: how much the music is in the body, 0..1
 uniform float Kick;    // the kick drum heard right now, 0..1 (see MusicPulse); 0 without music
@@ -677,6 +678,21 @@ void main() {
     // Lachgas: the world shrinks to a bright tunnel, far away, echoing.
     col = mix(col, tap(0.5 + (uv - 0.5) * 0.92), 0.35 * Wah * wahPulse);
     col *= 1.0 - smoothstep(0.15, 0.6, length(d)) * 0.8 * Wah;
+    // Tingles over the head and face: tiny cold sparks along the top and the sides of the view.
+    vec2 spark = floor(uv * OutSize / 4.0);
+    float tingle = step(0.985, hash(spark + floor(t * 15.0))) * smoothstep(0.25, 0.55, max(abs(d.x), d.y));
+    col += vec3(0.85, 0.9, 1.0) * 0.5 * tingle * Wah;
+    // A big hit: a static wall of interlocking circles, breathing with the wah.
+    float wall = smoothstep(0.55, 1.0, Wah) + Gone;
+    if (wall > 0.0) {
+        vec2 g = (uv - 0.5) * vec2(aspect, 1.0) * (12.0 + 1.5 * wahPulse);
+        float r1 = abs(length(fract(g) - 0.5) - 0.36);
+        float r2 = abs(length(fract(g + 0.5) - 0.5) - 0.36);
+        float rings = smoothstep(0.06, 0.0, min(r1, r2));
+        col = mix(col, vec3(0.85, 0.88, 1.0), 0.45 * rings * min(wall, 1.0));
+    }
+    // ...and then the self is gone: everything white and flat, only the circles left.
+    col = mix(col, vec3(0.94, 0.93, 1.0), 0.85 * Gone);
 
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
@@ -715,6 +731,10 @@ void main() {
     float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
     // MDMA: tracers too, shorter - distinct from medium doses on.
     col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip + 0.45 * smoothstep(0.4, 1.0, Roll)) * Trail * World * onScreen);
+
+    // Lachgas: the view pauses - it holds still for most of each wah, and moves in jerks.
+    float frozen = step(fract(t * 18.0 / 6.2831853), 0.25 + 0.45 * Wah) * step(0.35, Wah);
+    col = mix(col, texture(PrevSampler, texCoord).rgb, frozen * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

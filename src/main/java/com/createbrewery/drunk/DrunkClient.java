@@ -211,6 +211,7 @@ public final class DrunkClient {
             TweakClient.tick(mc, player);
             NodClient.tick(mc, player);
             BenzoClient.tick(mc, player);
+            GasClient.tick(player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
@@ -475,6 +476,7 @@ public final class DrunkClient {
             chain.setUniform("Calm", BenzoClient.calm * screen());
             chain.setUniform("Rebound", BenzoClient.rebound * screen());
             chain.setUniform("Wah", wah * screen());
+            chain.setUniform("Gone", GasClient.gone * screen());
             chain.setUniform("Stare", TripClient.stare * screen());
             chain.setUniform("Harsh", TripClient.harsh);
             chain.setUniform("Afterglow", afterglow * screen());
@@ -551,6 +553,11 @@ public final class DrunkClient {
         // Lachgas: every sound comes in bent up or down, depending on where the wah is.
         if (wah > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
             event.setSound(new EnhancedSound(sound, 1f, 1f - 0.3f * wah * (float) Math.sin(player.tickCount * 0.9)));
+            // ...and stutters: it comes again, and again, fading.
+            if (wah > 0.3f && !sound.isLooping() && pendingEchoes.size() < 16) {
+                pendingEchoes.add(new PendingEcho(sound, player.tickCount + 3, 0.5f * wah));
+                pendingEchoes.add(new PendingEcho(sound, player.tickCount + 6, 0.3f * wah));
+            }
             return;
         }
         // Your own mining, placing and bites ring on for a moment (not every footstep).
