@@ -143,6 +143,16 @@ void main() {
     float ang = Dissoc * 0.35 * sin(t * 0.15) * length(c) * 2.0;
     c = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * c;
     uv = 0.5 + c * (1.0 - 0.08 * Dissoc);
+    // The eyes slide: the view drifts sideways and snaps back (optical sliding).
+    uv.x += (fract(t * 0.4) - 0.5) * 0.02 * Dissoc;
+    // Scenery slicing: the view falls apart into strips, each a little out of line, shifting now and then.
+    float slicing = smoothstep(0.3, 1.0, Dissoc);
+    uv.x += (hash(vec2(floor(uv.y * 14.0), floor(t * 0.5))) - 0.5) * 0.03 * slicing;
+    // Distances lie: what is far away swells and shrinks against what is near.
+    if (Dissoc > 0.0 && World > 0.0) {
+        float far = smoothstep(4.0, 40.0, distAt(clamp(uv, 0.0, 1.0)));
+        uv = 0.5 + (uv - 0.5) * (1.0 - 0.12 * far * Dissoc * World * sin(t * 0.2));
+    }
     // Weed, from a strong high on: surfaces seem to breathe - a wide, slow swell across the
     // picture, about one breath every 10 s. Nothing like the beer wobble, and no double vision.
     float stoned = smoothstep(0.45, 1.0, High);
@@ -288,6 +298,21 @@ void main() {
     col = mix(col, vec3(lum), 0.45 * Dissoc) * mix(vec3(1.0), vec3(0.85, 0.93, 1.08), Dissoc);
     float hole = clamp((Dissoc - 0.6) / 0.4, 0.0, 1.0);
     col *= 1.0 - smoothstep(0.12, 0.7, length(d)) * 0.85 * hole;
+    if (hole > 0.0) {
+        // At the end of the tunnel a white glow...
+        vec2 m = d * vec2(aspect, 1.0);
+        float mr = length(m);
+        col += vec3(1.0, 0.98, 0.95) * smoothstep(0.25, 0.0, mr) * 0.8 * hole;
+        // ...and around it in the dark, a machinescape: glossy, soft-edged synthetic shapes in
+        // simple colours, streaming towards you.
+        vec2 mg = vec2(atan(m.y, m.x) * 4.0 / 3.14159, 0.6 / (mr + 0.05) + t * 0.4);
+        vec2 mc = floor(mg);
+        vec2 mf = fract(mg) - 0.5;
+        float box = smoothstep(0.42, 0.3, max(abs(mf.x), abs(mf.y)));
+        vec3 shade = 0.5 + 0.5 * cos(6.2831853 * (hash(mc) + vec3(0.0, 0.33, 0.67)));
+        float band = smoothstep(0.12, 0.3, mr) * smoothstep(0.8, 0.4, mr);
+        col += shade * box * 0.35 * band * hole * step(0.4, hash(mc + 7.0));
+    }
 
     // Weed: colours pop and details look more interesting (broad local contrast, not the hard
     // Koks sharpening), wide pupils let lights glow in a warm, sunny white, the whole world gets

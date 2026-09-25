@@ -127,6 +127,7 @@ public final class DrunkClient {
         TripClient.init();
         RollClient.init();
         TweakClient.init();
+        KetaClient.init();
         MusicPulse.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
@@ -213,6 +214,7 @@ public final class DrunkClient {
             BenzoClient.tick(mc, player);
             GasClient.tick(player);
             CokeClient.tick(mc, player);
+            KetaClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
@@ -551,6 +553,11 @@ public final class DrunkClient {
         // DMT: every sound bends down and stretches, as if from very far away.
         if (breakthrough > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
             event.setSound(new EnhancedSound(sound, 1f, 1f - 0.4f * breakthrough));
+            return;
+        }
+        // Keta: every sound comes from far off - quieter, and a little low.
+        if (dissoc > 0.2f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC && source != SoundSource.RECORDS) {
+            event.setSound(new EnhancedSound(sound, 1f - 0.4f * dissoc, 1f - 0.12f * dissoc));
             return;
         }
         // Lachgas: every sound comes in bent up or down, depending on where the wah is.
@@ -1002,6 +1009,8 @@ public final class DrunkClient {
             float slow = 1f - 0.5f * dissoc - (player.hasEffect(ModEffects.K_HOLE) ? 0.35f : 0f);
             input.forwardImpulse *= Math.max(0.1f, slow);
             input.leftImpulse *= Math.max(0.1f, slow);
+            // The K-wobble: walking goes robotic and wobbly, the body swaying off to the side.
+            input.leftImpulse += noise(seconds(player, 0f) * 0.9, 67) * 0.4f * dissoc * Math.abs(input.forwardImpulse);
             if (player.hasEffect(ModEffects.K_HOLE)) input.jumping = false;
         }
         if (blood < Intoxication.MERRY) return;
@@ -1106,6 +1115,7 @@ public final class DrunkClient {
         drawShadow(player, g, w, h);
         RollClient.drawDancer(player, g, w, h);
         TweakClient.drawDart(player, g, w, h, event.getPartialTick().getGameTimeDeltaPartialTick(true));
+        KetaClient.drawGhosts(player, g, event.getPartialTick().getGameTimeDeltaPartialTick(true));
 
         float lid = 0f;
         if (blood >= Intoxication.DRUNK) {

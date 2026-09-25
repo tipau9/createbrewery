@@ -228,14 +228,17 @@ public final class TripClient {
     private static void onHand(RenderHandEvent event) {
         float trip = DrunkClient.trip;
         LocalPlayer player = Minecraft.getInstance().player;
-        if (trip < 0.05f || player == null) return;
+        float away = KetaClient.away;
+        if ((trip < 0.05f && away < 0.05f) || player == null) return;
         PoseStack pose = event.getPoseStack();
         if (handFrame == frame) pose.mulPose(new Matrix4f(handApplied).invert());
         float t = (player.tickCount + event.getPartialTick()) / 20f;
         Matrix4f wobble = new Matrix4f()
             .translate(0.02f * trip * Mth.sin(t * 1.1f), 0.03f * trip * Mth.sin(t * 1.7f), 0f)
             .rotateZ(0.12f * trip * Mth.sin(t * 0.8f))
-            .scale(1f, 1f + 0.1f * trip * Mth.sin(t * 2.3f), 1f + 0.06f * trip * Mth.cos(t * 1.9f));
+            .scale(1f, 1f + 0.1f * trip * Mth.sin(t * 2.3f), 1f + 0.06f * trip * Mth.cos(t * 1.9f))
+            // Keta: your own hand is not quite yours - it hangs further off, lower, as if at the end of a long arm.
+            .translate(0.1f * away, -0.2f * away, -0.7f * away);
         pose.mulPose(wobble);
         handApplied.set(wobble);
         handFrame = frame;
