@@ -59,9 +59,13 @@ public final class NodClient {
             flood = 0f;
         }
 
-        // On the nod: the eyes sink, the head drops, a dream - and awake with a jerk. Not while
-        // running about or getting hurt, and not during the rush.
-        boolean busy = player.isSprinting() || player.hurtTime > 0 || player.swinging || player.isInWater();
+        // On the nod: the eyes sink, the head drops, a dream - and awake with a jerk. Only sitting
+        // or standing still: moving, riding, flying, a screen open or getting hurt keeps you awake,
+        // and so does a stimulant on top (a speedball masks the sedation).
+        boolean busy = player.input.forwardImpulse != 0f || player.input.leftImpulse != 0f || player.input.jumping
+            || player.isFallFlying() || player.isPassenger() || mc.screen != null
+            || player.hurtTime > 0 || player.swinging || player.isInWater() || nod == null
+            || player.hasEffect(ModEffects.TWEAK) || player.hasEffect(ModEffects.COKE_HIGH);
         if (nodTicks < 0 && felt > 0.3f && rushTicks < 0 && !busy && player.tickCount >= nextNod) {
             nodTicks = 0;
             nodLength = 120 + r.nextInt(100) + (int) (120 * felt);
@@ -79,7 +83,7 @@ public final class NodClient {
             }
             if (nodTicks >= nodLength || busy) {
                 // Awake: the head snaps up, a jolt, eyes open.
-                player.turn(0.0, -drooped * 0.8 / 0.15);
+                player.turn(0.0, -drooped / 0.15);
                 jerk = 1f;
                 nodTicks = -1;
                 dream = 0f;
