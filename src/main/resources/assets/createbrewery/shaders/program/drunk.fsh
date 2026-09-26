@@ -801,14 +801,14 @@ void main() {
     vec2 spark = floor(uv * OutSize / 4.0);
     float tingle = step(0.985, hash(spark + floor(t * 15.0))) * smoothstep(0.25, 0.55, max(abs(d.x), d.y));
     col += vec3(0.85, 0.9, 1.0) * 0.5 * tingle * Wah;
-    // A big hit: a static wall of interlocking circles, breathing with the wah.
-    float wall = smoothstep(0.55, 1.0, Wah) + Gone;
+    // The third balloon: faint interlocking circles creeping in at the edges, breathing with the wah.
+    float wall = Gone * smoothstep(0.2, 0.6, length(d));
     if (wall > 0.0) {
         vec2 g = (uv - 0.5) * vec2(aspect, 1.0) * (12.0 + 1.5 * wahPulse);
         float r1 = abs(length(fract(g) - 0.5) - 0.36);
         float r2 = abs(length(fract(g + 0.5) - 0.5) - 0.36);
         float rings = smoothstep(0.06, 0.0, min(r1, r2));
-        col = mix(col, vec3(0.85, 0.88, 1.0), 0.45 * rings * min(wall, 1.0));
+        col = mix(col, vec3(0.85, 0.88, 1.0), 0.2 * rings * wall);
     }
     // ...and then the self is gone: everything white and flat, only the circles left.
     col = mix(col, vec3(0.94, 0.93, 1.0), 0.85 * Gone);
