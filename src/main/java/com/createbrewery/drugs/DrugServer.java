@@ -513,6 +513,11 @@ public final class DrugServer {
         }
     }
 
+    @SubscribeEvent
+    public static void onCommands(net.neoforged.neoforge.event.RegisterCommandsEvent event) {
+        TestCommand.register(event.getDispatcher());
+    }
+
     /** Wide awake on Koks, Meth and Ecstasy: no sleeping. */
     @SubscribeEvent
     public static void onSleep(CanPlayerSleepEvent event) {

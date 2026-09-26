@@ -32,7 +32,9 @@ public final class DmtClient {
         int duration = effect == null ? 0 : effect.getDuration();
         // A new dose starts the journey over, however long this one is.
         if (duration > lastDuration + 20) {
-            start = duration;
+            // A real hit (or /brewery test jumping into it) runs on the DMT clock; the short
+            // Lachgas spike (Mixes) has its own.
+            start = duration > 300 ? com.createbrewery.drugs.Psychedelics.DMT_TICKS : duration;
             said = 0;
         }
         lastDuration = duration;

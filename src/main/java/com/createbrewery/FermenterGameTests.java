@@ -813,6 +813,20 @@ public class FermenterGameTests {
         helper.succeed();
     }
 
+    /** The test command's phase clock: the peak of two LSD tabs sits between come-up and fade. */
+    @GameTest(template = TEMPLATE)
+    public static void testCommandSetsThePhase(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.LSD);
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.LSD);
+        com.createbrewery.drugs.TestCommand.setPhase(player, com.createbrewery.effect.ModEffects.LSD_TRIP, "peak");
+        var trip = player.getEffect(com.createbrewery.effect.ModEffects.LSD_TRIP);
+        helper.assertTrue(trip != null && trip.getAmplifier() == 1, "two tabs are not amplifier 1");
+        helper.assertTrue(com.createbrewery.drugs.DrugEffect.strength(player, com.createbrewery.effect.ModEffects.LSD_TRIP) > 0.99f,
+            "the peak is not at full strength");
+        helper.succeed();
+    }
+
     /** Naloxon brings the breath back and blocks the heroin; on a habit it is the withdrawal at once. */
     @GameTest(template = TEMPLATE)
     public static void naloxonBringsTheBreathBack(GameTestHelper helper) {
