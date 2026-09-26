@@ -215,6 +215,7 @@ public final class DrunkClient {
             GasClient.tick(player);
             CokeClient.tick(mc, player);
             KetaClient.tick(mc, player);
+            WeedClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
@@ -865,7 +866,7 @@ public final class DrunkClient {
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f)) return;
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && WeedClient.laugh <= 0.01f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -887,6 +888,8 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 1.3) * 1.2f * MusicPulse.kick * RollClient.beat;
         // At the peak every kick slams the head.
         roll += noise(t * 30.0, 89) * 7f * MusicPulse.kick * RollClient.beat * RollClient.peak;
+        // Weed: shaking with the giggles.
+        roll += (float) Math.sin(t * 20.0) * 2f * WeedClient.laugh;
         // Heroin: waking from a nod with a jolt.
         roll += noise(t * 30.0, 101) * 4f * NodClient.jerk;
         // A brain zap jerks the head.
@@ -1013,6 +1016,9 @@ public final class DrunkClient {
             input.leftImpulse += noise(seconds(player, 0f) * 0.9, 67) * 0.4f * dissoc * Math.abs(input.forwardImpulse);
             if (player.hasEffect(ModEffects.K_HOLE)) input.jumping = false;
         }
+        // Weed: couchlock - after standing a while, the legs take a moment to get going.
+        input.forwardImpulse *= WeedClient.legs();
+        input.leftImpulse *= WeedClient.legs();
         if (blood < Intoxication.MERRY) return;
 
         float w = ramp(Intoxication.MERRY);
@@ -1127,7 +1133,7 @@ public final class DrunkClient {
             }
         }
         // Heroin: on the nod the eyes sink shut and jerk open again (NodClient); Xanax makes them heavy.
-        lid = Math.max(lid, Math.max(Math.max(NodClient.lid, 0.1f * opiate), BenzoClient.lid) * screen());
+        lid = Math.max(lid, Math.max(Math.max(Math.max(NodClient.lid, 0.1f * opiate), BenzoClient.lid), WeedClient.lid) * screen());
         if (lid > 0f) {
             int px = (int) (h * lid);
             int feather = h / 8;
@@ -1221,6 +1227,7 @@ public final class DrunkClient {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
         CokeClient.drawCraving(player, event.getGuiGraphics());
+        WeedClient.drawMunchies(player, event.getGuiGraphics());
         BenzoClient.drawGap(event.getGuiGraphics());
         MobEffectInstance blackout = player.getEffect(ModEffects.BLACKOUT);
         if (blackout == null) return;
