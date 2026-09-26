@@ -566,11 +566,16 @@ void main() {
         vec3 bloom = mix(vec3(0.95, 0.35, 0.8), vec3(0.3, 1.0, 0.6), layer) * (0.4 + 0.8 * petal * layer);
         col = mix(col, bloom, smoothstep(open, open - 0.25, br) * 0.75 * Waiting);
     }
-    // The other side: a vast dome of light tiled with jewels, streaming outwards without end
-    // (log-polar, so it repeats smaller and smaller towards the bright middle). Only far off:
-    // what is right next to you - the beings - stays in front of it.
+    // The other side: you stand inside a vast dome of light tiled with jewels. It is tied to where
+    // you look, so turning your head looks round the hall: the tiles shrink without end towards
+    // the blazing light overhead (Mercator, so they stay square), and below, a polished floor
+    // mirrors it all. Only far off: what is right next to you - the beings - stays in front.
+    // With a shaderpack (no world) it hangs on the screen instead.
     if (Beyond > 0.0 || Descent > 0.0) {
-        vec2 lp = vec2(atan(bc.y, bc.x), log(br + 0.001) - t * 0.15) * (8.0 / 3.14159);
+        vec3 look = World > 0.0 ? dir : normalize(vec3(bc.x, bc.y + 0.3, 1.0));
+        float el = asin(clamp(abs(look.y), 0.0, 0.999));
+        float merc = log(tan(0.785398 + el * 0.5));
+        vec2 lp = vec2(atan(look.z, look.x), -merc * 0.9 + t * 0.12) * (12.0 / 3.14159);
         vec2 tile = floor(lp);
         vec2 tf = fract(lp) - 0.5;
         float sq = max(abs(tf.x), abs(tf.y));
@@ -580,7 +585,9 @@ void main() {
         float shine = pow(1.0 - 2.0 * sq, 2.0) * (0.6 + 0.4 * sin(t * 2.0 + pick * 6.28));
         float rim = smoothstep(0.42, 0.5, sq);
         vec3 dome = jewel * (0.3 + 1.2 * shine) + vec3(1.0, 0.8, 0.35) * rim;
-        dome += vec3(1.0, 0.95, 0.85) * exp(-br * 6.0) * 1.5;
+        dome += vec3(1.0, 0.95, 0.85) * pow(max(look.y, 0.0), 10.0) * 2.0;
+        // Dimmer towards the horizon, and the floor a darker mirror of the dome.
+        dome *= (0.45 + 0.55 * smoothstep(0.0, 0.5, abs(look.y))) * (look.y < 0.0 ? 0.45 : 1.0);
         float far = World > 0.0 ? smoothstep(4.0, 7.0, dist) : 1.0;
         col = mix(col, dome, Beyond * mix(0.35, 1.0, far));
         // Coming down: the pattern thins into pale lines laid over the world, and fades.

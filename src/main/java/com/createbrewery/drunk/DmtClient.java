@@ -13,6 +13,9 @@ import net.minecraft.util.RandomSource;
 /**
  * The DMT breakthrough as the phases people report, client only. The shader reads the four channels.
  *
+ * <p>One hit stays short of it (sub-breakthrough): cracking open, the flower, a door - and back.
+ * A second hit breaks through.
+ *
  * <p>DMT (PsychonautWiki; Lawrence et al. 2022): within seconds a loud, high carrier tone, a
  * crackling, the room vibrating; geometry growing over every surface, neon on black. Then a
  * chrysanthemum unfolding, a tunnel or a waiting room. Then the other side: a palace or hall of
@@ -37,12 +40,15 @@ public final class DmtClient {
         }
         lastDuration = duration;
         float p = effect == null ? 1f : 1f - (float) duration / Math.max(1, start);
+        // One hit is not enough to break through: the flower, the humming, a door - and back.
+        // Only a second hit (amplifier 1) takes you to the other side.
+        boolean through = effect != null && effect.getAmplifier() >= 1;
 
         crack = DrunkClient.ease(crack, effect != null && p < 0.12f ? 1f : 0f);
-        waiting = DrunkClient.ease(waiting, effect != null && p > 0.1f && p < 0.32f ? 1f : 0f);
-        beyond = DrunkClient.ease(beyond, effect != null && p > 0.3f && p < 0.78f ? 1f : 0f);
+        waiting = DrunkClient.ease(waiting, effect != null && p > 0.1f && p < (through ? 0.32f : 0.7f) ? 1f : 0f);
+        beyond = DrunkClient.ease(beyond, through && p > 0.3f && p < 0.78f ? 1f : 0f);
         // Coming down lingers on for a while after the effect is over.
-        if (effect != null && p > 0.75f) descent = DrunkClient.ease(descent, 1f);
+        if (effect != null && p > (through ? 0.75f : 0.66f)) descent = DrunkClient.ease(descent, 1f);
         else descent = Math.max(0f, descent - 1f / 400f);
 
         // The carrier wave: a high, loud tone and a crackle, as it cracks open.
@@ -66,7 +72,8 @@ public final class DmtClient {
         if (waiting > 0.5f) say(player, 2, WAITING, 0xB8A0FF);
         if (beyond > 0.5f && say(player, 4, ARRIVE, 0xFFD27C)) tone(mc, SoundEvents.BEACON_POWER_SELECT, 0.5f, 1f);
         if (beyond > 0.5f && p > 0.55f) say(player, 8, BEINGS, 0xFFD27C);
-        if (descent > 0.5f) say(player, 16, DESCENT, 0xC8DCFF);
+        if (waiting > 0.5f && !through && p > 0.4f) say(player, 32, DOOR, 0xB8A0FF);
+        if (descent > 0.5f) say(player, 16, through ? DESCENT : NEARLY, 0xC8DCFF);
     }
 
     private static void tone(Minecraft mc, SoundEvent sound, float pitch, float volume) {
@@ -81,6 +88,9 @@ public final class DmtClient {
         "Hier war ich schon mal. Schon immer."};
     private static final String[] BEINGS = {"Sie haben auf mich gewartet.", "Sie zeigen mir etwas.",
         "Sie freuen sich, dass ich da bin.", "Das hier ist echter als echt."};
+    private static final String[] DOOR = {"Da ist eine Tür… ich komm nicht durch.", "Noch ein Zug. Dann bin ich durch.",
+        "Es wartet jemand dahinter. Ich spür's."};
+    private static final String[] NEARLY = {"Fast. Ich war fast da.", "Was war hinter der Blüte?", "Beim nächsten Mal. Beim nächsten Mal geh ich durch."};
     private static final String[] DESCENT = {"Wie soll ich das je jemandem erklären?", "Ich hab keine Worte dafür.",
         "Das war… realer als alles hier."};
 
