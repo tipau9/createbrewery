@@ -12,7 +12,8 @@ import net.minecraft.util.Mth;
 /**
  * A player's body on drugs, drawn through playerAnimator (only loaded when it is installed). Off
  * in first person. In playerAnimator "body" is the whole player (position in blocks, turning
- * about the hips), "torso" only the trunk (in pixels, and it bends).
+ * about the hips); "torso" is only the trunk's box - moving it tears it off the head, arms and
+ * legs without bendy-lib - so it is never used here.
  * <ul>
  *   <li>Lasting poses: dancing on MDMA (each player has one of three styles - hands in the air, the
  *       shuffle, head-banging), the chin sinking to the chest on the nod (mostly the real pitch,
@@ -84,7 +85,7 @@ final class PoseAnimation implements IAnimation {
         int style = Math.floorMod(player.getUUID().hashCode(), 3);
         if (position) {
             // Bouncing on the beat; sagging in the K-hole.
-            if (part.equals("torso")) d[1] = (style == 1 ? 0.8f : 1.5f) * bounce * dance + 1.5f * slump;
+            if (part.equals("body")) d[1] = -(style == 1 ? 0.05f : 0.09f) * bounce * dance - 0.09f * slump;
             return;
         }
         switch (part) {
@@ -93,11 +94,10 @@ final class PoseAnimation implements IAnimation {
                 d[2] = 0.35f * slump;
             }
             case "body" -> {
-                d[0] = 0.2f * nod + (0.35f + 0.08f * jerk) * laugh;
+                d[0] = (style == 2 ? 0.12f * bounce : 0f) * dance + 0.2f * nod + (0.35f + 0.08f * jerk) * laugh;
                 d[1] = (style == 1 ? 0.3f * beat : 0f) * dance;
                 d[2] = 0.12f * slump;
             }
-            case "torso" -> d[0] = (style == 2 ? 0.25f * bounce : 0f) * dance;
             case "rightArm", "leftArm" -> {
                 float side = part.equals("rightArm") ? 1f : -1f;
                 float armDance = switch (style) {
@@ -127,15 +127,15 @@ final class PoseAnimation implements IAnimation {
                 // Doubled over, hands on the knees, heaving.
                 if (position) return;
                 float heave = 0.15f * (float) Math.sin(t * 18f);
-                if (part.equals("torso")) d[0] = 0.8f + heave;
-                if (part.equals("head")) d[0] = 0.4f + heave;
+                if (part.equals("body")) d[0] = 0.45f + 0.5f * heave;
+                if (part.equals("head")) d[0] = 0.5f + heave;
                 if (right || left) { d[0] = -0.7f - value.getX(); d[2] = right ? 0.15f : -0.15f; }
             }
             case DrugPose.SEIZURE -> {
                 // Stiff and shaking all over; each limb out of step with the others.
                 float phase = part.hashCode() * 0.37f;
                 float shake = 0.35f * (float) Math.sin(t * 45f + phase) + 0.2f * (float) Math.sin(t * 31f + 2f * phase);
-                if (position) { if (part.equals("torso")) d[1] = 0.6f * shake; return; }
+                if (position) { if (part.equals("body")) d[1] = 0.03f * shake; return; }
                 float amount = part.equals("body") ? 0.15f : 1f;
                 d[0] = amount * shake + (right || left ? -0.4f : 0f);
                 d[2] = amount * 0.5f * shake;
