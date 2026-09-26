@@ -268,6 +268,9 @@ public final class TripClient {
 
     // ---- mushrooms ----
 
+    /** Veil's glowing spores until they fail once; then vanilla spores. */
+    private static boolean quasarSpores = true;
+
     private static void mushrooms(Minecraft mc, LocalPlayer player, float shroom) {
         RandomSource r = player.getRandom();
         chill = DrunkClient.ease(chill, Psychedelics.comingUp(player, ModEffects.SHROOM_TRIP) ? 1f : 0f);
@@ -281,8 +284,13 @@ public final class TripClient {
             laugh = 0;
             return;
         }
-        // Spores drift through the air; mushrooms, mycelium and moss glow.
-        if (r.nextFloat() < shroom) {
+        // Spores drift through the air; mushrooms, mycelium and moss glow. With Veil, glowing
+        // spores in the colours of the trip, a burst each second; without it, vanilla spores.
+        if (quasarSpores) {
+            if (player.tickCount % 20 == 0 && r.nextFloat() < shroom) {
+                quasarSpores = DrunkClient.veilParticles("spores", player.getX(), player.getY() + 1.5, player.getZ());
+            }
+        } else if (r.nextFloat() < shroom) {
             mc.level.addParticle(r.nextBoolean() ? ParticleTypes.SPORE_BLOSSOM_AIR : ParticleTypes.WARPED_SPORE,
                 player.getX() + (r.nextDouble() - 0.5) * 12.0, player.getY() + r.nextDouble() * 4.0,
                 player.getZ() + (r.nextDouble() - 0.5) * 12.0, 0.0, 0.0, 0.0);

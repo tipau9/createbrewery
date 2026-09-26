@@ -1,0 +1,44 @@
+{
+    "max_lifetime": 20,
+    "rate": 4,
+    "count": 1,
+    "emitter_settings": {
+        "shape": { "shape": "cube", "dimensions": [12.0, 4.0, 12.0], "rotation": [0.0, 0.0, 0.0], "from_surface": false },
+        "particle_settings": {
+            "particle_speed": 0.01,
+            "random_speed": true,
+            "base_particle_size": 0.035,
+            "particle_size_variation": 0.5,
+            "random_size": true,
+            "particle_lifetime": 140,
+            "particle_lifetime_variation": 0.4,
+            "random_lifetime": true,
+            "random_initial_direction": true
+        }
+    },
+    "particle_data": {
+        "should_collide": false,
+        "additive": true,
+        "modules": [
+            { "module": "veil:gravity", "strength": -0.0008 },
+            { "module": "veil:drag", "strength": 0.02 },
+            {
+                "module": "veil:color",
+                "interpolant": "q.agePercent",
+                "gradient": {
+                    "rgb_points": [
+                        { "percent": 0.0, "color": "#7CFFB0" },
+                        { "percent": 0.5, "color": "#FFD870" },
+                        { "percent": 1.0, "color": "#B080FF" }
+                    ],
+                    "alpha_points": [
+                        { "percent": 0.0, "alpha": 0.0 },
+                        { "percent": 0.2, "alpha": 0.9 },
+                        { "percent": 0.8, "alpha": 0.9 },
+                        { "percent": 1.0, "alpha": 0.0 }
+                    ]
+                }
+            }
+        ]
+    }
+}

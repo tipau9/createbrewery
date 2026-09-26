@@ -72,6 +72,8 @@ uniform mat4 InvViewProj;  // screen to camera-relative world, this frame
 uniform sampler2D DhDepthSampler; // Distant Horizons: the far landscape's own depth
 uniform mat4 DhInvViewProj;       // the same as InvViewProj, for DH's depth
 uniform float Dh;                 // 1 while Distant Horizons hands over its depth
+uniform sampler2D NormalSampler;  // Veil: the surface normal of each pixel (0 where nothing was drawn)
+uniform float Normals;            // 1 while Veil hands over the normals
 uniform mat4 PrevViewProj; // camera-relative world to screen, last frame
 uniform vec3 CamPos;       // camera position, wrapped to keep float precision
 uniform vec3 CamDelta;     // how far the camera moved since last frame
@@ -130,6 +132,19 @@ vec4 posAt(vec2 uv) {
         }
     }
     return vec4(worldAt(uv, depth), 0.0);
+}
+
+// The real edges and creases of blocks, 0..1, from how the surface turns between neighbouring
+// pixels (the same in any space, so it does not matter which one Veil writes in). 0 without Veil.
+float creaseAt(vec2 uv, vec2 px) {
+    if (Normals <= 0.0) return 0.0;
+    vec3 n = texture(NormalSampler, uv).xyz;
+    vec3 nx = texture(NormalSampler, uv + vec2(px.x, 0.0)).xyz;
+    vec3 ny = texture(NormalSampler, uv + vec2(0.0, px.y)).xyz;
+    if (dot(n, n) < 0.25 || dot(nx, nx) < 0.25 || dot(ny, ny) < 0.25) return 0.0;
+    n = normalize(n);
+    float turn = 1.0 - min(dot(n, normalize(nx)), dot(n, normalize(ny)));
+    return smoothstep(0.1, 0.4, turn);
 }
 
 float distAt(vec2 uv) {
@@ -486,7 +501,7 @@ void main() {
     float dc = distAt(uv);
     float dx = abs(distAt(uv + vec2(px.x, 0.0)) + distAt(uv - vec2(px.x, 0.0)) - 2.0 * dc);
     float dy = abs(distAt(uv + vec2(0.0, px.y)) + distAt(uv - vec2(0.0, px.y)) - 2.0 * dc);
-    float outline = smoothstep(0.02, 0.12, (dx + dy) / max(dc, 0.5));
+    float outline = max(smoothstep(0.02, 0.12, (dx + dy) / max(dc, 0.5)), creaseAt(uv, px));
     col = mix(col, wrainbow * 1.2, outline * 0.55 * peak * lsdLook * solid);
     // Peyote: "Istigkeit" - things within ~5 blocks get sharper with a thin gold rim; distant things get a warm golden haze.
     float nearObj = smoothstep(5.5, 1.2, dist) * solid;
@@ -570,7 +585,7 @@ void main() {
         float lines = pow(abs(sin(glyph * 2.5)), 24.0);
         float grow = smoothstep(24.0 * Crack, 24.0 * Crack - 3.0, dist) * solid;
         col = mix(col, col * 0.2, 0.7 * Crack);
-        col += vec3(0.2, 1.0, 0.45) * lines * grow * 1.2 * Crack;
+        col += vec3(0.2, 1.0, 0.45) * max(lines, creaseAt(uv, px)) * grow * 1.2 * Crack;
         col += vec3(0.5, 1.0, 0.6) * step(0.6, fract(t * 9.0)) * smoothstep(0.35, 0.75, length(d)) * 0.25 * Crack;
     }
     // The waiting room: a chrysanthemum unfolding from the middle, petal after petal, filling the view.

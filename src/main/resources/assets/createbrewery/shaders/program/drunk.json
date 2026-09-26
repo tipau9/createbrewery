@@ -11,7 +11,8 @@
         { "name": "DiffuseSampler" },
         { "name": "PrevSampler" },
         { "name": "DiffuseDepthSampler" },
-        { "name": "DhDepthSampler" }
+        { "name": "DhDepthSampler" },
+        { "name": "NormalSampler" }
     ],
     "uniforms": [
         { "name": "ProjMat",      "type": "matrix4x4",  "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
@@ -36,6 +37,7 @@
         { "name": "Flip",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Eyes",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Dh",           "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "Normals",      "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "DhInvViewProj", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
         { "name": "Waiting",      "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Beyond",       "type": "float",      "count": 1,  "values": [ 0.0 ] },

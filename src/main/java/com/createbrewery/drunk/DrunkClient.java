@@ -516,6 +516,7 @@ public final class DrunkClient {
         if (veil) {
             try {
                 VeilLights.frame(player, partial);
+                VeilFx.tick(!irisPack && (trip > 0.05f || DmtClient.crack > 0.01f), player.tickCount);
             } catch (RuntimeException | LinkageError e) {
                 veil = false;
                 LOGGER.warn("Veil lights unavailable", e);
@@ -923,6 +924,29 @@ public final class DrunkClient {
         RenderSystem.enableDepthTest();
     }
 
+    private static int veilNormals() {
+        if (!veil) return -1;
+        try {
+            return VeilFx.normalTexture();
+        } catch (RuntimeException | LinkageError e) {
+            veil = false;
+            LOGGER.warn("Veil normals unavailable", e);
+            return -1;
+        }
+    }
+
+    /** A Quasar particle emitter from Veil; false without Veil, so the caller uses vanilla particles. */
+    static boolean veilParticles(String emitter, double x, double y, double z) {
+        if (!veil) return false;
+        try {
+            return VeilFx.emit(emitter, x, y, z);
+        } catch (RuntimeException | LinkageError e) {
+            veil = false;
+            LOGGER.warn("Veil particles unavailable", e);
+            return false;
+        }
+    }
+
     private static org.joml.Matrix4f dhInvViewProj(org.joml.Matrix4f modelView) {
         try {
             return DhDepth.invViewProj(modelView);
@@ -966,10 +990,13 @@ public final class DrunkClient {
                 Vec3 moved = prevCam == null || chainFrames < 3 ? Vec3.ZERO : cam.subtract(prevCam);
                 org.joml.Matrix4f dhInv = dh ? dhInvViewProj(event.getModelViewMatrix()) : null;
                 chain.setUniform("Dh", dhInv == null ? 0f : 1f);
+                int normals = veilNormals();
+                chain.setUniform("Normals", normals < 0 ? 0f : 1f);
                 for (net.minecraft.client.renderer.PostPass pass : (java.util.List<net.minecraft.client.renderer.PostPass>) chainPasses.get(chain)) {
                     var effect = pass.getEffect();
                     effect.safeGetUniform("InvViewProj").set(new org.joml.Matrix4f(viewProj).invert());
                     effect.safeGetUniform("PrevViewProj").set(chainFrames < 3 ? viewProj : prevViewProj);
+                    if (normals >= 0) effect.setSampler("NormalSampler", () -> normals);
                     if (dhInv != null) {
                         effect.setSampler("DhDepthSampler", DhDepth::texture);
                         effect.safeGetUniform("DhInvViewProj").set(dhInv);
