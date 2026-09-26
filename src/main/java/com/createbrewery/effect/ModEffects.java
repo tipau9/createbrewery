@@ -221,6 +221,12 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, MobEffect> NALOXONE = EFFECTS.register("naloxone", () ->
         new DrugEffect(MobEffectCategory.BENEFICIAL, 0xF08A30, 0, null, 0, 0, 0));
 
+    /** Gier: after a Koks or meth binge, restless and flat, the mind circling round the next line. */
+    public static final DeferredHolder<MobEffect, MobEffect> CRAVING = EFFECTS.register("craving", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xB0B0C8, 20, DrugServer::cravingTick, 0, 0, 0)
+            .scaled(Attributes.BLOCK_BREAK_SPEED, id("craving_mining"), -0.15)
+            .scaled(Attributes.ATTACK_DAMAGE, id("craving_damage"), -0.1));
+
     /** Gewöhnung: the heroin high wears thin (hidden; amplifier 0..2). */
     public static final DeferredHolder<MobEffect, MobEffect> OPIOID_HABIT = EFFECTS.register("opioid_habit", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x8A7050, 0, null, 0, 0, 0));

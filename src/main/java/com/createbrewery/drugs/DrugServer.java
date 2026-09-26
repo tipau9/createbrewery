@@ -176,7 +176,10 @@ public final class DrugServer {
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
         player.addEffect(new MobEffectInstance(high, DrugEffect.doseTicks(before, high, ticks), level, false, false, true));
-        if (kind == Kind.COKE) player.removeEffect(ModEffects.COKE_CRASH); // a new line pushes the crash back
+        if (kind == Kind.COKE) {
+            player.removeEffect(ModEffects.COKE_CRASH); // a new line pushes the crash back
+            player.removeEffect(ModEffects.CRAVING);    // ...and stills the craving, for now
+        }
         // Keta: the K-Loch from the third dose - or the second, with weed deepening it.
         int holeAt = player.hasEffect(ModEffects.WEED_HIGH) ? 1 : 2;
         if (kind == Kind.KETA && level >= holeAt) {
@@ -256,6 +259,16 @@ public final class DrugServer {
             player.getFoodData().setExhaustion(0f);
         }
         checkMix(entity);
+    }
+
+    private static final String[] CRAVING = {"Nur noch eine Line…", "Eine noch, dann hör ich auf.", "Wo krieg ich jetzt noch was her?",
+        "Ohne ist alles so flach.", "Ich bin so unruhig."};
+
+    /** Gier, every second: now and then the thought of the next line. Another dose ends it - for now. */
+    public static void cravingTick(LivingEntity entity, int level) {
+        if (entity instanceof Player player && player.getRandom().nextFloat() < 1f / 40f) {
+            think(player, CRAVING[player.getRandom().nextInt(CRAVING.length)], 0xB0B0C8);
+        }
     }
 
     public static void crashTick(LivingEntity entity, int level) {
@@ -390,6 +403,8 @@ public final class DrugServer {
         float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
         if (instance.is(ModEffects.COKE_HIGH)) {
             entity.addEffect(new MobEffectInstance(ModEffects.COKE_CRASH, (int) ((1200 + 600 * instance.getAmplifier()) * worse), 0));
+            // After a binge (more than one line) the craving sets in, longer the more it was.
+            if (instance.getAmplifier() >= 1) entity.addEffect(new MobEffectInstance(ModEffects.CRAVING, 2400 * instance.getAmplifier(), 0));
         } else if (instance.is(ModEffects.KETA_HIGH) || instance.is(ModEffects.K_HOLE)) {
             entity.addEffect(new MobEffectInstance(ModEffects.DAZED, (int) (1200 * worse), 0));
         } else if (instance.is(ModEffects.HEART_ATTACK) && entity.isAlive()) {

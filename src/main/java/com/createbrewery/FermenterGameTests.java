@@ -818,6 +818,21 @@ public class FermenterGameTests {
         helper.succeed();
     }
 
+    /** A Koks binge ends in craving; the next line stills it. */
+    @GameTest(template = TEMPLATE)
+    public static void aBingeEndsInCraving(GameTestHelper helper) {
+        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, 1, 2, 1);
+        pig.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.COKE_HIGH, 5, 1));
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.CRAVING, 2400));
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(pig.hasEffect(com.createbrewery.effect.ModEffects.CRAVING), "no craving after a binge");
+            com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.COKE);
+            helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.CRAVING), "a line did not still the craving");
+            helper.succeed();
+        });
+    }
+
     /** The serotonin is still spent after a roll: the next pill only does half. */
     @GameTest(template = TEMPLATE)
     public static void mdmaWearsThinUntilTheLow(GameTestHelper helper) {

@@ -79,6 +79,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("item.createbrewery.naloxon.desc2", "Rechtsklick auf bewusstlose Mitspieler oder dich selbst");
         REGISTRATE.addRawLang("item.createbrewery.naloxon.desc3", "Löst bei Opiat-Abhängigen sofortigen Entzug aus");
         REGISTRATE.addRawLang("effect.createbrewery.opioid_habit", "Gewöhnung");
+        REGISTRATE.addRawLang("effect.createbrewery.craving", "Gier");
         REGISTRATE.addRawLang("effect.createbrewery.seizure", "Krampfanfall");
         REGISTRATE.addRawLang("effect.createbrewery.hyponatremia", "Wasservergiftung");
         REGISTRATE.addRawLang("effect.createbrewery.numbness", "Taubheit");

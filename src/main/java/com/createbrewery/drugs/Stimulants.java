@@ -60,8 +60,9 @@ public final class Stimulants {
         int ticks = spent ? ((DrugEffect) high.value()).fade() / 2 : DrugEffect.doseTicks(before, high, mdma ? MDMA_TICKS : METH_TICKS);
         player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
         if (spent) DrugServer.think(player, "Irgendwie… nicht wie letztes Mal.", 0xB08AB0);
-        // Another dose pushes the comedown back.
+        // Another dose pushes the comedown back (and stills the craving, for now).
         player.removeEffect(mdma ? ModEffects.COMEDOWN : ModEffects.METH_CRASH);
+        if (!mdma) player.removeEffect(ModEffects.CRAVING);
     }
 
     /** MDMA, every second: love for everyone around, the jaw grinding, and hugs. */
@@ -213,6 +214,8 @@ public final class Stimulants {
             if (entity instanceof Player player) DrugServer.think(player, "Warum bin ich so… leer? Grundlos. Einfach leer.", 0x8A8AB0);
         } else if (instance.is(ModEffects.TWEAK)) {
             entity.addEffect(new MobEffectInstance(ModEffects.METH_CRASH, 3600 + 1800 * instance.getAmplifier(), 0));
+            // Meth grips hardest: the craving comes after every run, not just a binge.
+            entity.addEffect(new MobEffectInstance(ModEffects.CRAVING, 4800 + 2400 * instance.getAmplifier(), 0));
         }
     }
 }
