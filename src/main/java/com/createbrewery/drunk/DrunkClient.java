@@ -110,6 +110,8 @@ public final class DrunkClient {
      * chain that keeps getting recreated would flash its black first frame again and again.
      */
     private static PostChain chain;
+    /** Veil comes with Sable / Create Aeronautics; without it there are no dynamic lights. */
+    private static boolean veil = net.neoforged.fml.ModList.get().isLoaded("veil");
     private static int chainWidth, chainHeight;
     /** Frames drawn since the chain was (re)built; the afterimage waits until it has a real previous frame. */
     private static int chainFrames;
@@ -137,6 +139,7 @@ public final class DrunkClient {
         KetaClient.init();
         MusicPulse.init();
         DrugAudio.init();
+        PoseClient.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -227,6 +230,7 @@ public final class DrunkClient {
             KetaClient.tick(mc, player);
             WeedClient.tick(mc, player);
             DmtClient.tick(mc, player);
+            PoseClient.tick(player);
             var r = player.getRandom();
             if (recurLeft > 0) recurLeft--;
             else if (trip * Math.max(0f, 1f - organic - desert) > 0.5f && r.nextFloat() < 1f / 900f) recurLeft = 60 + r.nextInt(60);
@@ -452,9 +456,19 @@ public final class DrunkClient {
         LocalPlayer player = mc.player;
         if (player == null) {
             appliedYaw = appliedPitch = appliedRetch = 0f;
+            if (veil) VeilLights.clear();
+            com.createbrewery.drugs.DrugPose.SEEN.clear();
             return;
         }
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        if (veil) {
+            try {
+                VeilLights.frame(player, partial);
+            } catch (RuntimeException | LinkageError e) {
+                veil = false;
+                LOGGER.warn("Veil lights unavailable", e);
+            }
+        }
         double t = seconds(player, partial);
         // Numb: Keta (and a lot of alcohol) dull the pain, not the injury. The hit lands in full,
         // but the view does not flinch and you do not hear yourself - only the hearts tell.

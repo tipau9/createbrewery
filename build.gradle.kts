@@ -59,6 +59,7 @@ repositories {
     maven("https://maven.createmod.net")            // Create, Ponder, Flywheel
     maven("https://maven.ithundxr.dev/snapshots")   // Registrate
     maven("https://maven.blamejared.com")           // JEI
+    maven("https://maven.kosmx.dev")                // playerAnimator
 }
 
 dependencies {
@@ -70,6 +71,10 @@ dependencies {
 
     compileOnly("mezz.jei:jei-${property("minecraft_version")}-neoforge-api:${property("jei_version")}")
     runtimeOnly("mezz.jei:jei-${property("minecraft_version")}-neoforge:${property("jei_version")}")
+    // Veil (bundled in Sable / Create Aeronautics): coloured dynamic lights, only when it is there.
+    compileOnly("foundry.veil:veil-neoforge-${property("minecraft_version")}:4.3.2") { isTransitive = false }
+    // playerAnimator (in the pack): drugged body poses, only when it is there.
+    compileOnly("dev.kosmx.player-anim:player-animation-lib-forge:2.0.4+1.21.1") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // Required to actually launch the JUnit Platform. Without it, the first unit
