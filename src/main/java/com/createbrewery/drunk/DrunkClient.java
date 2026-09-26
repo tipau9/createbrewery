@@ -987,6 +987,14 @@ public final class DrunkClient {
         }
     }
 
+    /** A drag on a joint (DrugPose.SMOKE): with Veil, a plume that rises from the mouth and drifts. */
+    public static void exhale(int entity) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || !(mc.level.getEntity(entity) instanceof net.minecraft.world.entity.LivingEntity who)) return;
+        Vec3 mouth = who.getEyePosition().add(who.getLookAngle().scale(0.3)).subtract(0, 0.1, 0);
+        veilParticles("joint_smoke", mouth.x, mouth.y, mouth.z);
+    }
+
     /** A Quasar particle emitter from Veil; false without Veil, so the caller uses vanilla particles. */
     static boolean veilParticles(String emitter, double x, double y, double z) {
         if (!veil) return false;

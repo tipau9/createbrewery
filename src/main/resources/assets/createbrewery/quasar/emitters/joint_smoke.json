@@ -1,0 +1,84 @@
+{
+    "max_lifetime": 30,
+    "rate": 3,
+    "count": 1,
+    "emitter_settings": {
+        "shape": {
+            "shape": "sphere",
+            "dimensions": [
+                0.08,
+                0.08,
+                0.08
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "from_surface": false
+        },
+        "particle_settings": {
+            "particle_speed": 0.015,
+            "random_speed": true,
+            "base_particle_size": 0.12,
+            "particle_size_variation": 0.1,
+            "random_size": true,
+            "particle_lifetime": 110,
+            "particle_lifetime_variation": 0.3,
+            "random_lifetime": true,
+            "random_initial_direction": true,
+            "random_initial_rotation": true
+        }
+    },
+    "particle_data": {
+        "should_collide": false,
+        "additive": false,
+        "sprite_data": {
+            "sprite": "createbrewery:textures/particle/quasar_smoke.png"
+        },
+        "modules": [
+            {
+                "module": "veil:gravity",
+                "strength": -0.0012
+            },
+            {
+                "module": "veil:drag",
+                "strength": 0.04
+            },
+            {
+                "module": "veil:color",
+                "interpolant": "q.agePercent",
+                "gradient": {
+                    "rgb_points": [
+                        {
+                            "percent": 0.0,
+                            "color": "#D8D8D0"
+                        },
+                        {
+                            "percent": 1.0,
+                            "color": "#9A9A96"
+                        }
+                    ],
+                    "alpha_points": [
+                        {
+                            "percent": 0.0,
+                            "alpha": 0.0
+                        },
+                        {
+                            "percent": 0.15,
+                            "alpha": 0.4
+                        },
+                        {
+                            "percent": 0.6,
+                            "alpha": 0.25
+                        },
+                        {
+                            "percent": 1.0,
+                            "alpha": 0.0
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

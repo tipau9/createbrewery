@@ -73,6 +73,7 @@ public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements
         } else if (pose.kind >= VOMIT) {
             long now = System.currentTimeMillis();
             ACTING.put(pose.entity, new Action(pose.kind, now, now + (pose.amount & 0xFF) * 200L));
+            if (pose.kind == SMOKE) com.createbrewery.drunk.DrunkClient.exhale(pose.entity);
         } else {
             SEEN.put(pose.entity, pose);
         }
