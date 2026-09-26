@@ -127,6 +127,7 @@ public final class DrunkClient {
         NeoForge.EVENT_BUS.addListener(DrunkClient::onGuiPre);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onGuiPost);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onRenderLevelStage);
+        NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.HIGHEST, DrunkClient::onGuiChain);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onInteract);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenOpening);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onScreenMouse);
@@ -244,7 +245,10 @@ public final class DrunkClient {
         DrugAudio.tick(wah, Math.max(dissoc, Math.max(DmtClient.waiting, DmtClient.beyond)), DmtClient.crack,
             trip * Math.max(0f, 1f - organic), trip * organic, rolling);
 
-        boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
+        boolean pack = shaderPackActive();
+        if (pack != irisPack && chain != null) chainFrames = 0;
+        irisPack = pack;
+        boolean want = player != null && !shaderFailed && screen() > 0.01f
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
                 || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || CokeClient.line > 0.01f || BenzoClient.rebound > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || DmtClient.descent > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
@@ -820,9 +824,31 @@ public final class DrunkClient {
     /** Draws the drunk vision over the finished world, before the hand and the HUD. */
     private static void onRenderLevelStage(RenderLevelStageEvent event) {
         com.createbrewery.drugs.Hallucinations.render(event);
-        if (chain == null || event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
-        Minecraft mc = Minecraft.getInstance();
-        RenderTarget main = mc.getMainRenderTarget();
+        if (chain == null || irisPack || event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        prepareChain();
+        worldUniforms(event);
+        runChain(event.getPartialTick().getGameTimeDeltaTicks());
+    }
+
+    /**
+     * With an Iris shaderpack the world is drawn by the pack, and the vanilla stage above sits in
+     * the middle of it. So the drug vision goes on top of the pack's finished picture instead,
+     * just before the HUD - without the depth buffer (World 0), so only what is tied to places in
+     * the world is missing, and the hand is swept along too.
+     */
+    private static void onGuiChain(RenderGuiEvent.Pre event) {
+        if (chain == null || !irisPack) return;
+        prepareChain();
+        chain.setUniform("World", 0f);
+        runChain(event.getPartialTick().getGameTimeDeltaTicks());
+        Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
+    }
+
+    /** True while an Iris shaderpack draws the world; updated each tick. */
+    private static boolean irisPack;
+
+    private static void prepareChain() {
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
         if (main.width != chainWidth || main.height != chainHeight) {
             chain.resize(main.width, main.height);
             chainWidth = main.width;
@@ -830,14 +856,16 @@ public final class DrunkClient {
             chainFrames = 0;
         }
         chain.setUniform("Trail", chainFrames < 3 ? 0f : 1f);
-        worldUniforms(event);
+    }
+
+    private static void runChain(float partialTicks) {
         chainFrames++;
         // Same state handling as vanilla around its own post effect.
         RenderSystem.disableBlend();
         RenderSystem.disableDepthTest();
         RenderSystem.resetTextureMatrix();
-        chain.process(event.getPartialTick().getGameTimeDeltaTicks());
-        main.bindWrite(false);
+        chain.process(partialTicks);
+        Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
         RenderSystem.enableDepthTest();
     }
 
@@ -887,10 +915,7 @@ public final class DrunkClient {
 
     private static Boolean irisPresent;
 
-    /**
-     * An Iris shaderpack draws the world its own way, and a vanilla post chain on top of it can
-     * break the picture. Looked up by reflection, so Iris stays optional.
-     */
+    /** Whether an Iris shaderpack is in use. Looked up by reflection, so Iris stays optional. */
     private static boolean shaderPackActive() {
         try {
             if (irisPresent == null) {
