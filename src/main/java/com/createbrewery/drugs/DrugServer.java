@@ -195,11 +195,7 @@ public final class DrugServer {
             // The lining gives up: often with the other powder still in there, and line after line.
             float bleed = mixed(player) ? 0.35f : level >= 2 ? 0.08f * (level - 1) : 0f;
             if (player.getRandom().nextFloat() < bleed) nosebleed(player, level1);
-            Vec3 look = player.getLookAngle();
-            level1.sendParticles(ModParticles.POWDER.get(), player.getX() + look.x * 0.3, player.getEyeY() - 0.1,
-                player.getZ() + look.z * 0.3, 8, 0.06, 0.04, 0.06, 0.01);
-            level1.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.SNIFF.get(),
-                SoundSource.PLAYERS, 1.0f, 0.9f + player.getRandom().nextFloat() * 0.2f);
+            // The sniff itself and its puff of powder come on the client, when the straw reaches the nose (SniffProps).
         }
     }
 

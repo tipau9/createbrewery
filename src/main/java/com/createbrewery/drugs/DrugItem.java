@@ -82,7 +82,7 @@ public class DrugItem extends Item {
             }
             if (purity.fentanyl()) Opioids.fentanyl(player);
             switch (kind) {
-                case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, 20);
+                case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, 100); // phone, card, straw: five seconds
                 case WEED -> DrugPose.act(player, DrugPose.SMOKE, 30);
                 case DMT, LACHGAS -> DrugPose.act(player, DrugPose.INHALE, 30);
                 case HEROIN -> DrugPose.act(player, DrugPose.INJECT, 40);

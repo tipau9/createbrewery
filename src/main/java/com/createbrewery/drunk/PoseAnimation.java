@@ -19,8 +19,8 @@ import net.minecraft.util.Mth;
  *       shuffle, head-banging), the chin sinking to the chest on the nod (mostly the real pitch,
  *       which NodClient already lowers; this only adds a little), slumped and lopsided in a K-hole,
  *       doubled over with laughter when stoned, hunched and shivering in withdrawal.</li>
- *   <li>One-off actions, sent by the server: doubled over throwing up, convulsing, a line to the
- *       nose, a drag (joint, pipe or balloon), a shot into the arm, collapsing to the ground.</li>
+ *   <li>One-off actions, sent by the server: doubled over throwing up, convulsing, a line off the
+ *       phone (see SniffProps), a drag (joint, pipe or balloon), a shot into the arm, collapsing to the ground.</li>
  * </ul>
  */
 final class PoseAnimation implements IAnimation {
@@ -144,10 +144,20 @@ final class PoseAnimation implements IAnimation {
                 d[2] = amount * 0.5f * shake;
             }
             case DrugPose.SNIFF -> {
-                // A hand up to the nose, head bowed to it, then snapping back.
+                // Phone held out in the left hand; the right chops a line on it with a card, then
+                // brings the straw to the nose as the head goes down to the screen; a sniff, head
+                // back, phone away (the easing out). SniffProps draws the phone, card and straw.
                 if (position) return;
-                if (right) { d[0] = -1.9f - value.getX(); d[2] = 0.45f; }
-                if (part.equals("head")) d[0] = p < 0.6f ? 0.35f : -0.3f;
+                boolean chopping = p < SniffProps.SWAP, sniffing = !chopping && p < SniffProps.SNIFF;
+                boolean back = p >= SniffProps.SNIFF && p < SniffProps.BACK;
+                if (left) { d[0] = (sniffing ? -1.45f : -1.15f) - value.getX(); d[1] = 0.45f; }
+                if (right) {
+                    float chop = p > SniffProps.OUT && p < SniffProps.CHOP ? 0.1f * (float) Math.sin(t * 22f) : 0f;
+                    d[0] = (chopping ? -1.05f + chop : sniffing ? -1.8f : -1.3f) - value.getX();
+                    d[1] = chopping ? -0.5f : -0.3f;
+                }
+                if (part.equals("head")) d[0] = chopping ? 0.55f : sniffing ? 0.75f : back ? -0.35f : 0f;
+                if (part.equals("body") && sniffing) d[0] = -0.15f;
             }
             case DrugPose.SMOKE, DrugPose.INHALE -> {
                 // Hand to the mouth, a long drag, then head back to breathe out.

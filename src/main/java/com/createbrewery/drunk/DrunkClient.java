@@ -203,6 +203,7 @@ public final class DrunkClient {
     private static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
+        SniffProps.tick(mc);
         float target = player == null ? 0f : DrunkServer.feltFor(player, player.getData(ModAttachments.DRUNK));
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
@@ -1563,6 +1564,7 @@ public final class DrunkClient {
 
     public static void addLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {
         DrugEyes.addLayers(event);
+        SniffProps.addLayers(event);
     }
 
     public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
