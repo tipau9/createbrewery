@@ -200,6 +200,7 @@
   "item.createbrewery.spent_grain": "Spent Grain",
   "item.createbrewery.xanax": "Xanax",
   "item.createbrewery.yeast": "Yeast",
+  "itemGroup.createbrewery": "Create Brewery",
   "subtitles.createbrewery.beer_open": "Bier zischt",
   "subtitles.createbrewery.cough": "Husten",
   "subtitles.createbrewery.ear_ringing": "Ohrenpfeifen",

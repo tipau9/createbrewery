@@ -21,10 +21,12 @@ public class CreateBrewery {
         ModItems.register();
         ModBlocks.register();
         ModBlockEntities.register();
+        ModCreativeTabs.register(modEventBus);
         com.createbrewery.effect.ModEffects.register(modEventBus);
         com.createbrewery.drunk.ModAttachments.register(modEventBus);
         com.createbrewery.particle.ModParticles.register(modEventBus);
         com.createbrewery.sound.ModSounds.register(modEventBus);
+        REGISTRATE.addRawLang("itemGroup.createbrewery", "Create Brewery");
         REGISTRATE.addRawLang("effect.createbrewery.inebriation", "Trunkenheit");
         REGISTRATE.addRawLang("effect.createbrewery.hangover", "Kater des Todes");
         REGISTRATE.addRawLang("effect.createbrewery.hiccups", "Schluckauf");
