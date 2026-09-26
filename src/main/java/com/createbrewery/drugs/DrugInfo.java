@@ -19,6 +19,10 @@ public final class DrugInfo {
     public static final Map<String, String> TEXT = new LinkedHashMap<>();
 
     static {
+        TEXT.put("drug_test_kit", "Drogentest-Kit: Droge in die andere Hand, dann benutzen. Zeigt, wie stark diese Charge ist "
+            + "und ob Fentanyl drin ist. Straßenware ist nie, was sie verspricht: Koks meist gestreckt, Pillen von schwach bis "
+            + "gefährlich stark, Pilze so verschieden wie die Natur. Jeder Stapel ist eine eigene Charge."
+            + "\n\nSehr stark: nur die Hälfte nehmen. Fentanyl: gar nicht - schon einmal kann die Atmung stoppen.");
         TEXT.put("koks", "Koks (Line ziehen): wach, schnell, redselig, alles scharf und hell. Etwa 3 Minuten."
             + "\n\nRisiko: Herzrasen bis Herzinfarkt, Nasenbluten, Gier nach der nächsten Line; ab der dritten Käfer unter der Haut. "
             + "Jede Line wirkt weniger, belastet das Herz aber voll."
@@ -42,6 +46,7 @@ public final class DrugInfo {
             + "\n\nRisiko: völlig weg, der Körper steht ungeschützt herum. Hinsetzen, jemand passt auf."
             + "\n\nGefährlich mit: allem, was das Herz belastet." + HELP);
         TEXT.put("mdma", "MDMA (Pille): Wärme, Nähe, Musik geht durch den Körper, Tanzen. Etwa 6 Minuten, dann der Absturz."
+            + " Nach dem Essen kommt sie später, auf leeren Magen früher. Pillen schwanken stark - testen, bei starken halbieren."
             + "\n\nRisiko: Überhitzung beim Tanzen, Kiefer mahlt; zu viel Wasser = Wasservergiftung. "
             + "Pausen, Schatten, Elektrolyt-Getränk statt literweise Wasser."
             + "\n\nGefährlich mit: Alkohol (Ausgetrocknet: überhitzt viel schneller), Koks, Meth." + HELP);
@@ -52,8 +57,10 @@ public final class DrugInfo {
         TEXT.put("heroin", "Heroin (Spritze): warme Flut, dann Wegnicken, Traum. Etwa 4 Minuten."
             + "\n\nRisiko: Atemlähmung, Gewöhnung (jeder Schuss wirkt schwächer, Entzug), Krampfanfall."
             + "\n\nGefährlich mit: Alkohol und Xanax (Atmung setzt aus), Koks oder Crystal (Speedball: das Aufputschen verdeckt die Überdosis)."
+            + "\n\nStraßenheroin kann Fentanyl enthalten - vorher testen (Drogentest-Kit). Naloxon wirkt auch dagegen."
             + "\n\nNaloxon rettet: Rechtsklick auf die Person." + HELP);
         TEXT.put("xanax", "Xanax (Pille): ruhig, weich, die Angst ist weg, alles unscharf. Etwa 5 Minuten, danach unruhiger als vorher."
+            + "\n\nGefälschte Bars vom Schwarzmarkt enthalten manchmal Fentanyl - testen."
             + "\n\nRisiko: Rebound-Angst, Krampfanfall beim Absetzen nach Gewöhnung."
             + "\n\nGefährlich mit: Heroin und Alkohol (Atmung)." + HELP);
         TEXT.put("lachgas_balloon", "Lachgas (Ballon): Wah-Wah im Kopf, Lachen, ein paar Sekunden weg. Etwa 15 Sekunden."

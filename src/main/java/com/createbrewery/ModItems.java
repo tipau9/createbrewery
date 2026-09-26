@@ -152,6 +152,12 @@ public class ModItems {
         .properties(p -> p.stacksTo(4))
         .register();
 
+    public static final ItemEntry<com.createbrewery.drugs.TestKitItem> TEST_KIT = REGISTRATE
+        .item("drug_test_kit", com.createbrewery.drugs.TestKitItem::new)
+        .lang("Drogentest-Kit")
+        .properties(p -> p.durability(10))
+        .register();
+
     public static final ItemEntry<com.createbrewery.drugs.ElectrolyteItem> ELECTROLYTE = REGISTRATE
         .item("electrolyte_drink", com.createbrewery.drugs.ElectrolyteItem::new)
         .lang("Elektrolyt-Drink")

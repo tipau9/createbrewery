@@ -26,6 +26,15 @@ public final class Pharmacology {
     }
 
     /**
+     * How many doses one street unit of {@code strength} normal doses is, with {@code roll} 0..1:
+     * the whole part always, the rest by chance (0.4 is nothing most of the time, 1.6 often two).
+     */
+    public static int doses(float strength, float roll) {
+        int whole = (int) Math.floor(strength);
+        return whole + (roll < strength - whole ? 1 : 0);
+    }
+
+    /**
      * How strong {@code amplifier + 1} stacked doses feel, 0..1: every further line or joint adds
      * half as much as the one before (acute tolerance), so chasing the first high never works.
      * The strain on the heart does not share this discount - see {@link #heartLoad}.

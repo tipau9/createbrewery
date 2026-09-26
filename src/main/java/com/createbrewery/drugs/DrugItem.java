@@ -1,11 +1,14 @@
 package com.createbrewery.drugs;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
@@ -17,6 +20,18 @@ public class DrugItem extends Item {
     public DrugItem(Properties properties, DrugServer.Kind kind) {
         super(properties);
         this.kind = kind;
+    }
+
+    public DrugServer.Kind kind() {
+        return kind;
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, java.util.List<Component> tooltip, TooltipFlag flag) {
+        if (kind == DrugServer.Kind.LACHGAS) return;
+        Purity purity = stack.get(Purity.PURITY.get());
+        tooltip.add(purity != null && purity.tested() ? TestKitItem.result(purity)
+            : Component.literal("Ungetestet - was drin ist, weiß keiner").withStyle(ChatFormatting.GRAY));
     }
 
     @Override
@@ -57,7 +72,15 @@ public class DrugItem extends Item {
             net.minecraft.advancements.CriteriaTriggers.CONSUME_ITEM.trigger(sp, stack);
         }
         if (!level.isClientSide) {
-            DrugServer.take(player, kind);
+            // A street batch: cut, normal or strong (any number of doses), maybe laced with fentanyl.
+            Purity purity = Purity.of(stack, kind, player.getRandom());
+            int doses = Pharmacology.doses(purity.strength(), player.getRandom().nextFloat());
+            // A fake Xanax bar is only the fentanyl; laced heroin is both.
+            if (!(purity.fentanyl() && kind == DrugServer.Kind.XANAX)) {
+                for (int i = 0; i < doses; i++) DrugServer.take(player, kind);
+                if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(player, "Gestreckt… das merk ich kaum.", 0xA0A0A0);
+            }
+            if (purity.fentanyl()) Opioids.fentanyl(player);
             switch (kind) {
                 case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, 20);
                 case WEED -> DrugPose.act(player, DrugPose.SMOKE, 30);

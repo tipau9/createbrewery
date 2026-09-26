@@ -8,6 +8,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class PharmacologyTest {
 
     @Test
+    void streetDosesRoundByChance() {
+        assertEquals(0, Pharmacology.doses(0.4f, 0.5f));
+        assertEquals(1, Pharmacology.doses(0.4f, 0.3f));
+        assertEquals(1, Pharmacology.doses(1.0f, 0.99f));
+        assertEquals(2, Pharmacology.doses(1.6f, 0.5f));
+        assertEquals(1, Pharmacology.doses(1.6f, 0.7f));
+    }
+
+    @Test
     void aDoseComesUpHoldsAndFades() {
         assertEquals(0f, Pharmacology.strength(0, 3600, 300, 900), 1e-6f);
         assertTrue(Pharmacology.strength(150, 3450, 300, 900) < 0.6f);

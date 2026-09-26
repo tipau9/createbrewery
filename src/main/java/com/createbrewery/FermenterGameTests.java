@@ -645,6 +645,7 @@ public class FermenterGameTests {
         net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
         net.minecraft.world.item.ItemStack joint = new net.minecraft.world.item.ItemStack(com.createbrewery.ModItems.JOINT.get());
+        joint.set(com.createbrewery.drugs.Purity.PURITY.get(), new com.createbrewery.drugs.Purity(1f, false, false)); // an average joint
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, joint);
         joint.finishUsingItem(helper.getLevel(), player);
         helper.assertTrue(joint.getDamageValue() == 1, "a hit did not wear the joint");
@@ -815,6 +816,23 @@ public class FermenterGameTests {
         helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.BAD_TRIP), "Xanax did not end the bad trip");
         com.createbrewery.drugs.Opioids.body(player);
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "heroin and Xanax did not stop the breath");
+        helper.succeed();
+    }
+
+    /** Fentanyl in a street bar stops the breath of someone not used to opioids; Naloxon still works. */
+    @GameTest(template = TEMPLATE)
+    public static void fentanylStopsTheBreath(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        com.createbrewery.drugs.Opioids.fentanyl(player);
+        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.NOD).getAmplifier() == 2, "fentanyl was not three shots' worth");
+        // Past the three seconds it takes to reach the brain.
+        var nod = player.getEffect(com.createbrewery.effect.ModEffects.NOD);
+        player.removeEffect(com.createbrewery.effect.ModEffects.NOD);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, nod.getDuration() - 100, 2));
+        com.createbrewery.drugs.Opioids.body(player);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "fentanyl did not stop the breath");
+        com.createbrewery.drugs.Opioids.naloxone(player);
+        helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "naloxon did not work on fentanyl");
         helper.succeed();
     }
 

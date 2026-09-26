@@ -89,6 +89,19 @@ public final class Opioids {
         }
     }
 
+    /**
+     * Fentanyl, in the heroin or pressed into a Xanax bar: many times stronger than it looks -
+     * two shots' worth on top at once, enough to stop the breath of anyone not used to it.
+     * Naloxon still works. Barely any habit of its own from one hit.
+     */
+    public static void fentanyl(Player player) {
+        MobEffectInstance before = player.getEffect(ModEffects.NOD);
+        int level = Math.min(MAX_LEVEL, before == null ? 2 : before.getAmplifier() + 2);
+        player.addEffect(new MobEffectInstance(ModEffects.NOD, DrugEffect.doseTicks(before, ModEffects.NOD, HEROIN_TICKS), level, false, false, true));
+        DrunkState s = DrunkServer.state(player);
+        s.dependence = Math.min(1f, s.dependence + 0.05f);
+    }
+
     /** Every second, for every player: the breath, and dependence wearing off or turning into withdrawal. */
     public static void body(Player player) {
         DrunkState s = DrunkServer.state(player);

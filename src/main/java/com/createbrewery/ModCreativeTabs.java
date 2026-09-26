@@ -40,6 +40,7 @@ public final class ModCreativeTabs {
                 // Apotheke & Medizin
                 output.accept(ModItems.IBUPROFEN.get());
                 output.accept(ModItems.NALOXON.get());
+                output.accept(ModItems.TEST_KIT.get());
 
                 // Substanzen & Zubehör
                 output.accept(ModItems.WEED.get());

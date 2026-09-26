@@ -303,6 +303,13 @@ public class ModRecipeProvider {
                 .requires(Items.SUGAR)
                 .unlockedBy("has_ghast_tear", has(Items.GHAST_TEAR))
                 .save(output, CreateBrewery.ID("naloxon_crafting"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.TEST_KIT.get(), 1)
+                .requires(Items.GLASS_BOTTLE)
+                .requires(Items.PAPER)
+                .requires(Items.REDSTONE)
+                .requires(Items.LAPIS_LAZULI)
+                .unlockedBy("has_glass_bottle", has(Items.GLASS_BOTTLE))
+                .save(output, CreateBrewery.ID("drug_test_kit"));
         }
     }
 }
