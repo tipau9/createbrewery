@@ -253,7 +253,7 @@ public final class DrunkClient {
             // The head jerks about, nothing you do.
             if (seizing > 0.5f) player.turn((r.nextFloat() - 0.5f) * 10f / 0.15f, (r.nextFloat() - 0.5f) * 8f / 0.15f);
             if (recurLeft > 0) recurLeft--;
-            else if (trip * Math.max(0f, 1f - organic - desert) > 0.5f && r.nextFloat() < 1f / 900f) recurLeft = 60 + r.nextInt(60);
+            else if (trip * Math.max(0f, 1f - organic - desert) > 0.75f && r.nextFloat() < 1f / 900f) recurLeft = 60 + r.nextInt(60);
             recur = ease(recur, recurLeft > 0 ? 1f : 0f);
             if (flipLeft > 0 && --flipLeft == 0) flip = 0;
             else if (flipLeft == 0 && dissoc > 0.5f && r.nextFloat() < 1f / 1200f) {

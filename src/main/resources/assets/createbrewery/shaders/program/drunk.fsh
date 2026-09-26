@@ -174,6 +174,13 @@ void main() {
     // Psychedelics: surfaces breathe and crawl. Brightness steers the flow, so the patterns seem
     // to grow out of the textures instead of floating over them.
     float peak = smoothstep(0.55, 1.0, Trip);
+    // LSD by Effect Index level: each layer only from the strength it really shows up at.
+    // Light: colours, drifting, visual snow. Common: tracers, breathing walls, auras, rainbows.
+    // Strong: patterns on surfaces, the sky, melting detail. Heroic: the view folds and mirrors.
+    float lsdShare = clamp(1.0 - Organic - Desert, 0.0, 1.0);
+    float lvl2 = mix(1.0, smoothstep(0.25, 0.55, Trip), lsdShare);
+    float lvl3 = smoothstep(0.5, 0.8, Trip);
+    float heroic = smoothstep(0.85, 1.0, Trip);
     float luma0 = dot(tap(uv), vec3(0.299, 0.587, 0.114));
     vec2 flow = vec2(sin(uv.y * 14.0 + t * 0.8 + luma0 * 6.0), cos(uv.x * 12.0 + t * 0.7 + luma0 * 6.0));
     uv += flow * px * (2.0 + 5.0 * peak) * Trip;
@@ -200,7 +207,7 @@ void main() {
     float breathe = sin(wp.x * 0.8 + t * 0.9) * sin(wp.z * 0.8 - t * 0.7) + 0.5 * sin(wp.y * 1.1 + t * 0.6);
     // Mushrooms: the breath follows a slow heartbeat, about fifty a minute.
     float beat = 1.0 + 0.8 * Organic * pow(0.5 + 0.5 * sin(t * 5.2), 8.0);
-    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * solid * beat;
+    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * lvl2 * solid * beat;
     // ...and surfaces run downwards like wet paint, in streaks that stay on their blocks.
     float run = 0.5 + 0.5 * sin(wp.x * 3.1 + 2.0 * sin(wp.z * 2.3) + t * 0.3);
     uv.y += run * run * 0.006 * Trip * Organic * solid;
@@ -372,11 +379,11 @@ void main() {
     col = mix(col, hueShift(col, shift), clamp(sat * 3.0, 0.0, 1.0));
     col = mix(vec3(lum), col, 1.0 + (0.8 - 0.5 * Organic + 0.3 * Desert) * Trip);
     // Texture liquidation: detail melts away, the world looks painted in flat, simple colours.
-    float liquid = smoothstep(0.4, 1.0, Trip);
-    if (liquid > 0.0) col = mix(col, floor(ring(uv, px * 2.0) * 8.0 + 0.5) / 8.0, 0.35 * liquid);
+    float liquid = lvl3 * smoothstep(0.65, 1.0, Trip);
+    if (liquid > 0.0) col = mix(col, floor(ring(uv, px * 2.0) * 8.0 + 0.5) / 8.0, 0.25 * liquid);
     // LSD coming up: fast bright flicker at the edges of the view, before the geometry.
     col *= 1.0 + 0.5 * step(0.5, fract(t * 13.0)) * smoothstep(0.3, 0.75, length(d)) * ComeUp;
-    float lsdTrip = Trip * lsdLook;
+    float lsdTrip = Trip * lsdLook * lvl2;
     if (lsdTrip > 0.01) {
         // Diffraction: bright lights split into rainbow rings, red inside, blue outside.
         col += vec3(spill(uv, px * 6.0, 0.1).r, spill(uv, px * 9.0, 0.5).g, spill(uv, px * 12.0, 0.9).b) * 2.0 * lsdTrip;
@@ -385,7 +392,7 @@ void main() {
             vec2 ax = vec2(px.x * 4.0, 0.0), ay = vec2(0.0, px.y * 4.0);
             float near = min(min(distAt(uv + ax), distAt(uv - ax)), min(distAt(uv + ay), distAt(uv - ay)));
             float aura = smoothstep(0.3, 2.0, distAt(uv) - near);
-            col += hueShift(vec3(1.0, 0.3, 0.6), t * 0.5 + near * 0.3) * aura * 0.5 * lsdTrip;
+            col += hueShift(vec3(1.0, 0.3, 0.6), t * 0.5 + near * 0.3) * aura * 0.35 * lsdTrip;
         }
     }
     // Mushrooms: soft focus, and every light blooms into a warm, gentle glow.
@@ -417,7 +424,7 @@ void main() {
     float ka = abs(mod(atan(kc.y, kc.x) + t * 0.05, seg) - seg * 0.5);
     // Mushrooms fold it into a slow spiral instead, like a snail shell or a fern.
     float sa = atan(kc.y, kc.x) + log(kr + 0.001) * 2.0 - t * 0.1;
-    col = mix(col, tap(0.5 + mix(vec2(cos(ka), sin(ka)), vec2(cos(sa), sin(sa)), Organic) * kr), 0.3 * peak);
+    col = mix(col, tap(0.5 + mix(vec2(cos(ka), sin(ka)), vec2(cos(sa), sin(sa)), Organic) * kr), 0.3 * peak * mix(1.0, heroic, lsdShare));
     float lattice = smoothstep(0.92, 1.0, abs(sin(kr * 60.0 - t * 1.5) * sin(ka * 16.0)));
     vec3 rainbow = 0.5 + 0.5 * sin(vec3(t, t * 1.3 + 2.0, t * 0.7 + 4.0) + kr * 20.0);
     col += rainbow * lattice * 0.12 * peak * lsdLook;
@@ -426,7 +433,7 @@ void main() {
                + sin(wp.y * 2.0 + 2.0 * sin(wp.x * 1.1 + t * 0.3));
     float contour = smoothstep(0.8, 1.0, abs(sin(wpat * 3.14159)));
     vec3 wrainbow = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + wpat * 0.3 + t * 0.05));
-    col += wrainbow * contour * 0.16 * Trip * lsdLook * solid * exp(-dist / 40.0);
+    col += wrainbow * contour * 0.16 * Trip * lvl3 * lsdLook * solid * exp(-dist / 40.0);
     // Peyote: Native American weaving patterns on surfaces - stepped zigzags and diamonds in red, orange, yellow, turquoise.
     float weave = Desert * Trip * solid;
     if (weave > 0.01) {
@@ -474,7 +481,7 @@ void main() {
     col = mix(col, mix(col, vec3(0.95, 0.75, 0.45), 0.35), farObj * 0.5 * Trip * Desert);
     // Grass, leaves and water wander through other colours.
     float foliage = clamp((col.g - max(col.r, col.b)) * 6.0, 0.0, 1.0) + clamp((col.b - max(col.r, col.g)) * 4.0, 0.0, 1.0);
-    col = mix(col, hueShift(col, 2.5 * sin(t * 0.12 + (wp.x + wp.z) * 0.04)), min(1.0, foliage) * 0.8 * Trip * lsdLook * solid);
+    col = mix(col, hueShift(col, 2.5 * sin(t * 0.12 + (wp.x + wp.z) * 0.04)), min(1.0, foliage) * 0.8 * Trip * lvl2 * lsdLook * solid);
     // Mushrooms: plants look alive instead - lush, deep and glowing from within, pulsing slowly.
     float alive = min(1.0, foliage) * Organic * Trip * solid * (0.75 + 0.25 * sin(t * 1.1 + wp.x * 0.3 + wp.z * 0.2));
     col = mix(col, col * vec3(0.8, 1.3, 0.85) + vec3(0.02, 0.07, 0.03), 0.7 * alive);
@@ -482,8 +489,8 @@ void main() {
     vec3 dir = normalize(rel);
     vec3 starCell = floor(dir * 150.0);
     float star = step(0.996, hash(starCell.xy + starCell.z * 17.0)) * (0.5 + 0.5 * sin(t * 3.0 + hash(starCell.yz) * 30.0));
-    col = mix(col, hueShift(col, t * 0.3 + dir.y * 3.0) * 1.1, 0.7 * Trip * lsdLook * sky * World);
-    col += vec3(star) * Trip * lsdLook * sky * World;
+    col = mix(col, hueShift(col, t * 0.3 + dir.y * 3.0) * 1.1, 0.7 * Trip * lvl3 * lsdLook * sky * World);
+    col += vec3(star) * Trip * lvl3 * lsdLook * sky * World;
     // Mushrooms: soft veils of green and violet light drift across the sky, like an aurora.
     float aurora = smoothstep(0.05, 0.5, dir.y) * pow(0.5 + 0.5 * sin(dir.x * 5.0 + 2.0 * sin(dir.z * 4.0 + t * 0.25) + t * 0.15), 3.0);
     col += mix(vec3(0.15, 0.9, 0.55), vec3(0.6, 0.3, 0.9), 0.5 + 0.5 * sin(dir.z * 3.0 + t * 0.1)) * aurora * 0.45 * Organic * Trip * sky * World;
@@ -493,15 +500,15 @@ void main() {
     float daySky = smoothstep(0.1, 0.4, dot(col, vec3(0.333)));
     col = mix(col, col * sunsetSky, 0.65 * daySky * Desert * Trip * sky * World);
     col += vec3(star) * 1.2 * (1.0 - daySky) * Desert * Trip * sky * World;
-    // At the peak the picture mirrors itself, and the two halves slowly drift.
-    float mirror = peak * smoothstep(0.3, 0.9, 0.5 + 0.5 * sin(t * 0.06));
-    col = mix(col, tap(vec2(1.0 - uv.x + 0.03 * sin(t * 0.3), uv.y)), 0.45 * mirror * lsdLook);
+    // Only on a heroic dose the picture mirrors itself, and the two halves slowly drift.
+    float mirror = heroic * smoothstep(0.3, 0.9, 0.5 + 0.5 * sin(t * 0.06));
+    col = mix(col, tap(vec2(1.0 - uv.x + 0.03 * sin(t * 0.3), uv.y)), 0.3 * mirror * lsdLook);
     // Visual snow: fine coloured grain over everything.
     vec2 grainAt = floor(uv * OutSize / 2.0) + mod(floor(t * 24.0), 251.0) * 7.0;
     col += (vec3(hash(grainAt), hash(grainAt + 3.1), hash(grainAt + 5.7)) - 0.5) * 0.07 * Trip * lsdLook;
     // Once in a while at the peak, colours flip for a heartbeat (soft, never a full flash).
     float blink = fract(t / 23.0);
-    col = mix(col, 1.0 - col, 0.45 * peak * lsdLook * smoothstep(0.0, 0.008, blink) * smoothstep(0.03, 0.012, blink));
+    col = mix(col, 1.0 - col, 0.25 * heroic * lsdLook * smoothstep(0.0, 0.008, blink) * smoothstep(0.03, 0.012, blink));
     // A bad place makes it harsh: hard contrast, bloody light.
     col = (col - 0.5) * (1.0 + 0.3 * Harsh * Trip) + 0.5;
     col *= mix(vec3(1.0), vec3(1.12, 0.9, 0.85), Harsh * Trip);
@@ -848,7 +855,7 @@ void main() {
     vec2 wasUv = was.xy / was.w * 0.5 + 0.5;
     float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
     // MDMA: tracers too, shorter - distinct from medium doses on.
-    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip + 0.45 * smoothstep(0.4, 1.0, Roll)) * Trail * World * onScreen);
+    col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip * lvl2 + 0.45 * smoothstep(0.4, 1.0, Roll)) * Trail * World * onScreen);
 
     // Lachgas: the view goes choppy, as if it ran at a handful of frames a second.
     float choppy = step(0.5, fract(t * 7.0)) * smoothstep(0.3, 0.8, Wah);
