@@ -297,6 +297,12 @@ public class ModRecipeProvider {
                 .requires(Items.RED_DYE)
                 .unlockedBy("has_slime_ball", has(Items.SLIME_BALL))
                 .save(output, CreateBrewery.ID("balloon"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.NALOXON.get(), 1)
+                .requires(Items.GHAST_TEAR)
+                .requires(Items.GLASS_BOTTLE)
+                .requires(Items.SUGAR)
+                .unlockedBy("has_ghast_tear", has(Items.GHAST_TEAR))
+                .save(output, CreateBrewery.ID("naloxon_crafting"));
         }
     }
 }

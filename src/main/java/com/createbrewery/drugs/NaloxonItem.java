@@ -1,5 +1,7 @@
 package com.createbrewery.drugs;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -7,8 +9,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
+
+import java.util.List;
 
 /**
  * Naloxon nasal spray: the opioid antidote. Mostly for someone else - whoever has stopped
@@ -17,6 +22,13 @@ import net.minecraft.world.level.Level;
 public class NaloxonItem extends Item {
     public NaloxonItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("item.createbrewery.naloxon.desc1").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.createbrewery.naloxon.desc2").withStyle(ChatFormatting.YELLOW));
+        tooltip.add(Component.translatable("item.createbrewery.naloxon.desc3").withStyle(ChatFormatting.RED));
     }
 
     @Override

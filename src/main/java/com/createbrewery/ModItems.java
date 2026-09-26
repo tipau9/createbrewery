@@ -148,7 +148,7 @@ public class ModItems {
 
     public static final ItemEntry<com.createbrewery.drugs.NaloxonItem> NALOXON = REGISTRATE
         .item("naloxon", com.createbrewery.drugs.NaloxonItem::new)
-        .lang("Naloxon-Nasenspray")
+        .lang("Narcan (Naloxon)")
         .properties(p -> p.stacksTo(4))
         .register();
 
