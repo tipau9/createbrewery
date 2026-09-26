@@ -22,11 +22,12 @@ final class PoseClient {
     }
 
     static void tick(LocalPlayer player) {
-        float[] strength = new float[5];
+        float[] strength = new float[DrugPose.SHIVER + 1];
         strength[DrugPose.DANCE] = RollClient.beat * DrunkClient.rolling;
         strength[DrugPose.NOD] = NodClient.drooped / 30f;
         strength[DrugPose.SLUMP] = KetaClient.hole;
         strength[DrugPose.LAUGH] = WeedClient.laugh;
+        strength[DrugPose.SHIVER] = DrugEffect.strength(player, ModEffects.WITHDRAWAL);
         int kind = DrugPose.NONE;
         for (int i = 1; i < strength.length; i++) if (strength[i] > 0.05f && strength[i] > strength[kind]) kind = i;
         int amount = kind == DrugPose.NONE ? 0 : Math.round(Math.min(1f, strength[kind]) * 255f);

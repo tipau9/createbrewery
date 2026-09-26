@@ -26,7 +26,7 @@ import net.minecraft.world.entity.player.Player;
  * <p>MDMA (Ecstasy): warm, open, everyone is your friend (hearts over everyone near you), music
  * is everything, the jaw clenches. The danger is heat: dancing on it drives the body temperature
  * up, and past a point it overheats (Hitzschlag). Water and rest cool it. Days later, the
- * serotonin is gone: the Tiefpunkt. Sneak up close to anyone for a hug - yes, even a creeper.
+ * serotonin is gone: the Tiefpunkt. Until then another pill does only half as much. Sneak up close to anyone for a hug - yes, even a creeper.
  * Coming up the stomach turns; rolling it hurts less, you can dance all night and cannot sleep.
  *
  * <p>Meth (Crystal): like Koks, but for half a day - fast, tireless, no hunger, no sleep, and by
@@ -54,7 +54,12 @@ public final class Stimulants {
         var high = mdma ? ModEffects.ROLLING : ModEffects.TWEAK;
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(mdma ? MAX_MDMA : MAX_METH, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(high, DrugEffect.doseTicks(before, high, mdma ? MDMA_TICKS : METH_TICKS), level, false, false, true));
+        // The serotonin is still used up from the last roll: the magic is gone - it starts at half
+        // strength and only fades from there.
+        boolean spent = mdma && before == null && (player.hasEffect(ModEffects.COMEDOWN_PENDING) || player.hasEffect(ModEffects.COMEDOWN));
+        int ticks = spent ? ((DrugEffect) high.value()).fade() / 2 : DrugEffect.doseTicks(before, high, mdma ? MDMA_TICKS : METH_TICKS);
+        player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
+        if (spent) DrugServer.think(player, "Irgendwie… nicht wie letztes Mal.", 0xB08AB0);
         // Another dose pushes the comedown back.
         player.removeEffect(mdma ? ModEffects.COMEDOWN : ModEffects.METH_CRASH);
     }

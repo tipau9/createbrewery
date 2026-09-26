@@ -18,7 +18,7 @@ import net.minecraft.util.Mth;
  *   <li>Lasting poses: dancing on MDMA (each player has one of three styles - hands in the air, the
  *       shuffle, head-banging), the chin sinking to the chest on the nod (mostly the real pitch,
  *       which NodClient already lowers; this only adds a little), slumped and lopsided in a K-hole,
- *       doubled over with laughter when stoned.</li>
+ *       doubled over with laughter when stoned, hunched and shivering in withdrawal.</li>
  *   <li>One-off actions, sent by the server: doubled over throwing up, convulsing, a line to the
  *       nose, a drag (joint, pipe or balloon), a shot into the arm, collapsing to the ground.</li>
  * </ul>
@@ -32,7 +32,7 @@ final class PoseAnimation implements IAnimation {
     }
 
     private final AbstractClientPlayer player;
-    private final float[] shown = new float[5];
+    private final float[] shown = new float[DrugPose.SHIVER + 1];
 
     private PoseAnimation(AbstractClientPlayer player) {
         this.player = player;
@@ -51,7 +51,7 @@ final class PoseAnimation implements IAnimation {
 
     @Override
     public boolean isActive() {
-        return shown[DrugPose.DANCE] + shown[DrugPose.NOD] + shown[DrugPose.SLUMP] + shown[DrugPose.LAUGH] > 0.01f
+        return shown[DrugPose.DANCE] + shown[DrugPose.NOD] + shown[DrugPose.SLUMP] + shown[DrugPose.LAUGH] + shown[DrugPose.SHIVER] > 0.01f
             || DrugPose.ACTING.containsKey(player.getId());
     }
 
@@ -80,6 +80,8 @@ final class PoseAnimation implements IAnimation {
     /** The lasting poses, as offsets from the vanilla pose. */
     private void pose(String part, boolean position, float t, Vec3f value, float[] d) {
         float dance = shown[DrugPose.DANCE], nod = shown[DrugPose.NOD], slump = shown[DrugPose.SLUMP], laugh = shown[DrugPose.LAUGH];
+        float shiver = shown[DrugPose.SHIVER];
+        float shake = 0.06f * (float) Math.sin(t * 60f + part.hashCode()) * shiver;
         float beat = (float) Math.sin(t * BEAT), bounce = 0.5f + 0.5f * (float) Math.cos(t * BEAT);
         float jerk = (float) Math.sin(t * 25f);
         int style = Math.floorMod(player.getUUID().hashCode(), 3);
@@ -90,13 +92,13 @@ final class PoseAnimation implements IAnimation {
         }
         switch (part) {
             case "head" -> {
-                d[0] = (style == 2 ? 0.7f * bounce : 0.25f * beat) * dance + 0.15f * nod + 0.5f * slump + 0.12f * jerk * laugh;
+                d[0] = (style == 2 ? 0.7f * bounce : 0.25f * beat) * dance + 0.15f * nod + 0.5f * slump + 0.12f * jerk * laugh + 0.3f * shiver + shake;
                 d[2] = 0.35f * slump;
             }
             case "body" -> {
-                d[0] = -((style == 2 ? 0.12f * bounce : 0f) * dance + 0.2f * nod + (0.35f + 0.08f * jerk) * laugh);
+                d[0] = -((style == 2 ? 0.12f * bounce : 0f) * dance + 0.2f * nod + (0.35f + 0.08f * jerk) * laugh + 0.2f * shiver);
                 d[1] = (style == 1 ? 0.3f * beat : 0f) * dance;
-                d[2] = 0.12f * slump;
+                d[2] = 0.12f * slump + shake;
             }
             case "rightArm", "leftArm" -> {
                 float side = part.equals("rightArm") ? 1f : -1f;
@@ -108,8 +110,9 @@ final class PoseAnimation implements IAnimation {
                     // Head-banging: fists forward, pumping with the head.
                     default -> -1.2f - 0.5f * bounce;
                 };
-                d[0] = armDance * dance + 0.2f * nod - 0.5f * laugh;
-                d[2] = -side * (style == 0 ? 0.3f : 0.1f) * dance + side * 0.25f * slump;
+                // Shivering: arms wrapped round the body.
+                d[0] = armDance * dance + 0.2f * nod - 0.5f * laugh + (-0.9f + shake) * shiver;
+                d[2] = -side * (style == 0 ? 0.3f : 0.1f) * dance + side * 0.25f * slump - side * 0.7f * shiver;
             }
             case "rightLeg", "leftLeg" -> {
                 float side = part.equals("rightLeg") ? 1f : -1f;

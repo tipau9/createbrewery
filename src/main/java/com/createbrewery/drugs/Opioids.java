@@ -74,6 +74,11 @@ public final class Opioids {
         if (!(entity instanceof Player player)) return;
         player.causeFoodExhaustion(0.3f);
         if (player.getRandom().nextFloat() < 0.01f) DrunkServer.vomit(player);
+        // Cold sweat, for everyone to see.
+        if (player.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.FALLING_WATER,
+                player.getX(), player.getEyeY() + 0.1, player.getZ(), 3, 0.25, 0.15, 0.25, 0);
+        }
     }
 
     /** Atemlähmung, every second: once the air is gone, it hurts - unless someone breathes for you. */

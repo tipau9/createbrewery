@@ -818,6 +818,17 @@ public class FermenterGameTests {
         helper.succeed();
     }
 
+    /** The serotonin is still spent after a roll: the next pill only does half. */
+    @GameTest(template = TEMPLATE)
+    public static void mdmaWearsThinUntilTheLow(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.COMEDOWN_PENDING, 36000));
+        com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.MDMA);
+        helper.assertTrue(com.createbrewery.drugs.DrugEffect.strength(player, com.createbrewery.effect.ModEffects.ROLLING) <= 0.5f,
+            "a spent pill rolled at full strength");
+        helper.succeed();
+    }
+
     /** The test command's phase clock: the peak of two LSD tabs sits between come-up and fade. */
     @GameTest(template = TEMPLATE)
     public static void testCommandSetsThePhase(GameTestHelper helper) {

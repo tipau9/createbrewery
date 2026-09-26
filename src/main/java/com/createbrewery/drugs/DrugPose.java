@@ -17,7 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * What a player's body is doing on drugs, so everyone around sees it.
  * <ul>
- *   <li>Lasting poses - dancing, nodding off, slumped in a K-hole, doubled over laughing - and the
+ *   <li>Lasting poses - dancing, nodding off, slumped in a K-hole, doubled over laughing, shivering
+ *       in withdrawal - and the
  *       look of the eyes: each client works out its own and sends it; the server passes it on to
  *       everyone who can see that player.</li>
  *   <li>One-off actions - throwing up, a seizure, a line, a drag (smoke or a balloon), a shot, collapsing: the server
@@ -25,13 +26,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  *
  * @param entity the player's entity id (ignored on the way to the server)
- * @param kind   a pose ({@link #DANCE}..{@link #LAUGH}, or {@link #NONE}) or an action ({@link #VOMIT}..{@link #INHALE})
+ * @param kind   a pose ({@link #DANCE}..{@link #SHIVER}, or {@link #NONE}) or an action ({@link #VOMIT}..{@link #INHALE})
  * @param amount a pose: how strongly, 0..255; an action: how long, in ticks / 4
  * @param eyes   a pose: {@link #EYES_RED}, {@link #EYES_LIDS}, {@link #EYES_GLASSY} or 0
  */
 public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements CustomPacketPayload {
-    public static final int NONE = 0, DANCE = 1, NOD = 2, SLUMP = 3, LAUGH = 4;
-    public static final int VOMIT = 5, SEIZURE = 6, SNIFF = 7, SMOKE = 8, INJECT = 9, COLLAPSE = 10, INHALE = 11;
+    public static final int NONE = 0, DANCE = 1, NOD = 2, SLUMP = 3, LAUGH = 4, SHIVER = 5;
+    public static final int VOMIT = 6, SEIZURE = 7, SNIFF = 8, SMOKE = 9, INJECT = 10, COLLAPSE = 11, INHALE = 12;
     public static final int EYES_RED = 1, EYES_LIDS = 2, EYES_GLASSY = 3;
     public static final Type<DrugPose> TYPE = new Type<>(CreateBrewery.ID("pose"));
     public static final StreamCodec<ByteBuf, DrugPose> CODEC = StreamCodec.composite(
@@ -50,7 +51,7 @@ public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("2").optional().playBidirectional(TYPE, CODEC, DrugPose::handle);
+        event.registrar("3").optional().playBidirectional(TYPE, CODEC, DrugPose::handle);
     }
 
     /** Server side: {@code player} does {@code kind} for {@code ticks}; they and everyone near see it. */
