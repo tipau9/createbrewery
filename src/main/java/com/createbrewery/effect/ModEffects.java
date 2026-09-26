@@ -217,6 +217,19 @@ public class ModEffects {
             .scaled(Attributes.ATTACK_DAMAGE, id("withdrawal_damage"), -0.3)
             .scaled(Attributes.BLOCK_BREAK_SPEED, id("withdrawal_mining"), -0.3));
 
+    /** Naloxon: it pushes the opioid off the receptors - for a minute. Whatever is left comes back after. */
+    public static final DeferredHolder<MobEffect, MobEffect> NALOXONE = EFFECTS.register("naloxone", () ->
+        new DrugEffect(MobEffectCategory.BENEFICIAL, 0xF08A30, 0, null, 0, 0, 0));
+
+    /** Gewöhnung: the heroin high wears thin (hidden; amplifier 0..2). */
+    public static final DeferredHolder<MobEffect, MobEffect> OPIOID_HABIT = EFFECTS.register("opioid_habit", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x8A7050, 0, null, 0, 0, 0));
+
+    /** Krampfanfall: benzo withdrawal (or water poisoning) - the body convulses, nothing obeys. */
+    public static final DeferredHolder<MobEffect, MobEffect> SEIZURE = EFFECTS.register("seizure", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x9040C0, 20, Opioids::seizureTick, 0, 0, 0)
+            .scaled(Attributes.MOVEMENT_SPEED, id("seizure_speed"), -1.0));
+
     /** Lachgas: seconds of giggling, wah-wah and a world far away. */
     public static final DeferredHolder<MobEffect, MobEffect> WAH = EFFECTS.register("wah", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0xC8DCFF, 20, DrugServer::wahTick, DrugServer.WAH_TICKS, 20, 160)

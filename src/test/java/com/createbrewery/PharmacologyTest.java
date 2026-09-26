@@ -81,4 +81,23 @@ class PharmacologyTest {
         assertTrue(Pharmacology.breathLoad(0, 1f, 1f, 0f, 0f) >= f, "one shot with Xanax");
         assertTrue(Pharmacology.breathLoad(-1, 0f, 1f, 1.3f, 0f) < f, "Xanax and three beers, no opioid");
     }
+
+    @Test
+    void breathToleranceHelpsButNeverFully() {
+        float naive = Pharmacology.breathLoad(1, 1f, 0f, 0f, 0f, 0f);
+        float used = Pharmacology.breathLoad(1, 1f, 0f, 0f, 0f, 1f);
+        assertTrue(used < naive, "tolerance did nothing");
+        // Three shots: deadly for a fresh (or rested) breath, just survivable for a used one -
+        // until a drink comes on top.
+        assertTrue(Pharmacology.breathLoad(2, 1f, 0f, 0f, 0f, 0f) >= Pharmacology.BREATH_FAILING);
+        assertTrue(Pharmacology.breathLoad(2, 1f, 0f, 0f, 0f, 1f) < Pharmacology.BREATH_FAILING);
+        assertTrue(Pharmacology.breathLoad(2, 1f, 0f, 0.5f, 0f, 1f) >= Pharmacology.BREATH_FAILING);
+    }
+
+    @Test
+    void seizuresOnlyAfterRealUse() {
+        assertEquals(0f, Pharmacology.seizureChance(0.3f), 1e-6f);
+        assertTrue(Pharmacology.seizureChance(0.5f) > 0f);
+        assertTrue(Pharmacology.seizureChance(1f) > Pharmacology.seizureChance(0.5f));
+    }
 }

@@ -47,8 +47,10 @@ public final class Opioids {
         if (heroin) {
             DrunkState s = DrunkServer.state(player);
             s.dependence = Math.min(1f, s.dependence + 0.2f);
+            s.breathTolerance = Math.min(1f, s.breathTolerance + 0.08f);
             player.removeEffect(ModEffects.WITHDRAWAL);
         } else {
+            DrunkServer.state(player).benzo = Math.min(1f, DrunkServer.state(player).benzo + 0.12f);
             calm(player);
         }
     }
@@ -89,7 +91,7 @@ public final class Opioids {
         boolean hole = player.hasEffect(ModEffects.K_HOLE);
         float breath = Pharmacology.breathLoad(nod == null ? -1 : nod.getAmplifier(), DrugEffect.strength(player, ModEffects.NOD),
             DrugEffect.felt(player, ModEffects.CALM), s.blood,
-            hole ? 1f : DrugEffect.strength(player, ModEffects.KETA_HIGH))
+            hole ? 1f : DrugEffect.strength(player, ModEffects.KETA_HIGH), s.breathTolerance)
             + (Mixes.speedball(player) ? 0.3f : 0f);
         if (breath >= Pharmacology.BREATH_FAILING) {
             player.addEffect(new MobEffectInstance(ModEffects.RESPIRATORY_DEPRESSION, 60, 0, false, false, true));
@@ -98,12 +100,65 @@ public final class Opioids {
         if (nod != null && s.dependence < 0.45f && HEROIN_TICKS - nod.getDuration() < 1200 && player.getRandom().nextFloat() < 0.01f) {
             DrunkServer.vomit(player);
         }
+        // Used to it: the high wears thin (both sides read this, see DrugEffect#felt).
+        int habit = s.dependence >= 0.75f ? 2 : s.dependence >= 0.5f ? 1 : s.dependence >= 0.3f ? 0 : -1;
+        if (habit >= 0) player.addEffect(new MobEffectInstance(ModEffects.OPIOID_HABIT, 60, habit, false, false, false));
+        // Naloxon on a habit: the whole withdrawal at once.
+        if (player.hasEffect(ModEffects.NALOXONE) && s.dependence >= 0.3f) {
+            player.addEffect(new MobEffectInstance(ModEffects.WITHDRAWAL, 60, 1, false, false, true));
+        }
+        // Without heroin the breath forgets its tolerance within minutes - long before the habit goes.
+        if (nod == null) s.breathTolerance = Math.max(0f, s.breathTolerance - 0.004f);
+        benzo(player, s);
         if (nod != null || s.dependence <= 0f) return;
         if (s.dependence >= DEPENDENT) {
             player.addEffect(new MobEffectInstance(ModEffects.WITHDRAWAL, 60, 0, false, false, true));
         }
         // Clean, the body slowly forgets: a full habit takes about an in-game day.
         s.dependence = Math.max(0f, s.dependence - 0.001f);
+    }
+
+    /**
+     * Xanax, every second: used to it and without it, the brain overshoots - a seizure can come.
+     * Taking it again stops that; clean long enough, the body settles.
+     */
+    private static void benzo(Player player, DrunkState s) {
+        if (s.benzo <= 0f || player.hasEffect(ModEffects.CALM)) return;
+        s.benzo = Math.max(0f, s.benzo - 0.0004f);
+        if (!player.hasEffect(ModEffects.SEIZURE) && player.getRandom().nextFloat() < Pharmacology.seizureChance(s.benzo)) {
+            seize(player);
+        }
+    }
+
+    public static final int SEIZURE_TICKS = 100;
+
+    /** A seizure: five seconds of convulsions, then dazed and hurt. */
+    public static void seize(Player player) {
+        player.addEffect(new MobEffectInstance(ModEffects.SEIZURE, SEIZURE_TICKS, 0, false, false, true));
+        player.setSprinting(false);
+    }
+
+    private static final ResourceKey<DamageType> SEIZURE = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "seizure"));
+
+    /** Seizure, every second: thrashing against whatever is there. */
+    public static void seizureTick(LivingEntity entity, int level) {
+        entity.hurt(new DamageSource(entity.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+            .getHolderOrThrow(SEIZURE)), 1f);
+    }
+
+    public static final int NALOXONE_TICKS = 1200;
+
+    /**
+     * Naloxon: the breath comes back at once, the heroin does nothing for a minute. With a habit
+     * that is the whole withdrawal in one go; and if there is still a lot of heroin in the body,
+     * it comes back once the naloxon is gone.
+     */
+    public static void naloxone(LivingEntity entity) {
+        entity.addEffect(new MobEffectInstance(ModEffects.NALOXONE, NALOXONE_TICKS, 0, false, false, true));
+        entity.removeEffect(ModEffects.RESPIRATORY_DEPRESSION);
+        entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), com.createbrewery.sound.ModSounds.SNIFF.get(),
+            net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.3f);
     }
 
     /** Heroin dulls pain: hits land softer while high. */

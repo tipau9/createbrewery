@@ -1,5 +1,6 @@
 package com.createbrewery.drugs;
 
+import com.createbrewery.effect.ModEffects;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
@@ -71,6 +72,8 @@ public class DrugEffect extends MobEffect {
     public static float strength(LivingEntity entity, Holder<MobEffect> effect) {
         MobEffectInstance instance = entity.getEffect(effect);
         if (instance == null) return 0f;
+        // Naloxon sits on the receptors: the heroin is still there, but does nothing until it wears off.
+        if (effect.is(ModEffects.NOD.getKey()) && entity.hasEffect(ModEffects.NALOXONE)) return 0f;
         if (!(effect.value() instanceof DrugEffect drug)) return 1f;
         int elapsed = drug.total - instance.getDuration();
         return Pharmacology.strength(elapsed, instance.getDuration(), drug.onset, drug.fade, instance.getAmplifier() > 0);
@@ -81,7 +84,11 @@ public class DrugEffect extends MobEffect {
         MobEffectInstance instance = entity.getEffect(effect);
         if (instance == null) return 0f;
         if (!(effect.value() instanceof DrugEffect drug) || !drug.stacking) return strength(entity, effect);
-        return strength(entity, effect) * Pharmacology.feltFor((instance.getAmplifier() + 1) / (float) drug.perDose);
+        float felt = strength(entity, effect) * Pharmacology.feltFor((instance.getAmplifier() + 1) / (float) drug.perDose);
+        // Used to heroin, the high wears thin: the same shot does less and less.
+        MobEffectInstance habit = entity.getEffect(ModEffects.OPIOID_HABIT);
+        if (habit != null && effect.is(ModEffects.NOD.getKey())) felt *= 1f - 0.2f * (habit.getAmplifier() + 1);
+        return felt;
     }
 
     @Override

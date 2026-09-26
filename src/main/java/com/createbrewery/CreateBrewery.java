@@ -68,6 +68,10 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.stoned_trip", "Nachgelegt");
         REGISTRATE.addRawLang("effect.createbrewery.nitrous_peak", "Gipfelsturm");
         REGISTRATE.addRawLang("effect.createbrewery.dehydrated", "Ausgetrocknet");
+        REGISTRATE.addRawLang("effect.createbrewery.naloxone", "Naloxon");
+        REGISTRATE.addRawLang("effect.createbrewery.opioid_habit", "Gewöhnung");
+        REGISTRATE.addRawLang("effect.createbrewery.seizure", "Krampfanfall");
+        REGISTRATE.addRawLang("death.attack.createbrewery.seizure", "%1$s hatte einen Krampfanfall");
         REGISTRATE.addRawLang("death.attack.createbrewery.overdose", "%1$s hat aufgehört zu atmen");
         REGISTRATE.addRawLang("death.attack.createbrewery.hyperthermia", "%1$s hat sich zu Tode getanzt");
         REGISTRATE.addRawLang("death.attack.createbrewery.skin_picking", "%1$s hat sich blutig gekratzt");

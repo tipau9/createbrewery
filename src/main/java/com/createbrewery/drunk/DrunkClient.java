@@ -82,6 +82,8 @@ public final class DrunkClient {
     private static int recurLeft, flipLeft;
     /** Keta: 0 upright, 1 mirrored, 2 upside down - for a few seconds at a time. */
     private static int flip;
+    /** A seizure: the body convulses, 0..1. */
+    private static float seizing;
     /** DMT: 0..1, 1 = the full breakthrough. */
     private static float breakthrough;
     /** MDMA and meth: 0..1 each. */
@@ -233,6 +235,9 @@ public final class DrunkClient {
             DmtClient.tick(mc, player);
             PoseClient.tick(player);
             var r = player.getRandom();
+            seizing = player.hasEffect(ModEffects.SEIZURE) ? 1f : Math.max(0f, seizing - 0.1f);
+            // The head jerks about, nothing you do.
+            if (seizing > 0.5f) player.turn((r.nextFloat() - 0.5f) * 10f / 0.15f, (r.nextFloat() - 0.5f) * 8f / 0.15f);
             if (recurLeft > 0) recurLeft--;
             else if (trip * Math.max(0f, 1f - organic - desert) > 0.5f && r.nextFloat() < 1f / 900f) recurLeft = 60 + r.nextInt(60);
             recur = ease(recur, recurLeft > 0 ? 1f : 0f);
@@ -935,7 +940,7 @@ public final class DrunkClient {
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && WeedClient.laugh <= 0.01f)) return;
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && WeedClient.laugh <= 0.01f && seizing <= 0.01f)) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -947,6 +952,8 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
         // ...and as it cracks open, the whole room vibrates.
         roll += noise(t * 40.0, 71) * 1.5f * DmtClient.crack;
+        // A seizure: violent, fast shaking.
+        roll += noise(t * 25.0, 83) * 20f * seizing;
         // Entzug: the whole body shivers.
         roll += noise(t * 12.0, 53) * 1.2f * sick;
         // Lachgas: dizzy - the head tips over, as if about to fall.
@@ -1030,8 +1037,8 @@ public final class DrunkClient {
     }
 
     private static void steer(LocalPlayer player, Input input) {
-        if (breakthrough > 0.6f) {
-            // Broken through: the body is left behind and does nothing.
+        if (breakthrough > 0.6f || seizing > 0f) {
+            // Broken through (or convulsing): the body is left behind and does nothing.
             input.forwardImpulse = input.leftImpulse = 0f;
             input.up = input.down = input.left = input.right = input.jumping = false;
             player.setSprinting(false);

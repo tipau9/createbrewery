@@ -43,7 +43,7 @@ public final class Mixes {
     }
 
     public static boolean speedball(LivingEntity entity) {
-        return entity.hasEffect(ModEffects.NOD) && (entity.hasEffect(ModEffects.COKE_HIGH) || entity.hasEffect(ModEffects.TWEAK));
+        return entity.hasEffect(ModEffects.NOD) && !entity.hasEffect(ModEffects.NALOXONE) && (entity.hasEffect(ModEffects.COKE_HIGH) || entity.hasEffect(ModEffects.TWEAK));
     }
 
     public static boolean dehydrating(Player player) {

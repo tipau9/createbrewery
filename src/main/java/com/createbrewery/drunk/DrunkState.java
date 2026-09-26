@@ -24,6 +24,14 @@ public final class DrunkState {
     public long toleranceTime;
     /** 0..1 how used the body is to heroin; from Opioids#DEPENDENT on, going without is withdrawal. */
     public float dependence;
+    /** 0..1 how used the breath is to heroin. Grows far slower than {@link #dependence}, and is gone far sooner. */
+    public float breathTolerance;
+    /** 0..1 how used the body is to Xanax; stopping from high up risks a seizure. */
+    public float benzo;
+    /** 0..1 vitamin B12 used up by Lachgas: numb feet, a clumsy gait. Heals slowly. */
+    public float b12;
+    /** 0..1 how damaged the bladder is by Keta. Heals very slowly. */
+    public float bladder;
 
     /** Server-only bookkeeping: whether the client last saw a non-zero state. */
     transient boolean clientSawAlcohol;
@@ -33,6 +41,8 @@ public final class DrunkState {
     public transient float heat;
     /** Server-only: seconds awake on meth, towards psychosis. */
     public transient int awake;
+    /** Server-only: water drunk on MDMA and not yet got rid of, towards water poisoning. */
+    public transient float water;
     /** Server-only: game time of the last drink, to spot two players clinking glasses. */
     transient long lastDrinkTime = Long.MIN_VALUE / 2;
 
@@ -41,6 +51,15 @@ public final class DrunkState {
     public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime, float dependence) {
         this(blood, stomach, peak, tolerance, toleranceTime);
         this.dependence = dependence;
+    }
+
+    private DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime, float dependence,
+                       float breathTolerance, float benzo, float b12, float bladder) {
+        this(blood, stomach, peak, tolerance, toleranceTime, dependence);
+        this.breathTolerance = breathTolerance;
+        this.benzo = benzo;
+        this.b12 = b12;
+        this.bladder = bladder;
     }
 
     public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime) {
@@ -70,7 +89,8 @@ public final class DrunkState {
     }
 
     public boolean isEmpty() {
-        return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f && dependence <= 0f;
+        return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f && dependence <= 0f
+            && breathTolerance <= 0f && benzo <= 0f && b12 <= 0f && bladder <= 0f;
     }
 
     public static final Codec<DrunkState> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -79,7 +99,11 @@ public final class DrunkState {
         Codec.FLOAT.fieldOf("peak").forGetter(s -> s.peak),
         Codec.FLOAT.optionalFieldOf("tolerance", 0f).forGetter(s -> s.tolerance),
         Codec.LONG.optionalFieldOf("tolerance_time", 0L).forGetter(s -> s.toleranceTime),
-        Codec.FLOAT.optionalFieldOf("dependence", 0f).forGetter(s -> s.dependence)
+        Codec.FLOAT.optionalFieldOf("dependence", 0f).forGetter(s -> s.dependence),
+        Codec.FLOAT.optionalFieldOf("breath_tolerance", 0f).forGetter(s -> s.breathTolerance),
+        Codec.FLOAT.optionalFieldOf("benzo", 0f).forGetter(s -> s.benzo),
+        Codec.FLOAT.optionalFieldOf("b12", 0f).forGetter(s -> s.b12),
+        Codec.FLOAT.optionalFieldOf("bladder", 0f).forGetter(s -> s.bladder)
     ).apply(i, DrunkState::new));
 
     public static final StreamCodec<ByteBuf, DrunkState> STREAM_CODEC = StreamCodec.composite(

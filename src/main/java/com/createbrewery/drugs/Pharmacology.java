@@ -99,9 +99,27 @@ public final class Pharmacology {
      * most real overdoses happen.
      */
     public static float breathLoad(int heroinAmp, float heroin, float xanax, float blood, float keta) {
-        float opioid = heroinAmp < 0 ? 0f : 0.45f * (heroinAmp + 1) * heroin;
+        return breathLoad(heroinAmp, heroin, xanax, blood, keta, 0f);
+    }
+
+    /**
+     * The same, for a body used to heroin: {@code tolerance} (0..1) takes up to 30 % of the
+     * opioid's weight off the breath. It builds far slower than the high wears thin, so the dose
+     * that feels right creeps past what the breath can take - and after a break the tolerance is
+     * gone while the habit is not (the overdose after rehab or prison).
+     */
+    public static float breathLoad(int heroinAmp, float heroin, float xanax, float blood, float keta, float tolerance) {
+        float opioid = heroinAmp < 0 ? 0f : 0.45f * (heroinAmp + 1) * heroin * (1f - 0.3f * clamp01(tolerance));
         float depressants = 0.3f * xanax + 0.2f * Math.max(0f, blood);
         return opioid + depressants + 0.2f * keta + 2f * opioid * depressants;
+    }
+
+    /**
+     * Chance per second of a withdrawal seizure off Xanax, for a body this used to it (0..1):
+     * none below 0.4 (about four pills close together), then rising.
+     */
+    public static float seizureChance(float benzo) {
+        return benzo < 0.4f ? 0f : 0.006f * (benzo - 0.3f);
     }
 
     /** Chance per second that a strained heart gives out. */

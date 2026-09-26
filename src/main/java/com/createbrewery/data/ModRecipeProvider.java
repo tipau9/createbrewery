@@ -135,6 +135,9 @@ public class ModRecipeProvider {
             create("xanax", b -> b
                 .require(Items.BONE_MEAL).require(Items.SUGAR).require(Items.LAPIS_LAZULI)
                 .output(ModItems.XANAX.get(), 4));
+            create("naloxon", b -> b
+                .require(Items.GHAST_TEAR).require(Items.GLASS_BOTTLE).require(Items.SUGAR)
+                .output(ModItems.NALOXON.get(), 2));
             create("lachgas", b -> b
                 .require(Items.GUNPOWDER).require(Items.SUGAR)
                 .require(Fluids.WATER, 250)

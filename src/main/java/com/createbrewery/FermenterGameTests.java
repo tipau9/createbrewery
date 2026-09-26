@@ -813,6 +813,22 @@ public class FermenterGameTests {
         helper.succeed();
     }
 
+    /** Naloxon brings the breath back and blocks the heroin; on a habit it is the withdrawal at once. */
+    @GameTest(template = TEMPLATE)
+    public static void naloxonBringsTheBreathBack(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, 4800, 2));
+        com.createbrewery.drunk.DrunkServer.state(player).dependence = 0.6f;
+        com.createbrewery.drugs.Opioids.body(player);
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "three shots did not stop the breath");
+        com.createbrewery.drugs.Opioids.naloxone(player);
+        helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "naloxon did not bring the breath back");
+        com.createbrewery.drugs.Opioids.body(player);
+        helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "the heroin stopped the breath through the naloxon");
+        helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.WITHDRAWAL), "naloxon on a habit brought no withdrawal");
+        helper.succeed();
+    }
+
     /** Named mixes show while both are active; Lachgas on a trip breaks through for a moment. */
     @GameTest(template = TEMPLATE)
     public static void mixesAreSpotted(GameTestHelper helper) {

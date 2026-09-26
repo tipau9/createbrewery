@@ -381,7 +381,19 @@ public final class DrugServer {
             entity.addEffect(new MobEffectInstance(ModEffects.DAZED, (int) (1200 * worse), 0));
         } else if (instance.is(ModEffects.HEART_ATTACK) && entity.isAlive()) {
             award(entity, "zweites_leben", "survived");
+        } else if (instance.is(ModEffects.NALOXONE) && entity.hasEffect(ModEffects.NOD) && entity instanceof Player player) {
+            // The naloxon is gone, the heroin is not.
+            think(player, "Es… kommt zurück. Warm. Schwer.", 0xC8A060);
+        } else if (instance.is(ModEffects.SEIZURE) && entity instanceof Player player) {
+            think(player, "Was… war das? Alles tut weh. Ich hab mir auf die Zunge gebissen.", 0xB090D0);
+            player.addEffect(new MobEffectInstance(ModEffects.DAZED, 600, 0));
         }
+    }
+
+    /** A thought over the hotbar, from the server. */
+    public static void think(Player player, String text, int colour) {
+        player.displayClientMessage(net.minecraft.network.chat.Component.literal(text)
+            .withStyle(net.minecraft.ChatFormatting.ITALIC).withColor(colour), true);
     }
 
     /** Grants an "Apotheke" advancement criterion that no vanilla trigger can express. */
