@@ -182,6 +182,7 @@ public class CreateBrewery {
         }
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(com.createbrewery.drugs.DrugPose::register);
+        modEventBus.addListener(com.createbrewery.drugs.DrugDebug::register);
         modEventBus.addListener(ModRecipeProvider::gatherData);
         ModLootModifiers.register(modEventBus);
         ModDataMaps.register(modEventBus);

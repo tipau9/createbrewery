@@ -269,7 +269,7 @@ public final class TripClient {
     // ---- mushrooms ----
 
     /** Veil's glowing spores until they fail once; then vanilla spores. */
-    private static boolean quasarSpores = true;
+    static boolean quasarSpores = true;
 
     private static void mushrooms(Minecraft mc, LocalPlayer player, float shroom) {
         RandomSource r = player.getRandom();

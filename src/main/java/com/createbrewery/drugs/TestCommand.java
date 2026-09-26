@@ -63,6 +63,7 @@ public final class TestCommand {
             s.peak = Math.max(s.peak, s.blood);
             player.syncData(ModAttachments.DRUNK);
             c.getSource().sendSuccess(() -> Component.literal(String.format("Alkohol: %.1f ‰", 0.8f * doses)), false);
+            debugLog(player);
             return 1;
         }
         DrugServer.Kind kind = DRUGS.get(name);
@@ -75,7 +76,15 @@ public final class TestCommand {
         for (int i = 0; i < takes; i++) DrugServer.take(player, kind);
         setPhase(player, high(kind), phase);
         c.getSource().sendSuccess(() -> Component.literal(name + " × " + doses + ", " + phase), false);
+        debugLog(player);
         return 1;
+    }
+
+    /** The client writes what its drug vision does into its log for the next 90 seconds (DrugDebug). */
+    private static void debugLog(Player player) {
+        if (player instanceof net.minecraft.server.level.ServerPlayer p) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new DrugDebug(90));
+        }
     }
 
     /** The effect that carries the high of each drug. */

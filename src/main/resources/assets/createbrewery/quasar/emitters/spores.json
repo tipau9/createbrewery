@@ -7,7 +7,7 @@
         "particle_settings": {
             "particle_speed": 0.01,
             "random_speed": true,
-            "base_particle_size": 0.035,
+            "base_particle_size": 0.09,
             "particle_size_variation": 0.5,
             "random_size": true,
             "particle_lifetime": 140,
@@ -19,6 +19,7 @@
     "particle_data": {
         "should_collide": false,
         "additive": true,
+        "sprite_data": { "sprite": "createbrewery:textures/particle/quasar_spore.png" },
         "modules": [
             { "module": "veil:gravity", "strength": -0.0008 },
             { "module": "veil:drag", "strength": 0.02 },

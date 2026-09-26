@@ -312,6 +312,47 @@ public final class DrunkClient {
         hearing(mc);
         // High, and on heroin even more: the world as if through cotton wool.
         muffle = Math.min(1f - 0.55f * high, 1f - 0.6f * opiate);
+        debugLog(mc, player);
+    }
+
+    /** The float uniforms of the last frame, kept while the debug log runs. */
+    private static final java.util.Map<String, Float> uniforms = new java.util.TreeMap<>();
+    private static boolean debugging;
+
+    /** Sets a float uniform on every pass of the chain, and keeps it for the debug log. */
+    private static void uniform(String name, float value) {
+        chain.setUniform(name, value);
+        if (debugging) uniforms.put(name, value);
+    }
+
+    /**
+     * For /brewery test (DrugDebug): once a second, what the drug vision is doing - the effects,
+     * which integrations run, and every uniform the shader gets that is not zero.
+     */
+    private static void debugLog(Minecraft mc, LocalPlayer player) {
+        boolean on = com.createbrewery.drugs.DrugDebug.on() && player != null;
+        if (on && !debugging) {
+            LOGGER.info("[Brewery debug] start: veil={} dh={} irisPack={} shaderFailed={} worldFailed={} quasarSpores={}",
+                veil, dh, irisPack, shaderFailed, worldFailed, TripClient.quasarSpores);
+        } else if (!on && debugging) {
+            LOGGER.info("[Brewery debug] end");
+            uniforms.clear();
+        }
+        debugging = on;
+        if (!on || player.tickCount % 20 != 0) return;
+        StringBuilder effects = new StringBuilder();
+        for (var e : player.getActiveEffects()) {
+            var key = e.getEffect().unwrapKey().map(k -> k.location()).orElse(null);
+            if (key == null || !key.getNamespace().equals(com.createbrewery.CreateBrewery.MOD_ID)) continue;
+            effects.append(String.format(" %s:%d/%ds", key.getPath(), e.getAmplifier() + 1, e.getDuration() / 20));
+            if (e.getEffect().value() instanceof DrugEffect) effects.append(String.format("(felt %.2f)", DrugEffect.felt(player, e.getEffect())));
+        }
+        StringBuilder live = new StringBuilder();
+        uniforms.forEach((name, value) -> {
+            if (Math.abs(value) > 0.005f) live.append(String.format(" %s=%.2f", name, value));
+        });
+        LOGGER.info("[Brewery debug] blood={}‰ chain={} frames={} screen={} normals={} |{} |{}", String.format("%.2f", blood),
+            chain != null, chainFrames, String.format("%.2f", screen()), veilNormals(), effects, live);
     }
 
     /**
@@ -528,66 +569,66 @@ public final class DrunkClient {
         if (numb(player)) player.hurtTime = 0;
 
         if (chain != null) {
-            chain.setUniform("Intensity", Intoxication.visualIntensity(blood) * screen());
-            chain.setUniform("Mood", Intoxication.mood(blood) * screen());
-            chain.setUniform("Stim", stim * screen());
-            chain.setUniform("Gray", gray * screen());
-            chain.setUniform("Dissoc", dissoc * screen());
-            chain.setUniform("High", high * screen());
-            chain.setUniform("Green", green * screen());
-            chain.setUniform("Trip", trip * screen());
-            chain.setUniform("Organic", organic);
-            chain.setUniform("Desert", desert);
-            chain.setUniform("BadTrip", bad * screen());
-            chain.setUniform("Break", breakthrough * screen());
-            chain.setUniform("ComeUp", comeUp * screen());
-            chain.setUniform("Recur", recur * screen());
-            chain.setUniform("Eyes", eyes * screen());
-            chain.setUniform("Flip", screen() > 0.5f && player != null && dissoc > 0.3f ? (float) flip : 0f);
-            chain.setUniform("Crack", DmtClient.crack * screen());
-            chain.setUniform("Waiting", DmtClient.waiting * screen());
-            chain.setUniform("Beyond", DmtClient.beyond * screen());
-            chain.setUniform("Descent", DmtClient.descent * screen());
-            chain.setUniform("Roll", rolling * screen());
-            chain.setUniform("Rush", RollClient.rush * screen());
-            chain.setUniform("Beat", RollClient.beat * screen());
+            uniform("Intensity", Intoxication.visualIntensity(blood) * screen());
+            uniform("Mood", Intoxication.mood(blood) * screen());
+            uniform("Stim", stim * screen());
+            uniform("Gray", gray * screen());
+            uniform("Dissoc", dissoc * screen());
+            uniform("High", high * screen());
+            uniform("Green", green * screen());
+            uniform("Trip", trip * screen());
+            uniform("Organic", organic);
+            uniform("Desert", desert);
+            uniform("BadTrip", bad * screen());
+            uniform("Break", breakthrough * screen());
+            uniform("ComeUp", comeUp * screen());
+            uniform("Recur", recur * screen());
+            uniform("Eyes", eyes * screen());
+            uniform("Flip", screen() > 0.5f && player != null && dissoc > 0.3f ? (float) flip : 0f);
+            uniform("Crack", DmtClient.crack * screen());
+            uniform("Waiting", DmtClient.waiting * screen());
+            uniform("Beyond", DmtClient.beyond * screen());
+            uniform("Descent", DmtClient.descent * screen());
+            uniform("Roll", rolling * screen());
+            uniform("Rush", RollClient.rush * screen());
+            uniform("Beat", RollClient.beat * screen());
             MusicPulse.update();
             // In the groove every kick hits harder, and at the peak harder still.
-            chain.setUniform("Kick", MusicPulse.kick * (1f + 0.5f * RollClient.groove + RollClient.peak));
-            chain.setUniform("Peak", RollClient.peak * screen());
-            chain.setUniform("Level", MusicPulse.level);
-            chain.setUniform("Hats", MusicPulse.hats * (1f + RollClient.peak));
-            chain.setUniform("Wiggle", RollClient.wiggle * screen());
-            chain.setUniform("Zap", RollClient.zap * screen());
-            chain.setUniform("Faded", RollClient.faded * screen());
-            chain.setUniform("Scene", RollClient.scene * screen());
-            chain.setUniform("Tension", MusicPulse.song.tension);
-            chain.setUniform("Drop", MusicPulse.song.drop);
-            chain.setUniform("Beats", (float) (MusicPulse.song.beats % 64));
-            chain.setUniform("Tempo", (float) (60.0 / MusicPulse.song.period()));
-            chain.setUniform("Heat", RollClient.heat * screen());
-            chain.setUniform("Tweak", tweak * screen());
-            chain.setUniform("Tired", TweakClient.tired * screen());
-            chain.setUniform("Nod", opiate * screen());
-            chain.setUniform("Flood", NodClient.flood * screen());
-            chain.setUniform("Dream", NodClient.dream * screen());
-            chain.setUniform("Breath", NodClient.breath);
-            chain.setUniform("Air", NodClient.air * screen());
-            chain.setUniform("Sick", NodClient.sick * screen());
-            chain.setUniform("Calm", BenzoClient.calm * screen());
-            chain.setUniform("Focus", focus(mc, player));
+            uniform("Kick", MusicPulse.kick * (1f + 0.5f * RollClient.groove + RollClient.peak));
+            uniform("Peak", RollClient.peak * screen());
+            uniform("Level", MusicPulse.level);
+            uniform("Hats", MusicPulse.hats * (1f + RollClient.peak));
+            uniform("Wiggle", RollClient.wiggle * screen());
+            uniform("Zap", RollClient.zap * screen());
+            uniform("Faded", RollClient.faded * screen());
+            uniform("Scene", RollClient.scene * screen());
+            uniform("Tension", MusicPulse.song.tension);
+            uniform("Drop", MusicPulse.song.drop);
+            uniform("Beats", (float) (MusicPulse.song.beats % 64));
+            uniform("Tempo", (float) (60.0 / MusicPulse.song.period()));
+            uniform("Heat", RollClient.heat * screen());
+            uniform("Tweak", tweak * screen());
+            uniform("Tired", TweakClient.tired * screen());
+            uniform("Nod", opiate * screen());
+            uniform("Flood", NodClient.flood * screen());
+            uniform("Dream", NodClient.dream * screen());
+            uniform("Breath", NodClient.breath);
+            uniform("Air", NodClient.air * screen());
+            uniform("Sick", NodClient.sick * screen());
+            uniform("Calm", BenzoClient.calm * screen());
+            uniform("Focus", focus(mc, player));
             // A frame at 60 fps is a third of a tick.
-            chain.setUniform("FrameScale", net.minecraft.util.Mth.clamp(0.333f / Math.max(0.01f, event.getPartialTick().getRealtimeDeltaTicks()), 0.5f, 4f));
-            chain.setUniform("Rebound", BenzoClient.rebound * screen());
-            chain.setUniform("Wah", wah * screen());
-            chain.setUniform("WahPulse", wahPulse(partial));
-            chain.setUniform("Gone", GasClient.gone * screen());
-            chain.setUniform("Coke", CokeClient.coke * screen());
-            chain.setUniform("Line", CokeClient.line * screen());
-            chain.setUniform("Stare", TripClient.stare * screen());
-            chain.setUniform("Harsh", TripClient.harsh);
-            chain.setUniform("Afterglow", afterglow * screen());
-            chain.setUniform("DrunkTime", (float) (t % 3600.0));
+            uniform("FrameScale", net.minecraft.util.Mth.clamp(0.333f / Math.max(0.01f, event.getPartialTick().getRealtimeDeltaTicks()), 0.5f, 4f));
+            uniform("Rebound", BenzoClient.rebound * screen());
+            uniform("Wah", wah * screen());
+            uniform("WahPulse", wahPulse(partial));
+            uniform("Gone", GasClient.gone * screen());
+            uniform("Coke", CokeClient.coke * screen());
+            uniform("Line", CokeClient.line * screen());
+            uniform("Stare", TripClient.stare * screen());
+            uniform("Harsh", TripClient.harsh);
+            uniform("Afterglow", afterglow * screen());
+            uniform("DrunkTime", (float) (t % 3600.0));
         }
 
         // From the second beer the aim wanders off on its own and has to be pulled back.
@@ -894,7 +935,7 @@ public final class DrunkClient {
     private static void onGuiChain(RenderGuiEvent.Pre event) {
         if (chain == null || !irisPack) return;
         prepareChain();
-        chain.setUniform("World", 0f);
+        uniform("World", 0f);
         runChain(event.getPartialTick().getGameTimeDeltaTicks());
         Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
     }
@@ -910,7 +951,7 @@ public final class DrunkClient {
             chainHeight = main.height;
             chainFrames = 0;
         }
-        chain.setUniform("Trail", chainFrames < 3 ? 0f : 1f);
+        uniform("Trail", chainFrames < 3 ? 0f : 1f);
     }
 
     private static void runChain(float partialTicks) {
@@ -939,7 +980,9 @@ public final class DrunkClient {
     static boolean veilParticles(String emitter, double x, double y, double z) {
         if (!veil) return false;
         try {
-            return VeilFx.emit(emitter, x, y, z);
+            boolean ok = VeilFx.emit(emitter, x, y, z);
+            if (debugging) LOGGER.info("[Brewery debug] quasar {} -> {}", emitter, ok ? "ok" : "unknown emitter");
+            return ok;
         } catch (RuntimeException | LinkageError e) {
             veil = false;
             LOGGER.warn("Veil particles unavailable", e);
@@ -989,9 +1032,9 @@ public final class DrunkClient {
                 }
                 Vec3 moved = prevCam == null || chainFrames < 3 ? Vec3.ZERO : cam.subtract(prevCam);
                 org.joml.Matrix4f dhInv = dh ? dhInvViewProj(event.getModelViewMatrix()) : null;
-                chain.setUniform("Dh", dhInv == null ? 0f : 1f);
+                uniform("Dh", dhInv == null ? 0f : 1f);
                 int normals = veilNormals();
-                chain.setUniform("Normals", normals < 0 ? 0f : 1f);
+                uniform("Normals", normals < 0 ? 0f : 1f);
                 for (net.minecraft.client.renderer.PostPass pass : (java.util.List<net.minecraft.client.renderer.PostPass>) chainPasses.get(chain)) {
                     var effect = pass.getEffect();
                     effect.safeGetUniform("InvViewProj").set(new org.joml.Matrix4f(viewProj).invert());
@@ -1010,7 +1053,7 @@ public final class DrunkClient {
                 LOGGER.warn("Trip shader cannot see the world; surface patterns and tracers fall back to the screen", e);
             }
         }
-        chain.setUniform("World", worldFailed ? 0f : 1f);
+        uniform("World", worldFailed ? 0f : 1f);
         prevViewProj.set(viewProj);
         prevCam = cam;
     }

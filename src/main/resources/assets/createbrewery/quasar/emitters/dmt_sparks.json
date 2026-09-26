@@ -7,7 +7,7 @@
         "particle_settings": {
             "particle_speed": 0.35,
             "random_speed": true,
-            "base_particle_size": 0.04,
+            "base_particle_size": 0.06,
             "particle_size_variation": 0.5,
             "random_size": true,
             "particle_lifetime": 30,
@@ -19,6 +19,7 @@
     "particle_data": {
         "should_collide": false,
         "additive": true,
+        "sprite_data": { "sprite": "createbrewery:textures/particle/quasar_spark.png" },
         "face_velocity": true,
         "velocity_stretch_factor": 4.0,
         "modules": [
