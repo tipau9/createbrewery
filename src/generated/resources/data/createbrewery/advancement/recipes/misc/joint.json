@@ -1,27 +1,27 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_hop_cones": {
-      "conditions": {
-        "items": [
-          {
-            "items": "createbrewery:hop_cones"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
-    },
     "has_the_recipe": {
       "conditions": {
         "recipe": "createbrewery:joint"
       },
       "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_weed": {
+      "conditions": {
+        "items": [
+          {
+            "items": "createbrewery:weed"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
     }
   },
   "requirements": [
     [
       "has_the_recipe",
-      "has_hop_cones"
+      "has_weed"
     ]
   ],
   "rewards": {

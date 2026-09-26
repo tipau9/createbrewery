@@ -42,6 +42,7 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.NALOXON.get());
 
                 // Substanzen & Zubehör
+                output.accept(ModItems.WEED.get());
                 output.accept(ModItems.JOINT.get());
                 output.accept(ModItems.BALLOON.get());
                 output.accept(ModItems.LACHGAS_BALLOON.get());

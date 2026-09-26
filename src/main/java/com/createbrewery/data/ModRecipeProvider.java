@@ -275,18 +275,22 @@ public class ModRecipeProvider {
                 .requires(Items.SLIME_BALL)
                 .unlockedBy("has_amethyst_shard", has(Items.AMETHYST_SHARD))
                 .save(output, CreateBrewery.ID("keta"));
-            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.JOINT.get(), 1)
-                .requires(Items.PAPER)
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.WEED.get(), 1)
                 .requires(ModItems.HOP_CONES.get())
                 .requires(Items.DRIED_KELP)
                 .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
+                .save(output, CreateBrewery.ID("weed"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.JOINT.get(), 1)
+                .requires(Items.PAPER)
+                .requires(ModItems.WEED.get())
+                .unlockedBy("has_weed", has(ModItems.WEED.get()))
                 .save(output, CreateBrewery.ID("joint"));
             ShapelessRecipeBuilder.shapeless(RecipeCategory.FOOD, ModItems.SPACE_BROWNIE.get(), 2)
                 .requires(Items.WHEAT)
                 .requires(Items.COCOA_BEANS)
                 .requires(Items.SUGAR)
-                .requires(ModItems.HOP_CONES.get())
-                .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
+                .requires(ModItems.WEED.get())
+                .unlockedBy("has_weed", has(ModItems.WEED.get()))
                 .save(output, CreateBrewery.ID("space_brownie"));
             ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.BALLOON.get(), 4)
                 .requires(Items.SLIME_BALL)

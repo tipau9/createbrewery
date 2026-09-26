@@ -75,6 +75,12 @@ public class ModItems {
         .properties(p -> p.stacksTo(16))
         .register();
 
+    public static final ItemEntry<Item> WEED = REGISTRATE
+        .item("weed", Item::new)
+        .lang("Cannabis-Blüte")
+        .properties(p -> p.stacksTo(64))
+        .register();
+
     public static final ItemEntry<DrugItem> JOINT = REGISTRATE
         .item("joint", p -> new DrugItem(p, DrugServer.Kind.WEED))
         .lang("Joint")

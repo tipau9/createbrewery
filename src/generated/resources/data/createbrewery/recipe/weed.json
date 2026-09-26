@@ -3,14 +3,14 @@
   "category": "misc",
   "ingredients": [
     {
-      "item": "minecraft:paper"
+      "item": "createbrewery:hop_cones"
     },
     {
-      "item": "createbrewery:weed"
+      "item": "minecraft:dried_kelp"
     }
   ],
   "result": {
     "count": 1,
-    "id": "createbrewery:joint"
+    "id": "createbrewery:weed"
   }
 }
