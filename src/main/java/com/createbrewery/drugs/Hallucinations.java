@@ -21,7 +21,7 @@ import java.util.List;
  *
  * <ul>
  *   <li>DMT: glowing beings circling you at the peak of the breakthrough (the "machine elves").</li>
- *   <li>LSD/mushroom peak: now and then a bright parrot flies past.</li>
+ *   <li>LSD/mushrooms, heroic dose: now and then a bright parrot flies past.</li>
  *   <li>Bad trip: a tall dark figure at the edge of your view that is gone when you look at it.</li>
  * </ul>
  */
@@ -71,7 +71,8 @@ public final class Hallucinations {
                 0.4 + random.nextDouble() * 2.0, (random.nextBoolean() ? 1 : -1) * (0.03 + random.nextDouble() * 0.04),
                 now + 400, false, true);
         }
-        if (trip > 0.75f && random.nextFloat() < 0.004f) {
+        // Things that are not there at all are rare on a trip - only on a heroic dose.
+        if (trip > 0.9f && random.nextFloat() < 0.002f) {
             add(EntityType.PARROT, level, random.nextDouble() * Math.PI * 2, 6 + random.nextDouble() * 3,
                 1.5 + random.nextDouble() * 2, 0.06, now + 80, false, true);
         }

@@ -31,6 +31,7 @@ uniform float Break;   // DMT breakthrough: 0..1
 uniform float ComeUp;  // LSD coming up: strobing at the edges, 0..1
 uniform float Recur;   // LSD: the view falls into itself (recursion), 0..1
 uniform float Flip;    // Keta: 0 upright, 1 mirrored, 2 upside down
+uniform float Eyes;    // tripping with the eyes shut: the closed-eye visions, 0..1
 uniform float Crack;   // DMT, cracking open: neon lines growing over every surface, 0..1
 uniform float Waiting; // DMT, the waiting room: tunnel and unfolding chrysanthemum, 0..1
 uniform float Beyond;  // DMT, the other side: a dome of light tiled with jewels, 0..1
@@ -864,6 +865,28 @@ void main() {
 
     // Tunnel vision.
     col *= 1.0 - smoothstep(0.3, 0.9, length(d * vec2(1.0, 0.8))) * 0.7 * k;
+
+    // Eyes shut on a trip: darkness, and in it the closed-eye visions - patterns unfolding without
+    // end down a slow tunnel. Mushrooms: soft, organic, veined, in greens, golds and violet.
+    // LSD: crisp and electric. Music makes them brighter (Level and Kick are 0 without it).
+    if (Eyes > 0.0) {
+        vec2 ce = (texCoord - 0.5) * vec2(aspect, 1.0);
+        float cr = length(ce);
+        float sym = mix(8.0, 6.0, Organic);
+        vec2 cp = vec2(atan(ce.y, ce.x) * sym / 3.14159, log(cr + 0.02) * 1.5 - t * 0.3);
+        float warp = sin(cp.x * 3.0 + sin(cp.y * 2.0 + t * 0.5)) * cos(cp.y * 3.0 - t * 0.4);
+        cp += Organic * 0.4 * vec2(sin(cp.y * 2.0 + t * 0.3), cos(cp.x * 2.0 - t * 0.2));
+        float cells = abs(sin(cp.x * 3.14159)) * abs(sin(cp.y * 3.14159));
+        float veins = smoothstep(0.85, 1.0, abs(sin((cp.x + cp.y) * 4.0 + warp * 2.0)));
+        vec3 electric = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + cp.y * 0.2 + t * 0.05));
+        vec3 fungal = mix(vec3(0.15, 0.45, 0.2), vec3(0.85, 0.65, 0.2), 0.5 + 0.5 * sin(cp.y * 2.0 + warp * 3.0));
+        fungal = mix(fungal, vec3(0.5, 0.25, 0.7), 0.3 * (0.5 + 0.5 * sin(cp.x * 1.5 + t * 0.2)));
+        vec3 shade = mix(electric, fungal, Organic);
+        vec3 visions = shade * (0.25 + 0.75 * pow(cells, 0.6)) + veins * 0.4 * mix(electric, vec3(1.0, 0.9, 0.6), Organic);
+        float music = 0.6 + 0.8 * Level + 0.4 * Kick;
+        float seen = clamp(Trip * 1.2, 0.0, 1.0) * music * smoothstep(1.1, 0.1, cr);
+        col = mix(col, vec3(0.02, 0.015, 0.03) + visions * seen * 0.8, Eyes);
+    }
 
     // Afterimages: blend in the previous finished frame. Done last, so the steady picture is
     // exactly the processed one and only movement smears.

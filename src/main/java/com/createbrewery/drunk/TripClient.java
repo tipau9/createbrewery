@@ -62,7 +62,7 @@ import java.util.List;
  *   <li>Thoughts above the hotbar; chat and item names come in scrambled rainbow letters.</li>
  *   <li>The third tab: at the peak you leave your body and look down on yourself for a while.</li>
  *   <li>Bad trip: monsters heard behind you, and hits that never landed.</li>
- *   <li>Mushrooms: spores in the air, animals that speak their minds, the forest playing flute,
+ *   <li>Mushrooms: spores in the air, feeling one with animals, music deeper, eyes-closed visions,
  *       laughing fits, chills on the come-up, and with a heroic dose in silent darkness the
  *       world grows in over you.</li>
  * </ul>
@@ -102,7 +102,6 @@ public final class TripClient {
         NeoForge.EVENT_BUS.addListener(TripClient::onFrame);
         NeoForge.EVENT_BUS.addListener(TripClient::onCameraDistance);
         NeoForge.EVENT_BUS.addListener(TripClient::onGui);
-        NeoForge.EVENT_BUS.addListener(TripClient::onNameTag);
     }
 
     private static float peak() {
@@ -269,8 +268,6 @@ public final class TripClient {
 
     // ---- mushrooms ----
 
-    private static final int[] PENTATONIC = {0, 3, 5, 7, 10, 12};
-
     private static void mushrooms(Minecraft mc, LocalPlayer player, float shroom) {
         RandomSource r = player.getRandom();
         chill = DrunkClient.ease(chill, Psychedelics.comingUp(player, ModEffects.SHROOM_TRIP) ? 1f : 0f);
@@ -297,11 +294,10 @@ public final class TripClient {
                 || state.is(Blocks.RED_MUSHROOM) || state.is(Blocks.BROWN_MUSHROOM_BLOCK) || state.is(Blocks.RED_MUSHROOM_BLOCK)) {
                 mc.level.addParticle(ParticleTypes.GLOW, pos.getX() + r.nextDouble(), pos.getY() + 1.05, pos.getZ() + r.nextDouble(), 0.0, 0.02, 0.0);
             }
-            // The forest plays flute: now and then a soft note from a tree nearby.
-            if ((state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES)) && r.nextFloat() < 0.01f * shroom) {
-                mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.NOTE_BLOCK_FLUTE.value(), SoundSource.RECORDS, 0.3f * shroom,
-                    (float) Math.pow(2.0, (PENTATONIC[r.nextInt(PENTATONIC.length)] - 6) / 12.0), r, pos.getX(), pos.getY(), pos.getZ()));
-            }
+        }
+        if (mc.crosshairPickEntity instanceof Animal && shroom > 0.35f && r.nextFloat() < 1f / 300f) {
+            player.displayClientMessage(Component.literal(ANIMALS[r.nextInt(ANIMALS.length)])
+                .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
         }
         // Laughing fits: out of nowhere, for a few seconds, you cannot stop - and cannot run.
         if (laugh <= 0 && shroom > 0.4f && r.nextFloat() < 1f / 1500f) laugh = 100;
@@ -361,20 +357,9 @@ public final class TripClient {
         }
     }
 
-    private static final String[] ANIMALS = {"Muh. Also… wir sind alle eins.", "Ich sehe dich. Wirklich.", "Hast du auch Gras gegessen?",
-        "Keine Angst. Wir wissen Bescheid.", "Das Netz unter der Erde grüßt dich.", "Warum rennst du immer so?",
-        "Ich bin auch nur ein Würfel.", "Die Sonne ist warm. Mehr gibt es nicht.", "Psst. Die Bäume hören zu."};
-
-    /** Mushrooms: animals nearby speak their minds, now and then. */
-    private static void onNameTag(RenderNameTagEvent event) {
-        float shroom = DrunkClient.trip * DrunkClient.organic;
-        if (shroom < 0.35f || !(event.getEntity() instanceof Animal animal)) return;
-        long slot = animal.getId() + animal.tickCount / 200;
-        if (slot % 3 != 0) return;
-        event.setContent(Component.literal(ANIMALS[(int) Math.floorMod(slot * 31 + animal.getId(), ANIMALS.length)])
-            .withStyle(ChatFormatting.ITALIC, ChatFormatting.GREEN));
-        event.setCanRender(TriState.TRUE);
-    }
+    /** Mushrooms: looking an animal in the eye, the feeling of being one with it (not words - a thought). */
+    private static final String[] ANIMALS = {"Die guckt mich an, als wüsste sie alles.", "Wir sind gar nicht so verschieden, du und ich.",
+        "Du lebst. Ich lebe. Das ist… so viel.", "Hast du auch Angst manchmal?", "Ich hab dich lieb. Einfach so."};
 
     private static final ResourceLocation FROST = ResourceLocation.withDefaultNamespace("textures/misc/powder_snow_outline.png");
     private static final ResourceLocation VINE = ResourceLocation.withDefaultNamespace("textures/block/vine.png");

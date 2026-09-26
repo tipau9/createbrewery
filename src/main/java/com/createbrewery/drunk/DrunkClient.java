@@ -86,6 +86,10 @@ public final class DrunkClient {
     private static float[] yawHistory = new float[6];
     private static int hgnLeft;
     private static float hgnDir;
+    /** Tripping with the eyes shut - crouched and still for a moment - 0..1; the closed-eye visions. */
+    private static float eyes;
+    private static int stillTicks;
+    private static boolean eyesHinted, eyesSeen;
     /** A seizure: the body convulses, 0..1. */
     private static float seizing;
     /** DMT: 0..1, 1 = the full breakthrough. */
@@ -250,6 +254,7 @@ public final class DrunkClient {
             var r = player.getRandom();
             seizing = player.hasEffect(ModEffects.SEIZURE) ? 1f : Math.max(0f, seizing - 0.1f);
             nystagmus(player);
+            closedEyes(mc, player);
             // The head jerks about, nothing you do.
             if (seizing > 0.5f) player.turn((r.nextFloat() - 0.5f) * 10f / 0.15f, (r.nextFloat() - 0.5f) * 8f / 0.15f);
             if (recurLeft > 0) recurLeft--;
@@ -525,6 +530,7 @@ public final class DrunkClient {
             chain.setUniform("Break", breakthrough * screen());
             chain.setUniform("ComeUp", comeUp * screen());
             chain.setUniform("Recur", recur * screen());
+            chain.setUniform("Eyes", eyes * screen());
             chain.setUniform("Flip", screen() > 0.5f && player != null && dissoc > 0.3f ? (float) flip : 0f);
             chain.setUniform("Crack", DmtClient.crack * screen());
             chain.setUniform("Waiting", DmtClient.waiting * screen());
@@ -809,7 +815,8 @@ public final class DrunkClient {
 
     /** Weed or MDMA: how much the music matters right now. */
     private static float loud() {
-        return Math.max(high, rolling);
+        // Mushrooms: music takes on a deep, rich cadence too.
+        return Math.max(Math.max(high, rolling), 0.6f * trip * organic);
     }
 
     /** High: music and ambience up to about 2x (+6 dB), which is where the listener gain goes. */
@@ -1090,6 +1097,29 @@ public final class DrunkClient {
         }
     }
 
+    /**
+     * On a trip the richest visions come with the eyes shut: crouch and keep still, and the
+     * world goes dark and fills with patterns - organic on mushrooms, electric on LSD - and
+     * music makes them stronger (as in the studies). A hint once per trip.
+     */
+    private static void closedEyes(Minecraft mc, LocalPlayer player) {
+        boolean still = player.isShiftKeyDown() && player.input.forwardImpulse == 0f && player.input.leftImpulse == 0f
+            && mc.screen == null;
+        stillTicks = still ? stillTicks + 1 : 0;
+        eyes += ((trip > 0.15f && stillTicks > 30 ? 1f : 0f) - eyes) * 0.15f;
+        if (trip < 0.05f) eyesHinted = eyesSeen = false;
+        if (trip > 0.35f && !eyesHinted && player.tickCount % 200 == 0) {
+            eyesHinted = true;
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Was wohl passiert, wenn ich die Augen zumache…? (still hocken)")
+                .withStyle(net.minecraft.ChatFormatting.ITALIC, net.minecraft.ChatFormatting.DARK_GREEN), true);
+        }
+        if (eyes > 0.9f && !eyesSeen) {
+            eyesSeen = true;
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Oh. OH. Hinter den Augen… da ist ja alles.")
+                .withStyle(net.minecraft.ChatFormatting.ITALIC, net.minecraft.ChatFormatting.DARK_GREEN), true);
+        }
+    }
+
     private static void steer(LocalPlayer player, Input input) {
         if (breakthrough > 0.6f || seizing > 0f) {
             // Broken through (or convulsing): the body is left behind and does nothing.
@@ -1197,6 +1227,8 @@ public final class DrunkClient {
             if (high > 0.6f) event.setCinematicCameraEnabled(true);
         }
         if (green > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.3f * green));
+        // Mushrooms: the body heavy and a little clumsy.
+        if (trip * organic > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.15f * trip * organic));
         // B12 gone: numb hands, the mouse drags.
         var numb = Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getEffect(ModEffects.NUMBNESS);
         if (numb != null) event.setMouseSensitivity(event.getMouseSensitivity() * (0.75f - 0.25f * numb.getAmplifier()));

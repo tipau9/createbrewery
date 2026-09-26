@@ -33,6 +33,7 @@
         { "name": "ComeUp",       "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Recur",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Flip",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "Eyes",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Waiting",      "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Beyond",       "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Descent",      "type": "float",      "count": 1,  "values": [ 0.0 ] },
