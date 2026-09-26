@@ -12,6 +12,9 @@ public class ModPonderScenes {
             .addStoryBoard(Create.asResource("basin"), BreweryScenes::fermenter)
             .addStoryBoard(Create.asResource("mechanical_mixer/mixing"), BreweryScenes::brewingHeat);
 
+        helper.forComponents(com.createbrewery.ModItems.NALOXON)
+            .addStoryBoard(Create.asResource("basin"), BreweryScenes::firstAid);
+
         helper.forComponents(AllBlocks.BASIN)
             .addStoryBoard(Create.asResource("mechanical_mixer/mixing"), BreweryScenes::brewingHeat);
     }

@@ -122,6 +122,13 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.jei.fermenting.one_day", "1 day");
         REGISTRATE.addRawLang("createbrewery.jei.fermenting.days", "%s days");
         REGISTRATE.addRawLang("createbrewery.jei.fermenting.days_decimal", "%s days");
+        REGISTRATE.addRawLang("createbrewery.ponder.first_aid.header", "Erste Hilfe");
+        REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_1", "Jemand ist bewusstlos: Filmriss, K-Loch, Herzinfarkt, oder die Atmung setzt aus.");
+        REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_2", "Hock dich direkt daneben (Schleichen). Solange du da hockst: Herzdruckmassage und stabile Seitenlage - nichts kommt in die Atemwege.");
+        REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_3", "Heroin: Naloxon, Rechtsklick auf die Person. Es wirkt nur etwa eine Minute - das Heroin kommt zurück, also bleib da.");
+        REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_4", "MDMA und Hitze: in den Schatten, Pause, Elektrolyt-Drink statt literweise Wasser.");
+        REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_5", "Nie allein konsumieren. Und nicht mischen: Alkohol mit Heroin, Xanax oder Keta legt die Atmung lahm.");
+        com.createbrewery.drugs.DrugInfo.addLang();
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.header", "Fermenting Beer in the Fermenter");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_1", "The Fermenter turns Hopped Wort and Yeast into Beer over time.");
         REGISTRATE.addRawLang("createbrewery.ponder.fermenter.text_2", "Unlike most Create machines, the Fermenter requires NO shaft or rotational force. It is completely passive.");

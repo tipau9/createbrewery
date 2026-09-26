@@ -187,4 +187,65 @@ public class BreweryScenes {
 
         scene.markAsFinished();
     }
+    /** First aid: someone is out cold - crouch next to them, Naloxon for heroin, electrolytes for MDMA. */
+    public static void firstAid(SceneBuilder builder, SceneBuildingUtil util) {
+        CreateSceneBuilder scene = new CreateSceneBuilder(builder);
+        scene.title("first_aid", "Erste Hilfe");
+        scene.configureBasePlate(0, 0, 5);
+        scene.showBasePlate();
+        scene.idle(10);
+
+        // The friend: faceless, lying on the ground.
+        net.minecraft.world.phys.Vec3 friend = util.vector().of(2.5, 1, 2.5);
+        scene.world().createEntity(level -> {
+            var stand = net.minecraft.world.entity.EntityType.ARMOR_STAND.create(level);
+            stand.setPos(friend.x, friend.y, friend.z);
+            stand.setPose(net.minecraft.world.entity.Pose.SLEEPING);
+            return stand;
+        });
+        scene.idle(10);
+        scene.overlay().showText(80)
+            .text("Jemand ist bewusstlos: Filmriss, K-Loch, Herzinfarkt, oder die Atmung setzt aus.")
+            .pointAt(friend)
+            .placeNearTarget()
+            .attachKeyFrame();
+        scene.idle(90);
+
+        scene.overlay().showControls(friend.add(0, 0.5, 0), Pointing.DOWN, 80).whileSneaking();
+        scene.overlay().showText(90)
+            .colored(PonderPalette.GREEN)
+            .text("Hock dich direkt daneben (Schleichen). Solange du da hockst: Herzdruckmassage und stabile Seitenlage - nichts kommt in die Atemwege.")
+            .pointAt(friend)
+            .placeNearTarget()
+            .attachKeyFrame();
+        scene.idle(100);
+
+        scene.overlay().showControls(friend.add(0, 0.5, 0), Pointing.DOWN, 70)
+            .withItem(ModItems.NALOXON.asStack())
+            .rightClick();
+        scene.overlay().showText(90)
+            .text("Heroin: Naloxon, Rechtsklick auf die Person. Es wirkt nur etwa eine Minute - das Heroin kommt zurück, also bleib da.")
+            .pointAt(friend)
+            .placeNearTarget()
+            .attachKeyFrame();
+        scene.idle(100);
+
+        scene.overlay().showControls(friend.add(0, 0.5, 0), Pointing.DOWN, 70)
+            .withItem(ModItems.ELECTROLYTE.asStack());
+        scene.overlay().showText(90)
+            .text("MDMA und Hitze: in den Schatten, Pause, Elektrolyt-Drink statt literweise Wasser.")
+            .pointAt(friend)
+            .placeNearTarget()
+            .attachKeyFrame();
+        scene.idle(100);
+
+        scene.overlay().showText(80)
+            .colored(PonderPalette.RED)
+            .text("Nie allein konsumieren. Und nicht mischen: Alkohol mit Heroin, Xanax oder Keta legt die Atmung lahm.")
+            .pointAt(friend)
+            .placeNearTarget()
+            .attachKeyFrame();
+        scene.idle(90);
+        scene.markAsFinished();
+    }
 }

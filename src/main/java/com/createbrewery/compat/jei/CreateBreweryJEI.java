@@ -45,6 +45,10 @@ public class CreateBreweryJEI implements IModPlugin {
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         allCategories.forEach(c -> c.registerRecipes(registration));
+        // Each drug: effect, duration, risks, dangerous mixes, first aid (DrugInfo).
+        com.createbrewery.drugs.DrugInfo.TEXT.keySet().forEach(path -> net.minecraft.core.registries.BuiltInRegistries.ITEM
+            .getOptional(CreateBrewery.ID(path)).ifPresent(item -> registration.addIngredientInfo(new net.minecraft.world.item.ItemStack(item),
+                mezz.jei.api.constants.VanillaTypes.ITEM_STACK, net.minecraft.network.chat.Component.translatable(com.createbrewery.drugs.DrugInfo.key(path)))));
     }
 
     @Override
