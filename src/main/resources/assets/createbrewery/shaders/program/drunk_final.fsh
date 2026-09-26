@@ -19,6 +19,7 @@ uniform float Tweak;
 uniform float Nod;
 uniform float Calm;
 uniform float Focus;                   // how far off the spot looked at is, smoothed, in blocks
+uniform float FrameScale;              // 60 fps over the real frame rate: blur as long at any fps
 uniform mat4 InvViewProj;
 uniform mat4 PrevViewProj;
 uniform vec3 CamDelta;
@@ -60,7 +61,7 @@ void main() {
     float smear = max(Tweak, Coke) * World * Trail;
     if (smear > 0.01) {
         vec4 was = PrevViewProj * vec4(worldAt(texCoord) + CamDelta, 1.0);
-        vec2 vel = (texCoord - (was.xy / was.w * 0.5 + 0.5)) * step(0.0, was.w) * 0.6 * smear;
+        vec2 vel = (texCoord - (was.xy / was.w * 0.5 + 0.5)) * step(0.0, was.w) * 2.0 * FrameScale * smear;
         float len = length(vel);
         if (len > 0.08) vel *= 0.08 / len;
         vec3 sum = col;
@@ -69,16 +70,18 @@ void main() {
     }
 
     // Bloom: bright light spills over, in the colour of the high - wide pupils on beer, weed,
-    // Koks, mushrooms, MDMA and meth; the MDMA glow breathes with the music.
-    // ponytail: strengths eyeballed against the old ring glow in drunk.fsh; tune here.
-    vec3 bloom = texture(BloomSampler, texCoord).rgb;
-    vec3 tint = vec3(1.0, 0.8, 0.5) * 1.8 * Mood
-              + vec3(1.0, 1.0, 1.05) * 0.5 * Coke
-              + vec3(1.0, 0.94, 0.8) * 1.4 * High
-              + vec3(1.0, 0.92, 0.7) * 1.0 * Organic * Trip
-              + vec3(1.0, 0.75, 0.85) * 1.0 * Roll * (1.0 + 0.8 * Beat * Level)
-              + vec3(0.8, 0.95, 1.1) * 0.6 * Tweak;
-    col += bloom * tint;
+    // Koks, mushrooms, MDMA and meth; the MDMA glow breathes with the music. The glow takes the
+    // colour of the high, not of the light (a torch on MDMA glows pink). Squashed with exp, so a
+    // small torch still glows and a bright sky does not blow out.
+    // ponytail: strengths eyeballed; tune the tint weights and the 8.0 gain here.
+    float bloom = dot(texture(BloomSampler, texCoord).rgb, vec3(0.299, 0.587, 0.114));
+    vec3 tint = vec3(1.0, 0.8, 0.5) * 0.7 * Mood
+              + vec3(0.9, 0.95, 1.1) * 0.3 * Coke
+              + vec3(1.0, 0.94, 0.8) * 0.5 * High
+              + vec3(1.0, 0.92, 0.7) * 0.5 * Organic * Trip
+              + vec3(1.0, 0.45, 0.75) * 0.8 * Roll * (1.0 + 0.8 * Beat * Level)
+              + vec3(0.8, 0.95, 1.1) * 0.3 * Tweak;
+    col += (1.0 - exp(-bloom * 8.0)) * tint;
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

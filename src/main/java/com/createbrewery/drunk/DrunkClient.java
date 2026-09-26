@@ -575,6 +575,8 @@ public final class DrunkClient {
             chain.setUniform("Sick", NodClient.sick * screen());
             chain.setUniform("Calm", BenzoClient.calm * screen());
             chain.setUniform("Focus", focus(mc, player));
+            // A frame at 60 fps is a third of a tick.
+            chain.setUniform("FrameScale", net.minecraft.util.Mth.clamp(0.333f / Math.max(0.01f, event.getPartialTick().getRealtimeDeltaTicks()), 0.5f, 4f));
             chain.setUniform("Rebound", BenzoClient.rebound * screen());
             chain.setUniform("Wah", wah * screen());
             chain.setUniform("WahPulse", wahPulse(partial));
