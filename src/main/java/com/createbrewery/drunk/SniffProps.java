@@ -51,24 +51,12 @@ final class SniffProps extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         }
     }
 
-    /** Client tick: the sniff and the puff of powder, once per line, for everyone in sight. */
+    /** Client tick: the sniff sound and the puff of powder during sniffing, for everyone in sight. */
     static void tick(Minecraft mc) {
         if (mc.level == null) return;
         long now = System.currentTimeMillis();
-        // Your own line: the camera swings round to the front to watch it (the body is not drawn
-        // in first person), and back to how it was once the phone is away.
-        DrugPose.Action own = mc.player == null ? null : DrugPose.ACTING.get(mc.player.getId());
-        boolean watching = own != null && own.kind() == DrugPose.SNIFF && own.progress(now) < 0.97f
-            && net.neoforged.fml.ModList.get().isLoaded("playeranimator");
-        if (watching && before == null) {
-            before = mc.options.getCameraType();
-            mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
-        } else if (!watching && before != null) {
-            mc.options.setCameraType(before);
-            before = null;
-        }
         DrugPose.ACTING.forEach((id, action) -> {
-            if (action.kind() != DrugPose.SNIFF || action.progress(now) < SNIFFED || !HEARD.add(action)) return;
+            if (action.kind() != DrugPose.SNIFF || action.progress(now) < DrugPose.SNIFF_LINE_START || !HEARD.add(action)) return;
             Entity entity = mc.level.getEntity(id);
             if (entity == null) return;
             mc.level.playLocalSound(entity.getX(), entity.getY(), entity.getZ(), ModSounds.SNIFF.get(), SoundSource.PLAYERS,
@@ -98,22 +86,42 @@ final class SniffProps extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
         Matrix4f m = pose.last().pose();
         // The phone: dark, flat in the palm, reaching past the fingers.
         box(v, m, -0.04f, 0.45f, -0.175f, 0.2f, 0.82f, -0.13f, 0.1f, 0.1f, 0.12f, lit);
-        // The screen, lit on its own, and the line on it (both faces: whichever turns up).
+        // The screen
         for (float z : new float[] {-0.176f, -0.129f}) {
             quad(v, m, -0.025f, 0.47f, 0.185f, 0.8f, z, 0.25f, 0.4f, 0.75f, 0.6f + 0.4f * lit);
-            float left = p < SNIFFED - 0.02f ? 1f : 1f - Math.min(1f, (p - SNIFFED + 0.02f) / 0.06f);
-            if (left > 0f && p > OUT) quad(v, m, 0.065f, 0.52f, 0.095f, 0.52f + 0.22f * left, z + (z < -0.15f ? -0.001f : 0.001f), 0.95f, 0.95f, 0.95f, 1f);
+            // Phase 2: Powder Pile
+            if (p >= DrugPose.SNIFF_POUR_START && p < DrugPose.SNIFF_CARD_START) {
+                float pourT = net.minecraft.util.Mth.clamp((p - DrugPose.SNIFF_POUR_START) / 0.10f, 0f, 1f);
+                float half = 0.025f * pourT;
+                quad(v, m, 0.08f - half, 0.63f - half, 0.08f + half, 0.63f + half, z + (z < -0.15f ? -0.001f : 0.001f), 0.96f, 0.96f, 0.98f, 1f);
+            }
+            // Phase 3 & 4: Line (shrinks as straw consumes it!)
+            else if (p >= DrugPose.SNIFF_CARD_START && p <= DrugPose.SNIFF_LINE_END) {
+                float left = 1f;
+                if (p >= DrugPose.SNIFF_LINE_START) {
+                    float s = net.minecraft.util.Mth.clamp((p - DrugPose.SNIFF_LINE_START) / (DrugPose.SNIFF_LINE_END - DrugPose.SNIFF_LINE_START), 0f, 1f);
+                    left = 1f - s;
+                }
+                if (left > 0f) {
+                    quad(v, m, 0.07f, 0.52f, 0.09f, 0.52f + 0.22f * left, z + (z < -0.15f ? -0.001f : 0.001f), 0.96f, 0.96f, 0.98f, 1f);
+                }
+            }
         }
         pose.popPose();
 
         pose.pushPose();
         getParentModel().rightArm.translateAndRotate(pose);
         m = pose.last().pose();
-        if (p > OUT && p < CHOP) {
-            // The card, a thin edge held in the fingers.
+
+        // Right Hand Props:
+        if (p >= DrugPose.SNIFF_POUR_START - 0.03f && p < DrugPose.SNIFF_CARD_START) {
+            // Ziploc baggie
+            box(v, m, -0.08f, 0.52f, -0.16f, 0.04f, 0.72f, -0.11f, 0.95f, 0.95f, 0.95f, lit * 0.85f);
+        } else if (p >= DrugPose.SNIFF_CARD_START && p < DrugPose.SNIFF_STRAW_START) {
+            // The card, held in the fingers
             box(v, m, -0.13f, 0.6f, -0.14f, 0.06f, 0.74f, -0.13f, 0.15f, 0.35f, 0.8f, lit);
-        } else if (p > SWAP - 0.03f && p < BACK) {
-            // The straw: a thin silver tube out of the fist.
+        } else if (p >= DrugPose.SNIFF_STRAW_START && p < DrugPose.SNIFF_TUCK) {
+            // The straw: silver tube out of the fist
             box(v, m, -0.05f, 0.58f, -0.15f, -0.025f, 0.84f, -0.125f, 0.8f, 0.82f, 0.85f, lit);
         }
         pose.popPose();

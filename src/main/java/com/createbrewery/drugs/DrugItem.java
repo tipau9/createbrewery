@@ -38,7 +38,9 @@ public class DrugItem extends Item {
     public UseAnim getUseAnimation(ItemStack stack) {
         return switch (kind) {
             case SHROOMS, MESCALINE, MDMA, XANAX -> UseAnim.EAT; // chewed, and they taste awful
-            default -> UseAnim.TOOT_HORN;           // raised to the face (or a tab on the tongue)
+            case WEED, DMT, LACHGAS -> UseAnim.TOOT_HORN;
+            case HEROIN -> UseAnim.BOW;
+            default -> UseAnim.NONE;
         };
     }
 
@@ -53,13 +55,40 @@ public class DrugItem extends Item {
             case MDMA, XANAX -> 12; // a pill, swallowed
             case HEROIN -> 36;    // finding the vein
             case LACHGAS -> 20;   // one deep breath from the balloon
-            default -> 24;
+            default -> 0;
         };
     }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (!DrugServer.enabled()) return InteractionResultHolder.fail(player.getItemInHand(hand));
+        boolean line = kind == DrugServer.Kind.COKE || kind == DrugServer.Kind.KETA || kind == DrugServer.Kind.METH;
+        if (line) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (player.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(stack);
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                net.minecraft.advancements.CriteriaTriggers.CONSUME_ITEM.trigger(sp, stack);
+            }
+            if (!level.isClientSide) {
+                Purity purity = Purity.of(stack, kind, player.getRandom());
+                int doses = Pharmacology.doses(purity.strength(), player.getRandom().nextFloat());
+                java.util.function.Consumer<Player> dose = p -> {
+                    if (!(purity.fentanyl() && kind == DrugServer.Kind.XANAX)) {
+                        for (int i = 0; i < doses; i++) DrugServer.take(p, kind);
+                        if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(p, "Gestreckt… das merk ich kaum.", 0xA0A0A0);
+                    }
+                    if (purity.fentanyl()) Opioids.fentanyl(p);
+                };
+                // The dose kicks in only after the full routine (line chopped, sniffed, phone tucked away).
+                DrugServer.later(player, Math.round(DrugPose.SNIFF_TICKS * DrugPose.DOSE_AT), dose);
+                DrugPose.act(player, DrugPose.SNIFF, DrugPose.SNIFF_TICKS);
+                player.getCooldowns().addCooldown(this, DrugPose.SNIFF_TICKS + 10);
+            }
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        }
         player.startUsingItem(hand);
         return InteractionResultHolder.consume(player.getItemInHand(hand));
     }
@@ -83,12 +112,8 @@ public class DrugItem extends Item {
                 }
                 if (purity.fentanyl()) Opioids.fentanyl(p);
             };
-            // A line goes in once it is chopped and the straw is at the nose; everything else at once.
-            boolean line = kind == DrugServer.Kind.COKE || kind == DrugServer.Kind.KETA || kind == DrugServer.Kind.METH;
-            if (line) DrugServer.later(player, Math.round(DrugPose.SNIFF_TICKS * DrugPose.SNIFF_AT), dose);
-            else dose.accept(player);
+            dose.accept(player);
             switch (kind) {
-                case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, DrugPose.SNIFF_TICKS); // phone, card, straw
                 case WEED -> DrugPose.act(player, DrugPose.SMOKE, 30);
                 case DMT, LACHGAS -> DrugPose.act(player, DrugPose.INHALE, 30);
                 case HEROIN -> DrugPose.act(player, DrugPose.INJECT, 40);

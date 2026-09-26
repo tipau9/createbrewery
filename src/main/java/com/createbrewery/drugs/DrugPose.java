@@ -34,9 +34,18 @@ public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements
     public static final int NONE = 0, DANCE = 1, NOD = 2, SLUMP = 3, LAUGH = 4, SHIVER = 5;
     public static final int VOMIT = 6, SEIZURE = 7, SNIFF = 8, SMOKE = 9, INJECT = 10, COLLAPSE = 11, INHALE = 12;
     public static final int EYES_RED = 1, EYES_LIDS = 2, EYES_GLASSY = 3;
-    /** A line off the phone takes this long; the straw reaches the nose (and the drug goes in) at {@link #SNIFF_AT} of it. */
-    public static final int SNIFF_TICKS = 100;
-    public static final float SNIFF_AT = 0.62f;
+    /** Full realistic sniff routine: phone out, baggie pour, card chop to line, straw sniff along line, tuck away, dose kicks in. */
+    public static final int SNIFF_TICKS = 210;
+    public static final float SNIFF_POUR_START = 0.16f;
+    public static final float SNIFF_POUR_END = 0.30f;
+    public static final float SNIFF_CARD_START = 0.35f;
+    public static final float SNIFF_CARD_END = 0.55f;
+    public static final float SNIFF_STRAW_START = 0.58f;
+    public static final float SNIFF_LINE_START = 0.63f;
+    public static final float SNIFF_LINE_END = 0.81f;
+    public static final float SNIFF_TUCK = 0.86f;
+    public static final float DOSE_AT = 0.95f;
+    public static final float SNIFF_AT = SNIFF_LINE_START;
     public static final Type<DrugPose> TYPE = new Type<>(CreateBrewery.ID("pose"));
     public static final StreamCodec<ByteBuf, DrugPose> CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT, DrugPose::entity, ByteBufCodecs.BYTE, DrugPose::kind, ByteBufCodecs.BYTE, DrugPose::amount,

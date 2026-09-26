@@ -144,20 +144,41 @@ final class PoseAnimation implements IAnimation {
                 d[2] = amount * 0.5f * shake;
             }
             case DrugPose.SNIFF -> {
-                // Phone held out in the left hand; the right chops a line on it with a card, then
-                // brings the straw to the nose as the head goes down to the screen; a sniff, head
-                // back, phone away (the easing out). SniffProps draws the phone, card and straw.
+                // 1. Phone out in left hand. 2. Baggie poured onto screen. 3. Card chops into line.
+                // 4. Straw glides along line, head down, sniffing. 5. Tucked away.
                 if (position) return;
-                boolean chopping = p < SniffProps.SWAP, sniffing = !chopping && p < SniffProps.SNIFF;
-                boolean back = p >= SniffProps.SNIFF && p < SniffProps.BACK;
-                if (left) { d[0] = (sniffing ? -1.45f : -1.15f) - value.getX(); d[1] = 0.45f; }
-                if (right) {
-                    float chop = p > SniffProps.OUT && p < SniffProps.CHOP ? 0.1f * (float) Math.sin(t * 22f) : 0f;
-                    d[0] = (chopping ? -1.05f + chop : sniffing ? -1.8f : -1.3f) - value.getX();
-                    d[1] = chopping ? -0.5f : -0.3f;
+                boolean pouring = p >= DrugPose.SNIFF_POUR_START && p < DrugPose.SNIFF_CARD_START;
+                boolean chopping = p >= DrugPose.SNIFF_CARD_START && p < DrugPose.SNIFF_STRAW_START;
+                boolean sniffing = p >= DrugPose.SNIFF_STRAW_START && p < DrugPose.SNIFF_TUCK;
+                boolean back = p >= DrugPose.SNIFF_TUCK;
+
+                if (left) {
+                    d[0] = (sniffing ? -1.45f : -1.20f) - value.getX();
+                    d[1] = 0.42f;
                 }
-                if (part.equals("head")) d[0] = chopping ? 0.55f : sniffing ? 0.75f : back ? -0.35f : 0f;
-                if (part.equals("body") && sniffing) d[0] = -0.15f;
+                if (right) {
+                    if (pouring) {
+                        float shake = 0.08f * (float) Math.sin(t * 32f);
+                        d[0] = -1.35f + shake - value.getX();
+                        d[1] = -0.25f;
+                        d[2] = -0.15f;
+                    } else if (chopping) {
+                        float chop = 0.12f * (float) Math.sin(t * 26f);
+                        d[0] = -1.15f + chop - value.getX();
+                        d[1] = -0.45f;
+                    } else if (sniffing) {
+                        // Sweep right hand slightly as straw follows line
+                        float sniffProgress = (p - DrugPose.SNIFF_LINE_START) / Math.max(0.01f, DrugPose.SNIFF_LINE_END - DrugPose.SNIFF_LINE_START);
+                        d[0] = (-1.75f - 0.1f * Mth.clamp(sniffProgress, 0f, 1f)) - value.getX();
+                        d[1] = -0.28f;
+                    } else {
+                        d[0] = -0.6f - value.getX();
+                    }
+                }
+                if (part.equals("head")) {
+                    d[0] = pouring ? 0.35f : chopping ? 0.55f : sniffing ? 0.80f : back ? -0.30f : 0f;
+                }
+                if (part.equals("body") && sniffing) d[0] = -0.18f;
             }
             case DrugPose.SMOKE, DrugPose.INHALE -> {
                 // Hand to the mouth, a long drag, then head back to breathe out.

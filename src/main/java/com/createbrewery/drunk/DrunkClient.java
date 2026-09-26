@@ -170,6 +170,7 @@ public final class DrunkClient {
         MusicPulse.init();
         DrugAudio.init();
         PoseClient.init();
+        SniffFirstPerson.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
