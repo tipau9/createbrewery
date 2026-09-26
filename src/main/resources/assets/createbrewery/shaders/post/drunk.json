@@ -1,7 +1,9 @@
 {
     "targets": [
         "swap",
-        "previous"
+        "previous",
+        "bloomA",
+        "bloomB"
     ],
     "passes": [
         {
@@ -10,25 +12,30 @@
             "outtarget": "swap",
             "use_linear_filter": true,
             "auxtargets": [
-                {
-                    "name": "PrevSampler",
-                    "id": "previous"
-                },
-                {
-                    "name": "DiffuseDepthSampler",
-                    "id": "minecraft:main:depth"
-                }
+                { "name": "PrevSampler", "id": "previous" },
+                { "name": "DiffuseDepthSampler", "id": "minecraft:main:depth" }
             ]
         },
+        { "name": "blit", "intarget": "swap", "outtarget": "previous" },
+        { "name": "createbrewery:drunk_bright", "intarget": "swap", "outtarget": "bloomA" },
+        { "name": "createbrewery:drunk_blur", "intarget": "bloomA", "outtarget": "bloomB", "use_linear_filter": true,
+          "uniforms": [ { "name": "BlurDir", "values": [ 1.5, 0.0 ] } ] },
+        { "name": "createbrewery:drunk_blur", "intarget": "bloomB", "outtarget": "bloomA", "use_linear_filter": true,
+          "uniforms": [ { "name": "BlurDir", "values": [ 0.0, 1.5 ] } ] },
+        { "name": "createbrewery:drunk_blur", "intarget": "bloomA", "outtarget": "bloomB", "use_linear_filter": true,
+          "uniforms": [ { "name": "BlurDir", "values": [ 3.5, 0.0 ] } ] },
+        { "name": "createbrewery:drunk_blur", "intarget": "bloomB", "outtarget": "bloomA", "use_linear_filter": true,
+          "uniforms": [ { "name": "BlurDir", "values": [ 0.0, 3.5 ] } ] },
         {
-            "name": "blit",
+            "name": "createbrewery:drunk_final",
             "intarget": "swap",
-            "outtarget": "previous"
+            "outtarget": "bloomB",
+            "use_linear_filter": true,
+            "auxtargets": [
+                { "name": "BloomSampler", "id": "bloomA" },
+                { "name": "DiffuseDepthSampler", "id": "minecraft:main:depth" }
+            ]
         },
-        {
-            "name": "blit",
-            "intarget": "swap",
-            "outtarget": "minecraft:main"
-        }
+        { "name": "blit", "intarget": "bloomB", "outtarget": "minecraft:main" }
     ]
 }

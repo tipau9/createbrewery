@@ -574,6 +574,7 @@ public final class DrunkClient {
             chain.setUniform("Air", NodClient.air * screen());
             chain.setUniform("Sick", NodClient.sick * screen());
             chain.setUniform("Calm", BenzoClient.calm * screen());
+            chain.setUniform("Focus", focus(mc, player));
             chain.setUniform("Rebound", BenzoClient.rebound * screen());
             chain.setUniform("Wah", wah * screen());
             chain.setUniform("WahPulse", wahPulse(partial));
@@ -928,6 +929,16 @@ public final class DrunkClient {
             LOGGER.warn("Distant Horizons depth unavailable", e);
             return null;
         }
+    }
+
+    /** How far off the spot looked at is, eased, so the depth of field refocuses like an eye. */
+    private static float focus;
+
+    private static float focus(Minecraft mc, LocalPlayer player) {
+        float target = mc.hitResult == null || mc.hitResult.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? 64f
+            : (float) mc.hitResult.getLocation().distanceTo(player.getEyePosition());
+        focus += (target - focus) * 0.08f;
+        return focus;
     }
 
     /** Last frame's camera, for tracers that only follow what really moves. */

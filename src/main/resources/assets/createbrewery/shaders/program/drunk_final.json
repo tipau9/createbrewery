@@ -1,0 +1,29 @@
+{
+    "blend": { "func": "add", "srcrgb": "one", "dstrgb": "zero" },
+    "vertex": "blit",
+    "fragment": "createbrewery:drunk_final",
+    "attributes": [ "Position" ],
+    "samplers": [ { "name": "DiffuseSampler" }, { "name": "BloomSampler" }, { "name": "DiffuseDepthSampler" } ],
+    "uniforms": [
+        { "name": "ProjMat",      "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "OutSize",      "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] },
+        { "name": "Intensity",    "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Mood",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Coke",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "High",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Trip",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Organic",      "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Roll",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Beat",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Level",        "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Tweak",        "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Nod",          "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Calm",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Focus",        "type": "float",     "count": 1,  "values": [ 8.0 ] },
+        { "name": "InvViewProj",  "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "PrevViewProj", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "CamDelta",     "type": "float",     "count": 3,  "values": [ 0.0, 0.0, 0.0 ] },
+        { "name": "World",        "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Trail",        "type": "float",     "count": 1,  "values": [ 0.0 ] }
+    ]
+}

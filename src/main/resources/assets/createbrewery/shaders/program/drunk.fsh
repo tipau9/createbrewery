@@ -322,9 +322,7 @@ void main() {
 
     // Beer goggles: soft focus, light bleeding into halos, rich warm colours.
     col = mix(col, ring(uv, px * 2.5), 0.25 * m);
-    vec3 halo = spill(uv, px * 2.0, 0.0) * 0.8 + spill(uv, px * 4.0, 0.39) * 0.9 + spill(uv, px * 6.5, 0.2)
-              * 1.0 + spill(uv, px * 9.5, 0.59) * 1.1 + spill(uv, px * 13.0, 0.1) * 1.2;
-    col += halo * vec3(1.0, 0.8, 0.5) * m;
+    // (The halos themselves are the bloom in drunk_final.fsh.)
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(vec3(lum), col, 1.0 + 0.35 * m);
     col *= mix(vec3(1.0), vec3(1.06, 1.02, 0.9), m);
@@ -334,7 +332,6 @@ void main() {
     col = (col - 0.5) * (1.0 + 0.25 * Stim) + 0.5 + 0.03 * Stim;
 
     // Koks: wide pupils - light blooms white, and edges glint like snow in the sun.
-    col += spill(uv, px * 5.0, 0.15) * vec3(1.0, 1.0, 1.05) * 1.2 * Coke;
     float edgeLum = length(col - ring(uv, px * 1.2));
     float glint = step(0.975, hash(floor(uv * OutSize / 2.0) + floor(t * 10.0))) * smoothstep(0.08, 0.25, edgeLum);
     col += vec3(1.0) * 0.7 * glint * Coke;
@@ -380,8 +377,6 @@ void main() {
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     float sat = length(col - vec3(lum));
     col = mix(vec3(lum), col, 1.0 + (0.9 - 1.0 * clamp(sat, 0.0, 0.5)) * High); // vibrance: dull colours gain most
-    vec3 glow = spill(uv, px * 3.0, 0.1) + spill(uv, px * 7.0, 0.5) * 1.2 + spill(uv, px * 12.0, 0.3) * 1.4;
-    col += glow * vec3(1.0, 0.94, 0.8) * 1.1 * High;
     col *= mix(vec3(1.0), vec3(1.05, 1.02, 0.94), High); // summer warmth
     col += (1.0 - col) * col * 0.12 * High; // shadows open up a little
     float dream = smoothstep(0.25, 0.75, length(d)) * High;
@@ -417,7 +412,6 @@ void main() {
     // Mushrooms: soft focus, and every light blooms into a warm, gentle glow.
     float soft = Organic * Trip;
     col = mix(col, ring(uv, px * 3.0), 0.3 * soft);
-    col += (spill(uv, px * 5.0, 0.2) + spill(uv, px * 10.0, 0.6) * 1.3) * vec3(1.0, 0.92, 0.7) * 1.2 * soft;
     // Wide pupils: bright light dazzles - highlights blow out.
     col += max(col - 0.65, 0.0) * 1.2 * soft;
     // Peyote: wide pupils create cross-shaped starburst spill from bright lights with slow turning rays.
@@ -638,7 +632,6 @@ void main() {
 
     // MDMA: everything soft and warm, lights bloom pink-gold, and bright things sparkle.
     // The glow breathes with the loudness of the music.
-    col += (spill(uv, px * 3.0, 0.3) + spill(uv, px * 8.0, 0.7) * 1.2) * vec3(1.0, 0.75, 0.85) * 1.2 * Roll * (1.0 + 0.8 * Beat * Level);
     col *= mix(vec3(1.0), vec3(1.08, 1.0, 1.04), Roll);
     vec2 cell = floor(uv * OutSize / 5.0);
     float cellHash = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
@@ -760,7 +753,6 @@ void main() {
     lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(lum), 0.4 * aside * Tweak) * (1.0 - 0.25 * aside * Tweak);
     // Wide pupils: bright things glare, hard and cold.
-    col += spill(uv, px * 4.0, 0.2) * vec3(0.8, 0.95, 1.1) * 1.5 * Tweak;
     if (Tired > 0.0) {
         // Sleepless: the picture fizzles with grain, like a dead TV channel.
         col += (hash(uv * OutSize + fract(t * 13.0) * 97.0) - 0.5) * 0.09 * Tired;
