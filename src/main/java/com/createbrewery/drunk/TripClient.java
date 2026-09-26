@@ -470,7 +470,8 @@ public final class TripClient {
     private static final String[] SHROOM_COMING_UP = {"*gähn*", "Mir ist irgendwie kalt.", "Mein Bauch fühlt sich komisch an.",
         "Warum bin ich so müde?"};
     private static final String[] SHROOM_TRIPPING = {"Die Bäume reden miteinander.", "Ich hab euch alle so lieb.",
-        "Warum ist Gras eigentlich so lustig?", "Hihi. Hihihi.", "Der Boden lebt.", "Alles wächst. Auch ich."};
+        "Warum ist Gras eigentlich so lustig?", "Hihi. Hihihi.", "Der Boden lebt.", "Alles wächst. Auch ich.",
+        "Wie lange sitz ich hier schon? Minuten? Stunden?", "War das grad eben… oder vor einer Ewigkeit?", "Die Sonne blendet so."};
     private static final String[] SHROOM_PEAK = {"Wir sind ein Netz. Unter der Erde.", "Ich weine… aber schön.",
         "Der Wald hat mich die ganze Zeit angeschaut.", "Ich bin nur ein Pilz, der träumt, dass er ein Mensch ist."};
     private static final String[] MESC_COMING_UP = {"Dieser Geschmack…", "Mein Magen… aber es geht.",

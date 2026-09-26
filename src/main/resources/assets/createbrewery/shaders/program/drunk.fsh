@@ -400,6 +400,8 @@ void main() {
     float soft = Organic * Trip;
     col = mix(col, ring(uv, px * 3.0), 0.3 * soft);
     col += (spill(uv, px * 5.0, 0.2) + spill(uv, px * 10.0, 0.6) * 1.3) * vec3(1.0, 0.92, 0.7) * 1.2 * soft;
+    // Wide pupils: bright light dazzles - highlights blow out.
+    col += max(col - 0.65, 0.0) * 1.2 * soft;
     // Peyote: wide pupils create cross-shaped starburst spill from bright lights with slow turning rays.
     float mescBloom = Desert * Trip;
     if (mescBloom > 0.01) {
