@@ -35,11 +35,28 @@ public final class TestCommand {
         Map.entry("lsd", DrugServer.Kind.LSD), Map.entry("pilze", DrugServer.Kind.SHROOMS), Map.entry("meskalin", DrugServer.Kind.MESCALINE),
         Map.entry("dmt", DrugServer.Kind.DMT), Map.entry("mdma", DrugServer.Kind.MDMA), Map.entry("meth", DrugServer.Kind.METH),
         Map.entry("heroin", DrugServer.Kind.HEROIN), Map.entry("xanax", DrugServer.Kind.XANAX), Map.entry("lachgas", DrugServer.Kind.LACHGAS));
+    /** For /brewery act: the one-off body actions (DrugPose), with how long each lasts in ticks. */
+    private static final Map<String, int[]> ACTIONS = Map.of("kotzen", new int[] {DrugPose.VOMIT, 40},
+        "krampf", new int[] {DrugPose.SEIZURE, 100}, "ziehen", new int[] {DrugPose.SNIFF, 20}, "rauchen", new int[] {DrugPose.SMOKE, 30},
+        "spritzen", new int[] {DrugPose.INJECT, 40}, "umkippen", new int[] {DrugPose.COLLAPSE, 160});
     private static final List<String> PHASES = List.of("comeup", "peak", "fade", "crack", "waiting", "beyond", "descent");
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("brewery").requires(s -> s.hasPermission(2))
             .then(Commands.literal("clear").executes(c -> clear(c.getSource().getPlayerOrException(), c.getSource())))
+            .then(Commands.literal("act").then(Commands.argument("aktion", StringArgumentType.word())
+                .suggests((c, b) -> SharedSuggestionProvider.suggest(ACTIONS.keySet(), b))
+                .executes(c -> {
+                    int[] action = ACTIONS.get(StringArgumentType.getString(c, "aktion"));
+                    if (action == null) {
+                        c.getSource().sendFailure(Component.literal("Aktion: " + String.join(", ", ACTIONS.keySet())));
+                        return 0;
+                    }
+                    Player player = c.getSource().getPlayerOrException();
+                    DrugPose.act(player, action[0], action[1]);
+                    debugLog(player);
+                    return 1;
+                })))
             .then(Commands.literal("test")
                 .then(Commands.argument("droge", StringArgumentType.word())
                     .suggests((c, b) -> SharedSuggestionProvider.suggest(

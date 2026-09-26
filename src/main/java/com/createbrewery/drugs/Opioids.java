@@ -135,6 +135,7 @@ public final class Opioids {
     /** A seizure: five seconds of convulsions, then dazed and hurt. */
     public static void seize(Player player) {
         player.addEffect(new MobEffectInstance(ModEffects.SEIZURE, SEIZURE_TICKS, 0, false, false, true));
+        DrugPose.act(player, DrugPose.SEIZURE, SEIZURE_TICKS);
         player.setSprinting(false);
     }
 

@@ -58,6 +58,12 @@ public class DrugItem extends Item {
         }
         if (!level.isClientSide) {
             DrugServer.take(player, kind);
+            switch (kind) {
+                case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, 20);
+                case WEED, DMT, LACHGAS -> DrugPose.act(player, DrugPose.SMOKE, 30);
+                case HEROIN -> DrugPose.act(player, DrugPose.INJECT, 40);
+                default -> {}
+            }
             // A joint is smoked hit by hit: one hit off its durability, a short breath between hits.
             player.getCooldowns().addCooldown(this, kind == DrugServer.Kind.WEED ? 30 : COOLDOWN);
         }

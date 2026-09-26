@@ -178,6 +178,7 @@ public class CreateBrewery {
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(CreateBreweryClient::onClientSetup);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
+            modEventBus.addListener(com.createbrewery.drunk.DrunkClient::addLayers);
             modEventBus.addListener(com.createbrewery.particle.BreweryParticle::register);
         }
         ModRecipeTypes.register(modEventBus);

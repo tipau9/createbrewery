@@ -351,8 +351,11 @@ public final class DrunkClient {
         uniforms.forEach((name, value) -> {
             if (Math.abs(value) > 0.005f) live.append(String.format(" %s=%.2f", name, value));
         });
-        LOGGER.info("[Brewery debug] blood={}‰ chain={} frames={} screen={} normals={} |{} |{}", String.format("%.2f", blood),
-            chain != null, chainFrames, String.format("%.2f", screen()), veilNormals(), effects, live);
+        var pose = com.createbrewery.drugs.DrugPose.SEEN.get(player.getId());
+        var action = com.createbrewery.drugs.DrugPose.ACTING.get(player.getId());
+        LOGGER.info("[Brewery debug] blood={}‰ chain={} frames={} screen={} normals={} pose={}/{} eyes={} action={} |{} |{}", String.format("%.2f", blood),
+            chain != null, chainFrames, String.format("%.2f", screen()), veilNormals(), pose == null ? 0 : pose.kind(),
+            pose == null ? 0 : pose.amount() & 0xFF, pose == null ? 0 : pose.eyes(), action == null ? "-" : action.kind(), effects, live);
     }
 
     /**
@@ -551,6 +554,7 @@ public final class DrunkClient {
             appliedYaw = appliedPitch = appliedRetch = 0f;
             if (veil) VeilLights.clear();
             com.createbrewery.drugs.DrugPose.SEEN.clear();
+            com.createbrewery.drugs.DrugPose.ACTING.clear();
             return;
         }
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
@@ -1520,6 +1524,10 @@ public final class DrunkClient {
     }
 
     // ---- inventory: the effect shows the actual level ----
+
+    public static void addLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {
+        DrugEyes.addLayers(event);
+    }
 
     public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
         event.registerMobEffect(new IClientMobEffectExtensions() {

@@ -584,6 +584,7 @@ public final class DrugServer {
         if (player.hasEffect(ModEffects.HEART_ATTACK)) return;
         player.setSprinting(false);
         player.addEffect(new MobEffectInstance(ModEffects.HEART_ATTACK, HEART_ATTACK_TICKS, 0, false, false, true));
+        DrugPose.act(player, DrugPose.COLLAPSE, HEART_ATTACK_TICKS);
         player.hurt(heartAttack(player.level()), 6f);
     }
 
