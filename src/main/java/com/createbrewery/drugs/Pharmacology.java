@@ -122,6 +122,11 @@ public final class Pharmacology {
         return benzo < 0.4f ? 0f : 0.006f * (benzo - 0.3f);
     }
 
+    /** Mushroom trips surge and ebb: 1 at the crest of a wave, 0.7 in the trough (2-minute period). */
+    public static float shroomWave(int elapsed) {
+        return 0.85f + 0.15f * (float) Math.cos(elapsed * Math.PI * 2 / 2400.0);
+    }
+
     /** Chance per second that a strained heart gives out. */
     public static float heartAttackChance(float load) {
         if (load >= HEART_CRITICAL) return 0.03f + 0.12f * (load - HEART_CRITICAL);

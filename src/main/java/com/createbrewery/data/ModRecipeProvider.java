@@ -281,6 +281,13 @@ public class ModRecipeProvider {
                 .requires(Items.DRIED_KELP)
                 .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
                 .save(output, CreateBrewery.ID("joint"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.FOOD, ModItems.SPACE_BROWNIE.get(), 2)
+                .requires(Items.WHEAT)
+                .requires(Items.COCOA_BEANS)
+                .requires(Items.SUGAR)
+                .requires(ModItems.HOP_CONES.get())
+                .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
+                .save(output, CreateBrewery.ID("space_brownie"));
             ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.BALLOON.get(), 4)
                 .requires(Items.SLIME_BALL)
                 .requires(Items.RED_DYE)

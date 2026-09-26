@@ -82,6 +82,10 @@ public final class DrunkClient {
     private static int recurLeft, flipLeft;
     /** Keta: 0 upright, 1 mirrored, 2 upside down - for a few seconds at a time. */
     private static int flip;
+    /** Alcohol: yaw a few ticks ago, to spot a quick look to the side; the eyes jerking back (HGN). */
+    private static float[] yawHistory = new float[6];
+    private static int hgnLeft;
+    private static float hgnDir;
     /** A seizure: the body convulses, 0..1. */
     private static float seizing;
     /** DMT: 0..1, 1 = the full breakthrough. */
@@ -238,6 +242,7 @@ public final class DrunkClient {
             PoseClient.tick(player);
             var r = player.getRandom();
             seizing = player.hasEffect(ModEffects.SEIZURE) ? 1f : Math.max(0f, seizing - 0.1f);
+            nystagmus(player);
             // The head jerks about, nothing you do.
             if (seizing > 0.5f) player.turn((r.nextFloat() - 0.5f) * 10f / 0.15f, (r.nextFloat() - 0.5f) * 8f / 0.15f);
             if (recurLeft > 0) recurLeft--;
@@ -954,6 +959,12 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
         // ...and as it cracks open, the whole room vibrates.
         roll += noise(t * 40.0, 71) * 1.5f * DmtClient.crack;
+        // Drunk in bed: the room spins - one way while the alcohol still rises, the other once it
+        // falls (positional alcohol nystagmus, phases I and II).
+        if (player.isSleeping() && blood >= Intoxication.MERRY) {
+            float phase = player.getData(ModAttachments.DRUNK).stomach > 0.05f ? 1f : -1f;
+            roll += (float) (t * 50.0 % 360.0) * phase * Math.min(1f, (blood - Intoxication.MERRY) / 0.8f + 0.3f);
+        }
         // A seizure: violent, fast shaking.
         roll += noise(t * 25.0, 83) * 20f * seizing;
         // Entzug: the whole body shivers.
@@ -1035,6 +1046,26 @@ public final class DrunkClient {
         if (input.jumping && player.onGround() && !player.isInWater() && !player.isInLava() && !player.onClimbable()) {
             if (player.tickCount - lastJump < 10 + (int) (25 * high)) input.jumping = false;
             else lastJump = player.tickCount;
+        }
+    }
+
+    /**
+     * Drunk, a quick look to the side and the eyes cannot hold it: they drift back and jerk out
+     * again, a few times (horizontal gaze nystagmus). The more drunk, the smaller the look that
+     * does it - about 50 degrees minus ten per per-mille.
+     */
+    private static void nystagmus(LocalPlayer player) {
+        float yaw = player.getYRot();
+        float moved = net.minecraft.util.Mth.wrapDegrees(yaw - yawHistory[player.tickCount % yawHistory.length]);
+        yawHistory[player.tickCount % yawHistory.length] = yaw;
+        if (hgnLeft > 0) {
+            hgnLeft--;
+            // Slow drift back, then a fast jerk out: the typical sawtooth.
+            float step = hgnLeft % 4 == 0 ? 1.5f * hgnDir : -0.5f * hgnDir;
+            player.turn(step / 0.15f, 0.0);
+        } else if (blood >= 0.5f && Math.abs(moved) > Math.max(15f, 50f - 10f * blood)) {
+            hgnLeft = 12;
+            hgnDir = Math.signum(moved);
         }
     }
 

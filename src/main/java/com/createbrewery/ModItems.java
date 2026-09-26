@@ -152,5 +152,12 @@ public class ModItems {
         .properties(p -> p.stacksTo(16))
         .register();
 
+    public static final ItemEntry<com.createbrewery.drugs.EdibleItem> SPACE_BROWNIE = REGISTRATE
+        .item("space_brownie", com.createbrewery.drugs.EdibleItem::new)
+        .lang("Space-Brownie")
+        .properties(p -> p.stacksTo(16).food(new net.minecraft.world.food.FoodProperties.Builder()
+            .nutrition(3).saturationModifier(0.3f).alwaysEdible().build()))
+        .register();
+
     public static void register() {}
 }

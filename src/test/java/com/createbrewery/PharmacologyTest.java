@@ -100,4 +100,11 @@ class PharmacologyTest {
         assertTrue(Pharmacology.seizureChance(0.5f) > 0f);
         assertTrue(Pharmacology.seizureChance(1f) > Pharmacology.seizureChance(0.5f));
     }
+
+    @Test
+    void mushroomsComeInWaves() {
+        assertEquals(1f, Pharmacology.shroomWave(0), 1e-6f);
+        assertEquals(0.7f, Pharmacology.shroomWave(1200), 1e-5f);
+        assertEquals(1f, Pharmacology.shroomWave(2400), 1e-5f);
+    }
 }

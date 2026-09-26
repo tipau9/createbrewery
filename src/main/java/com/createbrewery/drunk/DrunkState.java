@@ -41,6 +41,9 @@ public final class DrunkState {
     public transient float heat;
     /** Server-only: seconds awake on meth, towards psychosis. */
     public transient int awake;
+    /** Server-only: meth punding - the block mined over and over, and how many in a row. */
+    public transient net.minecraft.world.level.block.Block pundBlock;
+    public transient int pundStreak;
     /** Server-only: water drunk on MDMA and not yet got rid of, towards water poisoning. */
     public transient float water;
     /** Server-only: game time of the last drink, to spot two players clinking glasses. */

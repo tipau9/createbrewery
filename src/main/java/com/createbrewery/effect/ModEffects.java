@@ -243,6 +243,10 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, MobEffect> COMEDOWN_PENDING = EFFECTS.register("comedown_pending", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0x6A6A8A, 0, null, 0, 0, 0));
 
+    /** A Space-Brownie on its way: nothing yet (hidden; amplifier: how many). */
+    public static final DeferredHolder<MobEffect, MobEffect> EDIBLE_PENDING = EFFECTS.register("edible_pending", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x6FAF4A, 20, DrugServer::edibleTick, 0, 0, 0));
+
     /** Lachgas: seconds of giggling, wah-wah and a world far away. */
     public static final DeferredHolder<MobEffect, MobEffect> WAH = EFFECTS.register("wah", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0xC8DCFF, 20, DrugServer::wahTick, DrugServer.WAH_TICKS, 20, 160)

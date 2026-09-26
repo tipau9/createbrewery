@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:wheat"
+    },
+    {
+      "item": "minecraft:cocoa_beans"
+    },
+    {
+      "item": "minecraft:sugar"
+    },
+    {
+      "item": "createbrewery:hop_cones"
+    }
+  ],
+  "result": {
+    "count": 2,
+    "id": "createbrewery:space_brownie"
+  }
+}

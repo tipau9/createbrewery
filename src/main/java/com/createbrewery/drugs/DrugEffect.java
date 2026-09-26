@@ -76,7 +76,10 @@ public class DrugEffect extends MobEffect {
         if (effect.is(ModEffects.NOD.getKey()) && entity.hasEffect(ModEffects.NALOXONE)) return 0f;
         if (!(effect.value() instanceof DrugEffect drug)) return 1f;
         int elapsed = drug.total - instance.getDuration();
-        return Pharmacology.strength(elapsed, instance.getDuration(), drug.onset, drug.fade, instance.getAmplifier() > 0);
+        float strength = Pharmacology.strength(elapsed, instance.getDuration(), drug.onset, drug.fade, instance.getAmplifier() > 0);
+        // Mushrooms come in waves: stronger, then easing off, every two minutes or so.
+        if (effect.is(ModEffects.SHROOM_TRIP.getKey())) strength *= Pharmacology.shroomWave(elapsed);
+        return strength;
     }
 
     /** Strength times how strong the stacked doses feel (0..1). */

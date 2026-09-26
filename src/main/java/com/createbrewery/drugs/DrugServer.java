@@ -392,6 +392,8 @@ public final class DrugServer {
             entity.addEffect(new MobEffectInstance(ModEffects.DAZED, (int) (1200 * worse), 0));
         } else if (instance.is(ModEffects.HEART_ATTACK) && entity.isAlive()) {
             award(entity, "zweites_leben", "survived");
+        } else if (instance.is(ModEffects.EDIBLE_PENDING) && entity instanceof Player player) {
+            edibleKicksIn(player, instance.getAmplifier() + 1);
         } else if (instance.is(ModEffects.NALOXONE) && entity.hasEffect(ModEffects.NOD) && entity instanceof Player player) {
             // The naloxon is gone, the heroin is not.
             think(player, "Es… kommt zurück. Warm. Schwer.", 0xC8A060);
@@ -400,6 +402,68 @@ public final class DrugServer {
             player.addEffect(new MobEffectInstance(ModEffects.DAZED, 600, 0));
         }
     }
+
+    /** Hits of a joint one brownie is worth: eaten, THC hits about twice as hard. */
+    private static final int HITS_PER_BROWNIE = 8;
+
+    /** The brownie (or brownies) arrive, all at once. Two and you green out for sure. */
+    public static void edibleKicksIn(Player player, int brownies) {
+        MobEffectInstance before = player.getEffect(ModEffects.WEED_HIGH);
+        int hits = Math.min(MAX_HITS - 1, (before == null ? -1 : before.getAmplifier()) + HITS_PER_BROWNIE * brownies);
+        player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, WEED_TICKS, hits, false, false, true));
+        player.addEffect(new MobEffectInstance(ModEffects.COTTONMOUTH, COTTONMOUTH_TICKS, 0, false, false, true));
+        think(player, "Oh. Oh nein. Da ist es. Das ist… viel.", 0x8FCF5A);
+        if (joints(player) >= 2.5f || player.getRandom().nextFloat() < 0.3f * (brownies - 1)) greenOut(player);
+    }
+
+    /** Waiting for the brownie, every second: halfway there, nothing yet - maybe another? */
+    public static void edibleTick(LivingEntity entity, int level) {
+        MobEffectInstance pending = entity.getEffect(ModEffects.EDIBLE_PENDING);
+        if (entity instanceof Player player && pending != null && pending.getDuration() / 20 == EdibleItem.DELAY / 40) {
+            think(player, "Merk nix. Gar nix. …vielleicht noch einen?", 0x8FCF5A);
+        }
+    }
+
+    /**
+     * Drunk in bed, the room spins (positional alcohol nystagmus) - you cannot fall asleep, and
+     * it ends with you throwing up. The client turns the view (see DrunkClient).
+     */
+    private static void spins(Player player) {
+        if (player.isSleeping() && DrunkServer.state(player).blood >= Intoxication.DRUNK && player.getSleepTimer() >= 60) {
+            player.stopSleeping();
+            think(player, "Alles dreht sich… Bett, Decke, alles… ich muss…", 0xC8B070);
+            DrunkServer.vomit(player);
+        }
+    }
+
+    /**
+     * Meth: punding - doing the same small thing over and over, and it feels right. Mining one
+     * kind of block again and again speeds you up; being made to switch after a long run grates.
+     */
+    @SubscribeEvent
+    public static void onBreak(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+        Player player = event.getPlayer();
+        if (player.level().isClientSide || !player.hasEffect(ModEffects.TWEAK)) return;
+        DrunkState s = DrunkServer.state(player);
+        net.minecraft.world.level.block.Block block = event.getState().getBlock();
+        if (block == s.pundBlock) {
+            s.pundStreak++;
+            if (s.pundStreak % 6 == 0) {
+                player.addEffect(new MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, 200, 1, false, false, true));
+                think(player, PUND[player.getRandom().nextInt(PUND.length)], 0xA0E0FF);
+            }
+        } else {
+            if (s.pundStreak >= 12) {
+                player.addEffect(new MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, 200, 0, false, false, true));
+                think(player, "Nein, nein, NEIN. Ich war noch nicht fertig. Das war noch nicht fertig.", 0xE08080);
+            }
+            s.pundBlock = block;
+            s.pundStreak = 1;
+        }
+    }
+
+    private static final String[] PUND = {"Noch einen. Perfekt. Noch einen.", "Genau so. Jeder gleich. Wunderschön.",
+        "Ich könnte das ewig machen.", "Ordnung. Endlich Ordnung."};
 
     /** A thought over the hotbar, from the server. */
     public static void think(Player player, String text, int colour) {
@@ -471,6 +535,7 @@ public final class DrugServer {
             Opioids.body(player);
             Mixes.tick(player);
             wear(player);
+            spins(player);
         }
     }
 

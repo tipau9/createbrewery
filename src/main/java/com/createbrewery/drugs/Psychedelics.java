@@ -103,7 +103,8 @@ public final class Psychedelics {
         float mesc = DrugEffect.strength(player, ModEffects.MESCALINE_TRIP);
         // The come-up turns the stomach: mushrooms a little, peyote a lot.
         boolean mescComingUp = comingUp(player, ModEffects.MESCALINE_TRIP);
-        float sick = (comingUp(player, ModEffects.SHROOM_TRIP) ? 0.012f : 0f)
+        // Mushrooms on a full stomach turn it far more than on an empty one.
+        float sick = (comingUp(player, ModEffects.SHROOM_TRIP) ? 0.004f + 0.012f * player.getFoodData().getFoodLevel() / 20f : 0f)
             + (mescComingUp ? 0.035f : 0f);
         if (player.getRandom().nextFloat() < sick) {
             DrunkServer.vomit(player);
