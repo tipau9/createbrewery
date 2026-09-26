@@ -4,7 +4,8 @@
   "package": "com.createbrewery.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "ChannelMixin"
+    "ChannelMixin",
+    "LibraryMixin"
   ],
   "injectors": {
     "defaultRequire": 1

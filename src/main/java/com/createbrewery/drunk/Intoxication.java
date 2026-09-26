@@ -210,4 +210,28 @@ public final class Intoxication {
         return peak >= HANGOVER_PEAK && blood < HANGOVER_ONSET && stomach < 0.05f;
     }
 
+
+    /**
+     * OpenAL context attributes (key-value pairs, ended by 0) with {@code key} raised to at least
+     * {@code value}, or added. Anything after the ending 0 is dropped.
+     */
+    public static int[] withSends(int[] attributes, int key, int value) {
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        boolean found = false;
+        for (int i = 0; i + 1 < attributes.length && attributes[i] != 0; i += 2) {
+            int v = attributes[i + 1];
+            if (attributes[i] == key) {
+                v = Math.max(v, value);
+                found = true;
+            }
+            out.add(attributes[i]);
+            out.add(v);
+        }
+        if (!found) {
+            out.add(key);
+            out.add(value);
+        }
+        out.add(0);
+        return out.stream().mapToInt(Integer::intValue).toArray();
+    }
 }

@@ -129,6 +129,7 @@ public final class DrunkClient {
         TweakClient.init();
         KetaClient.init();
         MusicPulse.init();
+        DrugAudio.init();
         HiccupsEffect.clientKick = entity -> {
             if (entity == Minecraft.getInstance().player) {
                 // The whole body jerks: the view snaps up and a little aside.
@@ -218,6 +219,8 @@ public final class DrunkClient {
             WeedClient.tick(mc, player);
             DmtClient.tick(mc, player);
         }
+        DrugAudio.tick(wah, Math.max(dissoc, Math.max(DmtClient.waiting, DmtClient.beyond)), DmtClient.crack,
+            trip * Math.max(0f, 1f - organic), trip * organic, rolling);
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
@@ -674,7 +677,8 @@ public final class DrunkClient {
      * because OpenAL reuses sources. Runs on the sound thread, like everything touching a channel.
      */
     private static void onSoundSource(net.neoforged.neoforge.client.event.sound.PlaySoundSourceEvent event) {
-        if (muffleFailed) return;
+        // Sound Physics owns the direct filter (occlusion); setting ours would undo its work.
+        if (muffleFailed || DrugAudio.PHYSICS) return;
         try {
             if (channelSource == null) {
                 channelSource = com.mojang.blaze3d.audio.Channel.class.getDeclaredField("source");
