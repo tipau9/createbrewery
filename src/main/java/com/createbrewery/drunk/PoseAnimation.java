@@ -12,7 +12,7 @@ import net.minecraft.util.Mth;
 /**
  * A player's body on drugs, drawn through playerAnimator (only loaded when it is installed). Off
  * in first person. In playerAnimator "body" is the whole player (position in blocks, turning
- * about the hips); "torso" is only the trunk's box - moving it tears it off the head, arms and
+ * about the hips; negative x rotation bends it forward, positive leans it back); "torso" is only the trunk's box - moving it tears it off the head, arms and
  * legs without bendy-lib - so it is never used here.
  * <ul>
  *   <li>Lasting poses: dancing on MDMA (each player has one of three styles - hands in the air, the
@@ -94,7 +94,7 @@ final class PoseAnimation implements IAnimation {
                 d[2] = 0.35f * slump;
             }
             case "body" -> {
-                d[0] = (style == 2 ? 0.12f * bounce : 0f) * dance + 0.2f * nod + (0.35f + 0.08f * jerk) * laugh;
+                d[0] = -((style == 2 ? 0.12f * bounce : 0f) * dance + 0.2f * nod + (0.35f + 0.08f * jerk) * laugh);
                 d[1] = (style == 1 ? 0.3f * beat : 0f) * dance;
                 d[2] = 0.12f * slump;
             }
@@ -124,10 +124,10 @@ final class PoseAnimation implements IAnimation {
         boolean right = part.equals("rightArm"), left = part.equals("leftArm");
         switch (kind) {
             case DrugPose.VOMIT -> {
-                // Doubled over, hands on the knees, heaving.
+                // Doubled over, hands on the knees, lurching forward with each heave.
                 if (position) return;
-                float heave = 0.15f * (float) Math.sin(t * 18f);
-                if (part.equals("body")) d[0] = 0.45f + 0.5f * heave;
+                float heave = 0.2f * Math.max(0f, (float) Math.sin(t * 7f));
+                if (part.equals("body")) d[0] = -0.5f - heave;
                 if (part.equals("head")) d[0] = 0.5f + heave;
                 if (right || left) { d[0] = -0.7f - value.getX(); d[2] = right ? 0.15f : -0.15f; }
             }
@@ -166,7 +166,7 @@ final class PoseAnimation implements IAnimation {
                 float down = Mth.clamp(p * 6f, 0f, 1f);
                 down *= down;
                 if (position) { if (part.equals("body")) d[1] = -0.55f * down; return; }
-                if (part.equals("body")) d[0] = 1.5f * down;
+                if (part.equals("body")) d[0] = -1.5f * down;
                 if (part.equals("head")) d[2] = 0.4f * down;
                 if (right || left) d[2] = (right ? 0.5f : -0.5f) * down;
             }
