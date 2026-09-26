@@ -1151,6 +1151,11 @@ public final class DrunkClient {
         // Weed: couchlock - after standing a while, the legs take a moment to get going.
         input.forwardImpulse *= WeedClient.legs();
         input.leftImpulse *= WeedClient.legs();
+        // Koks: the legs jumped by themselves.
+        if (CokeClient.hop) {
+            input.jumping = true;
+            CokeClient.hop = false;
+        }
         if (blood < Intoxication.MERRY) return;
 
         float w = ramp(Intoxication.MERRY);

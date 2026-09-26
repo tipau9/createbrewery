@@ -27,6 +27,8 @@ import net.minecraft.util.RandomSource;
  *   <li>A line: a cold white burst, the eyes water, a sniff.</li>
  *   <li>The high: glossy, crisp, glinting like snow; sniffing, the numb face, grinding teeth.</li>
  *   <li>Craving: as it fades and in the crash, the Koks in your hotbar keeps pulling at you.</li>
+ *   <li>Restless: no standing still, glancing round; on a lot of it the body twitches by itself.</li>
+ *   <li>Paranoia: steps and doors behind you. And as it fades the hand goes for the bag by itself.</li>
  * </ul>
  * Chat turns loud and full of yourself (server side, BreweryCommonEvents).
  */
@@ -35,7 +37,10 @@ public final class CokeClient {
 
     /** The high, 0..1; a line just now (burst and watering eyes), 0..1; the craving, 0..1. */
     static float coke, line, craving;
-    private static int lastDuration, nextSniff = 200, nextThought = 300;
+    /** The legs jump by themselves, once (read by the movement input). */
+    static boolean hop;
+    private static int lastDuration, nextSniff = 200, nextThought = 300, still, nextParanoia = 400, dripAt = -1;
+    private static boolean reached;
 
     static void tick(Minecraft mc, LocalPlayer player) {
         RandomSource r = player.getRandom();
@@ -47,6 +52,12 @@ public final class CokeClient {
         if (high != null && duration > lastDuration + 20) {
             line = 1f;
             if (r.nextFloat() < 0.5f) think(player, LINE, 0xF4F4FF);
+            dripAt = player.tickCount + 50;
+        }
+        // A little later the bitter drip runs down the back of the throat: a swallow.
+        if (player.tickCount == dripAt) {
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.GENERIC_DRINK, 0.6f, 0.25f));
+            if (r.nextFloat() < 0.5f) think(player, DRIP, 0xF4F4FF);
         }
         lastDuration = duration;
         line *= 0.975f;
@@ -65,7 +76,53 @@ public final class CokeClient {
             }
         }
 
+        body(player, high, r);
+        paranoia(mc, player, high, fading, r);
+        // The hand goes for it by itself: once as it fades, the Koks in the hotbar is suddenly in hand.
+        if (fading && !reached) {
+            reached = true;
+            for (int i = 0; i < 9; i++) {
+                if (player.getInventory().getItem(i).is(ModItems.KOKS.get()) && player.getInventory().selected != i) {
+                    player.getInventory().selected = i;
+                    think(player, REACH, 0xF4F4FF);
+                    break;
+                }
+            }
+        }
+        if (!fading) reached = false;
+
         thoughts(player, high, fading);
+    }
+
+    /**
+     * Restless: standing still does not work, the head keeps glancing round. On a lot of it the
+     * body twitches by itself - an arm jerks, the legs jump (Psychedelicraft does this too).
+     */
+    private static void body(LocalPlayer player, net.minecraft.world.effect.MobEffectInstance high, RandomSource r) {
+        boolean moving = player.input.forwardImpulse != 0f || player.input.leftImpulse != 0f || player.input.jumping;
+        still = moving ? 0 : still + 1;
+        if (coke > 0.5f && still > 80 && r.nextFloat() < 0.03f) {
+            player.turn((r.nextBoolean() ? 25f : -25f) / 0.15f, 0.0);
+            still = 40;
+        }
+        if (high != null && high.getAmplifier() >= 2 && coke > 0.5f && r.nextFloat() < 1f / 400f) {
+            if (r.nextBoolean()) player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            else hop = true;
+        }
+    }
+
+    /** A lot of it, or as it fades: a step behind you, a door - was someone there? */
+    private static void paranoia(Minecraft mc, LocalPlayer player, net.minecraft.world.effect.MobEffectInstance high,
+                                 boolean fading, RandomSource r) {
+        boolean jumpy = high != null && (high.getAmplifier() >= 1 && coke > 0.4f || fading);
+        if (!jumpy || player.tickCount < nextParanoia) return;
+        nextParanoia = player.tickCount + 600 + r.nextInt(900);
+        if (r.nextFloat() > 0.5f) return;
+        var look = player.getLookAngle();
+        var sound = r.nextBoolean() ? SoundEvents.STONE_STEP : SoundEvents.WOODEN_DOOR_CLOSE;
+        mc.getSoundManager().play(new SimpleSoundInstance(sound, net.minecraft.sounds.SoundSource.BLOCKS, 0.7f,
+            0.9f + r.nextFloat() * 0.2f, r, player.getX() - look.x * 6, player.getY(), player.getZ() - look.z * 6));
+        think(player, PARANOID, 0xE0E0F0);
     }
 
     /** From the HUD, after the hotbar: the Koks there pulls at you while you crave it. */
@@ -93,6 +150,10 @@ public final class CokeClient {
         "Nur noch eine kleine.", "Wo ist das Tütchen?"};
     private static final String[] CRASH = {"Alles ist scheiße.", "Nur eine, dann geht's wieder.", "Lasst mich in Ruhe.",
         "Warum hab ich so viel geredet?", "Mein Kopf. Mein Kopf.", "Nie wieder. Also… heute nicht mehr."};
+    private static final String[] DRIP = {"Bitter… läuft hinten den Hals runter.", "Der Drip. Ekelhaft. Geil."};
+    private static final String[] REACH = {"Die Hand ist schon am Tütchen…", "Wie ist das in meine Hand gekommen?"};
+    private static final String[] PARANOID = {"War da wer?", "Hinter mir. Da war was.", "Wer ist da?! …niemand?",
+        "Die gucken alle. Ich merk das."};
     private static final String[] BUGS = {"Da krabbelt was auf dem Arm.", "Käfer? Unter der Haut? Nein. Doch?"};
 
     private static void thoughts(LocalPlayer player, net.minecraft.world.effect.MobEffectInstance high, boolean fading) {
