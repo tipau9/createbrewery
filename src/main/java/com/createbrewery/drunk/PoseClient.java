@@ -30,8 +30,10 @@ final class PoseClient {
         int amount = kind == DrugPose.NONE ? 0 : Math.round(Math.min(1f, strength[kind]) * 255f);
         DrugPose pose = new DrugPose(player.getId(), (byte) kind, (byte) amount);
         DrugPose.SEEN.put(player.getId(), pose);
-        // Only when it changed noticeably, and not more than four times a second.
-        if ((kind != sentKind || Math.abs(amount - sentAmount) >= 24) && player.tickCount >= nextSend
+        // When it changed noticeably (at most four times a second), and every two seconds anyway
+        // while posing, so someone who only just came near sees it too.
+        boolean changed = kind != sentKind || Math.abs(amount - sentAmount) >= 24;
+        if ((changed && player.tickCount >= nextSend || kind != DrugPose.NONE && player.tickCount >= nextSend + 35)
             && player.connection.hasChannel(DrugPose.TYPE)) {
             PacketDistributor.sendToServer(pose);
             sentKind = kind;

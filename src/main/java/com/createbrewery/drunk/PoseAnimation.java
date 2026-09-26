@@ -10,7 +10,8 @@ import net.minecraft.client.player.AbstractClientPlayer;
 
 /**
  * A player's body on drugs, drawn through playerAnimator (only loaded when it is installed):
- * dancing with arms up on MDMA, the chin sinking to the chest on the nod, slumped and lopsided in
+ * dancing with arms up on MDMA, the chin sinking to the chest on the nod (mostly the real pitch,
+ * which NodClient already lowers; this only adds a little), slumped and lopsided in
  * a K-hole, doubled over with laughter when stoned. Off in first person.
  */
 final class PoseAnimation implements IAnimation {
@@ -58,7 +59,7 @@ final class PoseAnimation implements IAnimation {
         } else if (type == TransformType.ROTATION) {
             switch (part) {
                 case "head" -> {
-                    x = 0.25f * beat * dance + 0.7f * nod + 0.5f * slump + 0.12f * (float) Math.sin(t * 25f) * laugh;
+                    x = 0.25f * beat * dance + 0.15f * nod + 0.5f * slump + 0.12f * (float) Math.sin(t * 25f) * laugh;
                     z = 0.35f * slump;
                 }
                 case "body" -> {

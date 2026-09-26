@@ -30,7 +30,9 @@ final class VeilLights {
     static void frame(LocalPlayer player, float partial) {
         float club = RollClient.beat * DrunkClient.rolling * DrunkClient.screen();
         float glow = DmtClient.beyond * DrunkClient.screen();
-        if (club < 0.02f && glow < 0.02f) {
+        // Freed only once the drug is over: switching Veil's light buffers on and off recompiles
+        // shaders, which would hitch at every pause between songs. Until then they just go dark.
+        if (DrunkClient.rolling < 0.02f && DmtClient.beyond < 0.02f) {
             clear();
             return;
         }
