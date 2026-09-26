@@ -128,12 +128,23 @@ public final class DrunkClient {
     private static PostChain chain;
     /** Veil comes with Sable / Create Aeronautics; without it there are no dynamic lights. */
     private static boolean veil = net.neoforged.fml.ModList.get().isLoaded("veil");
+    /** Distant Horizons draws the far landscape; without it the vanilla depth is all there is. */
+    private static boolean dh = net.neoforged.fml.ModList.get().isLoaded("distanthorizons");
     private static int chainWidth, chainHeight;
     /** Frames drawn since the chain was (re)built; the afterimage waits until it has a real previous frame. */
     private static int chainFrames;
     private static int chainBuilds;
 
     public static void init() {
+        if (dh) {
+            try {
+                DhDepth.init();
+                LOGGER.info("Drug vision: Distant Horizons depth on");
+            } catch (RuntimeException | LinkageError e) {
+                dh = false;
+                LOGGER.warn("Distant Horizons depth unavailable", e);
+            }
+        }
         NeoForge.EVENT_BUS.addListener(DrunkClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onRenderFrame);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onCameraAngles);
@@ -909,6 +920,16 @@ public final class DrunkClient {
         RenderSystem.enableDepthTest();
     }
 
+    private static org.joml.Matrix4f dhInvViewProj(org.joml.Matrix4f modelView) {
+        try {
+            return DhDepth.invViewProj(modelView);
+        } catch (RuntimeException | LinkageError e) {
+            dh = false;
+            LOGGER.warn("Distant Horizons depth unavailable", e);
+            return null;
+        }
+    }
+
     /** Last frame's camera, for tracers that only follow what really moves. */
     private static final org.joml.Matrix4f prevViewProj = new org.joml.Matrix4f();
     private static Vec3 prevCam;
@@ -930,10 +951,16 @@ public final class DrunkClient {
                     chainPasses.setAccessible(true);
                 }
                 Vec3 moved = prevCam == null || chainFrames < 3 ? Vec3.ZERO : cam.subtract(prevCam);
+                org.joml.Matrix4f dhInv = dh ? dhInvViewProj(event.getModelViewMatrix()) : null;
+                chain.setUniform("Dh", dhInv == null ? 0f : 1f);
                 for (net.minecraft.client.renderer.PostPass pass : (java.util.List<net.minecraft.client.renderer.PostPass>) chainPasses.get(chain)) {
                     var effect = pass.getEffect();
                     effect.safeGetUniform("InvViewProj").set(new org.joml.Matrix4f(viewProj).invert());
                     effect.safeGetUniform("PrevViewProj").set(chainFrames < 3 ? viewProj : prevViewProj);
+                    if (dhInv != null) {
+                        effect.setSampler("DhDepthSampler", DhDepth::texture);
+                        effect.safeGetUniform("DhInvViewProj").set(dhInv);
+                    }
                     effect.safeGetUniform("CamDelta").set((float) moved.x, (float) moved.y, (float) moved.z);
                     // ponytail: wrapped every 1024 blocks for float precision; the patterns jump once at each wrap.
                     effect.safeGetUniform("CamPos").set((float) (cam.x % 1024.0), (float) (cam.y % 1024.0), (float) (cam.z % 1024.0));

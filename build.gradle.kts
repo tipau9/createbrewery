@@ -60,6 +60,10 @@ repositories {
     maven("https://maven.ithundxr.dev/snapshots")   // Registrate
     maven("https://maven.blamejared.com")           // JEI
     maven("https://maven.kosmx.dev")                // playerAnimator
+    exclusiveContent {                              // Distant Horizons
+        forRepository { maven("https://api.modrinth.com/maven") }
+        filter { includeGroup("maven.modrinth") }
+    }
 }
 
 dependencies {
@@ -75,6 +79,8 @@ dependencies {
     compileOnly("foundry.veil:veil-neoforge-${property("minecraft_version")}:4.3.2") { isTransitive = false }
     // playerAnimator (in the pack): drugged body poses, only when it is there.
     compileOnly("dev.kosmx.player-anim:player-animation-lib-forge:2.0.4+1.21.1") { isTransitive = false }
+    // Distant Horizons (in the pack): the far landscape's depth, only when it is there.
+    compileOnly("maven.modrinth:distanthorizons:3.2.0-b-1.21.1") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // Required to actually launch the JUnit Platform. Without it, the first unit

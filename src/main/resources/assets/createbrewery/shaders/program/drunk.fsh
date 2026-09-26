@@ -69,6 +69,9 @@ uniform float Heat;    // MDMA: overheating from dancing, 0..1
 // World is 1 once DrunkClient could hand over the camera; without it those effects stay off.
 uniform sampler2D DiffuseDepthSampler;
 uniform mat4 InvViewProj;  // screen to camera-relative world, this frame
+uniform sampler2D DhDepthSampler; // Distant Horizons: the far landscape's own depth
+uniform mat4 DhInvViewProj;       // the same as InvViewProj, for DH's depth
+uniform float Dh;                 // 1 while Distant Horizons hands over its depth
 uniform mat4 PrevViewProj; // camera-relative world to screen, last frame
 uniform vec3 CamPos;       // camera position, wrapped to keep float precision
 uniform vec3 CamDelta;     // how far the camera moved since last frame
@@ -114,8 +117,23 @@ vec3 worldAt(vec2 uv, float depth) {
     return w.xyz / w.w;
 }
 
+// Camera-relative world position of a screen point; where vanilla sees sky, Distant Horizons'
+// far landscape may be there instead. w is 1 on land, 0 on real sky.
+vec4 posAt(vec2 uv) {
+    float depth = texture(DiffuseDepthSampler, uv).r;
+    if (depth < 0.99999) return vec4(worldAt(uv, depth), 1.0);
+    if (Dh > 0.0) {
+        float far = texture(DhDepthSampler, uv).r;
+        if (far < 0.99999) {
+            vec4 w = DhInvViewProj * vec4(uv * 2.0 - 1.0, far * 2.0 - 1.0, 1.0);
+            return vec4(w.xyz / w.w, 1.0);
+        }
+    }
+    return vec4(worldAt(uv, depth), 0.0);
+}
+
 float distAt(vec2 uv) {
-    return length(worldAt(uv, texture(DiffuseDepthSampler, uv).r));
+    return length(posAt(uv).xyz);
 }
 
 // Light spilling over from bright spots within radius r: only what is really bright counts.
@@ -195,11 +213,11 @@ void main() {
 
     // Tripping, the world itself breathes: the waves are tied to places in the world, so a wall
     // keeps its own slow swell as you walk past it, and far walls swell more than near ones.
-    float depth0 = texture(DiffuseDepthSampler, uv).r;
-    vec3 rel = worldAt(uv, depth0);
+    vec4 here = posAt(uv);
+    vec3 rel = here.xyz;
     vec3 wp = rel + CamPos;
     float dist = length(rel);
-    float sky = step(0.99999, depth0);
+    float sky = 1.0 - here.w;
     float solid = (1.0 - sky) * World;
     // K-hole: the world falls apart into cubes, each shifted a little against the others.
     float cubism = smoothstep(0.6, 1.0, Dissoc) * solid;
@@ -904,7 +922,7 @@ void main() {
     // Tripping: tracers behind everything that moves - mobs, drops, other players. Last frame is
     // looked up where this spot of the world was on screen then, so standing things stay sharp
     // while you look around, and only real movement leaves ghost copies behind.
-    vec4 was = PrevViewProj * vec4(worldAt(texCoord, texture(DiffuseDepthSampler, texCoord).r) + CamDelta, 1.0);
+    vec4 was = PrevViewProj * vec4(posAt(texCoord).xyz + CamDelta, 1.0);
     vec2 wasUv = was.xy / was.w * 0.5 + 0.5;
     float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
     // MDMA: tracers too, shorter - distinct from medium doses on.
