@@ -315,6 +315,9 @@ public final class DrunkClient {
         hearing(mc);
         // High, and on heroin even more: the world as if through cotton wool.
         muffle = Math.min(1f - 0.55f * high, 1f - 0.6f * opiate);
+        // Your voice, as the others hear it (Simple Voice Chat, see VoiceFx).
+        VoiceFx.params = player == null ? VoiceFx.Params.NONE : new VoiceFx.Params(Intoxication.visualIntensity(blood), wah, wahPulse(0f),
+            Math.max(opiate, BenzoClient.calm), dissoc, Math.max(CokeClient.coke, tweak), Math.max(DmtClient.waiting, DmtClient.beyond));
         debugLog(mc, player);
     }
 
