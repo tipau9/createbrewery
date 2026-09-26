@@ -93,7 +93,9 @@ public final class Psychedelics {
             return;
         }
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(trip, DrugEffect.doseTicks(before, trip, ticks(kind)), level, false, false, true));
+        // LSD goes under the tongue; mushrooms and peyote are eaten, and wait on the stomach.
+        int ticks = kind == DrugServer.Kind.LSD ? ticks(kind) : DrugServer.stomach(player, trip, ticks(kind));
+        player.addEffect(new MobEffectInstance(trip, DrugEffect.doseTicks(before, trip, ticks), level, false, false, true));
     }
 
     /** Every second while tripping: the body (stomach) and the setting (bad trips). */
@@ -202,7 +204,9 @@ public final class Psychedelics {
     public static boolean comingUp(Player player, Holder<MobEffect> trip) {
         MobEffectInstance instance = player.getEffect(trip);
         if (instance == null || !(trip.value() instanceof DrugEffect drug)) return false;
-        return drug.total() - instance.getDuration() < drug.onset();
+        // Still waiting on a full stomach (before the come-up) does not count.
+        int elapsed = drug.total() - instance.getDuration();
+        return elapsed >= 0 && elapsed < drug.onset();
     }
 
     /**

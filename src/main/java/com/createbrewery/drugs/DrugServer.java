@@ -587,6 +587,18 @@ public final class DrugServer {
     }
 
     /**
+     * A first pill or mushroom meets the stomach: right after a meal (saturation still high) it
+     * waits under the food and comes up a whole come-up later; on an empty stomach (hungry) it
+     * starts sooner. Top-ups are not affected.
+     */
+    public static int stomach(Player player, Holder<MobEffect> effect, int ticks) {
+        if (player.hasEffect(effect) || !(effect.value() instanceof DrugEffect drug)) return ticks;
+        if (player.getFoodData().getSaturationLevel() >= 8f) return ticks + drug.onset();
+        if (player.getFoodData().getFoodLevel() <= 6) return ticks - drug.onset() / 3;
+        return ticks;
+    }
+
+    /**
      * Gewöhnung to weed, Koks and meth, every second: shown (both sides read it, see
      * DrugEffect#felt) from a third of the way up, and wearing off while clean of that drug -
      * a full habit in about an hour. The heart takes no discount (heartLoad reads strength).

@@ -818,6 +818,24 @@ public class FermenterGameTests {
         helper.succeed();
     }
 
+    /** A pill after a meal comes up later; on an empty stomach, sooner. */
+    @GameTest(template = TEMPLATE)
+    public static void foodSlowsAPill(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player full = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        full.getFoodData().setFoodLevel(20);
+        full.getFoodData().setSaturation(15f);
+        com.createbrewery.drugs.DrugServer.take(full, com.createbrewery.drugs.DrugServer.Kind.MDMA);
+        net.minecraft.world.entity.player.Player hungry = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        hungry.getFoodData().setFoodLevel(4);
+        hungry.getFoodData().setSaturation(0f);
+        com.createbrewery.drugs.DrugServer.take(hungry, com.createbrewery.drugs.DrugServer.Kind.MDMA);
+        int ticks = com.createbrewery.drugs.Stimulants.MDMA_TICKS;
+        helper.assertTrue(full.getEffect(com.createbrewery.effect.ModEffects.ROLLING).getDuration() > ticks, "a meal did not slow the pill");
+        helper.assertTrue(hungry.getEffect(com.createbrewery.effect.ModEffects.ROLLING).getDuration() < ticks, "an empty stomach did not speed it");
+        helper.assertTrue(com.createbrewery.drugs.DrugEffect.strength(hungry, com.createbrewery.effect.ModEffects.ROLLING) > 0f, "hungry, it had not started");
+        helper.succeed();
+    }
+
     /** Used to Koks, the same line does less; the heart pays in full. */
     @GameTest(template = TEMPLATE)
     public static void aHabitThinsTheHigh(GameTestHelper helper) {

@@ -57,7 +57,8 @@ public final class Stimulants {
         // The serotonin is still used up from the last roll: the magic is gone - it starts at half
         // strength and only fades from there.
         boolean spent = mdma && before == null && (player.hasEffect(ModEffects.COMEDOWN_PENDING) || player.hasEffect(ModEffects.COMEDOWN));
-        int ticks = spent ? ((DrugEffect) high.value()).fade() / 2 : DrugEffect.doseTicks(before, high, mdma ? MDMA_TICKS : METH_TICKS);
+        int ticks = spent ? ((DrugEffect) high.value()).fade() / 2
+            : DrugEffect.doseTicks(before, high, mdma ? DrugServer.stomach(player, high, MDMA_TICKS) : METH_TICKS);
         player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
         if (spent) DrugServer.think(player, "Irgendwie… nicht wie letztes Mal.", 0xB08AB0);
         // Another dose pushes the comedown back (and stills the craving, for now).
