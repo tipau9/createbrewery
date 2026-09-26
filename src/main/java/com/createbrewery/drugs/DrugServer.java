@@ -550,10 +550,30 @@ public final class DrugServer {
 
     // ---- the heart ----
 
-    /** Every second: the heart load follows what is in the body and what the body is doing. */
+    /** Server: what happens to a player a moment later - the line goes in once the straw is at the nose. */
+    private record Later(long due, java.util.function.Consumer<Player> then) {}
+    private static final java.util.Map<java.util.UUID, java.util.List<Later>> LATER = new java.util.HashMap<>();
+
+    public static void later(Player player, int ticks, java.util.function.Consumer<Player> then) {
+        LATER.computeIfAbsent(player.getUUID(), id -> new java.util.ArrayList<>())
+            .add(new Later(player.level().getGameTime() + ticks, then));
+    }
+
+    /** Every tick: what was waiting; every second: the heart load follows what is in the body and what the body is doing. */
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
+        java.util.List<Later> waiting = player.level().isClientSide ? null : LATER.get(player.getUUID());
+        if (waiting != null) {
+            long now = player.level().getGameTime();
+            // Dead in the meantime: it never went in.
+            waiting.removeIf(l -> {
+                if (l.due() > now && player.isAlive()) return false;
+                if (player.isAlive()) l.then().accept(player);
+                return true;
+            });
+            if (waiting.isEmpty()) LATER.remove(player.getUUID());
+        }
         if (!player.level().isClientSide && player.tickCount % 20 == 0) {
             heartTick(player);
             weedBody(player);

@@ -75,14 +75,20 @@ public class DrugItem extends Item {
             // A street batch: cut, normal or strong (any number of doses), maybe laced with fentanyl.
             Purity purity = Purity.of(stack, kind, player.getRandom());
             int doses = Pharmacology.doses(purity.strength(), player.getRandom().nextFloat());
-            // A fake Xanax bar is only the fentanyl; laced heroin is both.
-            if (!(purity.fentanyl() && kind == DrugServer.Kind.XANAX)) {
-                for (int i = 0; i < doses; i++) DrugServer.take(player, kind);
-                if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(player, "Gestreckt… das merk ich kaum.", 0xA0A0A0);
-            }
-            if (purity.fentanyl()) Opioids.fentanyl(player);
+            java.util.function.Consumer<Player> dose = p -> {
+                // A fake Xanax bar is only the fentanyl; laced heroin is both.
+                if (!(purity.fentanyl() && kind == DrugServer.Kind.XANAX)) {
+                    for (int i = 0; i < doses; i++) DrugServer.take(p, kind);
+                    if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(p, "Gestreckt… das merk ich kaum.", 0xA0A0A0);
+                }
+                if (purity.fentanyl()) Opioids.fentanyl(p);
+            };
+            // A line goes in once it is chopped and the straw is at the nose; everything else at once.
+            boolean line = kind == DrugServer.Kind.COKE || kind == DrugServer.Kind.KETA || kind == DrugServer.Kind.METH;
+            if (line) DrugServer.later(player, Math.round(DrugPose.SNIFF_TICKS * DrugPose.SNIFF_AT), dose);
+            else dose.accept(player);
             switch (kind) {
-                case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, 100); // phone, card, straw: five seconds
+                case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, DrugPose.SNIFF_TICKS); // phone, card, straw
                 case WEED -> DrugPose.act(player, DrugPose.SMOKE, 30);
                 case DMT, LACHGAS -> DrugPose.act(player, DrugPose.INHALE, 30);
                 case HEROIN -> DrugPose.act(player, DrugPose.INJECT, 40);

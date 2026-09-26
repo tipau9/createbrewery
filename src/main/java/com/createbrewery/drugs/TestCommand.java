@@ -37,7 +37,7 @@ public final class TestCommand {
         Map.entry("heroin", DrugServer.Kind.HEROIN), Map.entry("xanax", DrugServer.Kind.XANAX), Map.entry("lachgas", DrugServer.Kind.LACHGAS));
     /** For /brewery act: the one-off body actions (DrugPose), with how long each lasts in ticks. */
     private static final Map<String, int[]> ACTIONS = Map.of("kotzen", new int[] {DrugPose.VOMIT, 40},
-        "krampf", new int[] {DrugPose.SEIZURE, 100}, "ziehen", new int[] {DrugPose.SNIFF, 100}, "rauchen", new int[] {DrugPose.SMOKE, 30}, "ballon", new int[] {DrugPose.INHALE, 30},
+        "krampf", new int[] {DrugPose.SEIZURE, 100}, "ziehen", new int[] {DrugPose.SNIFF, DrugPose.SNIFF_TICKS}, "rauchen", new int[] {DrugPose.SMOKE, 30}, "ballon", new int[] {DrugPose.INHALE, 30},
         "spritzen", new int[] {DrugPose.INJECT, 40}, "umkippen", new int[] {DrugPose.COLLAPSE, 160});
     private static final List<String> PHASES = List.of("comeup", "peak", "fade", "crack", "waiting", "beyond", "descent");
 

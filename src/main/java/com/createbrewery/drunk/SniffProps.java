@@ -34,8 +34,10 @@ import java.util.WeakHashMap;
 final class SniffProps extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
     /** Phase ends, as progress 0..1 of the action: phone out, chopping, card for straw, sniffing, head back, phone away. */
     static final float OUT = 0.12f, CHOP = 0.45f, SWAP = 0.55f, SNIFF = 0.8f, BACK = 0.88f;
-    /** The moment the line goes up the nose. */
-    private static final float SNIFFED = 0.62f;
+    /** The moment the line goes up the nose (the server doses then too). */
+    private static final float SNIFFED = DrugPose.SNIFF_AT;
+    /** The view the player had before their own line; the camera turns round to watch it. */
+    private static net.minecraft.client.CameraType before;
 
     private static final Set<DrugPose.Action> HEARD = Collections.newSetFromMap(new WeakHashMap<>());
 
@@ -53,6 +55,18 @@ final class SniffProps extends RenderLayer<AbstractClientPlayer, PlayerModel<Abs
     static void tick(Minecraft mc) {
         if (mc.level == null) return;
         long now = System.currentTimeMillis();
+        // Your own line: the camera swings round to the front to watch it (the body is not drawn
+        // in first person), and back to how it was once the phone is away.
+        DrugPose.Action own = mc.player == null ? null : DrugPose.ACTING.get(mc.player.getId());
+        boolean watching = own != null && own.kind() == DrugPose.SNIFF && own.progress(now) < 0.97f
+            && net.neoforged.fml.ModList.get().isLoaded("playeranimator");
+        if (watching && before == null) {
+            before = mc.options.getCameraType();
+            mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+        } else if (!watching && before != null) {
+            mc.options.setCameraType(before);
+            before = null;
+        }
         DrugPose.ACTING.forEach((id, action) -> {
             if (action.kind() != DrugPose.SNIFF || action.progress(now) < SNIFFED || !HEARD.add(action)) return;
             Entity entity = mc.level.getEntity(id);

@@ -34,6 +34,9 @@ public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements
     public static final int NONE = 0, DANCE = 1, NOD = 2, SLUMP = 3, LAUGH = 4, SHIVER = 5;
     public static final int VOMIT = 6, SEIZURE = 7, SNIFF = 8, SMOKE = 9, INJECT = 10, COLLAPSE = 11, INHALE = 12;
     public static final int EYES_RED = 1, EYES_LIDS = 2, EYES_GLASSY = 3;
+    /** A line off the phone takes this long; the straw reaches the nose (and the drug goes in) at {@link #SNIFF_AT} of it. */
+    public static final int SNIFF_TICKS = 100;
+    public static final float SNIFF_AT = 0.62f;
     public static final Type<DrugPose> TYPE = new Type<>(CreateBrewery.ID("pose"));
     public static final StreamCodec<ByteBuf, DrugPose> CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT, DrugPose::entity, ByteBufCodecs.BYTE, DrugPose::kind, ByteBufCodecs.BYTE, DrugPose::amount,
