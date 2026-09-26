@@ -196,8 +196,7 @@ public final class Psychedelics {
 
     /** DMT, every second: at the peak you meet them. */
     public static void breakthroughTick(LivingEntity entity, int level) {
-        // Only a real breakthrough (the second hit) reaches them.
-        if (level >= 1 && DrugEffect.strength(entity, ModEffects.BREAKTHROUGH) > 0.8f) DrugServer.award(entity, "maschinenelfen", "met");
+        if (DrugEffect.strength(entity, ModEffects.BREAKTHROUGH) > 0.8f) DrugServer.award(entity, "maschinenelfen", "met");
     }
 
     public static boolean comingUp(Player player, Holder<MobEffect> trip) {

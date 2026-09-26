@@ -569,7 +569,7 @@ void main() {
     // The other side: you stand inside a vast dome of light tiled with jewels. It is tied to where
     // you look, so turning your head looks round the hall: the tiles shrink without end towards
     // the blazing light overhead (Mercator, so they stay square), and below, a polished floor
-    // mirrors it all. Only far off: what is right next to you - the beings - stays in front.
+    // mirrors it all. The world is gone entirely; only the beings are there with you.
     // With a shaderpack (no world) it hangs on the screen instead.
     if (Beyond > 0.0 || Descent > 0.0) {
         vec3 look = World > 0.0 ? dir : normalize(vec3(bc.x, bc.y + 0.3, 1.0));
@@ -588,8 +588,29 @@ void main() {
         dome += vec3(1.0, 0.95, 0.85) * pow(max(look.y, 0.0), 10.0) * 2.0;
         // Dimmer towards the horizon, and the floor a darker mirror of the dome.
         dome *= (0.45 + 0.55 * smoothstep(0.0, 0.5, abs(look.y))) * (look.y < 0.0 ? 0.45 : 1.0);
-        float far = World > 0.0 ? smoothstep(4.0, 7.0, dist) : 1.0;
-        col = mix(col, dome, Beyond * mix(0.35, 1.0, far));
+        // The beings: tall figures of shifting jewel light - no faces - circling you, some one way,
+        // some the other, and drawing closer as it goes on.
+        vec3 upW = vec3(0.0, 1.0, 0.0);
+        for (int i = 0; i < 5; i++) {
+            float fi = float(i);
+            float a = t * (mod(fi, 2.0) < 0.5 ? 0.18 : -0.13) + fi * 1.2566;
+            float e = 0.08 + 0.06 * sin(t * 0.4 + fi * 1.7);
+            vec3 bd = vec3(cos(e) * cos(a), sin(e), cos(e) * sin(a));
+            if (dot(look, bd) < 0.8) continue;
+            vec3 right = normalize(cross(bd, upW));
+            vec3 upv = cross(right, bd);
+            float size = 0.09 + 0.05 * Beyond + 0.02 * sin(t * 0.7 + fi);
+            vec2 q = vec2(dot(look, right), dot(look, upv)) / size;
+            float bodyShape = length(q * vec2(1.7, 0.75) + vec2(0.0, 0.25));
+            float headShape = length(q - vec2(0.0, 1.05)) / 0.42;
+            float figure = smoothstep(1.0, 0.8, min(bodyShape, headShape));
+            float edge = smoothstep(0.75, 1.0, min(bodyShape, headShape)) * smoothstep(1.2, 1.0, min(bodyShape, headShape));
+            vec3 hue = 0.55 + 0.45 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + fi * 0.21 + q.y * 0.3 + t * 0.15));
+            float halo = exp(-min(bodyShape, headShape) * 1.5);
+            dome = mix(dome, hue * (1.2 + 0.4 * sin(t * 3.0 + q.y * 6.0)), figure);
+            dome += (hue + 0.4) * (edge * 0.8 + halo * 0.35);
+        }
+        col = mix(col, dome, Beyond);
         // Coming down: the pattern thins into pale lines laid over the world, and fades.
         col += vec3(0.85, 0.9, 1.0) * rim * 0.35 * Descent;
     }
