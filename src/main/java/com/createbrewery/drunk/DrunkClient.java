@@ -75,6 +75,13 @@ public final class DrunkClient {
     static float trip, organic, desert, bad;
     /** The clear, bright day after a trip: 0..1. */
     static float afterglow;
+    /** LSD coming up: strobing at the edges before the geometry, 0..1. */
+    private static float comeUp, lastLsd;
+    /** LSD: the view falling into itself for a few seconds (recursion), 0..1. */
+    private static float recur;
+    private static int recurLeft, flipLeft;
+    /** Keta: 0 upright, 1 mirrored, 2 upside down - for a few seconds at a time. */
+    private static int flip;
     /** DMT: 0..1, 1 = the full breakthrough. */
     private static float breakthrough;
     /** MDMA and meth: 0..1 each. */
@@ -193,6 +200,8 @@ public final class DrunkClient {
         float lsd = player == null ? 0f : DrugEffect.felt(player, ModEffects.LSD_TRIP);
         float shroom = player == null ? 0f : DrugEffect.felt(player, ModEffects.SHROOM_TRIP);
         float mesc = player == null ? 0f : DrugEffect.felt(player, ModEffects.MESCALINE_TRIP);
+        comeUp = ease(comeUp, lsd > lastLsd && lsd < 0.9f ? 1f : 0f);
+        lastLsd = lsd;
         // A flashback, days later: a short echo of the trip, LSD-coloured.
         float all = lsd + shroom + mesc + (player == null ? 0f : DrugEffect.strength(player, ModEffects.FLASHBACK));
         trip = ease(trip, Math.min(1f, all * (1f + 0.4f * rolling) + (all > 0f ? 0.3f * high : 0f)));
@@ -218,6 +227,15 @@ public final class DrunkClient {
             KetaClient.tick(mc, player);
             WeedClient.tick(mc, player);
             DmtClient.tick(mc, player);
+            var r = player.getRandom();
+            if (recurLeft > 0) recurLeft--;
+            else if (trip * Math.max(0f, 1f - organic - desert) > 0.5f && r.nextFloat() < 1f / 900f) recurLeft = 60 + r.nextInt(60);
+            recur = ease(recur, recurLeft > 0 ? 1f : 0f);
+            if (flipLeft > 0 && --flipLeft == 0) flip = 0;
+            else if (flipLeft == 0 && dissoc > 0.5f && r.nextFloat() < 1f / 1200f) {
+                flip = 1 + r.nextInt(2);
+                flipLeft = 40 + r.nextInt(60);
+            }
         }
         DrugAudio.tick(wah, Math.max(dissoc, Math.max(DmtClient.waiting, DmtClient.beyond)), DmtClient.crack,
             trip * Math.max(0f, 1f - organic), trip * organic, rolling);
@@ -455,6 +473,9 @@ public final class DrunkClient {
             chain.setUniform("Desert", desert);
             chain.setUniform("BadTrip", bad * screen());
             chain.setUniform("Break", breakthrough * screen());
+            chain.setUniform("ComeUp", comeUp * screen());
+            chain.setUniform("Recur", recur * screen());
+            chain.setUniform("Flip", screen() > 0.5f && player != null && dissoc > 0.3f ? (float) flip : 0f);
             chain.setUniform("Crack", DmtClient.crack * screen());
             chain.setUniform("Waiting", DmtClient.waiting * screen());
             chain.setUniform("Beyond", DmtClient.beyond * screen());

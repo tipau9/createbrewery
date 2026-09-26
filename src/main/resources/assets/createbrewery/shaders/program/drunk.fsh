@@ -28,6 +28,9 @@ uniform float Organic; // share of the trip that is mushrooms: green, melting
 uniform float Desert;  // share that is peyote: warm, shimmering
 uniform float BadTrip; // fear: 0..1
 uniform float Break;   // DMT breakthrough: 0..1
+uniform float ComeUp;  // LSD coming up: strobing at the edges, 0..1
+uniform float Recur;   // LSD: the view falls into itself (recursion), 0..1
+uniform float Flip;    // Keta: 0 upright, 1 mirrored, 2 upside down
 uniform float Crack;   // DMT, cracking open: neon lines growing over every surface, 0..1
 uniform float Waiting; // DMT, the waiting room: tunnel and unfolding chrysanthemum, 0..1
 uniform float Beyond;  // DMT, the other side: a dome of light tiled with jewels, 0..1
@@ -130,6 +133,9 @@ void main() {
     float t = DrunkTime;
     vec2 px = 1.0 / OutSize;
     vec2 uv = texCoord;
+    // Keta: now and then the whole view flips - mirrored, or upside down - for a few seconds.
+    if (Flip > 0.5) uv.x = 1.0 - uv.x;
+    if (Flip > 1.5) uv.y = 1.0 - uv.y;
 
     // DMT: the world folds into a twelvefold kaleidoscope and streams towards you down a tunnel.
     // Done first, so every other effect is drawn on the folded picture.
@@ -186,6 +192,10 @@ void main() {
     float dist = length(rel);
     float sky = step(0.99999, depth0);
     float solid = (1.0 - sky) * World;
+    // K-hole: the world falls apart into cubes, each shifted a little against the others.
+    float cubism = smoothstep(0.6, 1.0, Dissoc) * solid;
+    vec3 cube = wp * 0.5 + 0.37;
+    uv += (hash3(floor(cube)).xy - 0.5) * 0.012 * cubism;
     float breathe = sin(wp.x * 0.8 + t * 0.9) * sin(wp.z * 0.8 - t * 0.7) + 0.5 * sin(wp.y * 1.1 + t * 0.6);
     // Mushrooms: the breath follows a slow heartbeat, about fifty a minute.
     float beat = 1.0 + 0.8 * Organic * pow(0.5 + 0.5 * sin(t * 5.2), 8.0);
@@ -245,6 +255,9 @@ void main() {
     // Lachgas: the picture pumps in and out with the wah-wah, about three times a second.
     float wahPulse = 0.5 + 0.5 * sin(t * 18.0);
     uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * Wah * wahPulse);
+    // Just before the self goes: the view is pulled thin, squeezed into a narrow strip.
+    float band = 1.0 - 0.85 * smoothstep(0.05, 0.6, Gone);
+    uv.y = 0.5 + (uv.y - 0.5) / band;
 
     // Only once properly drunk (not in the party zone): wobble and double vision. Both move
     // slowly; nothing here changes faster than about once a second.
@@ -256,6 +269,13 @@ void main() {
     // Double vision: a second image drifts apart and back together.
     vec2 ghost = vec2(sin(t * 0.7) + 0.35 * sin(t * 1.9), 0.4 * cos(t * 0.53)) * 0.022 * k;
     vec3 col = mix(tap(uv), tap(uv + ghost), 0.5 * heavy);
+    // ...with dark gaps where the cubes meet.
+    if (cubism > 0.0) {
+        vec3 cf = min(fract(cube), 1.0 - fract(cube));
+        col *= 1.0 - smoothstep(0.05, 0.0, min(min(cf.x, cf.y), cf.z)) * 0.85 * cubism;
+    }
+    // Outside the stretched strip there is nothing.
+    col *= step(abs(texCoord.y - 0.5), 0.5 * band);
     // MDMA, high doses: the eyes no longer quite agree - a faint second image, just beside.
     float mdmaDouble = smoothstep(0.7, 1.0, Roll);
     if (mdmaDouble > 0.0) col = mix(col, tap(uv + vec2(0.005 + 0.002 * sin(t * 0.4), 0.0012)), 0.3 * mdmaDouble);
@@ -344,6 +364,23 @@ void main() {
     float shift = Trip * lsdLook * (0.6 * sin(t * 0.25) + 1.2 * peak * sin(t * 0.11 + lum * 4.0));
     col = mix(col, hueShift(col, shift), clamp(sat * 3.0, 0.0, 1.0));
     col = mix(vec3(lum), col, 1.0 + (0.8 - 0.5 * Organic + 0.3 * Desert) * Trip);
+    // Texture liquidation: detail melts away, the world looks painted in flat, simple colours.
+    float liquid = smoothstep(0.4, 1.0, Trip);
+    if (liquid > 0.0) col = mix(col, floor(ring(uv, px * 2.0) * 8.0 + 0.5) / 8.0, 0.35 * liquid);
+    // LSD coming up: fast bright flicker at the edges of the view, before the geometry.
+    col *= 1.0 + 0.5 * step(0.5, fract(t * 13.0)) * smoothstep(0.3, 0.75, length(d)) * ComeUp;
+    float lsdTrip = Trip * lsdLook;
+    if (lsdTrip > 0.01) {
+        // Diffraction: bright lights split into rainbow rings, red inside, blue outside.
+        col += vec3(spill(uv, px * 6.0, 0.1).r, spill(uv, px * 9.0, 0.5).g, spill(uv, px * 12.0, 0.9).b) * 2.0 * lsdTrip;
+        // Auras: a translucent coloured fringe around everything standing in front of something else.
+        if (World > 0.0) {
+            vec2 ax = vec2(px.x * 4.0, 0.0), ay = vec2(0.0, px.y * 4.0);
+            float near = min(min(distAt(uv + ax), distAt(uv - ax)), min(distAt(uv + ay), distAt(uv - ay)));
+            float aura = smoothstep(0.3, 2.0, distAt(uv) - near);
+            col += hueShift(vec3(1.0, 0.3, 0.6), t * 0.5 + near * 0.3) * aura * 0.5 * lsdTrip;
+        }
+    }
     // Mushrooms: soft focus, and every light blooms into a warm, gentle glow.
     float soft = Organic * Trip;
     col = mix(col, ring(uv, px * 3.0), 0.3 * soft);
@@ -817,6 +854,8 @@ void main() {
     // Lachgas: the view pauses - it holds still for most of each wah, and moves in jerks.
     float frozen = step(fract(t * 18.0 / 6.2831853), 0.25 + 0.45 * Wah) * step(0.35, Wah);
     col = mix(col, texture(PrevSampler, texCoord).rgb, frozen * Trail);
+    // Recursion: each frame holds the last one, a little smaller - the view falls into itself.
+    col = mix(col, texture(PrevSampler, 0.5 + (texCoord - 0.5) * 1.04).rgb, 0.5 * Recur * Trail);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
