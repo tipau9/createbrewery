@@ -13,7 +13,8 @@ import net.neoforged.fml.config.ModConfig;
 @Mod(CreateBrewery.MOD_ID)
 public class CreateBrewery {
     public static final String MOD_ID = "createbrewery";
-    public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MOD_ID);
+    public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MOD_ID)
+        .defaultCreativeTab((net.minecraft.resources.ResourceKey<net.minecraft.world.item.CreativeModeTab>) null);
 
     public CreateBrewery(IEventBus modEventBus, ModContainer modContainer) {
         REGISTRATE.registerEventListeners(modEventBus);
