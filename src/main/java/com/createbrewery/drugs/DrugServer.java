@@ -342,6 +342,7 @@ public final class DrugServer {
     /** A drink after smoking: the dry mouth is gone, and it feels amazing. */
     public static void quench(Player player, net.minecraft.world.item.ItemStack drink) {
         if (drink.getUseAnimation() != net.minecraft.world.item.UseAnim.DRINK) return;
+        TanCompat.itemDrink(player);
         if (!(drink.getItem() instanceof ElectrolyteItem)) Stimulants.drank(player);
         Stimulants.cool(player);
         if (!player.hasEffect(ModEffects.COTTONMOUTH)) return;
@@ -541,6 +542,7 @@ public final class DrugServer {
             Mixes.tick(player);
             wear(player);
             spins(player);
+            TanCompat.tick(player);
         }
     }
 

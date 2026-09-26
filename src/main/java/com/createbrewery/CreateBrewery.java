@@ -25,6 +25,8 @@ public class CreateBrewery {
         ModCreativeTabs.register(modEventBus);
         com.createbrewery.effect.ModEffects.register(modEventBus);
         com.createbrewery.drugs.HallucinationEntity.register(modEventBus);
+        modEventBus.addListener((net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) ->
+            event.enqueueWork(com.createbrewery.drugs.TanCompat::init));
         com.createbrewery.drunk.ModAttachments.register(modEventBus);
         com.createbrewery.particle.ModParticles.register(modEventBus);
         com.createbrewery.sound.ModSounds.register(modEventBus);

@@ -177,6 +177,7 @@ public final class Stimulants {
     public static void electrolytes(Player player) {
         DrunkState s = DrunkServer.state(player);
         s.water = 0f;
+        TanCompat.electrolytes(player);
         player.removeEffect(ModEffects.HYPONATREMIA);
         cool(player);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 1.0f);
