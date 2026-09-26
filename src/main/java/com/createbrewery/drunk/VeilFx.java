@@ -14,7 +14,7 @@ import net.minecraft.resources.ResourceLocation;
  * <ul>
  *   <li>Surface normals: the shader finds the real edges and creases of blocks with them, for the
  *       LSD neon outlines and the lines of the DMT crack.</li>
- *   <li>Quasar particles (assets/createbrewery/veil/quasar/emitters): glowing spores on
+ *   <li>Quasar particles (assets/createbrewery/quasar/emitters): glowing spores on
  *       mushrooms, a burst of neon sparks as DMT cracks open.</li>
  * </ul>
  */
