@@ -19,7 +19,7 @@ import net.minecraft.util.Mth;
  *       which NodClient already lowers; this only adds a little), slumped and lopsided in a K-hole,
  *       doubled over with laughter when stoned.</li>
  *   <li>One-off actions, sent by the server: doubled over throwing up, convulsing, a line to the
- *       nose, a drag, a shot into the arm, collapsing to the ground.</li>
+ *       nose, a drag (joint, pipe or balloon), a shot into the arm, collapsing to the ground.</li>
  * </ul>
  */
 final class PoseAnimation implements IAnimation {
@@ -146,7 +146,7 @@ final class PoseAnimation implements IAnimation {
                 if (right) { d[0] = -1.9f - value.getX(); d[2] = 0.45f; }
                 if (part.equals("head")) d[0] = p < 0.6f ? 0.35f : -0.3f;
             }
-            case DrugPose.SMOKE -> {
+            case DrugPose.SMOKE, DrugPose.INHALE -> {
                 // Hand to the mouth, a long drag, then head back to breathe out.
                 if (position) return;
                 if (right) { d[0] = (p < 0.6f ? -1.75f : -0.6f) - value.getX(); d[2] = 0.35f; }

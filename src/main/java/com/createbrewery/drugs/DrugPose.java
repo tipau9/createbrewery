@@ -20,18 +20,18 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>Lasting poses - dancing, nodding off, slumped in a K-hole, doubled over laughing - and the
  *       look of the eyes: each client works out its own and sends it; the server passes it on to
  *       everyone who can see that player.</li>
- *   <li>One-off actions - throwing up, a seizure, a line, a drag, a shot, collapsing: the server
+ *   <li>One-off actions - throwing up, a seizure, a line, a drag (smoke or a balloon), a shot, collapsing: the server
  *       sends them ({@link #act}) to the player and everyone who can see them.</li>
  * </ul>
  *
  * @param entity the player's entity id (ignored on the way to the server)
- * @param kind   a pose ({@link #DANCE}..{@link #LAUGH}, or {@link #NONE}) or an action ({@link #VOMIT}..{@link #COLLAPSE})
+ * @param kind   a pose ({@link #DANCE}..{@link #LAUGH}, or {@link #NONE}) or an action ({@link #VOMIT}..{@link #INHALE})
  * @param amount a pose: how strongly, 0..255; an action: how long, in ticks / 4
  * @param eyes   a pose: {@link #EYES_RED}, {@link #EYES_LIDS}, {@link #EYES_GLASSY} or 0
  */
 public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements CustomPacketPayload {
     public static final int NONE = 0, DANCE = 1, NOD = 2, SLUMP = 3, LAUGH = 4;
-    public static final int VOMIT = 5, SEIZURE = 6, SNIFF = 7, SMOKE = 8, INJECT = 9, COLLAPSE = 10;
+    public static final int VOMIT = 5, SEIZURE = 6, SNIFF = 7, SMOKE = 8, INJECT = 9, COLLAPSE = 10, INHALE = 11;
     public static final int EYES_RED = 1, EYES_LIDS = 2, EYES_GLASSY = 3;
     public static final Type<DrugPose> TYPE = new Type<>(CreateBrewery.ID("pose"));
     public static final StreamCodec<ByteBuf, DrugPose> CODEC = StreamCodec.composite(

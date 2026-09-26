@@ -60,7 +60,8 @@ public class DrugItem extends Item {
             DrugServer.take(player, kind);
             switch (kind) {
                 case COKE, KETA, METH -> DrugPose.act(player, DrugPose.SNIFF, 20);
-                case WEED, DMT, LACHGAS -> DrugPose.act(player, DrugPose.SMOKE, 30);
+                case WEED -> DrugPose.act(player, DrugPose.SMOKE, 30);
+                case DMT, LACHGAS -> DrugPose.act(player, DrugPose.INHALE, 30);
                 case HEROIN -> DrugPose.act(player, DrugPose.INJECT, 40);
                 default -> {}
             }

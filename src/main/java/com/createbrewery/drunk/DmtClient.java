@@ -66,7 +66,7 @@ public final class DmtClient {
 
         if (crack > 0.5f && say(player, 1, CRACK, 0x7CFF9A)) {
             // It cracks open: neon sparks burst out all around.
-            DrunkClient.veilParticles("dmt_sparks", player.getX(), player.getEyeY(), player.getZ());
+            if (DrunkClient.quasar()) DrunkClient.veilParticles("dmt_sparks", player.getX(), player.getEyeY(), player.getZ());
         }
         if (waiting > 0.5f) say(player, 2, WAITING, 0xB8A0FF);
         if (beyond > 0.5f && say(player, 4, ARRIVE, 0xFFD27C)) tone(mc, SoundEvents.BEACON_POWER_SELECT, 0.5f, 1f);

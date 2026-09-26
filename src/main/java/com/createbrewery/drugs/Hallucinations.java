@@ -58,6 +58,7 @@ public final class Hallucinations {
     /** GeckoLib draws the shadow person and the bugs (see HallucinationEntity). */
     public static final boolean GEO = net.neoforged.fml.ModList.get().isLoaded("geckolib");
     private static Level visionLevel;
+    private static final java.util.Set<EntityType<?>> warned = new java.util.HashSet<>();
 
     /** Every client tick, with the eased channels from DrunkClient. */
     public static void tick(LocalPlayer player, float breakthrough, float trip, float bad, float desert, float bugs) {
@@ -158,6 +159,8 @@ public final class Hallucinations {
                     Mth.lerp(partial, e.zo, e.getZ()) - cam.z, e.getYRot(), partial, pose, buffers, light);
             } catch (RuntimeException ex) {
                 v.entity.discard(); // a renderer that needs a real world: drop that vision
+                if (warned.add(e.getType())) org.slf4j.LoggerFactory.getLogger(Hallucinations.class)
+                    .warn("Hallucination {} could not be drawn", EntityType.getKey(e.getType()), ex);
             }
         }
         buffers.endBatch();

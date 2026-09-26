@@ -106,7 +106,6 @@ public final class DrunkServer {
     public static void blackout(Player player) {
         if (!player.hasEffect(ModEffects.BLACKOUT)) {
             player.addEffect(new MobEffectInstance(ModEffects.BLACKOUT, BLACKOUT_TICKS, 0, false, false, true));
-            com.createbrewery.drugs.DrugPose.act(player, com.createbrewery.drugs.DrugPose.COLLAPSE, BLACKOUT_TICKS);
         }
     }
 
@@ -273,7 +272,6 @@ public final class DrunkServer {
 
         if (bac >= Intoxication.BLACKOUT && !player.hasEffect(ModEffects.BLACKOUT) && random.nextFloat() < 0.015f) {
             player.addEffect(new MobEffectInstance(ModEffects.BLACKOUT, BLACKOUT_TICKS, 0, false, false, true));
-            com.createbrewery.drugs.DrugPose.act(player, com.createbrewery.drugs.DrugPose.COLLAPSE, BLACKOUT_TICKS);
         }
     }
 

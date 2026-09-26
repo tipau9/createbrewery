@@ -145,6 +145,8 @@ public final class DrunkClient {
                 LOGGER.warn("Distant Horizons depth unavailable", e);
             }
         }
+        if (veil) LOGGER.info("Drug vision: Veil lights, normals and Quasar particles on");
+        if (com.createbrewery.drugs.Hallucinations.GEO) LOGGER.info("Drug vision: GeckoLib hallucinations on");
         NeoForge.EVENT_BUS.addListener(DrunkClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onRenderFrame);
         NeoForge.EVENT_BUS.addListener(DrunkClient::onCameraAngles);
@@ -338,8 +340,9 @@ public final class DrunkClient {
     private static void debugLog(Minecraft mc, LocalPlayer player) {
         boolean on = com.createbrewery.drugs.DrugDebug.on() && player != null;
         if (on && !debugging) {
-            LOGGER.info("[Brewery debug] start: veil={} dh={} irisPack={} shaderFailed={} worldFailed={} quasarSpores={}",
-                veil, dh, irisPack, shaderFailed, worldFailed, TripClient.quasarSpores);
+            LOGGER.info("[Brewery debug] start: veil={} dh={} irisPack={} shaderFailed={} worldFailed={} quasarSpores={} geckolib={} playerAnimator={}",
+                veil, dh, irisPack, shaderFailed, worldFailed, TripClient.quasarSpores, com.createbrewery.drugs.Hallucinations.GEO,
+                net.neoforged.fml.ModList.get().isLoaded("playeranimator"));
         } else if (!on && debugging) {
             LOGGER.info("[Brewery debug] end");
             uniforms.clear();
@@ -992,7 +995,12 @@ public final class DrunkClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || !(mc.level.getEntity(entity) instanceof net.minecraft.world.entity.LivingEntity who)) return;
         Vec3 mouth = who.getEyePosition().add(who.getLookAngle().scale(0.3)).subtract(0, 0.1, 0);
-        veilParticles("joint_smoke", mouth.x, mouth.y, mouth.z);
+        if (quasar()) veilParticles("joint_smoke", mouth.x, mouth.y, mouth.z);
+    }
+
+    /** Whether Quasar particles can be used now: Veil there, no Iris shaderpack (Quasar does not draw under one). */
+    static boolean quasar() {
+        return veil && !irisPack;
     }
 
     /** A Quasar particle emitter from Veil; false without Veil, so the caller uses vanilla particles. */

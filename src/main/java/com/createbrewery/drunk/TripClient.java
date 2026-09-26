@@ -286,7 +286,7 @@ public final class TripClient {
         }
         // Spores drift through the air; mushrooms, mycelium and moss glow. With Veil, glowing
         // spores in the colours of the trip, a burst each second; without it, vanilla spores.
-        if (quasarSpores) {
+        if (quasarSpores && DrunkClient.quasar()) {
             if (player.tickCount % 20 == 0 && r.nextFloat() < shroom) {
                 quasarSpores = DrunkClient.veilParticles("spores", player.getX(), player.getY() + 1.5, player.getZ());
             }

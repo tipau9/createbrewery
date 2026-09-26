@@ -195,12 +195,19 @@ public class BreweryScenes {
         scene.showBasePlate();
         scene.idle(10);
 
-        // The friend: faceless, lying on the ground.
+        // The friend: a faceless armour stand, slumped - head on the chest, arms hanging.
         net.minecraft.world.phys.Vec3 friend = util.vector().of(2.5, 1, 2.5);
         scene.world().createEntity(level -> {
             var stand = net.minecraft.world.entity.EntityType.ARMOR_STAND.create(level);
             stand.setPos(friend.x, friend.y, friend.z);
-            stand.setPose(net.minecraft.world.entity.Pose.SLEEPING);
+            stand.setYRot(200f);
+            stand.setYBodyRot(200f);
+            stand.setShowArms(true);
+            stand.setNoBasePlate(true);
+            stand.setHeadPose(new net.minecraft.core.Rotations(55f, 0f, 20f));
+            stand.setBodyPose(new net.minecraft.core.Rotations(15f, 0f, 5f));
+            stand.setLeftArmPose(new net.minecraft.core.Rotations(10f, 0f, -12f));
+            stand.setRightArmPose(new net.minecraft.core.Rotations(10f, 0f, 12f));
             return stand;
         });
         scene.idle(10);
