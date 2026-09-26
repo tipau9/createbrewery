@@ -1121,7 +1121,7 @@ public final class DrunkClient {
         // Greening out: the head swims in slow, wide circles.
         roll += noise(t * 0.3, 41) * 13f * green;
         // DMT: the view turns slowly, as if weightless.
-        roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
+        roll += (float) Math.sin(t * 0.3) * 26f * breakthrough;
         // ...and as it cracks open, the whole room vibrates.
         roll += noise(t * 40.0, 71) * 1.5f * DmtClient.crack;
         // Drunk in bed: the room spins - one way while the alcohol still rises, the other once it
@@ -1163,6 +1163,8 @@ public final class DrunkClient {
         // Tripping, the whole view breathes in and out; a bad trip makes it gasp.
         double sec = event.getPlayer().tickCount / 20.0;
         drugs += (float) (Math.sin(sec * 0.9) * 0.035 * trip + noise(sec * 2.2, 11) * 0.03 * bad) * screen();
+        // DMT: the view tears wide open on the other side - the hall has no end - and lurches in the waiting room.
+        drugs += (0.35f * DmtClient.beyond + 0.15f * DmtClient.waiting * (float) Math.sin(sec * 1.5)) * screen();
         // ...and the walls close in on it.
         drugs -= 0.12f * bad * screen();
         // MDMA, very high: for a while the view seems to come from further back.

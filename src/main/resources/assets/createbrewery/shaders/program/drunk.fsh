@@ -575,61 +575,93 @@ void main() {
     // DMT: impossible, saturated colour, and a chrysanthemum of light blooming in the middle.
     float petals = sin(br * 40.0 - t * 4.0) * sin(ba * 24.0 + t);
     vec3 neon = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + br * 2.0 - t * 0.2 + petals * 0.2));
-    col = mix(col, hueShift(col, t * 0.8) * 1.3, 0.6 * Break);
-    col = mix(col, neon, 0.35 * Break * smoothstep(0.6, 0.0, br));
-    col += neon * smoothstep(0.85, 1.0, petals) * 0.25 * Break;
+    col = mix(col, hueShift(col, t * 0.8) * 1.4, 0.8 * Break);
+    col = mix(col, neon, 0.5 * Break * smoothstep(0.7, 0.0, br));
+    col += neon * smoothstep(0.8, 1.0, petals) * 0.45 * Break;
     // Cracking open: the room goes dark and neon-green lines grow out over every surface,
     // spreading from where you stand, while the edges of the view strobe.
     if (Crack > 0.0) {
         float glyph = sin(wp.x * 5.0 + t) + sin(wp.y * 5.0 - t * 0.7) + sin(wp.z * 5.0 + t * 0.5);
         float lines = pow(abs(sin(glyph * 2.5)), 24.0);
-        float grow = smoothstep(24.0 * Crack, 24.0 * Crack - 3.0, dist) * solid;
-        col = mix(col, col * 0.2, 0.7 * Crack);
-        col += vec3(0.2, 1.0, 0.45) * max(lines, creaseAt(uv, px)) * grow * 1.2 * Crack;
-        col += vec3(0.5, 1.0, 0.6) * step(0.6, fract(t * 9.0)) * smoothstep(0.35, 0.75, length(d)) * 0.25 * Crack;
+        float grow = smoothstep(40.0 * Crack, 40.0 * Crack - 3.0, dist) * solid;
+        col = mix(col, col * 0.1, 0.8 * Crack);
+        col += vec3(0.2, 1.0, 0.45) * max(lines, creaseAt(uv, px)) * grow * 2.0 * Crack;
+        col += vec3(0.5, 1.0, 0.6) * step(0.6, fract(t * 9.0)) * smoothstep(0.3, 0.75, length(d)) * 0.45 * Crack;
     }
-    // The waiting room: a chrysanthemum unfolding from the middle, petal after petal, filling the view.
+    // The waiting room: a chrysanthemum unfolding from the middle, petal after petal, filling the
+    // whole view, while you fall on and on into its heart.
     if (Waiting > 0.0) {
-        float open = 0.9 * Waiting;
-        float petal = 0.5 + 0.5 * cos(ba * 24.0 + br * 30.0 - t * 2.0);
-        float layer = 0.5 + 0.5 * sin(br * 18.0 - t * 3.0);
-        vec3 bloom = mix(vec3(0.95, 0.35, 0.8), vec3(0.3, 1.0, 0.6), layer) * (0.4 + 0.8 * petal * layer);
-        col = mix(col, bloom, smoothstep(open, open - 0.25, br) * 0.75 * Waiting);
+        float open = 1.4 * Waiting;
+        float fall = log(br + 0.001) * 10.0 - t * 5.0;
+        float petal = 0.5 + 0.5 * cos(ba * 24.0 + fall * 3.0);
+        float layer = 0.5 + 0.5 * sin(fall);
+        vec3 bloom = mix(vec3(0.95, 0.35, 0.8), vec3(0.3, 1.0, 0.6), layer) * (0.4 + 1.0 * petal * layer);
+        bloom += vec3(1.0, 0.9, 1.0) * exp(-br * 8.0);
+        col = mix(col, bloom, smoothstep(open, open - 0.25, br) * 0.95 * Waiting);
     }
-    // The other side: you stand inside a vast dome of light tiled with jewels. It is tied to where
-    // you look, so turning your head looks round the hall: the tiles shrink without end towards
-    // the blazing light overhead (Mercator, so they stay square), and below, a polished floor
-    // mirrors it all. The world is gone entirely; only the beings are there with you.
-    // With a shaderpack (no world) it hangs on the screen instead.
+    // The other side: you stand in a hall of light so vast it has no end. It is tied to where you
+    // look, so turning your head looks round it. Far overhead a dome tiled with jewels (Mercator,
+    // so they stay square), each jewel holding smaller ones; a blazing light at its top with shafts
+    // falling from it. Two rings of colossal pillars, the far one lost in haze, and a polished
+    // floor with gold seams running off to a horizon miles away. The world is gone entirely; only
+    // the beings are there with you, towering. With a shaderpack (no world) it hangs on the screen.
     if (Beyond > 0.0 || Descent > 0.0) {
         vec3 look = World > 0.0 ? dir : normalize(vec3(bc.x, bc.y + 0.3, 1.0));
-        float el = asin(clamp(abs(look.y), 0.0, 0.999));
-        float merc = log(tan(0.785398 + el * 0.5));
-        vec2 lp = vec2(atan(look.z, look.x), -merc * 0.9 + t * 0.12) * (12.0 / 3.14159);
+        float az = atan(look.z, look.x) + t * 0.03; // the whole hall turns, slowly
+        float elev = asin(clamp(look.y, -0.999, 0.999));
+        float merc = log(tan(0.785398 + abs(elev) * 0.5));
+        // Many small tiles: the dome is far away. It breathes a little.
+        vec2 lp = vec2(az, -merc * 0.9 + t * 0.12) * ((20.0 + 1.5 * sin(t * 0.5)) / 3.14159);
         vec2 tile = floor(lp);
         vec2 tf = fract(lp) - 0.5;
         float sq = max(abs(tf.x), abs(tf.y));
         float pick = hash(tile);
         vec3 jewel = pick < 0.25 ? vec3(0.8, 0.05, 0.2) : pick < 0.5 ? vec3(0.05, 0.7, 0.35)
                    : pick < 0.75 ? vec3(0.1, 0.25, 0.95) : vec3(0.55, 0.1, 0.85);
-        float shine = pow(1.0 - 2.0 * sq, 2.0) * (0.6 + 0.4 * sin(t * 2.0 + pick * 6.28));
+        vec2 inner = fract(lp * 3.0 + vec2(0.0, t * 0.3)) - 0.5;
+        float shine = pow(1.0 - 2.0 * sq, 2.0) * (0.6 + 0.4 * sin(t * 2.0 + pick * 6.28))
+                    + 0.5 * pow(1.0 - 2.0 * max(abs(inner.x), abs(inner.y)), 3.0);
         float rim = smoothstep(0.42, 0.5, sq);
         vec3 dome = jewel * (0.3 + 1.2 * shine) + vec3(1.0, 0.8, 0.35) * rim;
-        dome += vec3(1.0, 0.95, 0.85) * pow(max(look.y, 0.0), 10.0) * 2.0;
-        // Dimmer towards the horizon, and the floor a darker mirror of the dome.
-        dome *= (0.45 + 0.55 * smoothstep(0.0, 0.5, abs(look.y))) * (look.y < 0.0 ? 0.45 : 1.0);
-        // The beings: tall figures of shifting jewel light - no faces - circling you, some one way,
-        // some the other, and drawing closer as it goes on.
+        float up = max(look.y, 0.0);
+        dome += vec3(1.0, 0.95, 0.85) * (pow(up, 6.0) * 3.0
+            + pow(0.5 + 0.5 * sin(az * 18.0 + t * 0.4), 12.0) * smoothstep(0.1, 0.7, up) * 0.7);
+        dome *= 0.45 + 0.55 * smoothstep(0.0, 0.5, abs(look.y));
+        // The floor, in eye heights: a dark mirror of the dome, the seams fading into the distance.
+        if (look.y < 0.0) {
+            vec2 fp = look.xz / max(-look.y, 0.004);
+            vec2 g = abs(fract(fp * 0.25) - 0.5);
+            float seam = smoothstep(0.45, 0.5, max(g.x, g.y)) * exp(-length(fp) * 0.012);
+            dome = dome * 0.45 + vec3(1.0, 0.8, 0.4) * seam * 0.9;
+        }
+        // Colossal pillars: a ring of 20 at 25 eye heights, and 40 more at 80 behind, far ring first.
+        vec3 haze = vec3(1.0, 0.9, 0.7);
+        for (int k = 1; k >= 0; k--) {
+            float ring = k == 0 ? 25.0 : 80.0;
+            float n = k == 0 ? 20.0 : 40.0;
+            float off = (fract(az / 6.2831853 * n + 0.5 * float(k)) - 0.5) * 6.2831853 / n * ring;
+            float across = off / 1.6;
+            float inside = step(abs(across), 1.0) * step(elev, 1.2) * step(-atan(1.0, ring), elev);
+            vec3 stone = mix(vec3(0.95, 0.8, 0.5), vec3(0.55, 0.35, 0.9), float(k)) * (0.3 + 0.7 * sqrt(max(0.0, 1.0 - across * across)));
+            stone += vec3(1.0, 0.85, 0.5) * smoothstep(0.8, 1.0, abs(across)) * 0.7;
+            stone += (0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + elev * 3.0 - t * 0.3)))
+                * pow(0.5 + 0.5 * sin(elev * 70.0 - t * 2.0), 6.0) * 0.6;
+            dome = mix(dome, mix(stone, haze, k == 0 ? 0.2 : 0.55), inside);
+        }
+        // Light from miles away where floor meets dome.
+        dome = mix(dome, haze, exp(-abs(look.y) * 14.0) * 0.6);
+        // The beings: towering figures of shifting jewel light - no faces - circling you, some one
+        // way, some the other, and drawing closer as it goes on.
         vec3 upW = vec3(0.0, 1.0, 0.0);
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 7; i++) {
             float fi = float(i);
-            float a = t * (mod(fi, 2.0) < 0.5 ? 0.18 : -0.13) + fi * 1.2566;
-            float e = 0.08 + 0.06 * sin(t * 0.4 + fi * 1.7);
+            float a = t * (mod(fi, 2.0) < 0.5 ? 0.18 : -0.13) + fi * 0.8976;
+            float e = 0.2 + 0.08 * sin(t * 0.4 + fi * 1.7);
             vec3 bd = vec3(cos(e) * cos(a), sin(e), cos(e) * sin(a));
-            if (dot(look, bd) < 0.8) continue;
+            if (dot(look, bd) < 0.5) continue;
             vec3 right = normalize(cross(bd, upW));
             vec3 upv = cross(right, bd);
-            float size = 0.09 + 0.05 * Beyond + 0.02 * sin(t * 0.7 + fi);
+            float size = 0.2 + 0.08 * Beyond + 0.03 * sin(t * 0.7 + fi);
             vec2 q = vec2(dot(look, right), dot(look, upv)) / size;
             float bodyShape = length(q * vec2(1.7, 0.75) + vec2(0.0, 0.25));
             float headShape = length(q - vec2(0.0, 1.05)) / 0.42;

@@ -16,10 +16,11 @@ public final class Pharmacology {
     /**
      * 0..1 how strongly a dose acts right now: it comes up over {@code onset} ticks after the
      * first dose (smoothly, like a drug reaching the brain), holds, and fades over the last
-     * {@code fade} ticks. A top-up while already high does not restart the come-up.
+     * {@code fade} ticks. Top-ups set the clock so they neither restart nor skip the come-up
+     * (see {@link DrugEffect#doseTicks}).
      */
-    public static float strength(int elapsed, int remaining, int onset, int fade, boolean topUp) {
-        float up = topUp || onset <= 0 ? 1f : smoothstep(elapsed / (float) onset);
+    public static float strength(int elapsed, int remaining, int onset, int fade) {
+        float up = onset <= 0 ? 1f : smoothstep(elapsed / (float) onset);
         float down = fade <= 0 ? 1f : clamp01(remaining / (float) fade);
         return up * down;
     }

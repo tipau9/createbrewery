@@ -93,7 +93,7 @@ public final class Psychedelics {
             return;
         }
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(trip, ticks(kind), level, false, false, true));
+        player.addEffect(new MobEffectInstance(trip, DrugEffect.doseTicks(before, trip, ticks(kind)), level, false, false, true));
     }
 
     /** Every second while tripping: the body (stomach) and the setting (bad trips). */

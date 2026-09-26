@@ -43,7 +43,7 @@ public final class Opioids {
         var high = heroin ? ModEffects.NOD : ModEffects.CALM;
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(high, heroin ? HEROIN_TICKS : XANAX_TICKS, level, false, false, true));
+        player.addEffect(new MobEffectInstance(high, DrugEffect.doseTicks(before, high, heroin ? HEROIN_TICKS : XANAX_TICKS), level, false, false, true));
         if (heroin) {
             DrunkState s = DrunkServer.state(player);
             s.dependence = Math.min(1f, s.dependence + 0.2f);

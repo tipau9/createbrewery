@@ -9,12 +9,10 @@ class PharmacologyTest {
 
     @Test
     void aDoseComesUpHoldsAndFades() {
-        assertEquals(0f, Pharmacology.strength(0, 3600, 300, 900, false), 1e-6f);
-        assertTrue(Pharmacology.strength(150, 3450, 300, 900, false) < 0.6f);
-        assertEquals(1f, Pharmacology.strength(1500, 2100, 300, 900, false), 1e-6f);
-        assertTrue(Pharmacology.strength(3150, 450, 300, 900, false) < 0.6f);
-        // A top-up while high does not restart the come-up.
-        assertEquals(1f, Pharmacology.strength(0, 3600, 300, 900, true), 1e-6f);
+        assertEquals(0f, Pharmacology.strength(0, 3600, 300, 900), 1e-6f);
+        assertTrue(Pharmacology.strength(150, 3450, 300, 900) < 0.6f);
+        assertEquals(1f, Pharmacology.strength(1500, 2100, 300, 900), 1e-6f);
+        assertTrue(Pharmacology.strength(3150, 450, 300, 900) < 0.6f);
     }
 
     @Test

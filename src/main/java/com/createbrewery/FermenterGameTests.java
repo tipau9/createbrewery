@@ -673,6 +673,11 @@ public class FermenterGameTests {
         net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
         for (int i = 0; i < 3; i++) com.createbrewery.drugs.DrugServer.hit(player);
+        // Past the come-up, at the peak.
+        int hits = player.getEffect(com.createbrewery.effect.ModEffects.WEED_HIGH).getAmplifier();
+        player.removeEffect(com.createbrewery.effect.ModEffects.WEED_HIGH);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.WEED_HIGH,
+            com.createbrewery.drugs.DrugServer.WEED_TICKS - 300, hits));
         return player;
     }
 
@@ -802,7 +807,7 @@ public class FermenterGameTests {
         net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.BAD_TRIP, 1000));
         // Two shots, the second a top-up at full strength: still breathing.
-        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, 4800, 1));
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, 4700, 1));
         com.createbrewery.drugs.Opioids.body(player);
         helper.assertFalse(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "two shots stopped the breath");
         player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.CALM, 3000, 0));
@@ -819,6 +824,9 @@ public class FermenterGameTests {
         net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.LSD);
         com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.LSD);
+        // Two tabs at once still come up slowly.
+        helper.assertTrue(com.createbrewery.drugs.DrugEffect.strength(player, com.createbrewery.effect.ModEffects.LSD_TRIP) < 0.1f,
+            "the second tab skipped the come-up");
         com.createbrewery.drugs.TestCommand.setPhase(player, com.createbrewery.effect.ModEffects.LSD_TRIP, "peak");
         var trip = player.getEffect(com.createbrewery.effect.ModEffects.LSD_TRIP);
         helper.assertTrue(trip != null && trip.getAmplifier() == 1, "two tabs are not amplifier 1");
@@ -831,7 +839,7 @@ public class FermenterGameTests {
     @GameTest(template = TEMPLATE)
     public static void naloxonBringsTheBreathBack(GameTestHelper helper) {
         net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
-        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, 4800, 2));
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.NOD, 4700, 2));
         com.createbrewery.drunk.DrunkServer.state(player).dependence = 0.6f;
         com.createbrewery.drugs.Opioids.body(player);
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.RESPIRATORY_DEPRESSION), "three shots did not stop the breath");

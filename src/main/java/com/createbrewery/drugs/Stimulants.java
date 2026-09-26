@@ -54,7 +54,7 @@ public final class Stimulants {
         var high = mdma ? ModEffects.ROLLING : ModEffects.TWEAK;
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(mdma ? MAX_MDMA : MAX_METH, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(high, mdma ? MDMA_TICKS : METH_TICKS, level, false, false, true));
+        player.addEffect(new MobEffectInstance(high, DrugEffect.doseTicks(before, high, mdma ? MDMA_TICKS : METH_TICKS), level, false, false, true));
         // Another dose pushes the comedown back.
         player.removeEffect(mdma ? ModEffects.COMEDOWN : ModEffects.METH_CRASH);
     }

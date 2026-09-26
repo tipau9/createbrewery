@@ -120,7 +120,7 @@ public final class DrugServer {
     public static void hit(Player player) {
         MobEffectInstance before = player.getEffect(ModEffects.WEED_HIGH);
         int hits = before == null ? 0 : Math.min(MAX_HITS - 1, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, WEED_TICKS, hits, false, false, true));
+        player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, DrugEffect.doseTicks(before, ModEffects.WEED_HIGH, WEED_TICKS), hits, false, false, true));
         float joints = joints(player);
         // The circulation gives up from the second joint on, and past two and a half for sure.
         float sick = joints >= 2.5f ? 1f : joints > 2f ? 0.45f : joints > 1.5f ? 0.15f : 0f;
@@ -145,7 +145,7 @@ public final class DrugServer {
         if (kind == Kind.LACHGAS) {
             // Each balloon only prolongs the high a little; three in a row and the air runs short.
             MobEffectInstance before = player.getEffect(ModEffects.WAH);
-            player.addEffect(new MobEffectInstance(ModEffects.WAH, WAH_TICKS,
+            player.addEffect(new MobEffectInstance(ModEffects.WAH, DrugEffect.doseTicks(before, ModEffects.WAH, WAH_TICKS),
                 before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1), false, false, true));
             // Every balloon uses up a little vitamin B12.
             DrunkServer.state(player).b12 = Math.min(1f, DrunkServer.state(player).b12 + 0.05f);
@@ -175,14 +175,15 @@ public final class DrugServer {
         if (kind == Kind.KETA) DrunkServer.state(player).bladder = Math.min(1f, DrunkServer.state(player).bladder + 0.06f);
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
-        player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
+        player.addEffect(new MobEffectInstance(high, DrugEffect.doseTicks(before, high, ticks), level, false, false, true));
         if (kind == Kind.COKE) player.removeEffect(ModEffects.COKE_CRASH); // a new line pushes the crash back
         // Keta: the K-Loch from the third dose - or the second, with weed deepening it.
         int holeAt = player.hasEffect(ModEffects.WEED_HIGH) ? 1 : 2;
         if (kind == Kind.KETA && level >= holeAt) {
-            // Already in the hole: amplifier 1 marks a top-up, so it deepens instead of coming up again.
-            int deeper = player.hasEffect(ModEffects.K_HOLE) ? 1 : 0;
-            player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, K_HOLE_TICKS, deeper, false, false, true));
+            // Already in the hole: it deepens instead of coming up again.
+            MobEffectInstance hole = player.getEffect(ModEffects.K_HOLE);
+            player.addEffect(new MobEffectInstance(ModEffects.K_HOLE, DrugEffect.doseTicks(hole, ModEffects.K_HOLE, K_HOLE_TICKS),
+                hole == null ? 0 : 1, false, false, true));
         }
         if (player.level() instanceof ServerLevel level1) {
             // The lining gives up: often with the other powder still in there, and line after line.
@@ -411,7 +412,9 @@ public final class DrugServer {
     public static void edibleKicksIn(Player player, int brownies) {
         MobEffectInstance before = player.getEffect(ModEffects.WEED_HIGH);
         int hits = Math.min(MAX_HITS - 1, (before == null ? -1 : before.getAmplifier()) + HITS_PER_BROWNIE * brownies);
-        player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, WEED_TICKS, hits, false, false, true));
+        // Straight to the peak: the come-up already happened, unnoticed, in the stomach.
+        DrugEffect weed = (DrugEffect) ModEffects.WEED_HIGH.value();
+        player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, weed.total() - weed.onset(), hits, false, false, true));
         player.addEffect(new MobEffectInstance(ModEffects.COTTONMOUTH, COTTONMOUTH_TICKS, 0, false, false, true));
         think(player, "Oh. Oh nein. Da ist es. Das ist… viel.", 0x8FCF5A);
         if (joints(player) >= 2.5f || player.getRandom().nextFloat() < 0.3f * (brownies - 1)) greenOut(player);
