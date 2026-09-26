@@ -81,7 +81,6 @@ public final class SniffFirstPerson {
 
         PlayerRenderer renderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
         float lit = Math.max(LightTexture.block(light), LightTexture.sky(light)) / 15f * 0.85f + 0.15f;
-        VertexConsumer quads = buffers.getBuffer(RenderType.debugQuads());
 
         // Line endpoints on the phone screen (phone coordinates)
         final float LINE_X = 0.012f;
@@ -156,16 +155,17 @@ public final class SniffFirstPerson {
         renderer.renderLeftHand(pose, buffers, light, player);
         pose.popPose();
 
-        // Draw Phone Body & Screen
+        // Draw Phone Body & Screen (fetch quads AFTER arm rendering ends its batch)
+        VertexConsumer phoneQuads = buffers.getBuffer(RenderType.debugQuads());
         Matrix4f pm = pose.last().pose();
         // Phone chassis (metallic dark titanium slate)
-        box(quads, pm, -0.075f, -0.13f, -0.006f, 0.075f, 0.13f, 0.006f, 0.11f, 0.11f, 0.13f, lit);
+        box(phoneQuads, pm, -0.075f, -0.13f, -0.006f, 0.075f, 0.13f, 0.006f, 0.11f, 0.11f, 0.13f, lit);
         // Phone bevel highlight rim
-        box(quads, pm, -0.073f, -0.128f, -0.007f, 0.073f, 0.128f, -0.006f, 0.22f, 0.22f, 0.25f, lit);
+        box(phoneQuads, pm, -0.073f, -0.128f, -0.007f, 0.073f, 0.128f, -0.006f, 0.22f, 0.22f, 0.25f, lit);
         // AMOLED Screen surface
-        quad(quads, pm, -0.068f, -0.122f, 0.068f, 0.122f, -0.0075f, 0.04f, 0.04f, 0.06f, lit);
+        quad(phoneQuads, pm, -0.068f, -0.122f, 0.068f, 0.122f, -0.0075f, 0.04f, 0.04f, 0.06f, lit);
         // Notch dot
-        quad(quads, pm, -0.008f, 0.112f, 0.008f, 0.118f, -0.0077f, 0.01f, 0.01f, 0.01f, lit);
+        quad(phoneQuads, pm, -0.008f, 0.112f, 0.008f, 0.118f, -0.0077f, 0.01f, 0.01f, 0.01f, lit);
 
         // -------------------------------------------------------------
         // Powder & Line on Phone Screen
@@ -177,8 +177,8 @@ public final class SniffFirstPerson {
             float pourT = Mth.clamp((p - DrugPose.SNIFF_POUR_START) / 0.10f, 0f, 1f);
             float r = 0.024f * pourT;
             // Draw round powder pile
-            circle(quads, pm, LINE_X, 0f, r, powderZ, 0.96f, 0.96f, 0.98f, lit);
-            circle(quads, pm, LINE_X, 0f, r * 0.6f, powderZ - 0.0005f, 1f, 1f, 1f, lit);
+            circle(phoneQuads, pm, LINE_X, 0f, r, powderZ, 0.96f, 0.96f, 0.98f, lit);
+            circle(phoneQuads, pm, LINE_X, 0f, r * 0.6f, powderZ - 0.0005f, 1f, 1f, 1f, lit);
         }
         // Phase 3: Card chops pile into a clean line
         else if (p >= DrugPose.SNIFF_CARD_START && p < DrugPose.SNIFF_LINE_START) {
@@ -187,7 +187,7 @@ public final class SniffFirstPerson {
             float halfWidth = Mth.lerp(chopT, 0.022f, 0.0055f);
             float halfLength = Mth.lerp(chopT, 0.022f, (LINE_Y1 - LINE_Y0) * 0.5f);
             float cy = (LINE_Y0 + LINE_Y1) * 0.5f;
-            quad(quads, pm, LINE_X - halfWidth, cy - halfLength, LINE_X + halfWidth, cy + halfLength, powderZ, 0.97f, 0.97f, 0.99f, lit);
+            quad(phoneQuads, pm, LINE_X - halfWidth, cy - halfLength, LINE_X + halfWidth, cy + halfLength, powderZ, 0.97f, 0.97f, 0.99f, lit);
         }
         // Phase 4: Sniffing along the line (line shrinks as straw consumes it!)
         else if (p >= DrugPose.SNIFF_LINE_START && p <= DrugPose.SNIFF_LINE_END) {
@@ -195,7 +195,7 @@ public final class SniffFirstPerson {
             float currentY = LINE_Y0 + sniffProgress * (LINE_Y1 - LINE_Y0);
             // Only draw remaining part of the line from currentY to LINE_Y1
             if (currentY < LINE_Y1) {
-                quad(quads, pm, LINE_X - 0.0055f, currentY, LINE_X + 0.0055f, LINE_Y1, powderZ, 0.97f, 0.97f, 0.99f, lit);
+                quad(phoneQuads, pm, LINE_X - 0.0055f, currentY, LINE_X + 0.0055f, LINE_Y1, powderZ, 0.97f, 0.97f, 0.99f, lit);
             }
         }
         pose.popPose();
@@ -271,10 +271,11 @@ public final class SniffFirstPerson {
             pose.popPose();
 
             // Draw Credit Card prop (Navy blue card with gold stripe & gold chip)
+            VertexConsumer cardQuads = buffers.getBuffer(RenderType.debugQuads());
             Matrix4f cm = pose.last().pose();
-            box(quads, cm, -0.045f, -0.005f, -0.028f, 0.045f, 0.005f, 0.028f, 0.12f, 0.22f, 0.45f, lit);
+            box(cardQuads, cm, -0.045f, -0.005f, -0.028f, 0.045f, 0.005f, 0.028f, 0.12f, 0.22f, 0.45f, lit);
             // Magnetic stripe / gold chip
-            box(quads, cm, -0.046f, -0.006f, -0.01f, 0.046f, 0.006f, 0.005f, 0.85f, 0.72f, 0.22f, lit);
+            box(cardQuads, cm, -0.046f, -0.006f, -0.01f, 0.046f, 0.006f, 0.005f, 0.85f, 0.72f, 0.22f, lit);
             pose.popPose();
         }
 
@@ -312,10 +313,11 @@ public final class SniffFirstPerson {
             pose.popPose();
 
             // Draw Straw Prop (Silver cylinder / rolled banknote tube)
+            VertexConsumer strawQuads = buffers.getBuffer(RenderType.debugQuads());
             Matrix4f sm = pose.last().pose();
-            cylinder(quads, sm, 0f, -0.07f, 0.045f, 0.0075f, 0.12f, 0.82f, 0.85f, 0.88f, lit);
+            cylinder(strawQuads, sm, 0f, -0.07f, 0.045f, 0.0075f, 0.12f, 0.82f, 0.85f, 0.88f, lit);
             // Inner hollow tip
-            cylinder(quads, sm, 0f, -0.071f, 0.045f, 0.0055f, 0.004f, 0.2f, 0.2f, 0.25f, lit);
+            cylinder(strawQuads, sm, 0f, -0.071f, 0.045f, 0.0055f, 0.004f, 0.2f, 0.2f, 0.25f, lit);
 
             pose.popPose();
         }
