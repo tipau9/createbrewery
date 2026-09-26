@@ -206,7 +206,7 @@ public final class DrunkClient {
         breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
         afterglow = ease(afterglow, player == null ? 0f : DrugEffect.strength(player, ModEffects.AFTERGLOW));
         if (player != null && !mc.isPaused()) {
-            com.createbrewery.drugs.Hallucinations.tick(player, breakthrough, trip, bad, desert);
+            com.createbrewery.drugs.Hallucinations.tick(player, DmtClient.beyond, trip, bad, desert);
             TripClient.tick(mc, player);
             RollClient.tick(mc, player);
             TweakClient.tick(mc, player);
@@ -216,12 +216,13 @@ public final class DrunkClient {
             CokeClient.tick(mc, player);
             KetaClient.tick(mc, player);
             WeedClient.tick(mc, player);
+            DmtClient.tick(mc, player);
         }
 
         boolean want = player != null && !shaderFailed && screen() > 0.01f && !shaderPackActive()
             && (Intoxication.visualIntensity(blood) > 0.01f || Intoxication.mood(blood) > 0.01f
                 || stim > 0.01f || gray > 0.01f || dissoc > 0.01f || high > 0.01f || green > 0.01f
-                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || CokeClient.line > 0.01f || BenzoClient.rebound > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
+                || trip > 0.01f || bad > 0.01f || breakthrough > 0.01f || rolling > 0.01f || tweak > 0.01f || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || CokeClient.line > 0.01f || BenzoClient.rebound > 0.01f || NodClient.air > 0.01f || opiate > 0.01f || wah > 0.01f || afterglow > 0.01f || DmtClient.descent > 0.01f || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
         if (want && chain == null) {
             try {
                 chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), SHADER);
@@ -451,6 +452,10 @@ public final class DrunkClient {
             chain.setUniform("Desert", desert);
             chain.setUniform("BadTrip", bad * screen());
             chain.setUniform("Break", breakthrough * screen());
+            chain.setUniform("Crack", DmtClient.crack * screen());
+            chain.setUniform("Waiting", DmtClient.waiting * screen());
+            chain.setUniform("Beyond", DmtClient.beyond * screen());
+            chain.setUniform("Descent", DmtClient.descent * screen());
             chain.setUniform("Roll", rolling * screen());
             chain.setUniform("Rush", RollClient.rush * screen());
             chain.setUniform("Beat", RollClient.beat * screen());
@@ -876,6 +881,8 @@ public final class DrunkClient {
         roll += noise(t * 0.3, 41) * 13f * green;
         // DMT: the view turns slowly, as if weightless.
         roll += (float) Math.sin(t * 0.3) * 18f * breakthrough;
+        // ...and as it cracks open, the whole room vibrates.
+        roll += noise(t * 40.0, 71) * 1.5f * DmtClient.crack;
         // Entzug: the whole body shivers.
         roll += noise(t * 12.0, 53) * 1.2f * sick;
         // Lachgas: dizzy - the head tips over, as if about to fall.

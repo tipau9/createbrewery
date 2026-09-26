@@ -28,6 +28,10 @@ uniform float Organic; // share of the trip that is mushrooms: green, melting
 uniform float Desert;  // share that is peyote: warm, shimmering
 uniform float BadTrip; // fear: 0..1
 uniform float Break;   // DMT breakthrough: 0..1
+uniform float Crack;   // DMT, cracking open: neon lines growing over every surface, 0..1
+uniform float Waiting; // DMT, the waiting room: tunnel and unfolding chrysanthemum, 0..1
+uniform float Beyond;  // DMT, the other side: a dome of light tiled with jewels, 0..1
+uniform float Descent; // DMT, coming back down: pale geometry fading over the world, 0..1
 uniform float Roll;    // MDMA: 0..1
 uniform float Tweak;   // Meth: 0..1
 uniform float Tired;   // Meth, awake too long (or psychotic): the edges of the view lie, 0..1
@@ -136,7 +140,7 @@ void main() {
     float ba = abs(mod(atan(bc.y, bc.x) + t * 0.2, bseg) - bseg * 0.5);
     float depth = fract(0.15 / (br + 0.05) + t * 0.3);
     vec2 buv = vec2(cos(ba), sin(ba)) * mix(br, depth * 0.5, 0.6);
-    uv = mix(uv, 0.5 + buv * vec2(1.0 / aspect, 1.0), smoothstep(0.0, 0.7, Break));
+    uv = mix(uv, 0.5 + buv * vec2(1.0 / aspect, 1.0), smoothstep(0.0, 0.7, Waiting));
 
     // Keta: the world slowly swirls and drifts away from you. Very slow - under 0.1 Hz.
     vec2 c = uv - 0.5;
@@ -493,6 +497,44 @@ void main() {
     col = mix(col, hueShift(col, t * 0.8) * 1.3, 0.6 * Break);
     col = mix(col, neon, 0.35 * Break * smoothstep(0.6, 0.0, br));
     col += neon * smoothstep(0.85, 1.0, petals) * 0.25 * Break;
+    // Cracking open: the room goes dark and neon-green lines grow out over every surface,
+    // spreading from where you stand, while the edges of the view strobe.
+    if (Crack > 0.0) {
+        float glyph = sin(wp.x * 5.0 + t) + sin(wp.y * 5.0 - t * 0.7) + sin(wp.z * 5.0 + t * 0.5);
+        float lines = pow(abs(sin(glyph * 2.5)), 24.0);
+        float grow = smoothstep(24.0 * Crack, 24.0 * Crack - 3.0, dist) * solid;
+        col = mix(col, col * 0.2, 0.7 * Crack);
+        col += vec3(0.2, 1.0, 0.45) * lines * grow * 1.2 * Crack;
+        col += vec3(0.5, 1.0, 0.6) * step(0.6, fract(t * 9.0)) * smoothstep(0.35, 0.75, length(d)) * 0.25 * Crack;
+    }
+    // The waiting room: a chrysanthemum unfolding from the middle, petal after petal, filling the view.
+    if (Waiting > 0.0) {
+        float open = 0.9 * Waiting;
+        float petal = 0.5 + 0.5 * cos(ba * 24.0 + br * 30.0 - t * 2.0);
+        float layer = 0.5 + 0.5 * sin(br * 18.0 - t * 3.0);
+        vec3 bloom = mix(vec3(0.95, 0.35, 0.8), vec3(0.3, 1.0, 0.6), layer) * (0.4 + 0.8 * petal * layer);
+        col = mix(col, bloom, smoothstep(open, open - 0.25, br) * 0.75 * Waiting);
+    }
+    // The other side: a vast dome of light tiled with jewels, streaming outwards without end
+    // (log-polar, so it repeats smaller and smaller towards the bright middle). Only far off:
+    // what is right next to you - the beings - stays in front of it.
+    if (Beyond > 0.0 || Descent > 0.0) {
+        vec2 lp = vec2(atan(bc.y, bc.x), log(br + 0.001) - t * 0.15) * (8.0 / 3.14159);
+        vec2 tile = floor(lp);
+        vec2 tf = fract(lp) - 0.5;
+        float sq = max(abs(tf.x), abs(tf.y));
+        float pick = hash(tile);
+        vec3 jewel = pick < 0.25 ? vec3(0.8, 0.05, 0.2) : pick < 0.5 ? vec3(0.05, 0.7, 0.35)
+                   : pick < 0.75 ? vec3(0.1, 0.25, 0.95) : vec3(0.55, 0.1, 0.85);
+        float shine = pow(1.0 - 2.0 * sq, 2.0) * (0.6 + 0.4 * sin(t * 2.0 + pick * 6.28));
+        float rim = smoothstep(0.42, 0.5, sq);
+        vec3 dome = jewel * (0.3 + 1.2 * shine) + vec3(1.0, 0.8, 0.35) * rim;
+        dome += vec3(1.0, 0.95, 0.85) * exp(-br * 6.0) * 1.5;
+        float far = World > 0.0 ? smoothstep(4.0, 7.0, dist) : 1.0;
+        col = mix(col, dome, Beyond * mix(0.35, 1.0, far));
+        // Coming down: the pattern thins into pale lines laid over the world, and fades.
+        col += vec3(0.85, 0.9, 1.0) * rim * 0.35 * Descent;
+    }
 
     // MDMA: everything soft and warm, lights bloom pink-gold, and bright things sparkle.
     // The glow breathes with the loudness of the music.

@@ -223,6 +223,8 @@ public final class Psychedelics {
      * waiting one or two days out (hidden until it hits).
      */
     public static void expired(LivingEntity entity, MobEffectInstance instance) {
+        // DMT leaves no tolerance to speak of, but the afterglow lasts.
+        if (instance.is(ModEffects.BREAKTHROUGH)) entity.addEffect(new MobEffectInstance(ModEffects.AFTERGLOW, AFTERGLOW_TICKS, 0, false, false, true));
         if (instance.is(ModEffects.LSD_TRIP) || instance.is(ModEffects.SHROOM_TRIP) || instance.is(ModEffects.MESCALINE_TRIP)) {
             entity.addEffect(new MobEffectInstance(ModEffects.PSY_TOLERANCE, TOLERANCE_TICKS, 0, false, false, true));
             entity.addEffect(new MobEffectInstance(ModEffects.AFTERGLOW, AFTERGLOW_TICKS, 0, false, false, true));
