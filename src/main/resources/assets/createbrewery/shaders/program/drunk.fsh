@@ -47,6 +47,7 @@ uniform float Sick;    // Heroin withdrawal (cold turkey): cold, clammy, goosefl
 uniform float Calm;    // Xanax: flat, soft, grey-lilac and a little out of focus, 0..1
 uniform float Rebound; // after Xanax: the fear back doubled - too sharp, pulse at the edges, 0..1
 uniform float Wah;     // Lachgas: 0..1
+uniform float WahPulse; // Lachgas: where the wah-wah is, 0..1 - faster at the height, slowing as it fades
 uniform float Gone;    // Lachgas, the third balloon: the self dissolves into white, 0..1
 uniform float Rush;    // MDMA: a wave of euphoria washing over, 0..1
 uniform float Beat;    // MDMA: how much the music is in the body, 0..1
@@ -253,8 +254,14 @@ void main() {
     uv += (vec2(hash(floor(uv * 90.0) + floor(t * 7.0)), hash(floor(uv * 90.0) + floor(t * 7.0) + 5.3)) - 0.5) * px * 2.5 * Tired * solid;
 
     // Lachgas: the picture pumps in and out with the wah-wah, about three times a second.
-    float wahPulse = 0.5 + 0.5 * sin(t * 18.0);
-    uv = 0.5 + (uv - 0.5) * (1.0 - 0.04 * Wah * wahPulse);
+    float wahPulse = WahPulse;
+    uv = 0.5 + (uv - 0.5) * (1.0 - 0.015 * Wah * wahPulse);
+    // Distances stop making sense: what is far off swells towards you on every wah, and the
+    // world goes flat, like a picture of itself.
+    if (Wah > 0.0 && World > 0.0) {
+        float far = smoothstep(3.0, 30.0, distAt(clamp(uv, 0.0, 1.0)));
+        uv = 0.5 + (uv - 0.5) * (1.0 - 0.07 * far * Wah * wahPulse);
+    }
     // Just before the self goes: the view is pulled thin, squeezed into a narrow strip.
     float band = 1.0 - 0.85 * smoothstep(0.05, 0.6, Gone);
     uv.y = 0.5 + (uv.y - 0.5) / band;
@@ -794,23 +801,15 @@ void main() {
         col = mix(col, memory, Dream);
     }
 
-    // Lachgas: the world shrinks to a bright tunnel, far away, echoing.
-    col = mix(col, tap(0.5 + (uv - 0.5) * 0.92), 0.35 * Wah * wahPulse);
-    col *= 1.0 - smoothstep(0.15, 0.6, length(d)) * 0.8 * Wah;
+    // Lachgas: a faint echo of the picture, and the edges grey out and fade (the air is short).
+    col = mix(col, tap(0.5 + (uv - 0.5) * 0.94), 0.15 * Wah * wahPulse);
+    float greyOut = smoothstep(0.2, 0.65, length(d)) * Wah;
+    col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))), 0.6 * greyOut) * (1.0 - 0.4 * greyOut);
     // Tingles over the head and face: tiny cold sparks along the top and the sides of the view.
     vec2 spark = floor(uv * OutSize / 4.0);
     float tingle = step(0.985, hash(spark + floor(t * 15.0))) * smoothstep(0.25, 0.55, max(abs(d.x), d.y));
     col += vec3(0.85, 0.9, 1.0) * 0.5 * tingle * Wah;
-    // The third balloon: faint interlocking circles creeping in at the edges, breathing with the wah.
-    float wall = Gone * smoothstep(0.2, 0.6, length(d));
-    if (wall > 0.0) {
-        vec2 g = (uv - 0.5) * vec2(aspect, 1.0) * (12.0 + 1.5 * wahPulse);
-        float r1 = abs(length(fract(g) - 0.5) - 0.36);
-        float r2 = abs(length(fract(g + 0.5) - 0.5) - 0.36);
-        float rings = smoothstep(0.06, 0.0, min(r1, r2));
-        col = mix(col, vec3(0.85, 0.88, 1.0), 0.2 * rings * wall);
-    }
-    // ...and then the self is gone: everything white and flat, only the circles left.
+    // The third balloon: the self is gone - everything white and flat.
     col = mix(col, vec3(0.94, 0.93, 1.0), 0.85 * Gone);
 
     // Greening out: the colour drains out of everything, pale and sick green, and the edges go dark.
@@ -851,9 +850,9 @@ void main() {
     // MDMA: tracers too, shorter - distinct from medium doses on.
     col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip + 0.45 * smoothstep(0.4, 1.0, Roll)) * Trail * World * onScreen);
 
-    // Lachgas: the view pauses - it holds still for most of each wah, and moves in jerks.
-    float frozen = step(fract(t * 18.0 / 6.2831853), 0.25 + 0.45 * Wah) * step(0.35, Wah);
-    col = mix(col, texture(PrevSampler, texCoord).rgb, frozen * Trail);
+    // Lachgas: the view goes choppy, as if it ran at a handful of frames a second.
+    float choppy = step(0.5, fract(t * 7.0)) * smoothstep(0.3, 0.8, Wah);
+    col = mix(col, texture(PrevSampler, texCoord).rgb, choppy * Trail);
     // Recursion: each frame holds the last one, a little smaller - the view falls into itself.
     col = mix(col, texture(PrevSampler, 0.5 + (texCoord - 0.5) * 1.04).rgb, 0.5 * Recur * Trail);
 

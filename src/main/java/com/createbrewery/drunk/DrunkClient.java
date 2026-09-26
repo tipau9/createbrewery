@@ -97,6 +97,12 @@ public final class DrunkClient {
     private static float opiate, sick;
     /** Lachgas: 0..1. */
     private static float wah;
+    /**
+     * Lachgas: the wah-wah itself - a throb through everything heard and seen, fast at the height
+     * of the hit (about 4 a second) and slowing as it fades. The phase runs on ticks.
+     */
+    private static double wahPhase;
+    private static long wahCycle;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
     private static int lastCokeBeat;
@@ -194,6 +200,7 @@ public final class DrunkClient {
         // Lachgas hits within a breath: faster than the other channels.
         float wahTarget = player == null ? 0f : DrugEffect.strength(player, ModEffects.WAH);
         wah = Math.abs(wahTarget - wah) < 0.01f ? wahTarget : wah + (wahTarget - wah) * 0.3f;
+        if (wah > 0.01f && !mc.isPaused()) wahPhase += wahStep();
         sick = ease(sick, player == null ? 0f : DrugEffect.strength(player, ModEffects.WITHDRAWAL));
         // Meth sharpens like Koks, only harder and for longer.
         stim = ease(stim, player == null ? 0f : Math.max(DrugEffect.felt(player, ModEffects.COKE_HIGH), tweak));
@@ -254,7 +261,7 @@ public final class DrunkClient {
                 flipLeft = 40 + r.nextInt(60);
             }
         }
-        DrugAudio.tick(wah, Math.max(dissoc, Math.max(DmtClient.waiting, DmtClient.beyond)), DmtClient.crack,
+        DrugAudio.tick(wah * (0.3f + 0.7f * wahPulse(0f)), Math.max(dissoc, Math.max(DmtClient.waiting, DmtClient.beyond)), DmtClient.crack,
             trip * Math.max(0f, 1f - organic), trip * organic, rolling);
 
         boolean pack = shaderPackActive();
@@ -295,11 +302,24 @@ public final class DrunkClient {
      * Sounds only the drunk player hears, inside their own head: the hangover heartbeat in step
      * with the throbbing screen edge, and ringing ears when nodding off or passing out.
      */
-    /** Lachgas: the famous throbbing wah-wah inside the head, about three times a second. */
+    /** Lachgas: a low throb inside the head on every beat of the wah-wah, deeper as it slows. */
     private static void wahWah(Minecraft mc, LocalPlayer player) {
-        if (wah < 0.2f || player.tickCount % 7 != 0) return;
+        long cycle = (long) Math.floor(wahPhase / (Math.PI * 2));
+        if (cycle == wahCycle) return;
+        wahCycle = cycle;
+        if (wah < 0.2f) return;
         mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(),
-            0.55f + 0.1f * (float) Math.sin(player.tickCount * 0.3), 0.5f * wah));
+            0.5f + 0.15f * wah, 0.35f * wah));
+    }
+
+    /** How far the wah-wah turns in one tick: about 4 a second at full strength, 1.5 as it fades. */
+    private static double wahStep() {
+        return Math.PI * 2 * (1.5 + 2.5 * wah) / 20.0;
+    }
+
+    /** 0..1 where the wah-wah is right now (1: the loud, wide part). */
+    private static float wahPulse(float partial) {
+        return 0.5f + 0.5f * (float) Math.sin(wahPhase + partial * wahStep());
     }
 
     /** Moves {@code current} towards {@code target} over a couple of seconds. */
@@ -539,6 +559,7 @@ public final class DrunkClient {
             chain.setUniform("Calm", BenzoClient.calm * screen());
             chain.setUniform("Rebound", BenzoClient.rebound * screen());
             chain.setUniform("Wah", wah * screen());
+            chain.setUniform("WahPulse", wahPulse(partial));
             chain.setUniform("Gone", GasClient.gone * screen());
             chain.setUniform("Coke", CokeClient.coke * screen());
             chain.setUniform("Line", CokeClient.line * screen());
@@ -620,10 +641,8 @@ public final class DrunkClient {
             event.setSound(new EnhancedSound(sound, 1f - 0.4f * dissoc, 1f - 0.12f * dissoc));
             return;
         }
-        // Lachgas: every sound comes in bent up or down, depending on where the wah is.
+        // Lachgas: every sound echoes - it comes again, and again, fading.
         if (wah > 0.05f && !(sound instanceof TickableSoundInstance) && source != SoundSource.MUSIC) {
-            event.setSound(new EnhancedSound(sound, 1f, 1f - 0.3f * wah * (float) Math.sin(player.tickCount * 0.9)));
-            // ...and stutters: it comes again, and again, fading.
             if (wah > 0.3f && !sound.isLooping() && pendingEchoes.size() < 16) {
                 pendingEchoes.add(new PendingEcho(sound, player.tickCount + 3, 0.5f * wah));
                 pendingEchoes.add(new PendingEcho(sound, player.tickCount + 6, 0.3f * wah));
@@ -823,11 +842,13 @@ public final class DrunkClient {
      * volume, which OpenAL lets rise above 1.
      */
     private static void hearing(Minecraft mc) {
-        if (hearingFailed || (loud() <= 0.001f && !hearingBoosted)) return;
+        if (hearingFailed || (loud() <= 0.001f && wah <= 0.001f && !hearingBoosted)) return;
         try {
             float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
-            org.lwjgl.openal.AL10.alListenerf(org.lwjgl.openal.AL10.AL_GAIN, master * listenerBoost());
-            hearingBoosted = loud() > 0.001f;
+            // Lachgas: everything heard throbs with the wah-wah.
+            float throb = 1f - 0.5f * wah * (1f - wahPulse(0f));
+            org.lwjgl.openal.AL10.alListenerf(org.lwjgl.openal.AL10.AL_GAIN, master * listenerBoost() * throb);
+            hearingBoosted = loud() > 0.001f || wah > 0.001f;
         } catch (RuntimeException | LinkageError e) {
             hearingFailed = true; // no sound device: nothing to make louder
         }
@@ -970,7 +991,7 @@ public final class DrunkClient {
         // Entzug: the whole body shivers.
         roll += noise(t * 12.0, 53) * 1.2f * sick;
         // Lachgas: dizzy - the head tips over, as if about to fall.
-        roll += noise(t * 0.8, 61) * 15f * wah;
+        roll += noise(t * 0.8, 61) * 5f * wah;
         // Mushrooms: shaking with laughter, and the chills of the come-up.
         roll += (float) Math.sin(t * 22.0) * 2.5f * TripClient.laughing();
         // MDMA: goosebumps with every rush.

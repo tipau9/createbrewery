@@ -40,6 +40,7 @@
         { "name": "Tweak",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Nod",          "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Wah",          "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "WahPulse",     "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Rush",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Beat",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Kick",         "type": "float",      "count": 1,  "values": [ 0.0 ] },
