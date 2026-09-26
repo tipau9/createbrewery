@@ -7,8 +7,8 @@
         "particle_settings": {
             "particle_speed": 0.35,
             "random_speed": true,
-            "base_particle_size": 0.06,
-            "particle_size_variation": 0.5,
+            "base_particle_size": 0.03,
+            "particle_size_variation": 0.02,
             "random_size": true,
             "particle_lifetime": 30,
             "particle_lifetime_variation": 0.5,
