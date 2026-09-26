@@ -149,6 +149,7 @@ public final class TestCommand {
         }
         DrunkState s = DrunkServer.state(player);
         s.blood = s.stomach = s.peak = s.dependence = s.breathTolerance = s.benzo = s.b12 = s.bladder = 0f;
+        s.weedHabit = s.cokeHabit = s.methHabit = 0f;
         s.heat = s.water = 0f;
         s.awake = 0;
         player.syncData(ModAttachments.DRUNK);

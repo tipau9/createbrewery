@@ -227,6 +227,14 @@ public class ModEffects {
             .scaled(Attributes.BLOCK_BREAK_SPEED, id("craving_mining"), -0.15)
             .scaled(Attributes.ATTACK_DAMAGE, id("craving_damage"), -0.1));
 
+    /** Gewöhnung to weed, Koks and meth: their highs wear thin (hidden; amplifier 0..2). See DrugServer#habits. */
+    public static final DeferredHolder<MobEffect, MobEffect> WEED_HABIT = EFFECTS.register("weed_habit", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x6FAF4A, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> COKE_HABIT = EFFECTS.register("coke_habit", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xF4F4FF, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> METH_HABIT = EFFECTS.register("meth_habit", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x9FE3FF, 0, null, 0, 0, 0));
+
     /** Gewöhnung: the heroin high wears thin (hidden; amplifier 0..2). */
     public static final DeferredHolder<MobEffect, MobEffect> OPIOID_HABIT = EFFECTS.register("opioid_habit", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0x8A7050, 0, null, 0, 0, 0));

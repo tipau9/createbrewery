@@ -121,6 +121,8 @@ public final class DrugServer {
         MobEffectInstance before = player.getEffect(ModEffects.WEED_HIGH);
         int hits = before == null ? 0 : Math.min(MAX_HITS - 1, before.getAmplifier() + 1);
         player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, DrugEffect.doseTicks(before, ModEffects.WEED_HIGH, WEED_TICKS), hits, false, false, true));
+        DrunkState s = DrunkServer.state(player);
+        s.weedHabit = Math.min(1f, s.weedHabit + 0.012f);
         float joints = joints(player);
         // The circulation gives up from the second joint on, and past two and a half for sure.
         float sick = joints >= 2.5f ? 1f : joints > 2f ? 0.45f : joints > 1.5f ? 0.15f : 0f;
@@ -177,6 +179,7 @@ public final class DrugServer {
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
         player.addEffect(new MobEffectInstance(high, DrugEffect.doseTicks(before, high, ticks), level, false, false, true));
         if (kind == Kind.COKE) {
+            DrunkServer.state(player).cokeHabit = Math.min(1f, DrunkServer.state(player).cokeHabit + 0.06f);
             player.removeEffect(ModEffects.COKE_CRASH); // a new line pushes the crash back
             player.removeEffect(ModEffects.CRAVING);    // ...and stills the craving, for now
         }
@@ -403,8 +406,11 @@ public final class DrugServer {
         float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
         if (instance.is(ModEffects.COKE_HIGH)) {
             entity.addEffect(new MobEffectInstance(ModEffects.COKE_CRASH, (int) ((1200 + 600 * instance.getAmplifier()) * worse), 0));
-            // After a binge (more than one line) the craving sets in, longer the more it was.
-            if (instance.getAmplifier() >= 1) entity.addEffect(new MobEffectInstance(ModEffects.CRAVING, 2400 * instance.getAmplifier(), 0));
+            // After a binge (more than one line), or on a habit, the craving sets in; longer the more it was.
+            boolean hooked = entity instanceof Player p && DrunkServer.state(p).cokeHabit >= 0.3f;
+            if (instance.getAmplifier() >= 1 || hooked) {
+                entity.addEffect(new MobEffectInstance(ModEffects.CRAVING, 2400 * Math.max(1, instance.getAmplifier()), 0));
+            }
         } else if (instance.is(ModEffects.KETA_HIGH) || instance.is(ModEffects.K_HOLE)) {
             entity.addEffect(new MobEffectInstance(ModEffects.DAZED, (int) (1200 * worse), 0));
         } else if (instance.is(ModEffects.HEART_ATTACK) && entity.isAlive()) {
@@ -558,6 +564,7 @@ public final class DrugServer {
             Stimulants.body(player);
             Opioids.body(player);
             Mixes.tick(player);
+            habits(player);
             wear(player);
             spins(player);
             TanCompat.tick(player);
@@ -577,6 +584,25 @@ public final class DrugServer {
             com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.HANGOVER, 20);
             com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.GREENING_OUT, 20);
         }
+    }
+
+    /**
+     * Gewöhnung to weed, Koks and meth, every second: shown (both sides read it, see
+     * DrugEffect#felt) from a third of the way up, and wearing off while clean of that drug -
+     * a full habit in about an hour. The heart takes no discount (heartLoad reads strength).
+     */
+    public static void habits(Player player) {
+        DrunkState s = DrunkServer.state(player);
+        s.weedHabit = habit(player, s.weedHabit, ModEffects.WEED_HIGH, ModEffects.WEED_HABIT);
+        s.cokeHabit = habit(player, s.cokeHabit, ModEffects.COKE_HIGH, ModEffects.COKE_HABIT);
+        s.methHabit = habit(player, s.methHabit, ModEffects.TWEAK, ModEffects.METH_HABIT);
+    }
+
+    private static float habit(Player player, float level, Holder<MobEffect> high, Holder<MobEffect> shown) {
+        if (level <= 0f) return 0f;
+        int tier = level >= 0.8f ? 2 : level >= 0.55f ? 1 : level >= 0.3f ? 0 : -1;
+        if (tier >= 0) player.addEffect(new MobEffectInstance(shown, 60, tier, false, false, false));
+        return player.hasEffect(high) ? level : Math.max(0f, level - 0.0003f);
     }
 
     public static void heartTick(Player player) {

@@ -32,6 +32,8 @@ public final class DrunkState {
     public float b12;
     /** 0..1 how damaged the bladder is by Keta. Heals very slowly. */
     public float bladder;
+    /** 0..1 how used the body is to weed, Koks and meth: regular use, the high wears thin. Clean, it wears off. */
+    public float weedHabit, cokeHabit, methHabit;
 
     /** Server-only bookkeeping: whether the client last saw a non-zero state. */
     transient boolean clientSawAlcohol;
@@ -65,6 +67,14 @@ public final class DrunkState {
         this.bladder = bladder;
     }
 
+    private DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime, float dependence,
+                       float breathTolerance, float benzo, float b12, float bladder, float weedHabit, float cokeHabit, float methHabit) {
+        this(blood, stomach, peak, tolerance, toleranceTime, dependence, breathTolerance, benzo, b12, bladder);
+        this.weedHabit = weedHabit;
+        this.cokeHabit = cokeHabit;
+        this.methHabit = methHabit;
+    }
+
     public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime) {
         this.blood = blood;
         this.stomach = stomach;
@@ -93,7 +103,8 @@ public final class DrunkState {
 
     public boolean isEmpty() {
         return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f && dependence <= 0f
-            && breathTolerance <= 0f && benzo <= 0f && b12 <= 0f && bladder <= 0f;
+            && breathTolerance <= 0f && benzo <= 0f && b12 <= 0f && bladder <= 0f
+            && weedHabit <= 0f && cokeHabit <= 0f && methHabit <= 0f;
     }
 
     public static final Codec<DrunkState> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -106,7 +117,10 @@ public final class DrunkState {
         Codec.FLOAT.optionalFieldOf("breath_tolerance", 0f).forGetter(s -> s.breathTolerance),
         Codec.FLOAT.optionalFieldOf("benzo", 0f).forGetter(s -> s.benzo),
         Codec.FLOAT.optionalFieldOf("b12", 0f).forGetter(s -> s.b12),
-        Codec.FLOAT.optionalFieldOf("bladder", 0f).forGetter(s -> s.bladder)
+        Codec.FLOAT.optionalFieldOf("bladder", 0f).forGetter(s -> s.bladder),
+        Codec.FLOAT.optionalFieldOf("weed_habit", 0f).forGetter(s -> s.weedHabit),
+        Codec.FLOAT.optionalFieldOf("coke_habit", 0f).forGetter(s -> s.cokeHabit),
+        Codec.FLOAT.optionalFieldOf("meth_habit", 0f).forGetter(s -> s.methHabit)
     ).apply(i, DrunkState::new));
 
     public static final StreamCodec<ByteBuf, DrunkState> STREAM_CODEC = StreamCodec.composite(

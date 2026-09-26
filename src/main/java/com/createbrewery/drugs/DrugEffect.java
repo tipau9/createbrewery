@@ -99,9 +99,13 @@ public class DrugEffect extends MobEffect {
         if (instance == null) return 0f;
         if (!(effect.value() instanceof DrugEffect drug) || !drug.stacking) return strength(entity, effect);
         float felt = strength(entity, effect) * Pharmacology.feltFor((instance.getAmplifier() + 1) / (float) drug.perDose);
-        // Used to heroin, the high wears thin: the same shot does less and less.
-        MobEffectInstance habit = entity.getEffect(ModEffects.OPIOID_HABIT);
-        if (habit != null && effect.is(ModEffects.NOD.getKey())) felt *= 1f - 0.2f * (habit.getAmplifier() + 1);
+        // Used to it, the high wears thin: the same dose does less and less.
+        var habitOf = effect.is(ModEffects.NOD.getKey()) ? ModEffects.OPIOID_HABIT
+            : effect.is(ModEffects.WEED_HIGH.getKey()) ? ModEffects.WEED_HABIT
+            : effect.is(ModEffects.COKE_HIGH.getKey()) ? ModEffects.COKE_HABIT
+            : effect.is(ModEffects.TWEAK.getKey()) ? ModEffects.METH_HABIT : null;
+        MobEffectInstance habit = habitOf == null ? null : entity.getEffect(habitOf);
+        if (habit != null) felt *= 1f - 0.2f * (habit.getAmplifier() + 1);
         return felt;
     }
 

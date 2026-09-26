@@ -80,6 +80,9 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("item.createbrewery.naloxon.desc3", "Löst bei Opiat-Abhängigen sofortigen Entzug aus");
         REGISTRATE.addRawLang("effect.createbrewery.opioid_habit", "Gewöhnung");
         REGISTRATE.addRawLang("effect.createbrewery.craving", "Gier");
+        REGISTRATE.addRawLang("effect.createbrewery.weed_habit", "Gewöhnung (Weed)");
+        REGISTRATE.addRawLang("effect.createbrewery.coke_habit", "Gewöhnung (Koks)");
+        REGISTRATE.addRawLang("effect.createbrewery.meth_habit", "Gewöhnung (Crystal)");
         REGISTRATE.addRawLang("effect.createbrewery.seizure", "Krampfanfall");
         REGISTRATE.addRawLang("effect.createbrewery.hyponatremia", "Wasservergiftung");
         REGISTRATE.addRawLang("effect.createbrewery.numbness", "Taubheit");

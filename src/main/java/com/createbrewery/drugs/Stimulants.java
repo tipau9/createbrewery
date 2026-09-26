@@ -62,7 +62,10 @@ public final class Stimulants {
         if (spent) DrugServer.think(player, "Irgendwie… nicht wie letztes Mal.", 0xB08AB0);
         // Another dose pushes the comedown back (and stills the craving, for now).
         player.removeEffect(mdma ? ModEffects.COMEDOWN : ModEffects.METH_CRASH);
-        if (!mdma) player.removeEffect(ModEffects.CRAVING);
+        if (!mdma) {
+            player.removeEffect(ModEffects.CRAVING);
+            DrunkServer.state(player).methHabit = Math.min(1f, DrunkServer.state(player).methHabit + 0.08f);
+        }
     }
 
     /** MDMA, every second: love for everyone around, the jaw grinding, and hugs. */

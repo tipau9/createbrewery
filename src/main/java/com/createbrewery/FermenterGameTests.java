@@ -818,6 +818,20 @@ public class FermenterGameTests {
         helper.succeed();
     }
 
+    /** Used to Koks, the same line does less; the heart pays in full. */
+    @GameTest(template = TEMPLATE)
+    public static void aHabitThinsTheHigh(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.COKE_HIGH,
+            com.createbrewery.drugs.DrugServer.COKE_TICKS - 300, 0));
+        float fresh = com.createbrewery.drugs.DrugEffect.felt(player, com.createbrewery.effect.ModEffects.COKE_HIGH);
+        com.createbrewery.drunk.DrunkServer.state(player).cokeHabit = 0.9f;
+        com.createbrewery.drugs.DrugServer.habits(player);
+        float used = com.createbrewery.drugs.DrugEffect.felt(player, com.createbrewery.effect.ModEffects.COKE_HIGH);
+        helper.assertTrue(used < fresh * 0.5f, "a habit did not thin the high: " + fresh + " -> " + used);
+        helper.succeed();
+    }
+
     /** A Koks binge ends in craving; the next line stills it. */
     @GameTest(template = TEMPLATE)
     public static void aBingeEndsInCraving(GameTestHelper helper) {
