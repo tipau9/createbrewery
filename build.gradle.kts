@@ -60,6 +60,9 @@ repositories {
     maven("https://maven.ithundxr.dev/snapshots")   // Registrate
     maven("https://maven.blamejared.com")           // JEI
     maven("https://maven.kosmx.dev")                // playerAnimator
+    maven("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/") // GeckoLib
+    maven("https://maven.maxhenkel.de/repository/public")              // Simple Voice Chat API
+    maven("https://maven.minecraftforge.net")                          // Tough As Nails, GlitchCore
     exclusiveContent {                              // Distant Horizons
         forRepository { maven("https://api.modrinth.com/maven") }
         filter { includeGroup("maven.modrinth") }
@@ -81,6 +84,13 @@ dependencies {
     compileOnly("dev.kosmx.player-anim:player-animation-lib-forge:2.0.4+1.21.1") { isTransitive = false }
     // Distant Horizons (in the pack): the far landscape's depth, only when it is there.
     compileOnly("maven.modrinth:distanthorizons:3.2.0-b-1.21.1") { isTransitive = false }
+    // GeckoLib (in the pack): animated hallucinations, only when it is there.
+    compileOnly("software.bernie.geckolib:geckolib-neoforge-${property("minecraft_version")}:4.9.3") { isTransitive = false }
+    // Simple Voice Chat (in the pack): your voice on drugs, only when it is there.
+    compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.36")
+    // Tough As Nails (in the pack): body temperature and thirst, only when it is there.
+    compileOnly("com.github.glitchfiend:ToughAsNails-neoforge:${property("minecraft_version")}-10.1.0.3") { isTransitive = false }
+    compileOnly("com.github.glitchfiend:GlitchCore-neoforge:${property("minecraft_version")}-2.1.0.2") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // Required to actually launch the JUnit Platform. Without it, the first unit

@@ -250,7 +250,10 @@ public final class DrunkClient {
         breakthrough = ease(breakthrough, player == null ? 0f : DrugEffect.strength(player, ModEffects.BREAKTHROUGH));
         afterglow = ease(afterglow, player == null ? 0f : DrugEffect.strength(player, ModEffects.AFTERGLOW));
         if (player != null && !mc.isPaused()) {
-            com.createbrewery.drugs.Hallucinations.tick(player, DmtClient.beyond, trip, bad, desert);
+            // Bugs: sleepless on meth, or deep into the Koks (three lines and more).
+            MobEffectInstance coke = player.getEffect(ModEffects.COKE_HIGH);
+            float bugs = Math.max(TweakClient.tired, coke != null && coke.getAmplifier() >= 2 ? CokeClient.coke : 0f);
+            com.createbrewery.drugs.Hallucinations.tick(player, DmtClient.beyond, trip, bad, desert, bugs);
             TripClient.tick(mc, player);
             RollClient.tick(mc, player);
             TweakClient.tick(mc, player);
@@ -353,9 +356,9 @@ public final class DrunkClient {
         });
         var pose = com.createbrewery.drugs.DrugPose.SEEN.get(player.getId());
         var action = com.createbrewery.drugs.DrugPose.ACTING.get(player.getId());
-        LOGGER.info("[Brewery debug] blood={}‰ chain={} frames={} screen={} normals={} pose={}/{} eyes={} action={} |{} |{}", String.format("%.2f", blood),
+        LOGGER.info("[Brewery debug] blood={}‰ chain={} frames={} screen={} normals={} pose={}/{} eyes={} action={} visions={} |{} |{}", String.format("%.2f", blood),
             chain != null, chainFrames, String.format("%.2f", screen()), veilNormals(), pose == null ? 0 : pose.kind(),
-            pose == null ? 0 : pose.amount() & 0xFF, pose == null ? 0 : pose.eyes(), action == null ? "-" : action.kind(), effects, live);
+            pose == null ? 0 : pose.amount() & 0xFF, pose == null ? 0 : pose.eyes(), action == null ? "-" : action.kind(), com.createbrewery.drugs.Hallucinations.seen(), effects, live);
     }
 
     /**
@@ -506,7 +509,8 @@ public final class DrunkClient {
         }
 
         // The figure: comes in slowly, gone when looked at, never longer than a few seconds.
-        if (shadowAge < 0 && paranoid && dark && player.getRandom().nextFloat() < 1f / 700f) {
+        if (shadowAge < 0 && paranoid && dark && player.getRandom().nextFloat() < 1f / 700f
+            && !(com.createbrewery.drugs.Hallucinations.GEO && com.createbrewery.drugs.Hallucinations.shadow(player, 62f))) {
             shadowYaw = player.getYRot() + (player.getRandom().nextBoolean() ? 62f : -62f);
             shadowAge = 0;
             shadowGoing = false;
@@ -1524,6 +1528,17 @@ public final class DrunkClient {
     }
 
     // ---- inventory: the effect shows the actual level ----
+
+    public static void registerRenderers(net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
+        if (com.createbrewery.drugs.Hallucinations.GEO) {
+            GeoVisions.registerRenderers(event);
+        } else {
+            event.registerEntityRenderer(com.createbrewery.drugs.HallucinationEntity.SHADOW_PERSON.get(),
+                net.minecraft.client.renderer.entity.NoopRenderer::new);
+            event.registerEntityRenderer(com.createbrewery.drugs.HallucinationEntity.CRAWLER.get(),
+                net.minecraft.client.renderer.entity.NoopRenderer::new);
+        }
+    }
 
     public static void addLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {
         DrugEyes.addLayers(event);

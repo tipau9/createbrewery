@@ -24,6 +24,7 @@ public class CreateBrewery {
         ModBlockEntities.register();
         ModCreativeTabs.register(modEventBus);
         com.createbrewery.effect.ModEffects.register(modEventBus);
+        com.createbrewery.drugs.HallucinationEntity.register(modEventBus);
         com.createbrewery.drunk.ModAttachments.register(modEventBus);
         com.createbrewery.particle.ModParticles.register(modEventBus);
         com.createbrewery.sound.ModSounds.register(modEventBus);
@@ -179,6 +180,7 @@ public class CreateBrewery {
             modEventBus.addListener(CreateBreweryClient::onClientSetup);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::addLayers);
+            modEventBus.addListener(com.createbrewery.drunk.DrunkClient::registerRenderers);
             modEventBus.addListener(com.createbrewery.particle.BreweryParticle::register);
         }
         ModRecipeTypes.register(modEventBus);
