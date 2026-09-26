@@ -180,7 +180,9 @@ public final class DrunkClient {
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;
         if (Math.abs(target - blood) < 0.001f) blood = target;
         // Every drug comes up, holds and fades (DrugEffect.strength); the screen follows that curve.
-        rolling = ease(rolling, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING));
+        // Koks on top blunts the MDMA: less of the warmth, more of the edge.
+        rolling = ease(rolling, player == null ? 0f : DrugEffect.felt(player, ModEffects.ROLLING)
+            * (1f - 0.35f * DrugEffect.strength(player, ModEffects.COKE_HIGH)));
         tweak = ease(tweak, player == null ? 0f : DrugEffect.felt(player, ModEffects.TWEAK));
         opiate = ease(opiate, player == null ? 0f : Math.min(1f, DrugEffect.felt(player, ModEffects.NOD)
             + (player.hasEffect(ModEffects.RESPIRATORY_DEPRESSION) ? 0.5f : 0f))
@@ -1138,6 +1140,9 @@ public final class DrunkClient {
             if (high > 0.6f) event.setCinematicCameraEnabled(true);
         }
         if (green > 0f) event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.3f * green));
+        // B12 gone: numb hands, the mouse drags.
+        var numb = Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getEffect(ModEffects.NUMBNESS);
+        if (numb != null) event.setMouseSensitivity(event.getMouseSensitivity() * (0.75f - 0.25f * numb.getAmplifier()));
         if (dissoc > 0f) {
             event.setMouseSensitivity(event.getMouseSensitivity() * (1f - 0.6f * dissoc));
             if (dissoc > 0.5f) event.setCinematicCameraEnabled(true);

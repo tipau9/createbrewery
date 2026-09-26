@@ -146,5 +146,11 @@ public class ModItems {
         .properties(p -> p.stacksTo(4))
         .register();
 
+    public static final ItemEntry<com.createbrewery.drugs.ElectrolyteItem> ELECTROLYTE = REGISTRATE
+        .item("electrolyte_drink", com.createbrewery.drugs.ElectrolyteItem::new)
+        .lang("Elektrolyt-Drink")
+        .properties(p -> p.stacksTo(16))
+        .register();
+
     public static void register() {}
 }

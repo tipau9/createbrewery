@@ -130,6 +130,7 @@ public final class Stimulants {
                 player.addEffect(new MobEffectInstance(ModEffects.HYPERTHERMIA, 40, 0, false, false, true));
             }
         }
+        water(player, s);
         if (player.hasEffect(ModEffects.TWEAK)) {
             s.awake++;
             if (s.awake > PSYCHOSIS_AFTER && !player.hasEffect(ModEffects.PSYCHOSIS) && !player.hasEffect(ModEffects.CALM) && player.getRandom().nextFloat() < 0.01f) {
@@ -138,6 +139,47 @@ public final class Stimulants {
         } else if (player.isSleeping()) {
             s.awake = 0;
         }
+    }
+
+    /**
+     * MDMA makes the body hold on to water. Drinking to cool down is right, but what goes in on
+     * it stays in: past about four drinks the blood's salt thins (water poisoning) - headache,
+     * sick, confused, and further on a seizure. Most MDMA deaths are this, not drying out.
+     */
+    private static void water(Player player, DrunkState s) {
+        if (s.water <= 0f) return;
+        s.water = Math.max(0f, s.water - (player.hasEffect(ModEffects.ROLLING) ? 0.0005f : 0.004f));
+        if (s.water < 1f) return;
+        player.addEffect(new MobEffectInstance(ModEffects.HYPONATREMIA, 60, s.water >= 1.5f ? 1 : 0, false, false, true));
+        if (player.getRandom().nextFloat() < 0.01f) {
+            DrugServer.think(player, WATER[player.getRandom().nextInt(WATER.length)], 0x7AB0E0);
+        }
+        if (s.water >= 1.5f && !player.hasEffect(ModEffects.SEIZURE) && player.getRandom().nextFloat() < 0.02f) Opioids.seize(player);
+    }
+
+    private static final String[] WATER = {"Mein Kopf… als würd er platzen.", "Mir ist so schlecht. Noch mehr Wasser?",
+        "Wo… bin ich nochmal?", "Ich hab doch genug getrunken… oder?"};
+
+    /** Wasservergiftung, every second: sick to the stomach. */
+    public static void waterTick(LivingEntity entity, int level) {
+        if (entity.getRandom().nextFloat() < 0.04f * (level + 1)) {
+            entity.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 100, 0, false, false, false));
+        }
+        if (entity instanceof Player player && player.getRandom().nextFloat() < 0.01f * (level + 1)) DrunkServer.vomit(player);
+    }
+
+    /** Water on MDMA: it goes in, and stays. */
+    public static void drank(Player player) {
+        if (player.hasEffect(ModEffects.ROLLING) || player.hasEffect(ModEffects.COMEDOWN)) DrunkServer.state(player).water += 0.25f;
+    }
+
+    /** Salt and sugar: the blood's salt back, and cool. */
+    public static void electrolytes(Player player) {
+        DrunkState s = DrunkServer.state(player);
+        s.water = 0f;
+        player.removeEffect(ModEffects.HYPONATREMIA);
+        cool(player);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 1.0f, 1.0f);
     }
 
     /** A drink cools you down. */
@@ -158,6 +200,11 @@ public final class Stimulants {
     public static void expired(LivingEntity entity, MobEffectInstance instance) {
         if (instance.is(ModEffects.ROLLING)) {
             entity.addEffect(new MobEffectInstance(ModEffects.COMEDOWN, 2400 + 1200 * instance.getAmplifier(), 0));
+            // And the real low comes later: about two days on, the serotonin is at its lowest.
+            entity.addEffect(new MobEffectInstance(ModEffects.COMEDOWN_PENDING, 36000 + entity.getRandom().nextInt(12000), 0, false, false, false));
+        } else if (instance.is(ModEffects.COMEDOWN_PENDING)) {
+            entity.addEffect(new MobEffectInstance(ModEffects.COMEDOWN, 3600, 0));
+            if (entity instanceof Player player) DrugServer.think(player, "Warum bin ich so… leer? Grundlos. Einfach leer.", 0x8A8AB0);
         } else if (instance.is(ModEffects.TWEAK)) {
             entity.addEffect(new MobEffectInstance(ModEffects.METH_CRASH, 3600 + 1800 * instance.getAmplifier(), 0));
         }

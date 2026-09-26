@@ -138,6 +138,11 @@ public class ModRecipeProvider {
             create("naloxon", b -> b
                 .require(Items.GHAST_TEAR).require(Items.GLASS_BOTTLE).require(Items.SUGAR)
                 .output(ModItems.NALOXON.get(), 2));
+            // Water with sea salt (kelp) and sugar.
+            create("electrolyte_drink", b -> b
+                .require(Items.GLASS_BOTTLE).require(Items.DRIED_KELP).require(Items.SUGAR)
+                .require(Fluids.WATER, 250)
+                .output(ModItems.ELECTROLYTE.get()));
             create("lachgas", b -> b
                 .require(Items.GUNPOWDER).require(Items.SUGAR)
                 .require(Fluids.WATER, 250)

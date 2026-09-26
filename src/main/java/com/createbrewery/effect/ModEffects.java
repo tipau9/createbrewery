@@ -230,6 +230,19 @@ public class ModEffects {
         new DrugEffect(MobEffectCategory.HARMFUL, 0x9040C0, 20, Opioids::seizureTick, 0, 0, 0)
             .scaled(Attributes.MOVEMENT_SPEED, id("seizure_speed"), -1.0));
 
+    /** Wasservergiftung: on MDMA the water stays in, and too much of it thins the blood's salt. */
+    public static final DeferredHolder<MobEffect, MobEffect> HYPONATREMIA = EFFECTS.register("hyponatremia", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0x5A9AD0, 20, Stimulants::waterTick, 0, 0, 0)
+            .scaled(Attributes.MOVEMENT_SPEED, id("hyponatremia_speed"), -0.15));
+
+    /** Taubheit: Lachgas has used up the B12 - numb hands and feet (amplifier 0..1). */
+    public static final DeferredHolder<MobEffect, MobEffect> NUMBNESS = EFFECTS.register("numbness", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xA0B8C8, 0, null, 0, 0, 0));
+
+    /** Waiting to hit: the MDMA low two days on (hidden). */
+    public static final DeferredHolder<MobEffect, MobEffect> COMEDOWN_PENDING = EFFECTS.register("comedown_pending", () ->
+        new DrugEffect(MobEffectCategory.NEUTRAL, 0x6A6A8A, 0, null, 0, 0, 0));
+
     /** Lachgas: seconds of giggling, wah-wah and a world far away. */
     public static final DeferredHolder<MobEffect, MobEffect> WAH = EFFECTS.register("wah", () ->
         new DrugEffect(MobEffectCategory.NEUTRAL, 0xC8DCFF, 20, DrugServer::wahTick, DrugServer.WAH_TICKS, 20, 160)
@@ -247,6 +260,8 @@ public class ModEffects {
         new DrugEffect(MobEffectCategory.NEUTRAL, 0x9AF0FF, 0, null, 0, 0, 0));
     public static final DeferredHolder<MobEffect, MobEffect> DEHYDRATED = EFFECTS.register("dehydrated", () ->
         new DrugEffect(MobEffectCategory.HARMFUL, 0xD8A060, 0, null, 0, 0, 0));
+    public static final DeferredHolder<MobEffect, MobEffect> COCAETHYLENE = EFFECTS.register("cocaethylene", () ->
+        new DrugEffect(MobEffectCategory.HARMFUL, 0xE0E0C0, 0, null, 0, 0, 0));
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "effect." + path);

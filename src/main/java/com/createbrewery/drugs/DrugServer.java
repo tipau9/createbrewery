@@ -147,6 +147,8 @@ public final class DrugServer {
             MobEffectInstance before = player.getEffect(ModEffects.WAH);
             player.addEffect(new MobEffectInstance(ModEffects.WAH, WAH_TICKS,
                 before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1), false, false, true));
+            // Every balloon uses up a little vitamin B12.
+            DrunkServer.state(player).b12 = Math.min(1f, DrunkServer.state(player).b12 + 0.05f);
             return;
         }
         if (kind == Kind.HEROIN || kind == Kind.XANAX) {
@@ -167,6 +169,10 @@ public final class DrugServer {
             case KETA -> KETA_TICKS;
             default -> WEED_TICKS;
         };
+        // Koks on alcohol: the liver makes cocaethylene, which lasts about three times as long.
+        if (kind == Kind.COKE && DrunkServer.state(player).blood >= Intoxication.TIPSY) ticks = ticks * 3 / 2;
+        // Keta wears the bladder, dose by dose.
+        if (kind == Kind.KETA) DrunkServer.state(player).bladder = Math.min(1f, DrunkServer.state(player).bladder + 0.06f);
         MobEffectInstance before = player.getEffect(high);
         int level = before == null ? 0 : Math.min(MAX_LEVEL, before.getAmplifier() + 1);
         player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
@@ -336,6 +342,7 @@ public final class DrugServer {
     /** A drink after smoking: the dry mouth is gone, and it feels amazing. */
     public static void quench(Player player, net.minecraft.world.item.ItemStack drink) {
         if (drink.getUseAnimation() != net.minecraft.world.item.UseAnim.DRINK) return;
+        if (!(drink.getItem() instanceof ElectrolyteItem)) Stimulants.drank(player);
         Stimulants.cool(player);
         if (!player.hasEffect(ModEffects.COTTONMOUTH)) return;
         player.removeEffect(ModEffects.COTTONMOUTH);
@@ -354,6 +361,10 @@ public final class DrugServer {
                 SoundSource.PLAYERS, 1.0f, 1.1f + player.getRandom().nextFloat() * 0.2f);
         }
         if (player.getAirSupply() <= 0) DrunkServer.blackout(player);
+        // With alcohol: the legs go.
+        if (DrunkServer.state(player).blood >= Intoxication.TIPSY) {
+            player.addEffect(new MobEffectInstance(ModEffects.STUMBLE, 40, 0, false, false, true));
+        }
     }
 
     /** Lachgas pushes the oxygen out: from the third balloon in a row the air runs down. */
@@ -404,6 +415,40 @@ public final class DrugServer {
         if (advancement != null) player.getAdvancements().award(advancement, criterion);
     }
 
+    private static final ResourceKey<DamageType> BLADDER = ResourceKey.create(Registries.DAMAGE_TYPE,
+        ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "keta_bladder"));
+    private static final String[] NUMB = {"Meine Zehen kribbeln… schon den ganzen Tag.", "Ich spür meine Finger nicht richtig.",
+        "Warum lauf ich so komisch?"};
+
+    /**
+     * Every second: what builds up over many sessions. Lachgas uses up vitamin B12 - numb hands
+     * and feet, then a clumsy, stumbling walk - which heals over time. Keta wears the bladder:
+     * always needing to go, then it burns and bleeds.
+     */
+    static void wear(Player player) {
+        DrunkState s = DrunkServer.state(player);
+        if (s.b12 > 0f) {
+            s.b12 = Math.max(0f, s.b12 - 0.0002f);
+            if (s.b12 >= 0.35f) {
+                player.addEffect(new MobEffectInstance(ModEffects.NUMBNESS, 60, s.b12 >= 0.7f ? 1 : 0, false, false, true));
+                if (s.b12 >= 0.7f) player.addEffect(new MobEffectInstance(ModEffects.STUMBLE, 40, 0, false, false, false));
+                if (player.getRandom().nextFloat() < 1f / 180f) think(player, NUMB[player.getRandom().nextInt(NUMB.length)], 0xA0B8C8);
+            }
+        }
+        if (s.bladder > 0f) {
+            s.bladder = Math.max(0f, s.bladder - 0.00005f);
+            if (s.bladder >= 0.25f && player.getRandom().nextFloat() < 0.006f * s.bladder) {
+                if (s.bladder >= 0.6f) {
+                    player.hurt(new DamageSource(player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+                        .getHolderOrThrow(BLADDER)), 1f);
+                    think(player, "Au… das brennt. Und da ist Blut.", 0xD06060);
+                } else {
+                    think(player, "Ich muss schon wieder… schon wieder?!", 0xC8C890);
+                }
+            }
+        }
+    }
+
     /** Wide awake on Koks, Meth and Ecstasy: no sleeping. */
     @SubscribeEvent
     public static void onSleep(CanPlayerSleepEvent event) {
@@ -425,6 +470,7 @@ public final class DrugServer {
             Stimulants.body(player);
             Opioids.body(player);
             Mixes.tick(player);
+            wear(player);
         }
     }
 

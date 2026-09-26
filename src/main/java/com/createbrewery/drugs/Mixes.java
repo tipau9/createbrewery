@@ -21,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
  *   <li>Nachgelegt (a trip + weed): the trip gets stronger, and bad trips twice as likely.</li>
  *   <li>Gipfelsturm (a trip + Lachgas): a few seconds of breakthrough, like a small DMT.</li>
  *   <li>Ausgetrocknet (MDMA + alcohol): the body dries out and overheats far faster.</li>
+ *   <li>Kokaethylen (Koks + alcohol): Koks lasts half again as long, and the heart takes more.</li>
  * </ul>
  */
 public final class Mixes {
@@ -40,6 +41,7 @@ public final class Mixes {
             }
         }
         if (dehydrating(player)) mark(player, ModEffects.DEHYDRATED);
+        if (player.hasEffect(ModEffects.COKE_HIGH) && DrunkServer.state(player).blood >= Intoxication.TIPSY) mark(player, ModEffects.COCAETHYLENE);
     }
 
     public static boolean speedball(LivingEntity entity) {

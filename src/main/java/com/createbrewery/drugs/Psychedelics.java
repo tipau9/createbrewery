@@ -119,7 +119,9 @@ public final class Psychedelics {
         if (!player.hasEffect(ModEffects.BAD_TRIP) && !player.hasEffect(ModEffects.CALM) // Xanax: no fear
             && !player.hasEffect(ModEffects.ROLLING) // Candyflip: MDMA keeps the fear away
             && player.getRandom().nextFloat() < 0.012f * trip * badSetting(player)
-                * (player.hasEffect(ModEffects.WEED_HIGH) ? 2f : 1f)) {
+                * (player.hasEffect(ModEffects.WEED_HIGH) ? 2f : 1f)
+                // A stimulant on top: racing heart and racing thoughts, fear comes easier.
+                * (player.hasEffect(ModEffects.COKE_HIGH) || player.hasEffect(ModEffects.TWEAK) ? 1.8f : 1f)) {
             player.addEffect(new MobEffectInstance(ModEffects.BAD_TRIP, BAD_TRIP_TICKS, 0, false, false, true));
         }
         // Tatewari protection: sitting or standing still at a fire in desert/badlands calms hostility
