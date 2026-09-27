@@ -1,6 +1,7 @@
 package com.createbrewery.drunk;
 
 import com.mojang.blaze3d.audio.Channel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -166,8 +167,14 @@ public final class MusicPulse {
         boolean heard = false;
         for (Track t : tracks) {
             if (!mc.getSoundManager().isActive(t.sound)) {
-                if (t.filter >= 0) {
-                    try { EXTEfx.alDeleteFilters(t.filter); } catch (Throwable ignored) {}
+                if (t.filter > 0) {
+                    try {
+                        if (AL10.alIsSource(t.source)) {
+                            AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, EXTEfx.AL_FILTER_NULL);
+                        }
+                        EXTEfx.alDeleteFilters(t.filter);
+                    } catch (Throwable ignored) {}
+                    t.filter = -1;
                 }
                 tracks.remove(t);
                 LOGGER.info("MDMA heard {}: {} kicks", t.sound.getLocation(), t.kicks);
@@ -193,24 +200,54 @@ public final class MusicPulse {
 
     /** Behind closed doors, inside restroom stalls or outside, cut the highs for that authentic muffled club sub-bass sound. */
     private static void applyMuffleFilter(Track t, LocalPlayer player, Minecraft mc, float dt) {
-        if (DrugAudio.PHYSICS) return;
-        if (player == null || mc.level == null) return;
+        if (player == null || mc.level == null || t.sound == null) return;
         Vec3 eye = player.getEyePosition();
         Vec3 soundPos = new Vec3(t.sound.getX(), t.sound.getY(), t.sound.getZ());
         if (soundPos.lengthSqr() > 1.0) {
-            BlockHitResult hit = mc.level.clip(new ClipContext(eye, soundPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            boolean occluded = hit.getType() != HitResult.Type.MISS;
-            float targetMuffle = occluded ? 1.0f : 0.0f;
-            t.muffle += (targetMuffle - t.muffle) * Math.min(1.0f, dt * 6.0f);
+            BlockPos soundBlock = BlockPos.containing(soundPos);
+
+            // Real-time pitch control if played from DJ booth
+            if (mc.level.getBlockEntity(soundBlock) instanceof com.createbrewery.block.club.DjBoothBlockEntity dj) {
+                float djPitch = dj.getPitch();
+                if (djPitch >= 0.5f && djPitch <= 2.0f && AL10.alIsSource(t.source)) {
+                    try {
+                        AL10.alSourcef(t.source, AL10.AL_PITCH, djPitch);
+                    } catch (Throwable ignored) {}
+                }
+            }
+
+            // Raycast multiple sample points (center, turntable/speaker surface, overhead space)
+            // to ensure accurate occlusion: doors and solid walls block all rays, while direct line of sight
+            // or peeking around corners handles diffraction gracefully.
+            Vec3[] targets = new Vec3[] {
+                soundPos,
+                soundPos.add(0.0, 0.6, 0.0),
+                soundPos.add(0.0, 1.2, 0.0)
+            };
+
+            int blocked = 0;
+            for (Vec3 target : targets) {
+                BlockHitResult hit = mc.level.clip(new ClipContext(eye, target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                if (hit.getType() != HitResult.Type.MISS && !hit.getBlockPos().equals(soundBlock) && !hit.getBlockPos().equals(soundBlock.above())) {
+                    blocked++;
+                }
+            }
+
+            float targetMuffle = (float) blocked / targets.length;
+            // Smoothly glide towards target muffle (approx 0.2s for physical door sweep)
+            t.muffle += (targetMuffle - t.muffle) * Math.min(1.0f, dt * 7.0f);
         } else {
             t.muffle = 0f;
         }
 
         if (t.filter == -1) {
             try {
-                t.filter = EXTEfx.alGenFilters();
-                if (t.filter > 0) {
-                    EXTEfx.alFilteri(t.filter, EXTEfx.AL_FILTER_TYPE, EXTEfx.AL_FILTER_LOWPASS);
+                int f = EXTEfx.alGenFilters();
+                if (f > 0) {
+                    EXTEfx.alFilteri(f, EXTEfx.AL_FILTER_TYPE, EXTEfx.AL_FILTER_LOWPASS);
+                    t.filter = f;
+                } else {
+                    t.filter = -2;
                 }
             } catch (Throwable e) {
                 t.filter = -2;
@@ -219,11 +256,21 @@ public final class MusicPulse {
 
         if (t.filter > 0 && AL10.alIsSource(t.source)) {
             try {
-                float gainHF = Mth.lerp(t.muffle, 1.0f, 0.10f); // High frequencies cut down behind walls/doors
-                float gainLF = Mth.lerp(t.muffle, 1.0f, 0.90f); // Low bass remains resonant
-                EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAIN, gainLF);
-                EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAINHF, gainHF);
-                AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, t.filter);
+                if (t.muffle < 0.005f) {
+                    // Transparent: direct line of sight in the club
+                    EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAIN, 1.0f);
+                    EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAINHF, 1.0f);
+                    AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, t.filter);
+                } else {
+                    // Club Restroom Stall / Outside wall filter:
+                    // High frequencies cut down to ~7% (no hi-hats, no crisp vocal sizzle)
+                    // Sub-bass kick & low frequencies remain booming through walls at ~88%
+                    float gainHF = Mth.lerp(t.muffle, 1.0f, 0.07f);
+                    float gainLF = Mth.lerp(t.muffle, 1.0f, 0.88f);
+                    EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAIN, gainLF);
+                    EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAINHF, gainHF);
+                    AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, t.filter);
+                }
             } catch (Throwable ignored) {}
         }
     }

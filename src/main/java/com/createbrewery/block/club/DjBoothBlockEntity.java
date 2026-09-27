@@ -123,7 +123,6 @@ public class DjBoothBlockEntity extends BlockEntity {
             JukeboxSong.fromStack(level.registryAccess(), disc).ifPresentOrElse(songHolder -> {
                 int songId = level.registryAccess().registryOrThrow(Registries.JUKEBOX_SONG).getId(songHolder.value());
                 level.levelEvent(null, 1010, worldPosition, songId);
-                level.playSound(null, worldPosition, songHolder.value().soundEvent().value(), SoundSource.RECORDS, 3.0f, pitch);
                 level.gameEvent(null, GameEvent.JUKEBOX_PLAY, worldPosition);
                 if (player != null) {
                     player.displayClientMessage(Component.translatable("createbrewery.dj.playing", deckName, disc.getHoverName()), true);

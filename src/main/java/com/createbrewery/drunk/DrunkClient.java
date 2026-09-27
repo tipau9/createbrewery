@@ -585,6 +585,8 @@ public final class DrunkClient {
         // but the view does not flinch and you do not hear yourself - only the hearts tell.
         if (numb(player)) player.hurtTime = 0;
 
+        MusicPulse.update();
+
         if (chain != null) {
             uniform("Intensity", Intoxication.visualIntensity(blood) * screen());
             uniform("Mood", Intoxication.mood(blood) * screen());
@@ -609,7 +611,6 @@ public final class DrunkClient {
             uniform("Roll", rolling * screen());
             uniform("Rush", RollClient.rush * screen());
             uniform("Beat", RollClient.beat * screen());
-            MusicPulse.update();
             // In the groove every kick hits harder, and at the peak harder still.
             uniform("Kick", MusicPulse.kick * (1f + 0.5f * RollClient.groove + RollClient.peak));
             uniform("Peak", RollClient.peak * screen());
