@@ -26,5 +26,24 @@ public class ModBlockEntities {
         })
         .register();
 
+    public static final BlockEntityEntry<com.createbrewery.block.club.StrobeLightBlockEntity> STROBE_LIGHT = REGISTRATE
+        .blockEntity("strobe_light", com.createbrewery.block.club.StrobeLightBlockEntity::new)
+        .validBlocks(ModBlocks.STROBE_LIGHT)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.LaserProjectorBlockEntity> LASER_PROJECTOR = REGISTRATE
+        .blockEntity("laser_projector", com.createbrewery.block.club.LaserProjectorBlockEntity::new)
+        .validBlocks(ModBlocks.LASER_PROJECTOR)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.FogMachineBlockEntity> FOG_MACHINE = REGISTRATE
+        .blockEntity("fog_machine", com.createbrewery.block.club.FogMachineBlockEntity::new)
+        .validBlocks(ModBlocks.FOG_MACHINE)
+        .registerCapability(event -> {
+            event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.FOG_MACHINE.get(),
+                (be, side) -> be.getTank().getCapability());
+        })
+        .register();
+
     public static void register() {}
 }

@@ -57,6 +57,11 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.KETA.get());
                 output.accept(ModItems.HEROIN.get());
                 output.accept(ModItems.XANAX.get());
+
+                // Club- & Festival-Gadgets
+                output.accept(ModBlocks.STROBE_LIGHT.get());
+                output.accept(ModBlocks.LASER_PROJECTOR.get());
+                output.accept(ModBlocks.FOG_MACHINE.get());
             })
             .build()
         );

@@ -52,6 +52,33 @@ public class ModBlocks {
         .simpleItem()
         .register();
 
+    public static final BlockEntry<com.createbrewery.block.club.StrobeLightBlock> STROBE_LIGHT = REGISTRATE
+        .block("strobe_light", com.createbrewery.block.club.StrobeLightBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(p -> p.noOcclusion().lightLevel(s -> s.getValue(com.createbrewery.block.club.StrobeLightBlock.LIT) ? 15 : 0))
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.LaserProjectorBlock> LASER_PROJECTOR = REGISTRATE
+        .block("laser_projector", com.createbrewery.block.club.LaserProjectorBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.FogMachineBlock> FOG_MACHINE = REGISTRATE
+        .block("fog_machine", com.createbrewery.block.club.FogMachineBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
     /**
      * Real 8-stage (age 0-7) crop blockstate/models, replacing Registrate's placeholder
      * single-variant cube default (Registrate's {@code BlockBuilder.defaultBlockstate()} has no

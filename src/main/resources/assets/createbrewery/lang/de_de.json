@@ -64,5 +64,21 @@
   "subtitles.createbrewery.glass_clink": "Gläser klirren",
   "subtitles.createbrewery.heartbeat": "Herzklopfen",
   "subtitles.createbrewery.hiccup": "Hicks",
-  "subtitles.createbrewery.sniff": "Schniefen"
+  "subtitles.createbrewery.sniff": "Schniefen",
+  "block.createbrewery.strobe_light": "Stroboskop",
+  "block.createbrewery.laser_projector": "Club-Laser",
+  "block.createbrewery.fog_machine": "Nebelmaschine",
+  "createbrewery.strobe.mode.beat": "Modus: Beat-Sync (Kicks)",
+  "createbrewery.strobe.mode.strobe": "Modus: Dauerblitz (12 Hz)",
+  "createbrewery.strobe.mode.redstone": "Modus: Redstone-Signal",
+  "createbrewery.laser.color_changed": "Laser-Farbe geändert!",
+  "createbrewery.laser.rainbow_mode": "Laser-Modus: Regenbogen-Prisma!",
+  "createbrewery.laser.pattern.beam": "Muster: Einzellaser",
+  "createbrewery.laser.pattern.sweep": "Muster: Fächer-Scan (Oszillierend)",
+  "createbrewery.laser.pattern.fan": "Muster: 5-Strahl-Fächer",
+  "createbrewery.laser.pattern.burst": "Muster: Drop-/Beat-Burst",
+  "createbrewery.fog_machine.filled": "Nebelmaschine befüllt (%s mB)",
+  "createbrewery.fog_machine.started": "Nebelmaschine aktiviert (%s mB verbleibend)",
+  "createbrewery.fog_machine.stopped": "Nebelmaschine gestoppt (%s mB verbleibend)",
+  "createbrewery.goggles.fog_machine.header": "Nebelmaschine"
 }

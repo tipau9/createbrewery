@@ -38,6 +38,7 @@ public class BreweryParticle extends TextureSheetParticle {
     public static final Style POWDER = new Style(-0.005f, 0.85f, 14, 24, 0.05f, 0.1f, 0.003f, false, false, false, false, false, true);
     public static final Style BLOOD = new Style(0.7f, 0.96f, 18, 30, 0.035f, 0f, 0f, false, false, false, true, false, true);
     public static final Style SMOKE = new Style(-0.012f, 0.93f, 50, 80, 0.16f, 0.06f, 0.004f, true, false, false, false, false, true);
+    public static final Style FOG = new Style(0.001f, 0.94f, 80, 140, 0.55f, 0.015f, 0.008f, true, false, false, true, false, true);
     public static final Style PUDDLE = new Style(0f, 0.5f, 24, 40, 0.14f, 0f, 0f, false, false, false, true, false, true);
 
     private static final float[][] PARTY_COLOURS = {
@@ -132,5 +133,6 @@ public class BreweryParticle extends TextureSheetParticle {
         event.registerSpriteSet(ModParticles.POWDER.get(), s -> provider(s, POWDER));
         event.registerSpriteSet(ModParticles.NOSEBLEED.get(), s -> provider(s, BLOOD));
         event.registerSpriteSet(ModParticles.SMOKE.get(), s -> provider(s, SMOKE));
+        event.registerSpriteSet(ModParticles.FOG.get(), s -> provider(s, FOG));
     }
 }

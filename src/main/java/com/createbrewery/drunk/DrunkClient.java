@@ -1561,6 +1561,10 @@ public final class DrunkClient {
             event.registerEntityRenderer(com.createbrewery.drugs.HallucinationEntity.CRAWLER.get(),
                 net.minecraft.client.renderer.entity.NoopRenderer::new);
         }
+        event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.STROBE_LIGHT.get(),
+            com.createbrewery.block.club.StrobeLightRenderer::new);
+        event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.LASER_PROJECTOR.get(),
+            com.createbrewery.block.club.LaserProjectorRenderer::new);
     }
 
     public static void addLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {

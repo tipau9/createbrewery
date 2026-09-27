@@ -133,8 +133,20 @@ public final class MusicPulse {
     }
 
     /** True while a song can be heard. Updated by {@link #update}. */
-    static boolean playing() {
+    public static boolean playing() {
         return playing;
+    }
+
+    public static float kick() {
+        return kick;
+    }
+
+    public static float drop() {
+        return song.drop;
+    }
+
+    public static int beats() {
+        return song.beats;
     }
 
     /**
