@@ -150,6 +150,12 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.fog_machine.started", "Fog Machine started (%s mB remaining)");
         REGISTRATE.addRawLang("createbrewery.fog_machine.stopped", "Fog Machine stopped (%s mB remaining)");
         REGISTRATE.addRawLang("createbrewery.goggles.fog_machine.header", "Fog Machine");
+        REGISTRATE.addRawLang("createbrewery.subwoofer.active", "Subwoofer: Bass active");
+        REGISTRATE.addRawLang("createbrewery.subwoofer.inactive", "Subwoofer: Inactive");
+        REGISTRATE.addRawLang("createbrewery.dj.beat_drop", "DROP TRIGGERED!");
+        REGISTRATE.addRawLang("createbrewery.beer_tap.poured", "Fresh draft beer poured!");
+        REGISTRATE.addRawLang("createbrewery.beer_tap.empty", "Beer Tap is empty!");
+        REGISTRATE.addRawLang("createbrewery.goggles.beer_tap.header", "Draft Beer Tap");
         REGISTRATE.addRawLang("createbrewery.ponder.first_aid.header", "Erste Hilfe");
         REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_1", "Jemand ist bewusstlos: Filmriss, K-Loch, Herzinfarkt, oder die Atmung setzt aus.");
         REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_2", "Hock dich direkt daneben (Schleichen). Solange du da hockst: Herzdruckmassage und stabile Seitenlage - nichts kommt in die Atemwege.");

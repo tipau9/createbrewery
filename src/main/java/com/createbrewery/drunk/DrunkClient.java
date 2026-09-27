@@ -1118,8 +1118,10 @@ public final class DrunkClient {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && WeedClient.laugh <= 0.01f && seizing <= 0.01f)) return;
+        if (player == null) return;
+        float subShake = com.createbrewery.block.club.SubwooferBlockEntity.getSubwooferBassShake(player);
+        if (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && WeedClient.laugh <= 0.01f && seizing <= 0.01f && subShake <= 0.01f) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -1158,6 +1160,10 @@ public final class DrunkClient {
         // A brain zap jerks the head.
         roll += noise(t * 40.0, 97) * 4f * RollClient.zap;
         roll += noise(t * 14.0, 71) * 0.8f * TripClient.chill;
+        // Subwoofer bass punch vibrating the chest and camera
+        if (subShake > 0.01f) {
+            roll += noise(t * 35.0, 97) * 2.2f * subShake;
+        }
         event.setRoll(event.getRoll() + roll * screen());
     }
 

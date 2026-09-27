@@ -45,5 +45,24 @@ public class ModBlockEntities {
         })
         .register();
 
+    public static final BlockEntityEntry<com.createbrewery.block.club.SubwooferBlockEntity> SUBWOOFER = REGISTRATE
+        .blockEntity("subwoofer", com.createbrewery.block.club.SubwooferBlockEntity::new)
+        .validBlocks(ModBlocks.SUBWOOFER)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.DjBoothBlockEntity> DJ_BOOTH = REGISTRATE
+        .blockEntity("dj_booth", com.createbrewery.block.club.DjBoothBlockEntity::new)
+        .validBlocks(ModBlocks.DJ_BOOTH)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.BeerTapBlockEntity> BEER_TAP = REGISTRATE
+        .blockEntity("beer_tap", com.createbrewery.block.BeerTapBlockEntity::new)
+        .validBlocks(ModBlocks.BEER_TAP)
+        .registerCapability(event -> {
+            event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.BEER_TAP.get(),
+                (be, side) -> be.getTank().getCapability());
+        })
+        .register();
+
     public static void register() {}
 }

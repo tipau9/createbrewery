@@ -21,6 +21,7 @@ public final class ModCreativeTabs {
             .displayItems((parameters, output) -> {
                 // Brauerei-Maschinen & Landwirtschaft
                 output.accept(ModBlocks.FERMENTER.get());
+                output.accept(ModBlocks.BEER_TAP.get());
                 output.accept(ModItems.BARLEY_SEEDS.get());
                 output.accept(ModItems.BARLEY.get());
                 output.accept(ModItems.GREEN_MALT.get());
@@ -59,6 +60,9 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.XANAX.get());
 
                 // Club- & Festival-Gadgets
+                output.accept(ModBlocks.DJ_BOOTH.get());
+                output.accept(ModBlocks.SUBWOOFER.get());
+                output.accept(ModBlocks.CO2_JET.get());
                 output.accept(ModBlocks.STROBE_LIGHT.get());
                 output.accept(ModBlocks.LASER_PROJECTOR.get());
                 output.accept(ModBlocks.FOG_MACHINE.get());

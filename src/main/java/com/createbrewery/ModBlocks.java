@@ -57,17 +57,16 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(p -> p.noOcclusion().lightLevel(s -> s.getValue(com.createbrewery.block.club.StrobeLightBlock.LIT) ? 15 : 0))
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
-            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
     public static final BlockEntry<com.createbrewery.block.club.LaserProjectorBlock> LASER_PROJECTOR = REGISTRATE
         .block("laser_projector", com.createbrewery.block.club.LaserProjectorBlock::new)
-        .lang("Club Laser")
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
-            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -76,7 +75,43 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
-            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.SubwooferBlock> SUBWOOFER = REGISTRATE
+        .block("subwoofer", com.createbrewery.block.club.SubwooferBlock::new)
+        .initialProperties(() -> Blocks.NOTE_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.DjBoothBlock> DJ_BOOTH = REGISTRATE
+        .block("dj_booth", com.createbrewery.block.club.DjBoothBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.Co2JetBlock> CO2_JET = REGISTRATE
+        .block("co2_jet", com.createbrewery.block.club.Co2JetBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.BeerTapBlock> BEER_TAP = REGISTRATE
+        .block("beer_tap", com.createbrewery.block.BeerTapBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 

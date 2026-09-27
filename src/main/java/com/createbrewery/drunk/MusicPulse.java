@@ -10,7 +10,13 @@ import net.neoforged.neoforge.client.event.sound.PlayStreamingSourceEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.openal.AL10;
 import org.lwjgl.openal.AL11;
+import org.lwjgl.openal.EXTEfx;
 import org.lwjgl.openal.SOFTSourceLatency;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 
 import javax.sound.sampled.AudioFormat;
@@ -59,6 +65,8 @@ public final class MusicPulse {
         int kicks;
         /** The gain the game set, and the one set here on top of it (-1: none yet). */
         float gain, louder = -1f;
+        int filter = -1;
+        float muffle = 0f;
 
         Track(int source, AudioFormat format) {
             this.source = source;
@@ -157,15 +165,21 @@ public final class MusicPulse {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         double now = System.nanoTime() / 1e9;
+        float dt = (float) Math.min(0.1, now - lastFrame);
+        lastFrame = now;
         float k = 0f, l = 0f, h = 0f;
         boolean heard = false;
         for (Track t : tracks) {
             if (!mc.getSoundManager().isActive(t.sound)) {
+                if (t.filter >= 0) {
+                    try { EXTEfx.alDeleteFilters(t.filter); } catch (Throwable ignored) {}
+                }
                 tracks.remove(t);
                 LOGGER.info("MDMA heard {}: {} kicks", t.sound.getLocation(), t.kicks);
                 continue;
             }
             louder(t);
+            applyMuffleFilter(t, player, mc, dt);
             float near = player == null ? 0f : closeness(t.sound, player);
             heard |= near > 0.05f;
             Now at = heardNow(t);
@@ -175,14 +189,49 @@ public final class MusicPulse {
             h = Math.max(h, at.get(KickDetector.HATS) * near);
         }
         playing = heard;
-        float dt = (float) Math.min(0.1, now - lastFrame);
-        lastFrame = now;
         song.hear(k, l, h, heard, now, dt);
         // At techno tempos each kick dies away faster, so hits stay apart instead of smearing.
         kick = Math.max(k, kick * (float) Math.exp(-dt * Math.max(9.0, 4.5 / song.period())));
         hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
         // Up fast, down slowly: loud bits hit at once, the quiet comes in gently.
         level += (l - level) * (1f - (float) Math.exp(-dt * (l > level ? 25.0 : 4.0)));
+    }
+
+    /** Behind closed doors, inside restroom stalls or outside, cut the highs for that authentic muffled club sub-bass sound. */
+    private static void applyMuffleFilter(Track t, LocalPlayer player, Minecraft mc, float dt) {
+        if (DrugAudio.PHYSICS) return;
+        if (player == null || mc.level == null) return;
+        Vec3 eye = player.getEyePosition();
+        Vec3 soundPos = new Vec3(t.sound.getX(), t.sound.getY(), t.sound.getZ());
+        if (soundPos.lengthSqr() > 1.0) {
+            BlockHitResult hit = mc.level.clip(new ClipContext(eye, soundPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            boolean occluded = hit.getType() != HitResult.Type.MISS;
+            float targetMuffle = occluded ? 1.0f : 0.0f;
+            t.muffle += (targetMuffle - t.muffle) * Math.min(1.0f, dt * 6.0f);
+        } else {
+            t.muffle = 0f;
+        }
+
+        if (t.filter == -1) {
+            try {
+                t.filter = EXTEfx.alGenFilters();
+                if (t.filter > 0) {
+                    EXTEfx.alFilteri(t.filter, EXTEfx.AL_FILTER_TYPE, EXTEfx.AL_FILTER_LOWPASS);
+                }
+            } catch (Throwable e) {
+                t.filter = -2;
+            }
+        }
+
+        if (t.filter > 0 && AL10.alIsSource(t.source)) {
+            try {
+                float gainHF = Mth.lerp(t.muffle, 1.0f, 0.10f); // High frequencies cut down behind walls/doors
+                float gainLF = Mth.lerp(t.muffle, 1.0f, 0.90f); // Low bass remains resonant
+                EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAIN, gainLF);
+                EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAINHF, gainHF);
+                AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, t.filter);
+            } catch (Throwable ignored) {}
+        }
     }
 
     /** At the peak the music sounds louder: up to twice the gain the game gave it. */

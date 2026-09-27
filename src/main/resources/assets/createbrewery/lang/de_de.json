@@ -88,5 +88,15 @@
   "createbrewery.fog_machine.filled": "Nebelmaschine befüllt (%s mB)",
   "createbrewery.fog_machine.started": "Nebelmaschine aktiviert (%s mB verbleibend)",
   "createbrewery.fog_machine.stopped": "Nebelmaschine gestoppt (%s mB verbleibend)",
-  "createbrewery.goggles.fog_machine.header": "Nebelmaschine"
+  "createbrewery.goggles.fog_machine.header": "Nebelmaschine",
+  "block.createbrewery.subwoofer": "Subwoofer",
+  "block.createbrewery.dj_booth": "DJ-Pult",
+  "block.createbrewery.co2_jet": "CO2-Kryo-Jet",
+  "block.createbrewery.beer_tap": "Bierzapfhahn",
+  "createbrewery.subwoofer.active": "Subwoofer: Bass aktiv",
+  "createbrewery.subwoofer.inactive": "Subwoofer: Deaktiviert",
+  "createbrewery.dj.beat_drop": "BASS DROP AUSGELÖST!",
+  "createbrewery.beer_tap.poured": "Frisch gezapftes Bier eingeschenkt!",
+  "createbrewery.beer_tap.empty": "Zapfhahn ist leer!",
+  "createbrewery.goggles.beer_tap.header": "Bierzapfhahn"
 }
