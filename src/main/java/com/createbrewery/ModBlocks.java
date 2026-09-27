@@ -63,6 +63,7 @@ public class ModBlocks {
 
     public static final BlockEntry<com.createbrewery.block.club.LaserProjectorBlock> LASER_PROJECTOR = REGISTRATE
         .block("laser_projector", com.createbrewery.block.club.LaserProjectorBlock::new)
+        .lang("Club Laser")
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),

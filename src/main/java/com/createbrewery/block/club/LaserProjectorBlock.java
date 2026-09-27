@@ -78,7 +78,7 @@ public class LaserProjectorBlock extends Block implements EntityBlock {
         return defaultBlockState()
             .setValue(FACING, dir)
             .setValue(POWERED, powered)
-            .setValue(ACTIVE, !powered);
+            .setValue(ACTIVE, true);
     }
 
     @Override
@@ -86,7 +86,8 @@ public class LaserProjectorBlock extends Block implements EntityBlock {
         if (!level.isClientSide) {
             boolean powered = level.hasNeighborSignal(pos);
             if (powered != state.getValue(POWERED)) {
-                // If powered by redstone, toggle active state accordingly
+                // Like the fog machine: a redstone edge sets it (on with signal, off without),
+                // sneak + empty hand toggles it; whichever came last wins.
                 level.setBlock(pos, state.setValue(POWERED, powered).setValue(ACTIVE, powered), 3);
             }
         }
@@ -120,27 +121,28 @@ public class LaserProjectorBlock extends Block implements EntityBlock {
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        // Cycle pattern mode
-        LaserPattern next = projector.getPattern().next();
-        projector.setPattern(next);
-        level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.4f);
-        if (level.isClientSide) {
-            player.displayClientMessage(Component.translatable("createbrewery.laser.pattern." + next.getSerializedName()), true);
-        }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        // Anything else held is used normally (placing blocks, the wrench).
+        return stack.isEmpty() ? ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION : ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof LaserProjectorBlockEntity projector) {
+        if (player.isShiftKeyDown()) {
+            boolean on = !state.getValue(ACTIVE);
+            level.setBlock(pos, state.setValue(ACTIVE, on), 3);
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, on ? 1.4f : 0.9f);
+            if (level.isClientSide) {
+                player.displayClientMessage(Component.translatable(on ? "createbrewery.laser.on" : "createbrewery.laser.off"), true);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        if (level.getBlockEntity(pos) instanceof LaserProjectorBlockEntity projector) {
             LaserPattern next = projector.getPattern().next();
             projector.setPattern(next);
             level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.4f);
             if (level.isClientSide) {
                 player.displayClientMessage(Component.translatable("createbrewery.laser.pattern." + next.getSerializedName()), true);
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
@@ -164,9 +166,11 @@ public class LaserProjectorBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+        // Only drives the sweep and rainbow animation.
+        if (!level.isClientSide) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof LaserProjectorBlockEntity projector) {
-                projector.tick(lvl, pos, st);
+                projector.tick();
             }
         };
     }

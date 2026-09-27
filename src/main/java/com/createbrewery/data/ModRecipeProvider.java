@@ -1,10 +1,12 @@
 package com.createbrewery.data;
 
 import com.createbrewery.CreateBrewery;
+import com.createbrewery.ModBlocks;
 import com.createbrewery.ModFluids;
 import com.createbrewery.ModItems;
 import com.createbrewery.ModRecipeTypes;
 import com.createbrewery.recipe.FermentingRecipe;
+import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.api.data.recipe.FillingRecipeGen;
 import com.simibubi.create.api.data.recipe.HauntingRecipeGen;
@@ -20,6 +22,7 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
 import net.minecraft.world.item.Items;
@@ -303,6 +306,31 @@ public class ModRecipeProvider {
                 .requires(Items.SUGAR)
                 .unlockedBy("has_ghast_tear", has(Items.GHAST_TEAR))
                 .save(output, CreateBrewery.ID("naloxon_crafting"));
+            // Club gadgets
+            ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModBlocks.STROBE_LIGHT.get())
+                .pattern("IGI").pattern("ILI").pattern("IRI")
+                .define('I', AllItems.IRON_SHEET.get())
+                .define('G', Items.GLASS)
+                .define('L', Items.GLOWSTONE)
+                .define('R', Items.REDSTONE)
+                .unlockedBy("has_glowstone", has(Items.GLOWSTONE))
+                .save(output, CreateBrewery.ID("strobe_light"));
+            ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModBlocks.LASER_PROJECTOR.get())
+                .pattern(" G ").pattern("AEA").pattern("III")
+                .define('I', AllItems.IRON_SHEET.get())
+                .define('G', Items.GLASS)
+                .define('A', Items.AMETHYST_SHARD)
+                .define('E', AllItems.ELECTRON_TUBE.get())
+                .unlockedBy("has_electron_tube", has(AllItems.ELECTRON_TUBE.get()))
+                .save(output, CreateBrewery.ID("laser_projector"));
+            ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModBlocks.FOG_MACHINE.get())
+                .pattern("IPI").pattern("IBI").pattern("ICI")
+                .define('I', AllItems.IRON_SHEET.get())
+                .define('P', AllBlocks.FLUID_PIPE.get())
+                .define('B', Items.BUCKET)
+                .define('C', Items.CAMPFIRE)
+                .unlockedBy("has_bucket", has(Items.BUCKET))
+                .save(output, CreateBrewery.ID("fog_machine"));
             ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.TEST_KIT.get(), 1)
                 .requires(Items.GLASS_BOTTLE)
                 .requires(Items.PAPER)

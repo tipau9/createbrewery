@@ -565,6 +565,7 @@ public final class DrunkClient {
         if (player == null) {
             appliedYaw = appliedPitch = appliedRetch = 0f;
             if (veil) VeilLights.clear();
+            com.createbrewery.block.club.StrobeLightBlockEntity.clearRoomLights();
             com.createbrewery.drugs.DrugPose.SEEN.clear();
             com.createbrewery.drugs.DrugPose.ACTING.clear();
             return;

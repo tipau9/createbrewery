@@ -129,13 +129,12 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.jei.fermenting.days_decimal", "%s days");
 
         // Club Gadgets
-        REGISTRATE.addRawLang("block.createbrewery.strobe_light", "Strobe Light");
-        REGISTRATE.addRawLang("block.createbrewery.laser_projector", "Club Laser");
-        REGISTRATE.addRawLang("block.createbrewery.fog_machine", "Fog Machine");
         REGISTRATE.addRawLang("createbrewery.strobe.mode.beat", "Mode: Beat Sync (Kicks)");
-        REGISTRATE.addRawLang("createbrewery.strobe.mode.strobe", "Mode: Fast Strobe (12 Hz)");
+        REGISTRATE.addRawLang("createbrewery.strobe.mode.strobe", "Mode: Fast Strobe (~7 Hz)");
         REGISTRATE.addRawLang("createbrewery.strobe.mode.redstone", "Mode: Redstone Signal");
         REGISTRATE.addRawLang("createbrewery.laser.color_changed", "Laser color updated!");
+        REGISTRATE.addRawLang("createbrewery.laser.on", "Laser on");
+        REGISTRATE.addRawLang("createbrewery.laser.off", "Laser off");
         REGISTRATE.addRawLang("createbrewery.laser.rainbow_mode", "Laser Mode: Rainbow Prism!");
         REGISTRATE.addRawLang("createbrewery.laser.pattern.beam", "Pattern: Single Beam");
         REGISTRATE.addRawLang("createbrewery.laser.pattern.sweep", "Pattern: Sweep Scan");

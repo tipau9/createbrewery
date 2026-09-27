@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "emitting=false,facing=east,powered=false": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 90
+    },
+    "emitting=false,facing=east,powered=true": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 90
+    },
+    "emitting=false,facing=north,powered=false": {
+      "model": "createbrewery:block/fog_machine"
+    },
+    "emitting=false,facing=north,powered=true": {
+      "model": "createbrewery:block/fog_machine"
+    },
+    "emitting=false,facing=south,powered=false": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 180
+    },
+    "emitting=false,facing=south,powered=true": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 180
+    },
+    "emitting=false,facing=west,powered=false": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 270
+    },
+    "emitting=false,facing=west,powered=true": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 270
+    },
+    "emitting=true,facing=east,powered=false": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 90
+    },
+    "emitting=true,facing=east,powered=true": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 90
+    },
+    "emitting=true,facing=north,powered=false": {
+      "model": "createbrewery:block/fog_machine"
+    },
+    "emitting=true,facing=north,powered=true": {
+      "model": "createbrewery:block/fog_machine"
+    },
+    "emitting=true,facing=south,powered=false": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 180
+    },
+    "emitting=true,facing=south,powered=true": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 180
+    },
+    "emitting=true,facing=west,powered=false": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 270
+    },
+    "emitting=true,facing=west,powered=true": {
+      "model": "createbrewery:block/fog_machine",
+      "y": 270
+    }
+  }
+}

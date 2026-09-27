@@ -4,7 +4,6 @@ import com.createbrewery.drunk.MusicPulse;
 import com.createbrewery.particle.ModParticles;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -14,13 +13,18 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
+
+import static com.createbrewery.block.club.StrobeLightRenderer.quad;
 
 public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjectorBlockEntity> {
+
+    /** How far a beam reaches before it fades into the air. */
+    static final double RANGE = 42.0;
 
     public LaserProjectorRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -41,121 +45,82 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
         // Color resolution
         int c = be.getColor();
-        float r, g, b;
         if (c == -1) {
             // Rainbow prism cycle
             float hue = ((be.getTicks() + partialTick) * 0.02f) % 1.0f;
-            int rgb = Mth.hsvToRgb(hue, 0.95f, 1.0f);
-            r = ((rgb >> 16) & 0xFF) / 255f;
-            g = ((rgb >> 8) & 0xFF) / 255f;
-            b = (rgb & 0xFF) / 255f;
-        } else {
-            r = ((c >> 16) & 0xFF) / 255f;
-            g = ((c >> 8) & 0xFF) / 255f;
-            b = (c & 0xFF) / 255f;
+            c = Mth.hsvToRgb(hue, 0.95f, 1.0f);
         }
+        float r = ((c >> 16) & 0xFF) / 255f;
+        float g = ((c >> 8) & 0xFF) / 255f;
+        float b = (c & 0xFF) / 255f;
 
-        // Base raycast origin in world space (front lens of projector)
-        Vec3 startWorld = Vec3.atCenterOf(pos).add(
-            facing.getStepX() * 0.46,
-            facing.getStepY() * 0.46,
-            facing.getStepZ() * 0.46
-        );
+        Vec3 center = Vec3.atCenterOf(pos);
+        Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.46));
 
         LaserPattern pattern = be.getPattern();
-
-        // Calculate beam angles
-        float[] beamYawOffsets;
-        if (pattern == LaserPattern.FAN) {
-            beamYawOffsets = new float[]{-24f, -12f, 0f, 12f, 24f};
-        } else if (pattern == LaserPattern.BURST) {
-            if (drop > 0.25f || kick > 0.45f) {
-                beamYawOffsets = new float[]{-22f, -11f, 0f, 11f, 22f};
-            } else {
-                beamYawOffsets = new float[]{0f};
-            }
-        } else if (pattern == LaserPattern.SWEEP) {
-            float sweep;
-            if (MusicPulse.playing()) {
-                sweep = Mth.sin((be.getTicks() + partialTick) * 0.18f) * 26f;
-            } else {
-                sweep = Mth.sin((be.getTicks() + partialTick) * 0.08f) * 20f;
-            }
-            beamYawOffsets = new float[]{sweep};
-        } else {
-            // SINGLE BEAM
-            beamYawOffsets = new float[]{0f};
-        }
+        float[] beamYawOffsets = switch (pattern) {
+            case FAN -> new float[]{-24f, -12f, 0f, 12f, 24f};
+            case BURST -> drop > 0.25f || kick > 0.45f ? new float[]{-22f, -11f, 0f, 11f, 22f} : new float[]{0f};
+            case SWEEP -> new float[]{MusicPulse.playing()
+                ? Mth.sin((be.getTicks() + partialTick) * 0.18f) * 26f
+                : Mth.sin((be.getTicks() + partialTick) * 0.08f) * 20f};
+            case BEAM -> new float[]{0f};
+        };
 
         VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        pose.pushPose();
+        pose.translate(0.5, 0.5, 0.5);
+        Matrix4f m = pose.last().pose();
 
         for (float yawDeg : beamYawOffsets) {
-            // Compute beam direction in world coordinates
-            Vec3 dir = getBeamDirection(facing, yawDeg);
-            Vec3 maxEnd = startWorld.add(dir.scale(42.0));
+            double[] d = LaserBeams.direction(facing.getStepX(), facing.getStepY(), facing.getStepZ(), yawDeg);
+            Vec3 dir = new Vec3(d[0], d[1], d[2]);
+            BlockHitResult hit = level.clip(new ClipContext(startWorld, startWorld.add(dir.scale(RANGE)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
+            boolean hitBlock = hit.getType() != HitResult.Type.MISS;
+            Vec3 endWorld = hit.getLocation();
 
-            // Clip against blocks in the world
-            BlockHitResult hit = level.clip(new ClipContext(startWorld, maxEnd, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
-            Vec3 endWorld = hit.getType() != HitResult.Type.MISS ? hit.getLocation() : maxEnd;
-            double beamLength = startWorld.distanceTo(endWorld);
+            // Everything below is relative to the block centre (the pose is translated there).
+            Vec3 relStart = startWorld.subtract(center);
+            Vec3 relEnd = endWorld.subtract(center);
+            renderBeam(v, m, relStart, relEnd, r, g, b, kickBoost);
 
-            // Relative vector from block origin (0.5, 0.5, 0.5) to start and end
-            Vec3 relStart = startWorld.subtract(Vec3.atCenterOf(pos));
-            Vec3 relEnd = endWorld.subtract(Vec3.atCenterOf(pos));
-
-            // Render laser beam cylinder/cross-quads
-            renderBeamSegment(pose, v, relStart, relEnd, r, g, b, kickBoost);
-
-            // Impact dot & sparks
-            if (hit.getType() != HitResult.Type.MISS) {
-                renderImpactDot(pose, v, relEnd, r, g, b, kickBoost);
+            if (hitBlock) {
+                renderImpactDot(v, m, relEnd, hit.getDirection(), r, g, b, kickBoost);
                 if (level.random.nextFloat() < 0.08f + kickBoost * 0.15f) {
                     level.addParticle(ModParticles.CHEERS_SPARK.get(),
-                        endWorld.x - dir.x * 0.05,
-                        endWorld.y - dir.y * 0.05,
-                        endWorld.z - dir.z * 0.05,
+                        endWorld.x - dir.x * 0.05, endWorld.y - dir.y * 0.05, endWorld.z - dir.z * 0.05,
                         (level.random.nextDouble() - 0.5) * 0.04,
                         0.02 + level.random.nextDouble() * 0.04,
                         (level.random.nextDouble() - 0.5) * 0.04);
                 }
             }
         }
+        pose.popPose();
     }
 
-    private static Vec3 getBeamDirection(Direction facing, float yawOffsetDeg) {
-        float rad = yawOffsetDeg * Mth.DEG_TO_RAD;
-        Vec3 base = Vec3.atLowerCornerOf(facing.getNormal());
-
-        if (facing.getAxis().isVertical()) {
-            // If facing UP or DOWN, rotate in XZ plane
-            return new Vec3(Mth.sin(rad), base.y, Mth.cos(rad)).normalize();
-        } else {
-            // Horizontal facing: rotate horizontally around Y axis
-            double cos = Mth.cos(rad);
-            double sin = Mth.sin(rad);
-            double x = base.x * cos - base.z * sin;
-            double z = base.x * sin + base.z * cos;
-            return new Vec3(x, base.y, z).normalize();
-        }
+    @Override
+    public AABB getRenderBoundingBox(LaserProjectorBlockEntity be) {
+        return new AABB(be.getBlockPos()).inflate(RANGE);
     }
 
-    private static void renderBeamSegment(PoseStack pose, VertexConsumer v, Vec3 start, Vec3 end,
-                                          float r, float g, float b, float boost) {
-        pose.pushPose();
-        pose.translate(0.5, 0.5, 0.5);
+    @Override
+    public boolean shouldRenderOffScreen(LaserProjectorBlockEntity be) {
+        return true;
+    }
 
-        Matrix4f m = pose.last().pose();
+    @Override
+    public int getViewDistance() {
+        return 128;
+    }
 
+    private static void renderBeam(VertexConsumer v, Matrix4f m, Vec3 start, Vec3 end,
+                                   float r, float g, float b, float boost) {
         Vec3 diff = end.subtract(start);
-        float len = (float) diff.length();
-        if (len < 0.01f) {
-            pose.popPose();
-            return;
-        }
-
+        if (diff.lengthSqr() < 1e-4) return;
         Vec3 norm = diff.normalize();
 
-        // Generate orthogonal vectors for beam cross-section
+        // Two orthogonal vectors across the beam, for the crossed planes
         Vec3 up = Math.abs(norm.y) > 0.95 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
         Vec3 right = norm.cross(up).normalize();
         up = right.cross(norm).normalize();
@@ -164,47 +129,42 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         float glowW = 0.055f + boost * 0.050f;
         float glowAlpha = 0.55f + boost * 0.35f;
 
-        // 1. Inner intense White Core
-        drawBeamQuad(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f);
-        drawBeamQuad(v, m, start, end, up.scale(coreW), 1f, 1f, 1f, 0.95f);
-
-        // 2. Outer Vibrant Colored Glow Sheath
-        drawBeamQuad(v, m, start, end, right.scale(glowW), r, g, b, glowAlpha);
-        drawBeamQuad(v, m, start, end, up.scale(glowW), r, g, b, glowAlpha);
-
-        pose.popPose();
+        // Hot white core inside a coloured sheath
+        beamPlane(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f);
+        beamPlane(v, m, start, end, up.scale(coreW), 1f, 1f, 1f, 0.95f);
+        beamPlane(v, m, start, end, right.scale(glowW), r, g, b, glowAlpha);
+        beamPlane(v, m, start, end, up.scale(glowW), r, g, b, glowAlpha);
     }
 
-    private static void drawBeamQuad(VertexConsumer v, Matrix4f m, Vec3 s, Vec3 e, Vec3 offset,
-                                     float r, float g, float b, float a) {
-        float x0 = (float) (s.x - offset.x), y0 = (float) (s.y - offset.y), z0 = (float) (s.z - offset.z);
-        float x1 = (float) (s.x + offset.x), y1 = (float) (s.y + offset.y), z1 = (float) (s.z + offset.z);
-        float x2 = (float) (e.x + offset.x), y2 = (float) (e.y + offset.y), z2 = (float) (e.z + offset.z);
-        float x3 = (float) (e.x - offset.x), y3 = (float) (e.y - offset.y), z3 = (float) (e.z - offset.z);
-
-        v.addVertex(m, x0, y0, z0).setColor(r, g, b, a);
-        v.addVertex(m, x1, y1, z1).setColor(r, g, b, a);
-        v.addVertex(m, x2, y2, z2).setColor(r, g, b, a);
-        v.addVertex(m, x3, y3, z3).setColor(r, g, b, a);
+    private static void beamPlane(VertexConsumer v, Matrix4f m, Vec3 s, Vec3 e, Vec3 o,
+                                  float r, float g, float b, float a) {
+        quad(v, m,
+            (float) (s.x - o.x), (float) (s.y - o.y), (float) (s.z - o.z),
+            (float) (s.x + o.x), (float) (s.y + o.y), (float) (s.z + o.z),
+            (float) (e.x + o.x), (float) (e.y + o.y), (float) (e.z + o.z),
+            (float) (e.x - o.x), (float) (e.y - o.y), (float) (e.z - o.z),
+            r, g, b, a, a);
     }
 
-    private static void renderImpactDot(PoseStack pose, VertexConsumer v, Vec3 hitPos,
+    /** A bright dot lying flat on the face the beam hit, lifted off it a hair against z-fighting. */
+    private static void renderImpactDot(VertexConsumer v, Matrix4f m, Vec3 hit, Direction face,
                                         float r, float g, float b, float boost) {
-        Matrix4f m = pose.last().pose();
+        Vec3 n = Vec3.atLowerCornerOf(face.getNormal());
+        Vec3 u = face.getAxis() == Direction.Axis.Y ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+        Vec3 w = n.cross(u);
+        Vec3 c = hit.add(n.scale(0.01));
         float radius = 0.05f + boost * 0.04f;
-        float hx = (float) hitPos.x, hy = (float) hitPos.y, hz = (float) hitPos.z;
+        dot(v, m, c, u.scale(radius), w.scale(radius), 1f, 1f, 1f, 0.9f);
+        dot(v, m, c.add(n.scale(0.002)), u.scale(radius * 2.2), w.scale(radius * 2.2), r, g, b, 0.6f);
+    }
 
-        // Bright impact cross / flare
-        v.addVertex(m, hx - radius, hy - radius, hz).setColor(1f, 1f, 1f, 0.9f);
-        v.addVertex(m, hx + radius, hy - radius, hz).setColor(1f, 1f, 1f, 0.9f);
-        v.addVertex(m, hx + radius, hy + radius, hz).setColor(1f, 1f, 1f, 0.9f);
-        v.addVertex(m, hx - radius, hy + radius, hz).setColor(1f, 1f, 1f, 0.9f);
-
-        // Glow ring
-        float glowRad = radius * 2.2f;
-        v.addVertex(m, hx - glowRad, hy - glowRad, hz).setColor(r, g, b, 0.6f);
-        v.addVertex(m, hx + glowRad, hy - glowRad, hz).setColor(r, g, b, 0.6f);
-        v.addVertex(m, hx + glowRad, hy + glowRad, hz).setColor(r, g, b, 0.6f);
-        v.addVertex(m, hx - glowRad, hy + glowRad, hz).setColor(r, g, b, 0.6f);
+    private static void dot(VertexConsumer v, Matrix4f m, Vec3 c, Vec3 u, Vec3 w,
+                            float r, float g, float b, float a) {
+        quad(v, m,
+            (float) (c.x - u.x - w.x), (float) (c.y - u.y - w.y), (float) (c.z - u.z - w.z),
+            (float) (c.x + u.x - w.x), (float) (c.y + u.y - w.y), (float) (c.z + u.z - w.z),
+            (float) (c.x + u.x + w.x), (float) (c.y + u.y + w.y), (float) (c.z + u.z + w.z),
+            (float) (c.x - u.x + w.x), (float) (c.y - u.y + w.y), (float) (c.z - u.z + w.z),
+            r, g, b, a, a);
     }
 }

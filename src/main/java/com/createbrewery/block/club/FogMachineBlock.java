@@ -29,8 +29,6 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class FogMachineBlock extends Block implements EntityBlock {
@@ -87,28 +85,23 @@ public class FogMachineBlock extends Block implements EntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
-        // Refill with Water Bucket
         if (stack.is(Items.WATER_BUCKET)) {
-            if (fogMachine.fillFluid(1000)) {
-                if (!player.getAbilities().instabuild) {
-                    player.setItemInHand(hand, new ItemStack(Items.BUCKET));
-                }
-                level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0f, 1.0f);
-                if (level.isClientSide) {
-                    player.displayClientMessage(Component.translatable("createbrewery.fog_machine.filled", fogMachine.getFluidAmount()), true);
-                }
-                return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            if (!fogMachine.fillFluid(1000)) {
+                // No room for a whole bucket: swallow the click (FAIL would fall through and pour it on the floor).
+                return ItemInteractionResult.CONSUME;
             }
+            if (!player.getAbilities().instabuild) {
+                player.setItemInHand(hand, new ItemStack(Items.BUCKET));
+            }
+            level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0f, 1.0f);
+            if (level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.fog_machine.filled", fogMachine.getFluidAmount()), true);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        // Toggle manual emitting if empty hand / wrench
-        boolean newEmitting = !state.getValue(EMITTING);
-        level.setBlock(pos, state.setValue(EMITTING, newEmitting), 3);
-        level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, newEmitting ? 1.4f : 0.9f);
-        if (level.isClientSide) {
-            player.displayClientMessage(Component.translatable(newEmitting ? "createbrewery.fog_machine.started" : "createbrewery.fog_machine.stopped", fogMachine.getFluidAmount()), true);
-        }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        // Only an empty hand switches it on and off; anything else held is used normally.
+        return stack.isEmpty() ? ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION : ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override

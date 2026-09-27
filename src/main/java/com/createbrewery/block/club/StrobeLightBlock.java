@@ -77,10 +77,14 @@ public class StrobeLightBlock extends Block implements EntityBlock {
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Direction dir = context.getNearestLookingDirection().getOpposite();
         boolean powered = context.getLevel().hasNeighborSignal(context.getClickedPos());
-        return defaultBlockState()
+        return lit(defaultBlockState()
             .setValue(FACING, dir)
-            .setValue(POWERED, powered)
-            .setValue(LIT, false);
+            .setValue(POWERED, powered));
+    }
+
+    /** Real block light only in REDSTONE mode: the server cannot hear the music, so beats only flash the lens. */
+    private static BlockState lit(BlockState state) {
+        return state.setValue(LIT, state.getValue(MODE) == StrobeMode.REDSTONE && state.getValue(POWERED));
     }
 
     @Override
@@ -88,26 +92,21 @@ public class StrobeLightBlock extends Block implements EntityBlock {
         if (!level.isClientSide) {
             boolean powered = level.hasNeighborSignal(pos);
             if (powered != state.getValue(POWERED)) {
-                level.setBlock(pos, state.setValue(POWERED, powered), 3);
+                level.setBlock(pos, lit(state.setValue(POWERED, powered)), 3);
             }
         }
     }
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        StrobeMode next = state.getValue(MODE).next();
-        level.setBlock(pos, state.setValue(MODE, next), 3);
-        level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.2f);
-        if (level.isClientSide) {
-            player.displayClientMessage(Component.translatable("createbrewery.strobe.mode." + next.getSerializedName()), true);
-        }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        // Only an empty hand switches modes; anything held is used normally (placing blocks, the wrench).
+        return stack.isEmpty() ? ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION : ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         StrobeMode next = state.getValue(MODE).next();
-        level.setBlock(pos, state.setValue(MODE, next), 3);
+        level.setBlock(pos, lit(state.setValue(MODE, next)), 3);
         level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.2f);
         if (level.isClientSide) {
             player.displayClientMessage(Component.translatable("createbrewery.strobe.mode." + next.getSerializedName()), true);
@@ -134,9 +133,11 @@ public class StrobeLightBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+        // The flash is client-only: it follows what this client hears.
+        if (!level.isClientSide) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof StrobeLightBlockEntity strobe) {
-                strobe.tick(lvl, pos, st);
+                strobe.tick(st);
             }
         };
     }

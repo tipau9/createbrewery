@@ -11,6 +11,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,6 +35,8 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
     public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
         tank = new SmartFluidTankBehaviour(SmartFluidTankBehaviour.INPUT, this, 1, TANK_CAPACITY, true)
             .allowInsertion().forbidExtraction();
+        // Fog juice is water; lava or beer would make for a different kind of party.
+        tank.getPrimaryHandler().setValidator(f -> f.is(FluidTags.WATER));
         behaviours.add(tank);
     }
 
@@ -45,10 +48,13 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
         return tank == null ? 0 : tank.getPrimaryHandler().getFluidAmount();
     }
 
+    /** Fills only if all of {@code amount} fits, so a bucket is never half-emptied into the void. */
     public boolean fillFluid(int amount) {
         if (tank == null) return false;
-        int filled = tank.getPrimaryHandler().fill(new FluidStack(Fluids.WATER, amount), IFluidHandler.FluidAction.EXECUTE);
-        return filled > 0;
+        FluidStack water = new FluidStack(Fluids.WATER, amount);
+        if (tank.getPrimaryHandler().fill(water, IFluidHandler.FluidAction.SIMULATE) < amount) return false;
+        tank.getPrimaryHandler().fill(water, IFluidHandler.FluidAction.EXECUTE);
+        return true;
     }
 
     @Override

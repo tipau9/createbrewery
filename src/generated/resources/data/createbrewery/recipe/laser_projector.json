@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "E": {
+      "item": "create:electron_tube"
+    },
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "I": {
+      "item": "create:iron_sheet"
+    }
+  },
+  "pattern": [
+    " G ",
+    "AEA",
+    "III"
+  ],
+  "result": {
+    "count": 1,
+    "id": "createbrewery:laser_projector"
+  }
+}

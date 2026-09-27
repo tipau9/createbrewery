@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "B": {
+      "item": "minecraft:bucket"
+    },
+    "C": {
+      "item": "minecraft:campfire"
+    },
+    "I": {
+      "item": "create:iron_sheet"
+    },
+    "P": {
+      "item": "create:fluid_pipe"
+    }
+  },
+  "pattern": [
+    "IPI",
+    "IBI",
+    "ICI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "createbrewery:fog_machine"
+  }
+}

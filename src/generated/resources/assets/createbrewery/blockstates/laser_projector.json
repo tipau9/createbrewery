@@ -1,0 +1,108 @@
+{
+  "variants": {
+    "active=false,facing=down,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 180
+    },
+    "active=false,facing=down,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 180
+    },
+    "active=false,facing=east,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 90
+    },
+    "active=false,facing=east,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 90
+    },
+    "active=false,facing=north,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90
+    },
+    "active=false,facing=north,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90
+    },
+    "active=false,facing=south,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 180
+    },
+    "active=false,facing=south,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 180
+    },
+    "active=false,facing=up,powered=false": {
+      "model": "createbrewery:block/laser_projector"
+    },
+    "active=false,facing=up,powered=true": {
+      "model": "createbrewery:block/laser_projector"
+    },
+    "active=false,facing=west,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 270
+    },
+    "active=false,facing=west,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 270
+    },
+    "active=true,facing=down,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 180
+    },
+    "active=true,facing=down,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 180
+    },
+    "active=true,facing=east,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 90
+    },
+    "active=true,facing=east,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 90
+    },
+    "active=true,facing=north,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90
+    },
+    "active=true,facing=north,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90
+    },
+    "active=true,facing=south,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 180
+    },
+    "active=true,facing=south,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 180
+    },
+    "active=true,facing=up,powered=false": {
+      "model": "createbrewery:block/laser_projector"
+    },
+    "active=true,facing=up,powered=true": {
+      "model": "createbrewery:block/laser_projector"
+    },
+    "active=true,facing=west,powered=false": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 270
+    },
+    "active=true,facing=west,powered=true": {
+      "model": "createbrewery:block/laser_projector",
+      "x": 90,
+      "y": 270
+    }
+  }
+}
