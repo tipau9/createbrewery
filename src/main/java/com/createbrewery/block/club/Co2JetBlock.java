@@ -73,8 +73,18 @@ public class Co2JetBlock extends Block {
         level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 1.6f, 1.8f);
 
         if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            // Check physical obstacles along the jet trajectory so it collides realistically with walls/ceilings
+            double maxReach = 8.0;
+            for (double d = 1.0; d <= 8.0; d += 1.0) {
+                BlockPos checkPos = pos.relative(facing, (int) Math.round(d));
+                if (level.getBlockState(checkPos).isSolidRender(level, checkPos)) {
+                    maxReach = Math.max(0.6, d - 0.2);
+                    break;
+                }
+            }
+
             // High-pressure cryo gas blast sent from server to all clients
-            for (double d = 0.5; d <= 8.0; d += 0.4) {
+            for (double d = 0.5; d <= maxReach; d += 0.4) {
                 double px = pos.getX() + 0.5 + facing.getStepX() * d;
                 double py = pos.getY() + 0.5 + facing.getStepY() * d;
                 double pz = pos.getZ() + 0.5 + facing.getStepZ() * d;
@@ -84,7 +94,7 @@ public class Co2JetBlock extends Block {
             }
 
             // Thermal cooling on server: cool down overheated players standing in the plume
-            AABB plumeBox = new AABB(pos).expandTowards(facing.getStepX() * 8, facing.getStepY() * 8, facing.getStepZ() * 8).inflate(1.2);
+            AABB plumeBox = new AABB(pos).expandTowards(facing.getStepX() * maxReach, facing.getStepY() * maxReach, facing.getStepZ() * maxReach).inflate(1.2);
             List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, plumeBox);
             for (LivingEntity entity : targets) {
                 entity.clearFire();
@@ -99,6 +109,11 @@ public class Co2JetBlock extends Block {
     public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
         if (state.getValue(POWERED)) {
             Direction facing = state.getValue(FACING);
+            BlockPos inFront = pos.relative(facing);
+            if (level.getBlockState(inFront).isSolidRender(level, inFront)) {
+                return; // Nozzle blocked directly by a wall
+            }
+
             double startX = pos.getX() + 0.5 + facing.getStepX() * 0.7;
             double startY = pos.getY() + 0.5 + facing.getStepY() * 0.7;
             double startZ = pos.getZ() + 0.5 + facing.getStepZ() * 0.7;

@@ -14,6 +14,15 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.TintedGlassBlock;
+import net.minecraft.world.level.block.TransparentBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+
 /**
  * What the strobes do to your eyes: every strobe that fires this tick offers how hard it hits the
  * camera, the strongest one wins. That lights the whole lightmap up for the tick (the room is lit
@@ -41,6 +50,43 @@ public final class StrobeFlash {
         return light;
     }
 
+    /** Real physical raycasting: determines if light can travel from {@code from} to {@code to} through blocks. */
+    public static boolean isLightOccluded(Level level, Vec3 from, Vec3 to, Entity entity) {
+        Vec3 current = from;
+        Vec3 totalDir = to.subtract(from);
+        double totalDistSq = totalDir.lengthSqr();
+        if (totalDistSq < 1e-4) return false;
+
+        for (int step = 0; step < 8; step++) {
+            BlockHitResult hit = level.clip(new ClipContext(current, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
+            if (hit.getType() == HitResult.Type.MISS) {
+                return false;
+            }
+            BlockPos hitPos = hit.getBlockPos();
+            BlockState state = level.getBlockState(hitPos);
+
+            // Tinted glass, closed doors and trapdoors explicitly block light
+            if (state.getBlock() instanceof TintedGlassBlock || state.getBlock() instanceof DoorBlock || state.getBlock() instanceof TrapDoorBlock) {
+                return true;
+            }
+
+            // Transparent materials: clear glass, stained glass, iron bars, glass panes let light through
+            if (state.getLightBlock(level, hitPos) == 0 && (state.getBlock() instanceof TransparentBlock || state.getBlock() instanceof IronBarsBlock)) {
+                Vec3 stepDir = to.subtract(current);
+                if (stepDir.lengthSqr() < 1e-4) return false;
+                current = hit.getLocation().add(stepDir.normalize().scale(0.05));
+                if (current.distanceToSqr(from) >= totalDistSq) {
+                    return false;
+                }
+                continue;
+            }
+
+            // Opaque blocks: walls, closed doors, trapdoors, stone, wood, concrete, etc.
+            return true;
+        }
+        return true;
+    }
+
     /**
      * A strobe at {@code pos} flashing with {@code intensity} at brightness {@code power} (1..5);
      * {@code steady} is the non-flashing redstone mode.
@@ -59,12 +105,27 @@ public final class StrobeFlash {
 
         float reach = (float) (1 - dist / REACH[p]);
         float exposure = reach * reach * (3 - 2 * reach);
-        // Behind the strobe only the bounce off the walls reaches you, behind a wall a little glow.
+        // Behind the strobe only the bounce off the walls reaches you
         Vec3 aim = Vec3.atLowerCornerOf(facing.getNormal());
         if (dist > 0.1 && toEye.dot(aim) < 0) exposure *= 0.5f;
-        boolean seen = mc.player != null && level.clip(new ClipContext(lens, eye, ClipContext.Block.VISUAL,
-            ClipContext.Fluid.NONE, mc.player)).getType() == HitResult.Type.MISS;
-        if (!seen) exposure *= 0.3f;
+
+        // Optical Line of Sight Check: check if walls/doors physically block the light
+        boolean directSight = mc.player != null && !isLightOccluded(level, lens, eye, mc.player);
+        if (!directSight) {
+            // Check indirect bounce around player space (overhead, sides)
+            // If all are occluded, the player is partitioned in another room / behind closed doors / outside
+            boolean indirectSight = mc.player != null && (
+                !isLightOccluded(level, lens, eye.add(0.0, 1.2, 0.0), mc.player)
+                || !isLightOccluded(level, lens, eye.add(0.8, 0.0, 0.8), mc.player)
+                || !isLightOccluded(level, lens, eye.add(-0.8, 0.0, -0.8), mc.player)
+            );
+            if (!indirectSight) {
+                // Fully occluded by walls/doors - ZERO flash!
+                return;
+            }
+            exposure *= 0.35f;
+        }
+
         // A flash in a lit room hardly registers; in the dark it blinds.
         int lightAtEye = level.getMaxLocalRawBrightness(BlockPos.containing(eye));
         float dark = 1f - lightAtEye / 15f * 0.75f;
@@ -74,12 +135,12 @@ public final class StrobeFlash {
 
         // Glare: staring into the lens hurts more than seeing its flash on the wall.
         float look = dist < 0.1 ? 1f : (float) Math.max(0, -mc.gameRenderer.getMainCamera().getLookVector().dot(toEye.toVector3f().normalize()));
-        float stare = seen ? look * look * look : 0f;
+        float stare = directSight ? look * look * look : 0f;
 
         nextLight = Math.max(nextLight, lit);
         // "Blinding" whites out the whole screen whenever you can see it, wherever you look.
         // A steady (redstone) light only glares when you stare into it; a white screen for minutes is no fun.
-        float glareHit = steady ? 0.3f * stare : p == 4 ? (seen ? 1f : 0.35f) : 0.35f + 0.65f * stare;
+        float glareHit = steady ? 0.3f * stare : p == 4 ? (directSight ? 1f : 0.2f) : (directSight ? 0.35f + 0.65f * stare : 0.15f);
         nextGlare = Math.max(nextGlare, intensity * exposure * dark * GLARE[p] * glareHit);
     }
 

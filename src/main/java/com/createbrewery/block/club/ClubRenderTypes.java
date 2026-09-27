@@ -20,6 +20,7 @@ final class ClubRenderTypes extends RenderType {
         CompositeState.builder()
             .setShaderState(RENDERTYPE_LIGHTNING_SHADER)
             .setWriteMaskState(COLOR_WRITE)
+            .setDepthTestState(LEQUAL_DEPTH_TEST)
             .setTransparencyState(LIGHTNING_TRANSPARENCY)
             .setOutputState(WEATHER_TARGET)
             .createCompositeState(false));
