@@ -1,0 +1,60 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "base": "createbrewery:block/co2_jet_base",
+    "side": "createbrewery:block/co2_jet_side",
+    "nozzle": "createbrewery:block/co2_jet_nozzle",
+    "brass": "createbrewery:block/club_brass",
+    "particle": "createbrewery:block/co2_jet_side"
+  },
+  "elements": [
+    {
+      "name": "base_plate",
+      "from": [2, 0, 2],
+      "to": [14, 2, 14],
+      "faces": {
+        "north": { "texture": "#base", "uv": [2, 14, 14, 16] },
+        "south": { "texture": "#base", "uv": [2, 14, 14, 16] },
+        "east": { "texture": "#base", "uv": [2, 14, 14, 16] },
+        "west": { "texture": "#base", "uv": [2, 14, 14, 16] },
+        "up": { "texture": "#base", "uv": [2, 2, 14, 14] },
+        "down": { "texture": "#base", "uv": [2, 2, 14, 14], "cullface": "down" }
+      }
+    },
+    {
+      "name": "valve_body",
+      "from": [4.5, 2, 4.5],
+      "to": [11.5, 7.5, 11.5],
+      "faces": {
+        "north": { "texture": "#side", "uv": [4, 6, 12, 14] },
+        "south": { "texture": "#side", "uv": [4, 6, 12, 14] },
+        "east": { "texture": "#side", "uv": [4, 6, 12, 14] },
+        "west": { "texture": "#side", "uv": [4, 6, 12, 14] },
+        "up": { "texture": "#base", "uv": [4, 4, 12, 12] }
+      }
+    },
+    {
+      "name": "brass_collar",
+      "from": [5.5, 7.5, 5.5],
+      "to": [10.5, 9, 10.5],
+      "faces": {
+        "north": { "texture": "#brass", "uv": [5, 0, 11, 2] },
+        "south": { "texture": "#brass", "uv": [5, 0, 11, 2] },
+        "east": { "texture": "#brass", "uv": [5, 0, 11, 2] },
+        "west": { "texture": "#brass", "uv": [5, 0, 11, 2] }
+      }
+    },
+    {
+      "name": "cannon_barrel",
+      "from": [5, 9, 5],
+      "to": [11, 15, 11],
+      "faces": {
+        "north": { "texture": "#nozzle", "uv": [5, 5, 11, 11] },
+        "south": { "texture": "#nozzle", "uv": [5, 5, 11, 11] },
+        "east": { "texture": "#nozzle", "uv": [5, 5, 11, 11] },
+        "west": { "texture": "#nozzle", "uv": [5, 5, 11, 11] },
+        "up": { "texture": "#nozzle", "uv": [5, 5, 11, 11] }
+      }
+    }
+  ]
+}

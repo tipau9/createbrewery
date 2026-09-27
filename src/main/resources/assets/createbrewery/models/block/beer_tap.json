@@ -1,0 +1,73 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "drip": "createbrewery:block/beer_tap_drip",
+    "tower": "createbrewery:block/beer_tap_tower",
+    "spout": "createbrewery:block/beer_tap_spout",
+    "brass": "createbrewery:block/club_brass",
+    "particle": "createbrewery:block/beer_tap_tower"
+  },
+  "elements": [
+    {
+      "name": "drip_tray",
+      "from": [3, 0, 2],
+      "to": [13, 1.5, 14],
+      "faces": {
+        "north": { "texture": "#drip", "uv": [3, 14, 13, 16] },
+        "south": { "texture": "#drip", "uv": [3, 14, 13, 16] },
+        "east": { "texture": "#drip", "uv": [2, 14, 14, 16] },
+        "west": { "texture": "#drip", "uv": [2, 14, 14, 16] },
+        "up": { "texture": "#drip", "uv": [3, 2, 13, 14] },
+        "down": { "texture": "#drip", "uv": [3, 2, 13, 14], "cullface": "down" }
+      }
+    },
+    {
+      "name": "dispense_column",
+      "from": [6, 1.5, 7],
+      "to": [10, 11, 11],
+      "faces": {
+        "north": { "texture": "#tower", "uv": [6, 3, 10, 13] },
+        "south": { "texture": "#tower", "uv": [6, 3, 10, 13] },
+        "east": { "texture": "#tower", "uv": [6, 3, 10, 13] },
+        "west": { "texture": "#tower", "uv": [6, 3, 10, 13] }
+      }
+    },
+    {
+      "name": "column_cap",
+      "from": [5.5, 11, 6.5],
+      "to": [10.5, 12, 11.5],
+      "faces": {
+        "north": { "texture": "#brass", "uv": [5, 0, 11, 1] },
+        "south": { "texture": "#brass", "uv": [5, 0, 11, 1] },
+        "east": { "texture": "#brass", "uv": [5, 0, 11, 1] },
+        "west": { "texture": "#brass", "uv": [5, 0, 11, 1] },
+        "up": { "texture": "#brass", "uv": [5, 5, 11, 11] }
+      }
+    },
+    {
+      "name": "tap_faucet_spout",
+      "from": [7, 6.5, 2],
+      "to": [9, 8.5, 7],
+      "faces": {
+        "north": { "texture": "#spout", "uv": [6, 12, 9, 14] },
+        "south": { "texture": "#spout", "uv": [6, 12, 9, 14] },
+        "east": { "texture": "#spout", "uv": [2, 12, 7, 14] },
+        "west": { "texture": "#spout", "uv": [2, 12, 7, 14] },
+        "up": { "texture": "#spout", "uv": [7, 2, 9, 7] },
+        "down": { "texture": "#spout", "uv": [7, 2, 9, 7] }
+      }
+    },
+    {
+      "name": "tap_handle_lever",
+      "from": [7.5, 8.5, 3.5],
+      "to": [8.5, 14, 4.5],
+      "faces": {
+        "north": { "texture": "#spout", "uv": [7, 1, 8, 7] },
+        "south": { "texture": "#spout", "uv": [7, 1, 8, 7] },
+        "east": { "texture": "#spout", "uv": [7, 1, 8, 7] },
+        "west": { "texture": "#spout", "uv": [7, 1, 8, 7] },
+        "up": { "texture": "#spout", "uv": [7, 1, 8, 2] }
+      }
+    }
+  ]
+}

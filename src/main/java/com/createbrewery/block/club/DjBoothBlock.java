@@ -79,6 +79,17 @@ public class DjBoothBlock extends Block implements EntityBlock {
         return state.getValue(POWERED) ? 15 : 0;
     }
 
+    public static boolean isMusicDisc(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (stack.has(DataComponents.JUKEBOX_PLAYABLE)) return true;
+        net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (id != null) {
+            String p = id.getPath();
+            if (p.contains("music_disc") || p.contains("record") || p.contains("disc")) return true;
+        }
+        return stack.is(net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.withDefaultNamespace("music_discs")));
+    }
+
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         BlockEntity be = level.getBlockEntity(pos);
@@ -87,12 +98,18 @@ public class DjBoothBlock extends Block implements EntityBlock {
         }
 
         // Inserting Music Disc
-        if (stack.has(DataComponents.JUKEBOX_PLAYABLE)) {
-            if (dj.insertDisc(stack, player.isShiftKeyDown())) {
+        if (isMusicDisc(stack)) {
+            boolean inserted = dj.insertDisc(stack, player.isShiftKeyDown(), player);
+            if (inserted) {
                 if (!player.getAbilities().instabuild) {
                     stack.shrink(1);
                 }
                 level.playSound(null, pos, SoundEvents.DISPENSER_DISPENSE, SoundSource.BLOCKS, 0.8f, 1.2f);
+                return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            } else {
+                if (level.isClientSide) {
+                    player.displayClientMessage(Component.translatable("createbrewery.dj.decks_full"), true);
+                }
                 return ItemInteractionResult.sidedSuccess(level.isClientSide);
             }
         }
@@ -107,13 +124,12 @@ public class DjBoothBlock extends Block implements EntityBlock {
             return InteractionResult.PASS;
         }
 
-        // Check which section of the console was clicked
-        double localX = hitResult.getLocation().x - pos.getX();
-        double localZ = hitResult.getLocation().z - pos.getZ();
-
         if (player.isShiftKeyDown()) {
             // Shift click: Eject discs
             dj.ejectDiscs(player);
+            if (level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.dj.ejected"), true);
+            }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 

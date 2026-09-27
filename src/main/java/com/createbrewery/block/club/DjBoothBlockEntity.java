@@ -32,23 +32,29 @@ public class DjBoothBlockEntity extends BlockEntity {
         super(type, pos, state);
     }
 
-    public boolean insertDisc(ItemStack disc, boolean preferDeckB) {
-        if (!disc.has(DataComponents.JUKEBOX_PLAYABLE)) return false;
+    public boolean insertDisc(ItemStack disc, boolean preferDeckB, Player player) {
+        if (!DjBoothBlock.isMusicDisc(disc)) return false;
 
+        String deckName = null;
         if (!preferDeckB && deckA.isEmpty()) {
             deckA = disc.copyWithCount(1);
             onDiscInserted(deckA, true);
-            setChanged();
-            return true;
+            deckName = "Deck A";
         } else if (deckB.isEmpty()) {
             deckB = disc.copyWithCount(1);
             onDiscInserted(deckB, false);
-            setChanged();
-            return true;
+            deckName = "Deck B";
         } else if (deckA.isEmpty()) {
             deckA = disc.copyWithCount(1);
             onDiscInserted(deckA, true);
+            deckName = "Deck A";
+        }
+
+        if (deckName != null) {
             setChanged();
+            if (player != null && level != null && level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.dj.deck_inserted", deckName, disc.getHoverName()), true);
+            }
             return true;
         }
         return false;
@@ -57,9 +63,7 @@ public class DjBoothBlockEntity extends BlockEntity {
     private void onDiscInserted(ItemStack disc, boolean isDeckA) {
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            if (disc.has(DataComponents.JUKEBOX_PLAYABLE)) {
-                level.levelEvent(null, 1010, worldPosition, Item.getId(disc.getItem()));
-            }
+            level.levelEvent(null, 1010, worldPosition, Item.getId(disc.getItem()));
         }
     }
 

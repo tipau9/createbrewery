@@ -72,25 +72,17 @@ public class Co2JetBlock extends Block {
     public static void fireJet(Level level, BlockPos pos, Direction facing) {
         level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 1.6f, 1.8f);
 
-        if (level.isClientSide) {
-            // Spawn high-velocity cryogenic gas plume
-            double startX = pos.getX() + 0.5 + facing.getStepX() * 0.5;
-            double startY = pos.getY() + 0.5 + facing.getStepY() * 0.5;
-            double startZ = pos.getZ() + 0.5 + facing.getStepZ() * 0.5;
-
-            for (int i = 0; i < 28; i++) {
-                double speed = 0.55 + level.random.nextDouble() * 0.45;
-                double spread = 0.08;
-                double vx = facing.getStepX() * speed + (level.random.nextDouble() - 0.5) * spread;
-                double vy = facing.getStepY() * speed + (level.random.nextDouble() - 0.5) * spread;
-                double vz = facing.getStepZ() * speed + (level.random.nextDouble() - 0.5) * spread;
-
-                level.addParticle(ModParticles.FOG.get(), startX, startY, startZ, vx, vy, vz);
-                if (level.random.nextFloat() < 0.3f) {
-                    level.addParticle(ParticleTypes.SNOWFLAKE, startX, startY, startZ, vx * 0.8, vy * 0.8, vz * 0.8);
-                }
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            // High-pressure cryo gas blast sent from server to all clients
+            for (double d = 0.5; d <= 8.0; d += 0.4) {
+                double px = pos.getX() + 0.5 + facing.getStepX() * d;
+                double py = pos.getY() + 0.5 + facing.getStepY() * d;
+                double pz = pos.getZ() + 0.5 + facing.getStepZ() * d;
+                serverLevel.sendParticles(ParticleTypes.CLOUD, px, py, pz, 6, 0.18, 0.18, 0.18, 0.05);
+                serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, px, py, pz, 4, 0.12, 0.12, 0.12, 0.02);
+                serverLevel.sendParticles(ParticleTypes.POOF, px, py, pz, 3, 0.15, 0.15, 0.15, 0.04);
             }
-        } else {
+
             // Thermal cooling on server: cool down overheated players standing in the plume
             AABB plumeBox = new AABB(pos).expandTowards(facing.getStepX() * 8, facing.getStepY() * 8, facing.getStepZ() * 8).inflate(1.2);
             List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, plumeBox);
@@ -98,6 +90,28 @@ public class Co2JetBlock extends Block {
                 entity.clearFire();
                 if (entity.hasEffect(ModEffects.HYPERTHERMIA)) {
                     entity.removeEffect(ModEffects.HYPERTHERMIA);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+        if (state.getValue(POWERED)) {
+            Direction facing = state.getValue(FACING);
+            double startX = pos.getX() + 0.5 + facing.getStepX() * 0.7;
+            double startY = pos.getY() + 0.5 + facing.getStepY() * 0.7;
+            double startZ = pos.getZ() + 0.5 + facing.getStepZ() * 0.7;
+
+            for (int i = 0; i < 8; i++) {
+                double speed = 0.45 + random.nextDouble() * 0.35;
+                double spread = 0.12;
+                double vx = facing.getStepX() * speed + (random.nextDouble() - 0.5) * spread;
+                double vy = facing.getStepY() * speed + (random.nextDouble() - 0.5) * spread;
+                double vz = facing.getStepZ() * speed + (random.nextDouble() - 0.5) * spread;
+                level.addParticle(ParticleTypes.CLOUD, startX, startY, startZ, vx, vy, vz);
+                if (random.nextFloat() < 0.45f) {
+                    level.addParticle(ParticleTypes.SNOWFLAKE, startX, startY, startZ, vx * 0.8, vy * 0.8, vz * 0.8);
                 }
             }
         }

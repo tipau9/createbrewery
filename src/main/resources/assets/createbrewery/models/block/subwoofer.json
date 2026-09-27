@@ -1,0 +1,84 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "front": "createbrewery:block/subwoofer_front",
+    "side": "createbrewery:block/subwoofer_side",
+    "top": "createbrewery:block/subwoofer_top",
+    "back": "createbrewery:block/subwoofer_back",
+    "particle": "createbrewery:block/subwoofer_front"
+  },
+  "elements": [
+    {
+      "name": "cabinet_main",
+      "from": [0, 0, 1],
+      "to": [16, 16, 16],
+      "faces": {
+        "south": { "texture": "#back", "uv": [0, 0, 16, 16], "cullface": "south" },
+        "east": { "texture": "#side", "uv": [0, 0, 15, 16], "cullface": "east" },
+        "west": { "texture": "#side", "uv": [1, 0, 16, 16], "cullface": "west" },
+        "up": { "texture": "#top", "uv": [0, 1, 16, 16], "cullface": "up" },
+        "down": { "texture": "#top", "uv": [0, 1, 16, 16], "cullface": "down" }
+      }
+    },
+    {
+      "name": "front_top_rim",
+      "from": [0, 15, 0],
+      "to": [16, 16, 1],
+      "faces": {
+        "north": { "texture": "#top", "uv": [0, 0, 16, 1] },
+        "up": { "texture": "#top", "uv": [0, 0, 16, 1], "cullface": "up" },
+        "east": { "texture": "#side", "uv": [15, 0, 16, 1], "cullface": "east" },
+        "west": { "texture": "#side", "uv": [0, 0, 1, 1], "cullface": "west" }
+      }
+    },
+    {
+      "name": "front_bottom_rim",
+      "from": [0, 0, 0],
+      "to": [16, 1, 1],
+      "faces": {
+        "north": { "texture": "#top", "uv": [0, 15, 16, 16] },
+        "down": { "texture": "#top", "uv": [0, 0, 16, 1], "cullface": "down" },
+        "east": { "texture": "#side", "uv": [15, 15, 16, 16], "cullface": "east" },
+        "west": { "texture": "#side", "uv": [0, 15, 1, 16], "cullface": "west" }
+      }
+    },
+    {
+      "name": "front_left_rim",
+      "from": [0, 1, 0],
+      "to": [1, 15, 1],
+      "faces": {
+        "north": { "texture": "#side", "uv": [0, 1, 1, 15] },
+        "west": { "texture": "#side", "uv": [0, 1, 1, 15], "cullface": "west" }
+      }
+    },
+    {
+      "name": "front_right_rim",
+      "from": [15, 1, 0],
+      "to": [16, 15, 1],
+      "faces": {
+        "north": { "texture": "#side", "uv": [15, 1, 16, 15] },
+        "east": { "texture": "#side", "uv": [15, 1, 16, 15], "cullface": "east" }
+      }
+    },
+    {
+      "name": "speaker_baffle",
+      "from": [1, 1, 1],
+      "to": [15, 15, 1.2],
+      "faces": {
+        "north": { "texture": "#front", "uv": [1, 1, 15, 15] }
+      }
+    },
+    {
+      "name": "dust_cap",
+      "from": [6, 5, 0.4],
+      "to": [10, 9, 1.0],
+      "faces": {
+        "north": { "texture": "#front", "uv": [6, 5, 10, 9] },
+        "up": { "texture": "#front", "uv": [6, 5, 10, 6] },
+        "down": { "texture": "#front", "uv": [6, 8, 10, 9] },
+        "east": { "texture": "#front", "uv": [9, 5, 10, 9] },
+        "west": { "texture": "#front", "uv": [6, 5, 7, 9] }
+      }
+    }
+  ]
+}

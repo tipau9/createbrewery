@@ -153,6 +153,9 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.subwoofer.active", "Subwoofer: Bass active");
         REGISTRATE.addRawLang("createbrewery.subwoofer.inactive", "Subwoofer: Inactive");
         REGISTRATE.addRawLang("createbrewery.dj.beat_drop", "DROP TRIGGERED!");
+        REGISTRATE.addRawLang("createbrewery.dj.deck_inserted", "%s: %s loaded");
+        REGISTRATE.addRawLang("createbrewery.dj.decks_full", "Both decks full! (Shift+Right-click to eject)");
+        REGISTRATE.addRawLang("createbrewery.dj.ejected", "Discs ejected");
         REGISTRATE.addRawLang("createbrewery.beer_tap.poured", "Fresh draft beer poured!");
         REGISTRATE.addRawLang("createbrewery.beer_tap.empty", "Beer Tap is empty!");
         REGISTRATE.addRawLang("createbrewery.goggles.beer_tap.header", "Draft Beer Tap");

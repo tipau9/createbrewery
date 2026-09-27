@@ -96,6 +96,9 @@
   "createbrewery.subwoofer.active": "Subwoofer: Bass aktiv",
   "createbrewery.subwoofer.inactive": "Subwoofer: Deaktiviert",
   "createbrewery.dj.beat_drop": "BASS DROP AUSGELÖST!",
+  "createbrewery.dj.deck_inserted": "%s: %s eingelegt",
+  "createbrewery.dj.decks_full": "Beide Decks belegt! (Shift+Rechtsklick zum Auswerfen)",
+  "createbrewery.dj.ejected": "Discs ausgeworfen",
   "createbrewery.beer_tap.poured": "Frisch gezapftes Bier eingeschenkt!",
   "createbrewery.beer_tap.empty": "Zapfhahn ist leer!",
   "createbrewery.goggles.beer_tap.header": "Bierzapfhahn"

@@ -84,7 +84,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.NOTE_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -93,7 +93,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -102,7 +102,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -111,7 +111,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
