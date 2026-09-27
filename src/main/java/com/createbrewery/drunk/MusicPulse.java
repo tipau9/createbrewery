@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,6 +64,8 @@ public final class MusicPulse {
         float gain, louder = -1f;
         int filter = -1;
         float muffle = 0f;
+        boolean kickLatched = false;
+        int subBassSource = -1;
 
         Track(int source, AudioFormat format) {
             this.source = source;
@@ -176,6 +179,15 @@ public final class MusicPulse {
                     } catch (Throwable ignored) {}
                     t.filter = -1;
                 }
+                if (t.subBassSource > 0) {
+                    try {
+                        if (AL10.alIsSource(t.subBassSource)) {
+                            AL10.alSourceStop(t.subBassSource);
+                            AL10.alDeleteSources(t.subBassSource);
+                        }
+                    } catch (Throwable ignored) {}
+                    t.subBassSource = -1;
+                }
                 tracks.remove(t);
                 LOGGER.info("MDMA heard {}: {} kicks", t.sound.getLocation(), t.kicks);
                 continue;
@@ -185,9 +197,21 @@ public final class MusicPulse {
             float near = player == null ? 0f : closeness(t.sound, player);
             heard |= near > 0.05f;
             if (!getHeardNow(t, CURRENT_SLICE)) continue;
-            k = Math.max(k, CURRENT_SLICE[KickDetector.KICK] * near);
+            float kickNow = CURRENT_SLICE[KickDetector.KICK];
+            k = Math.max(k, kickNow * near);
             l = Math.max(l, CURRENT_SLICE[KickDetector.LEVEL] * near);
             h = Math.max(h, CURRENT_SLICE[KickDetector.HATS] * near);
+
+            // Sub-Bass Transmission through restroom stalls and club walls:
+            // When muffled behind walls, trigger deep 46 Hz sub-bass punch in sync with the beat
+            if (t.muffle > 0.12f && player != null && near > 0.02f) {
+                if (kickNow > 0.35f && !t.kickLatched) {
+                    t.kickLatched = true;
+                    playTrackSubBass(t, player, kickNow, mc);
+                } else if (kickNow < 0.20f) {
+                    t.kickLatched = false;
+                }
+            }
         }
         playing = heard;
         song.hear(k, l, h, heard, now, dt);
@@ -196,6 +220,81 @@ public final class MusicPulse {
         hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
         // Up fast, down slowly: loud bits hit at once, the quiet comes in gently.
         level += (l - level) * (1f - (float) Math.exp(-dt * (l > level ? 25.0 : 4.0)));
+    }
+
+    private static int subBassBuffer = -1;
+
+    private static int getOrCreateSubBassBuffer() {
+        if (subBassBuffer > 0 && AL10.alIsBuffer(subBassBuffer)) return subBassBuffer;
+        try {
+            int n = (int) (44100 * 0.32);
+            ByteBuffer pcm = ByteBuffer.allocateDirect(n * 2).order(ByteOrder.nativeOrder());
+            double phase = 0.0;
+            for (int i = 0; i < n; i++) {
+                double t = (double) i / 44100.0;
+                // Realistic club sub-bass acoustic transmission:
+                // Fast transient attack punch sweeping from 72 Hz down into a deep 46 Hz room resonance
+                double freq = 46.0 + 26.0 * Math.exp(-t * 50.0);
+                phase += 2.0 * Math.PI * freq / 44100.0;
+                double sine = Math.sin(phase);
+                // Soft saturation gives rich chest-thump warmth on headphones & speakers
+                double wave = Math.tanh(sine * 1.4) * 0.82;
+                // 4ms smooth attack, exponential sub-bass decay, gentle tail fadeout
+                double attack = t < 0.004 ? 0.5 * (1.0 - Math.cos(Math.PI * t / 0.004)) : 1.0;
+                double decay = Math.exp(-t * 8.5);
+                double tail = t > 0.24 ? Math.max(0.0, 1.0 - (t - 0.24) / 0.08) : 1.0;
+                double amp = attack * decay * tail;
+                pcm.putShort((short) Math.round(wave * amp * 32000.0));
+            }
+            pcm.flip();
+            int buf = AL10.alGenBuffers();
+            AL10.alBufferData(buf, AL10.AL_FORMAT_MONO16, pcm, 44100);
+            subBassBuffer = buf;
+            return subBassBuffer;
+        } catch (Throwable e) {
+            LOGGER.warn("Could not generate club sub-bass buffer", e);
+            return -1;
+        }
+    }
+
+    private static void playTrackSubBass(Track t, LocalPlayer player, float kickIntensity, Minecraft mc) {
+        if (t.sound == null) return;
+        Vec3 soundPos = new Vec3(t.sound.getX(), t.sound.getY(), t.sound.getZ());
+        if (soundPos.lengthSqr() <= 1.0) return;
+
+        if (t.subBassSource == -1) {
+            try {
+                int buf = getOrCreateSubBassBuffer();
+                if (buf > 0) {
+                    int src = AL10.alGenSources();
+                    if (src > 0) {
+                        AL10.alSourcei(src, AL10.AL_BUFFER, buf);
+                        AL10.alSourcei(src, AL10.AL_LOOPING, AL10.AL_FALSE);
+                        AL10.alSourcef(src, AL10.AL_ROLLOFF_FACTOR, 0.65f); // Sub-bass carries through walls and air
+                        AL10.alSourcef(src, AL10.AL_REFERENCE_DISTANCE, 6.0f);
+                        AL10.alSourcef(src, AL10.AL_MAX_DISTANCE, 38.0f);
+                        t.subBassSource = src;
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        if (t.subBassSource > 0 && AL10.alIsSource(t.subBassSource)) {
+            try {
+                AL10.alSource3f(t.subBassSource, AL10.AL_POSITION, (float) soundPos.x, (float) soundPos.y, (float) soundPos.z);
+                float djPitch = 1.0f;
+                if (mc.level != null && mc.level.getBlockEntity(BlockPos.containing(soundPos)) instanceof com.createbrewery.block.club.DjBoothBlockEntity dj) {
+                    djPitch = dj.getPitch();
+                }
+                AL10.alSourcef(t.subBassSource, AL10.AL_PITCH, Mth.clamp(djPitch, 0.5f, 2.0f));
+
+                double dist = Math.sqrt(player.distanceToSqr(soundPos.x, soundPos.y, soundPos.z));
+                float falloff = (float) Math.max(0.0, 1.0 - dist / 34.0);
+                float gain = t.muffle * (0.6f + 0.4f * kickIntensity) * falloff * 1.4f;
+                AL10.alSourcef(t.subBassSource, AL10.AL_GAIN, Math.min(1.0f, gain));
+                AL10.alSourcePlay(t.subBassSource);
+            } catch (Throwable ignored) {}
+        }
     }
 
     /** Behind closed doors, inside restroom stalls or outside, cut the highs for that authentic muffled club sub-bass sound. */
@@ -263,16 +362,36 @@ public final class MusicPulse {
                     AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, t.filter);
                 } else {
                     // Club Restroom Stall / Outside wall filter:
-                    // High frequencies cut down to ~7% (no hi-hats, no crisp vocal sizzle)
-                    // Sub-bass kick & low frequencies remain booming through walls at ~88%
-                    float gainHF = Mth.lerp(t.muffle, 1.0f, 0.07f);
-                    float gainLF = Mth.lerp(t.muffle, 1.0f, 0.88f);
+                    // High and mid frequencies cut into a faint distant murmur (gainHF -> 0.0)
+                    // The direct track volume drops by ~18 dB (gainLF -> 0.12)
+                    // Vocals, synths, and melodies are muffled into an indistinct background drone,
+                    // while the synchronized sub-bass pulse thumps through the walls.
+                    float gainHF = Mth.clamp(Mth.lerp(t.muffle, 1.0f, 0.0f), 0.0f, 1.0f);
+                    float gainLF = Mth.clamp(Mth.lerp(t.muffle, 1.0f, 0.12f), 0.0f, 1.0f);
                     EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAIN, gainLF);
                     EXTEfx.alFilterf(t.filter, EXTEfx.AL_LOWPASS_GAINHF, gainHF);
                     AL10.alSourcei(t.source, EXTEfx.AL_DIRECT_FILTER, t.filter);
                 }
             } catch (Throwable ignored) {}
         }
+    }
+
+    public static float getMusicBassShake(net.minecraft.world.entity.player.Player player) {
+        if (player == null || tracks.isEmpty()) return 0f;
+        float k = kick;
+        if (k < 0.12f) return 0f;
+        float total = 0f;
+        for (Track t : tracks) {
+            if (t.sound == null) continue;
+            double distSq = player.distanceToSqr(t.sound.getX(), t.sound.getY(), t.sound.getZ());
+            if (distSq < 289.0) { // within 17 blocks
+                double dist = Math.sqrt(distSq);
+                float falloff = (float) Math.max(0.0, 1.0 - (dist / 17.0));
+                float wallFactor = t.muffle > 0.25f ? 1.25f : 0.85f;
+                total += k * falloff * falloff * wallFactor * 0.75f;
+            }
+        }
+        return Math.min(1.2f, total);
     }
 
     /** At the peak the music sounds louder: up to twice the gain the game gave it. */

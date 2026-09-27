@@ -59,24 +59,25 @@ public class SubwooferBlockEntity extends BlockEntity {
     }
 
     public static float getSubwooferBassShake(net.minecraft.world.entity.player.Player player) {
-        if (player == null || ACTIVE_SUBS.isEmpty()) return 0f;
+        if (player == null) return 0f;
         float kick = MusicPulse.kick();
-        if (kick < 0.1f) return 0f;
+        float subShake = 0f;
+        if (kick >= 0.1f && !ACTIVE_SUBS.isEmpty()) {
+            double px = player.getX();
+            double py = player.getY();
+            double pz = player.getZ();
 
-        double px = player.getX();
-        double py = player.getY();
-        double pz = player.getZ();
-
-        float totalShake = 0f;
-        for (BlockPos pos : ACTIVE_SUBS) {
-            double distSq = pos.distToCenterSqr(px, py, pz);
-            if (distSq < 144.0) { // within 12 blocks
-                double dist = Math.sqrt(distSq);
-                float falloff = (float) Math.max(0.0, 1.0 - (dist / 12.0));
-                totalShake += kick * falloff * falloff;
+            for (BlockPos pos : ACTIVE_SUBS) {
+                double distSq = pos.distToCenterSqr(px, py, pz);
+                if (distSq < 324.0) { // within 18 blocks
+                    double dist = Math.sqrt(distSq);
+                    float falloff = (float) Math.max(0.0, 1.0 - (dist / 18.0));
+                    subShake += kick * falloff * falloff;
+                }
             }
         }
-        return Math.min(1.5f, totalShake);
+        float musicShake = MusicPulse.getMusicBassShake(player);
+        return Math.min(1.5f, Math.max(subShake, musicShake));
     }
 
     @Override
