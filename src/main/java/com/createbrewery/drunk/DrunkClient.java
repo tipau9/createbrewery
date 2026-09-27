@@ -1576,6 +1576,8 @@ public final class DrunkClient {
             com.createbrewery.block.club.StrobeLightRenderer::new);
         event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.LASER_PROJECTOR.get(),
             com.createbrewery.block.club.LaserProjectorRenderer::new);
+        event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.DJ_BOOTH.get(),
+            com.createbrewery.block.club.DjBoothRenderer::new);
     }
 
     public static void addLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {

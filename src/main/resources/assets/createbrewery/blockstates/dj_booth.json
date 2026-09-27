@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,powered=false": { "model": "createbrewery:block/dj_booth" },
+    "facing=north,powered=true":  { "model": "createbrewery:block/dj_booth" },
+    "facing=east,powered=false":  { "model": "createbrewery:block/dj_booth", "y": 90 },
+    "facing=east,powered=true":   { "model": "createbrewery:block/dj_booth", "y": 90 },
+    "facing=south,powered=false": { "model": "createbrewery:block/dj_booth", "y": 180 },
+    "facing=south,powered=true":  { "model": "createbrewery:block/dj_booth", "y": 180 },
+    "facing=west,powered=false":  { "model": "createbrewery:block/dj_booth", "y": 270 },
+    "facing=west,powered=true":   { "model": "createbrewery:block/dj_booth", "y": 270 }
+  }
+}

@@ -1,5 +1,6 @@
 package com.createbrewery.block.club;
 
+import com.createbrewery.compat.EtchedCompat;
 import com.createbrewery.drunk.MusicPulse;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -8,25 +9,26 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.JukeboxPlayable;
 import net.minecraft.world.item.JukeboxSong;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 
 public class DjBoothBlockEntity extends BlockEntity {
 
     private ItemStack deckA = ItemStack.EMPTY;
     private ItemStack deckB = ItemStack.EMPTY;
+    private int activeDeck = 0; // 0 = none, 1 = Deck A, 2 = Deck B
+    private boolean isPlaying = false;
     private float crossfader = 0.5f;
     private float pitch = 1.0f;
     private int dropTicks = 0;
@@ -39,60 +41,118 @@ public class DjBoothBlockEntity extends BlockEntity {
         if (!DjBoothBlock.isMusicDisc(disc)) return false;
 
         String deckName = null;
-        if (!preferDeckB && deckA.isEmpty()) {
-            deckA = disc.copyWithCount(1);
-            onDiscInserted(deckA, true);
-            deckName = "Deck A";
-        } else if (deckB.isEmpty()) {
-            deckB = disc.copyWithCount(1);
-            onDiscInserted(deckB, false);
-            deckName = "Deck B";
-        } else if (deckA.isEmpty()) {
-            deckA = disc.copyWithCount(1);
-            onDiscInserted(deckA, true);
-            deckName = "Deck A";
+        boolean insertedDeckA = false;
+
+        if (preferDeckB) {
+            if (deckB.isEmpty()) {
+                deckB = disc.copyWithCount(1);
+                deckName = "Deck B";
+                insertedDeckA = false;
+            } else if (deckA.isEmpty()) {
+                deckA = disc.copyWithCount(1);
+                deckName = "Deck A";
+                insertedDeckA = true;
+            }
+        } else {
+            if (deckA.isEmpty()) {
+                deckA = disc.copyWithCount(1);
+                deckName = "Deck A";
+                insertedDeckA = true;
+            } else if (deckB.isEmpty()) {
+                deckB = disc.copyWithCount(1);
+                deckName = "Deck B";
+                insertedDeckA = false;
+            }
         }
 
         if (deckName != null) {
             setChanged();
-            if (player != null && level != null && level.isClientSide) {
-                player.displayClientMessage(Component.translatable("createbrewery.dj.deck_inserted", deckName, disc.getHoverName()), true);
+            if (level != null) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            }
+            ItemStack inserted = insertedDeckA ? deckA : deckB;
+            onDiscInserted(inserted, insertedDeckA, player);
+
+            if (player != null && level != null) {
+                Component trackTitle = EtchedCompat.isEtchedDisc(inserted)
+                    ? EtchedCompat.getTrackDisplayName(inserted, level.registryAccess())
+                    : inserted.getHoverName();
+                player.displayClientMessage(Component.translatable("createbrewery.dj.deck_inserted", deckName, trackTitle), true);
             }
             return true;
         }
         return false;
     }
 
-    private void onDiscInserted(ItemStack disc, boolean isDeckA) {
+    private void onDiscInserted(ItemStack disc, boolean isDeckA, Player player) {
         if (level != null && !level.isClientSide) {
-            playDeck(isDeckA, null);
+            playDeck(isDeckA, player);
         }
     }
 
     public void playDeck(boolean isDeckA, Player player) {
+        if (level == null || level.isClientSide) return;
+
         ItemStack disc = isDeckA ? deckA : deckB;
         String deckName = isDeckA ? "Deck A" : "Deck B";
         if (disc.isEmpty()) {
-            if (player != null && level != null && level.isClientSide) {
+            if (player != null) {
                 player.displayClientMessage(Component.translatable("createbrewery.dj.deck_empty", deckName), true);
             }
             return;
         }
 
-        if (level == null) return;
+        // Stop any previous playing track
+        stopMusic();
 
-        // Stop previous track
-        level.levelEvent(1011, worldPosition, 0);
+        activeDeck = isDeckA ? 1 : 2;
+        isPlaying = true;
 
-        JukeboxSong.fromStack(level.registryAccess(), disc).ifPresent(songHolder -> {
-            int songId = level.registryAccess().registryOrThrow(Registries.JUKEBOX_SONG).getId(songHolder.value());
-            level.levelEvent(null, 1010, worldPosition, songId);
-            level.playSound(null, worldPosition, songHolder.value().soundEvent().value(), SoundSource.RECORDS, 3.0f, pitch);
-            if (player != null && level.isClientSide) {
-                player.displayClientMessage(Component.translatable("createbrewery.dj.playing", deckName, disc.getHoverName()), true);
+        if (EtchedCompat.isEtchedDisc(disc)) {
+            // Etched Mod Custom Vinyl Streaming
+            boolean started = EtchedCompat.playEtchedDisc((ServerLevel) level, worldPosition, disc);
+            if (started) {
+                Component title = EtchedCompat.getTrackDisplayName(disc, level.registryAccess());
+                if (player != null) {
+                    player.displayClientMessage(Component.translatable("createbrewery.dj.playing", deckName, title), true);
+                }
+                level.gameEvent(null, GameEvent.JUKEBOX_PLAY, worldPosition);
             }
-        });
+        } else {
+            // Vanilla or standard JukeboxSong
+            JukeboxSong.fromStack(level.registryAccess(), disc).ifPresentOrElse(songHolder -> {
+                int songId = level.registryAccess().registryOrThrow(Registries.JUKEBOX_SONG).getId(songHolder.value());
+                level.levelEvent(null, 1010, worldPosition, songId);
+                level.playSound(null, worldPosition, songHolder.value().soundEvent().value(), SoundSource.RECORDS, 3.0f, pitch);
+                level.gameEvent(null, GameEvent.JUKEBOX_PLAY, worldPosition);
+                if (player != null) {
+                    player.displayClientMessage(Component.translatable("createbrewery.dj.playing", deckName, disc.getHoverName()), true);
+                }
+            }, () -> {
+                // Fallback attempt via Etched or play hover name
+                if (EtchedCompat.isLoaded()) {
+                    EtchedCompat.playEtchedDisc((ServerLevel) level, worldPosition, disc);
+                    level.gameEvent(null, GameEvent.JUKEBOX_PLAY, worldPosition);
+                }
+                if (player != null) {
+                    player.displayClientMessage(Component.translatable("createbrewery.dj.playing", deckName, disc.getHoverName()), true);
+                }
+            });
+        }
+
+        setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    public void stopMusic() {
+        if (level == null || level.isClientSide) return;
+
+        level.levelEvent(1011, worldPosition, 0);
+        if (level instanceof ServerLevel sl) {
+            EtchedCompat.stopEtchedDisc(sl, worldPosition);
+        }
+        level.gameEvent(null, GameEvent.JUKEBOX_STOP_PLAY, worldPosition);
+        isPlaying = false;
     }
 
     public void ejectDiscs(Player player) {
@@ -109,8 +169,12 @@ public class DjBoothBlockEntity extends BlockEntity {
             ejected = true;
         }
         if (ejected) {
-            level.levelEvent(1011, worldPosition, 0); // Stop record
+            stopMusic();
+            activeDeck = 0;
             level.playSound(null, worldPosition, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.8f, 1.0f);
+            if (player != null) {
+                player.displayClientMessage(Component.translatable("createbrewery.dj.ejected"), true);
+            }
             setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
@@ -118,14 +182,13 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     public void triggerDrop(Player player) {
         dropTicks = 25;
-        if (level != null) {
+        if (level != null && !level.isClientSide) {
             BlockState state = getBlockState();
             if (!state.getValue(DjBoothBlock.POWERED)) {
                 level.setBlock(worldPosition, state.setValue(DjBoothBlock.POWERED, true), 3);
             }
             level.playSound(null, worldPosition, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.9f, 1.4f);
-            if (level.isClientSide) {
-                MusicPulse.drop(); // Trigger beat drop on music track
+            if (player != null) {
                 player.displayClientMessage(Component.translatable("createbrewery.dj.beat_drop"), true);
             }
         }
@@ -142,6 +205,8 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     public ItemStack getDeckA() { return deckA; }
     public ItemStack getDeckB() { return deckB; }
+    public int getActiveDeck() { return activeDeck; }
+    public boolean isPlaying() { return isPlaying; }
     public float getCrossfader() { return crossfader; }
     public float getPitch() { return pitch; }
 
@@ -150,6 +215,8 @@ public class DjBoothBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         if (!deckA.isEmpty()) tag.put("DeckA", deckA.save(registries));
         if (!deckB.isEmpty()) tag.put("DeckB", deckB.save(registries));
+        tag.putInt("ActiveDeck", activeDeck);
+        tag.putBoolean("IsPlaying", isPlaying);
         tag.putFloat("Crossfader", crossfader);
         tag.putFloat("Pitch", pitch);
     }
@@ -159,6 +226,8 @@ public class DjBoothBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         if (tag.contains("DeckA")) deckA = ItemStack.parse(registries, tag.getCompound("DeckA")).orElse(ItemStack.EMPTY);
         if (tag.contains("DeckB")) deckB = ItemStack.parse(registries, tag.getCompound("DeckB")).orElse(ItemStack.EMPTY);
+        if (tag.contains("ActiveDeck")) activeDeck = tag.getInt("ActiveDeck");
+        if (tag.contains("IsPlaying")) isPlaying = tag.getBoolean("IsPlaying");
         if (tag.contains("Crossfader")) crossfader = tag.getFloat("Crossfader");
         if (tag.contains("Pitch")) pitch = tag.getFloat("Pitch");
     }
