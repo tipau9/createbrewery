@@ -13,8 +13,11 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.JukeboxPlayable;
+import net.minecraft.world.item.JukeboxSong;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -62,9 +65,34 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     private void onDiscInserted(ItemStack disc, boolean isDeckA) {
         if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            level.levelEvent(null, 1010, worldPosition, Item.getId(disc.getItem()));
+            playDeck(isDeckA, null);
         }
+    }
+
+    public void playDeck(boolean isDeckA, Player player) {
+        ItemStack disc = isDeckA ? deckA : deckB;
+        String deckName = isDeckA ? "Deck A" : "Deck B";
+        if (disc.isEmpty()) {
+            if (player != null && level != null && level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.dj.deck_empty", deckName), true);
+            }
+            return;
+        }
+
+        if (level == null) return;
+
+        // Stop previous track
+        level.levelEvent(1011, worldPosition, 0);
+
+        JukeboxSong.fromStack(level.registryAccess(), disc).ifPresent(songHolder -> {
+            int songId = level.registryAccess().registryOrThrow(Registries.JUKEBOX_SONG).getId(songHolder.value());
+            level.levelEvent(null, 1010, worldPosition, songId);
+            level.playSound(null, worldPosition, songHolder.value().soundEvent().value(), SoundSource.RECORDS, 3.0f, pitch);
+            if (player != null && level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.dj.playing", deckName, disc.getHoverName()), true);
+            }
+        });
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
     }
 
     public void ejectDiscs(Player player) {

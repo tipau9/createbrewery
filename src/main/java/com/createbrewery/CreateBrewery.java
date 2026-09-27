@@ -154,6 +154,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.subwoofer.inactive", "Subwoofer: Inactive");
         REGISTRATE.addRawLang("createbrewery.dj.beat_drop", "DROP TRIGGERED!");
         REGISTRATE.addRawLang("createbrewery.dj.deck_inserted", "%s: %s loaded");
+        REGISTRATE.addRawLang("createbrewery.dj.playing", "▶ Playing %s: %s");
+        REGISTRATE.addRawLang("createbrewery.dj.deck_empty", "%s is empty!");
         REGISTRATE.addRawLang("createbrewery.dj.decks_full", "Both decks full! (Shift+Right-click to eject)");
         REGISTRATE.addRawLang("createbrewery.dj.ejected", "Discs ejected");
         REGISTRATE.addRawLang("createbrewery.beer_tap.poured", "Fresh draft beer poured!");

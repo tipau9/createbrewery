@@ -133,9 +133,35 @@ public class DjBoothBlock extends Block implements EntityBlock {
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        // Center button: Trigger BEAT DROP!
-        dj.triggerDrop(player);
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        // Relative coordinates on block top face (-0.5 .. 0.5)
+        Direction facing = state.getValue(FACING);
+        double hitX = hitResult.getLocation().x - pos.getX();
+        double hitZ = hitResult.getLocation().z - pos.getZ();
+
+        double localX;
+        switch (facing) {
+            case NORTH -> localX = 0.5 - hitX;
+            case SOUTH -> localX = hitX - 0.5;
+            case WEST  -> localX = hitZ - 0.5;
+            case EAST  -> localX = 0.5 - hitZ;
+            default    -> localX = hitX - 0.5;
+        }
+
+        if (localX < -0.15) {
+            // Left platter: Deck A
+            dj.playDeck(true, player);
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.6f, 1.2f);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        } else if (localX > 0.15) {
+            // Right platter: Deck B
+            dj.playDeck(false, player);
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.6f, 1.2f);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        } else {
+            // Center button: Trigger BEAT DROP!
+            dj.triggerDrop(player);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
     }
 
     @Override
