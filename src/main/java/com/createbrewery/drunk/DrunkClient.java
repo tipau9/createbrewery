@@ -960,6 +960,10 @@ public final class DrunkClient {
     /** True while an Iris shaderpack draws the world; updated each tick. */
     private static boolean irisPack;
 
+    public static boolean shaderPack() {
+        return irisPack;
+    }
+
     private static void prepareChain() {
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
         if (main.width != chainWidth || main.height != chainHeight) {

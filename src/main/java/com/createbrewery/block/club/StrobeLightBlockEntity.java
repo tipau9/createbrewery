@@ -51,10 +51,13 @@ public class StrobeLightBlockEntity extends BlockEntity {
             case REDSTONE -> flashIntensity = state.getValue(StrobeLightBlock.POWERED) ? 1f : 0f;
         }
 
+        boolean steady = state.getValue(StrobeLightBlock.MODE) == StrobeMode.REDSTONE;
+        if (level != null) StrobeFlash.offer(level, worldPosition, state.getValue(StrobeLightBlock.FACING), flashIntensity, steady);
+
         if (veil) {
             try {
                 roomLight = StrobeRoomLight.update(roomLight, worldPosition, state.getValue(StrobeLightBlock.FACING),
-                    flashIntensity, state.getValue(StrobeLightBlock.MODE) == StrobeMode.REDSTONE);
+                    flashIntensity, steady);
             } catch (RuntimeException | LinkageError e) {
                 veil = false;
                 LOGGER.warn("Veil strobe light unavailable", e);

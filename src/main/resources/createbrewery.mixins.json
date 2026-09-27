@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "ChannelMixin",
-    "LibraryMixin"
+    "LibraryMixin",
+    "LightTextureMixin"
   ],
   "injectors": {
     "defaultRequire": 1

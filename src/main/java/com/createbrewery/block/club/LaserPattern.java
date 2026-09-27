@@ -6,7 +6,8 @@ public enum LaserPattern implements StringRepresentable {
     BEAM("beam"),
     SWEEP("sweep"),
     FAN("fan"),
-    BURST("burst");
+    BURST("burst"),
+    TUNNEL("tunnel");
 
     private final String name;
 

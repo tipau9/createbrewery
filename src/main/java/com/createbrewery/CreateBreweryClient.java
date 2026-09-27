@@ -9,5 +9,6 @@ public class CreateBreweryClient {
     public static void onClientSetup(FMLClientSetupEvent event) {
         PonderIndex.addPlugin(new BreweryPonderPlugin());
         DrunkClient.init();
+        com.createbrewery.block.club.StrobeFlash.init();
     }
 }

@@ -39,41 +39,32 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         BlockPos pos = be.getBlockPos();
 
         // Music reactivity
-        float kick = MusicPulse.kick();
         float drop = MusicPulse.drop();
-        float kickBoost = Math.max(kick * 0.8f, drop * 1.2f);
-
-        // Color resolution
-        int c = be.getColor();
-        if (c == -1) {
-            // Rainbow prism cycle
-            float hue = ((be.getTicks() + partialTick) * 0.02f) % 1.0f;
-            c = Mth.hsvToRgb(hue, 0.95f, 1.0f);
-        }
-        float r = ((c >> 16) & 0xFF) / 255f;
-        float g = ((c >> 8) & 0xFF) / 255f;
-        float b = (c & 0xFF) / 255f;
+        float beat = be.getBeat();
+        float kickBoost = Math.max(Math.max(MusicPulse.kick() * 0.8f, drop * 1.2f), beat);
 
         Vec3 center = Vec3.atCenterOf(pos);
         Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.46));
 
-        LaserPattern pattern = be.getPattern();
-        float[] beamYawOffsets = switch (pattern) {
-            case FAN -> new float[]{-24f, -12f, 0f, 12f, 24f};
-            case BURST -> drop > 0.25f || kick > 0.45f ? new float[]{-22f, -11f, 0f, 11f, 22f} : new float[]{0f};
-            case SWEEP -> new float[]{MusicPulse.playing()
-                ? Mth.sin((be.getTicks() + partialTick) * 0.18f) * 26f
-                : Mth.sin((be.getTicks() + partialTick) * 0.08f) * 20f};
-            case BEAM -> new float[]{0f};
-        };
+        float[][] beams = aim(be, partialTick, beat, drop);
 
         VertexConsumer v = buffers.getBuffer(RenderType.lightning());
         pose.pushPose();
         pose.translate(0.5, 0.5, 0.5);
         Matrix4f m = pose.last().pose();
 
-        for (float yawDeg : beamYawOffsets) {
-            double[] d = LaserBeams.direction(facing.getStepX(), facing.getStepY(), facing.getStepZ(), yawDeg);
+        for (int i = 0; i < beams.length; i++) {
+            // Colour: rainbow runs through the beams, so a fan shows the whole spectrum.
+            int c = be.getColor();
+            if (c == -1) {
+                float hue = ((be.getTicks() + partialTick) * 0.02f + (float) i / beams.length * 0.6f) % 1.0f;
+                c = Mth.hsvToRgb(hue, 0.95f, 1.0f);
+            }
+            float r = ((c >> 16) & 0xFF) / 255f;
+            float g = ((c >> 8) & 0xFF) / 255f;
+            float b = (c & 0xFF) / 255f;
+
+            double[] d = LaserBeams.direction(facing.getStepX(), facing.getStepY(), facing.getStepZ(), beams[i][0], beams[i][1]);
             Vec3 dir = new Vec3(d[0], d[1], d[2]);
             BlockHitResult hit = level.clip(new ClipContext(startWorld, startWorld.add(dir.scale(RANGE)),
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
@@ -87,7 +78,7 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
             if (hitBlock) {
                 renderImpactDot(v, m, relEnd, hit.getDirection(), r, g, b, kickBoost);
-                if (level.random.nextFloat() < 0.08f + kickBoost * 0.15f) {
+                if (level.random.nextFloat() < (0.08f + kickBoost * 0.15f) * 3f / Math.max(3, beams.length)) {
                     level.addParticle(ModParticles.CHEERS_SPARK.get(),
                         endWorld.x - dir.x * 0.05, endWorld.y - dir.y * 0.05, endWorld.z - dir.z * 0.05,
                         (level.random.nextDouble() - 0.5) * 0.04,
@@ -97,6 +88,54 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
             }
         }
         pose.popPose();
+    }
+
+    /**
+     * Where every beam points right now, as {yaw, pitch} in degrees off the facing. The pattern clock
+     * ({@code phase}) runs faster on kicks, so the whole show speeds up with the music.
+     */
+    static float[][] aim(LaserProjectorBlockEntity be, float partialTick, float beat, float drop) {
+        float t = be.getPhase(partialTick);
+        return switch (be.getPattern()) {
+            // One beam drawing a figure-of-eight over the crowd
+            case BEAM -> new float[][]{{40f * Mth.sin(t), 22f * Mth.sin(t * 1.7f + 1f)}};
+            // A 5-beam sheet swinging side to side and bobbing
+            case SWEEP -> {
+                float yaw = 38f * Mth.sin(t * 0.8f), pitch = 12f * Mth.sin(t * 0.5f);
+                float spread = 8f + 4f * beat;
+                float[][] out = new float[5][];
+                for (int i = 0; i < 5; i++) out[i] = new float[]{yaw + (i - 2) * spread, pitch};
+                yield out;
+            }
+            // A 9-beam fan spinning around the lens; it opens up on every beat
+            case FAN -> {
+                float turn = t * 0.6f, spread = 6f + 6f * beat + 2f * Mth.sin(t * 0.3f);
+                float cos = Mth.cos(turn), sin = Mth.sin(turn), tilt = 10f * Mth.sin(t * 0.4f);
+                float[][] out = new float[9][];
+                for (int i = 0; i < 9; i++) {
+                    float o = (i - 4) * spread;
+                    out[i] = new float[]{o * cos, o * sin + tilt};
+                }
+                yield out;
+            }
+            // Beams jumping to new spots on every beat; the drop brings all twelve
+            case BURST -> {
+                int n = drop > 0.3f ? LaserProjectorBlockEntity.MAX_BEAMS : 6;
+                float[][] out = new float[n][];
+                for (int i = 0; i < n; i++) out[i] = new float[]{be.chaseYaw(i, partialTick), be.chasePitch(i, partialTick)};
+                yield out;
+            }
+            // Twelve beams on a turning cone: a tunnel of light in the haze, wider on the beat
+            case TUNNEL -> {
+                float radius = 16f + 8f * beat + 5f * Mth.sin(t * 0.3f);
+                float[][] out = new float[12][];
+                for (int i = 0; i < 12; i++) {
+                    float a = Mth.TWO_PI * i / 12 + t * 1.2f;
+                    out[i] = new float[]{radius * Mth.cos(a), radius * Mth.sin(a)};
+                }
+                yield out;
+            }
+        };
     }
 
     @Override

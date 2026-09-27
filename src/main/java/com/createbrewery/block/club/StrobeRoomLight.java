@@ -38,10 +38,10 @@ final class StrobeRoomLight {
             light.getLightData()
                 .setPosition(pos.getX() + 0.5 + facing.getStepX(), pos.getY() + 0.5 + facing.getStepY(), pos.getZ() + 0.5 + facing.getStepZ())
                 .setColor(0xE8F0FF)
-                .setRadius(14f);
+                .setRadius(20f);
             ALL.add(light);
         }
-        light.getLightData().setBrightness(brightness * 2.5f);
+        light.getLightData().setBrightness(brightness * 3.5f);
         light.markDirty();
         return light;
     }

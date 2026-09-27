@@ -72,16 +72,19 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
 
         // Client particle spawning
         if (level != null && level.isClientSide) {
-            if (tickCount % 2 == 0) {
-                // The brass nozzle on the front of the model (4-6 px up, sticking out to the block edge)
-                double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.52;
-                double nozzleY = worldPosition.getY() + 0.25;
-                double nozzleZ = worldPosition.getZ() + 0.5 + facing.getStepZ() * 0.52;
+            // A steady jet, with a thicker blast when the music drops.
+            int puffs = 2 + (com.createbrewery.drunk.MusicPulse.drop() > 0.3f ? 2 : 0);
+            for (int i = 0; i < puffs; i++) {
+                // Just past the brass nozzle; the particle draws its puff a little above this point (see FogParticle).
+                double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.85;
+                double nozzleY = worldPosition.getY() + 0.01;
+                double nozzleZ = worldPosition.getZ() + 0.5 + facing.getStepZ() * 0.85;
 
-                // Spurt billowing fog forward
-                double velX = facing.getStepX() * 0.16 + (level.random.nextDouble() - 0.5) * 0.05;
-                double velY = 0.01 + level.random.nextDouble() * 0.02;
-                double velZ = facing.getStepZ() * 0.16 + (level.random.nextDouble() - 0.5) * 0.05;
+                // Shot out fast in a narrow cone; drag slows it over ~9 blocks.
+                double speed = 0.34 + level.random.nextDouble() * 0.14;
+                double velX = facing.getStepX() * speed + (level.random.nextDouble() - 0.5) * 0.08;
+                double velY = level.random.nextDouble() * 0.03;
+                double velZ = facing.getStepZ() * speed + (level.random.nextDouble() - 0.5) * 0.08;
 
                 level.addParticle(ModParticles.FOG.get(), nozzleX, nozzleY, nozzleZ, velX, velY, velZ);
             }

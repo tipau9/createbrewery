@@ -136,10 +136,11 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.laser.on", "Laser on");
         REGISTRATE.addRawLang("createbrewery.laser.off", "Laser off");
         REGISTRATE.addRawLang("createbrewery.laser.rainbow_mode", "Laser Mode: Rainbow Prism!");
-        REGISTRATE.addRawLang("createbrewery.laser.pattern.beam", "Pattern: Single Beam");
-        REGISTRATE.addRawLang("createbrewery.laser.pattern.sweep", "Pattern: Sweep Scan");
-        REGISTRATE.addRawLang("createbrewery.laser.pattern.fan", "Pattern: 5-Beam Fan");
-        REGISTRATE.addRawLang("createbrewery.laser.pattern.burst", "Pattern: Drop/Beat Burst");
+        REGISTRATE.addRawLang("createbrewery.laser.pattern.beam", "Pattern: Scanner");
+        REGISTRATE.addRawLang("createbrewery.laser.pattern.sweep", "Pattern: Swinging Fan");
+        REGISTRATE.addRawLang("createbrewery.laser.pattern.fan", "Pattern: Spinning Fan");
+        REGISTRATE.addRawLang("createbrewery.laser.pattern.burst", "Pattern: Beat Chase");
+        REGISTRATE.addRawLang("createbrewery.laser.pattern.tunnel", "Pattern: Tunnel");
         REGISTRATE.addRawLang("createbrewery.fog_machine.filled", "Fog Machine filled (%s mB)");
         REGISTRATE.addRawLang("createbrewery.fog_machine.started", "Fog Machine started (%s mB remaining)");
         REGISTRATE.addRawLang("createbrewery.fog_machine.stopped", "Fog Machine stopped (%s mB remaining)");
@@ -213,6 +214,7 @@ public class CreateBrewery {
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::addLayers);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::registerRenderers);
             modEventBus.addListener(com.createbrewery.particle.BreweryParticle::register);
+            modEventBus.addListener(com.createbrewery.particle.FogParticle::registerShaders);
         }
         ModRecipeTypes.register(modEventBus);
         modEventBus.addListener(com.createbrewery.drugs.DrugPose::register);
