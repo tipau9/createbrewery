@@ -73,9 +73,10 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
         // Client particle spawning
         if (level != null && level.isClientSide) {
             if (tickCount % 2 == 0) {
-                double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.45;
-                double nozzleY = worldPosition.getY() + 0.45;
-                double nozzleZ = worldPosition.getZ() + 0.5 + facing.getStepZ() * 0.45;
+                // The brass nozzle on the front of the model (4-6 px up, sticking out to the block edge)
+                double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.52;
+                double nozzleY = worldPosition.getY() + 0.25;
+                double nozzleZ = worldPosition.getZ() + 0.5 + facing.getStepZ() * 0.52;
 
                 // Spurt billowing fog forward
                 double velX = facing.getStepX() * 0.16 + (level.random.nextDouble() - 0.5) * 0.05;
