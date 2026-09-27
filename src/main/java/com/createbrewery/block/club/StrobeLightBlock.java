@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -38,6 +39,8 @@ public class StrobeLightBlock extends Block implements EntityBlock {
     public static final EnumProperty<StrobeMode> MODE = EnumProperty.create("mode", StrobeMode.class);
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
+    /** How hard it flashes: 1 soft ... 5 blinding. Sneak + empty hand cycles it. */
+    public static final IntegerProperty BRIGHTNESS = IntegerProperty.create("brightness", 1, 5);
 
     private static final VoxelShape SHAPE_NORTH = box(2, 2, 2, 14, 14, 16);
     private static final VoxelShape SHAPE_SOUTH = box(2, 2, 0, 14, 14, 14);
@@ -52,12 +55,13 @@ public class StrobeLightBlock extends Block implements EntityBlock {
             .setValue(FACING, Direction.NORTH)
             .setValue(MODE, StrobeMode.BEAT)
             .setValue(POWERED, false)
-            .setValue(LIT, false));
+            .setValue(LIT, false)
+            .setValue(BRIGHTNESS, 3));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, MODE, POWERED, LIT);
+        builder.add(FACING, MODE, POWERED, LIT, BRIGHTNESS);
     }
 
     @Override
@@ -99,12 +103,21 @@ public class StrobeLightBlock extends Block implements EntityBlock {
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Only an empty hand switches modes; anything held is used normally (placing blocks, the wrench).
+        // Only an empty hand switches modes (sneaking: brightness); anything held is used normally (placing blocks, the wrench).
         return stack.isEmpty() ? ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION : ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (player.isShiftKeyDown()) {
+            int next = state.getValue(BRIGHTNESS) % 5 + 1;
+            level.setBlock(pos, state.setValue(BRIGHTNESS, next), 3);
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 0.8f + next * 0.15f);
+            if (level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.strobe.brightness." + next), true);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         StrobeMode next = state.getValue(MODE).next();
         level.setBlock(pos, lit(state.setValue(MODE, next)), 3);
         level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.2f);

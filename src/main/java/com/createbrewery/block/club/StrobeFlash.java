@@ -23,8 +23,10 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class StrobeFlash {
     private StrobeFlash() {}
 
-    /** Beyond this many blocks a strobe no longer lights you up. */
-    static final double REACH = 28.0;
+    /** Per brightness 1..5: how far it reaches (blocks), how much it lights the room, how much it glares. */
+    private static final double[] REACH = {16, 22, 28, 34, 40};
+    private static final float[] ROOM = {0.35f, 0.6f, 0.85f, 1f, 1f};
+    private static final float[] GLARE = {0.12f, 0.25f, 0.45f, 0.75f, 1f};
 
     private static float nextLight, nextGlare;
     private static float light, glare;
@@ -39,8 +41,11 @@ public final class StrobeFlash {
         return light;
     }
 
-    /** A strobe at {@code pos} flashing with {@code intensity}; {@code steady} is the non-flashing redstone mode. */
-    static void offer(Level level, BlockPos pos, Direction facing, float intensity, boolean steady) {
+    /**
+     * A strobe at {@code pos} flashing with {@code intensity} at brightness {@code power} (1..5);
+     * {@code steady} is the non-flashing redstone mode.
+     */
+    static void offer(Level level, BlockPos pos, Direction facing, float intensity, int power, boolean steady) {
         if (intensity <= 0f) return;
         Minecraft mc = Minecraft.getInstance();
         // Photosensitivity: "Hide Lightning Flashes" turns the flashing off; a steady light may stay.
@@ -49,9 +54,10 @@ public final class StrobeFlash {
         Vec3 lens = Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.55));
         Vec3 toEye = eye.subtract(lens);
         double dist = toEye.length();
-        if (dist > REACH) return;
+        int p = Mth.clamp(power, 1, 5) - 1;
+        if (dist > REACH[p]) return;
 
-        float reach = (float) (1 - dist / REACH);
+        float reach = (float) (1 - dist / REACH[p]);
         float exposure = reach * reach * (3 - 2 * reach);
         // Behind the strobe only the bounce off the walls reaches you, behind a wall a little glow.
         Vec3 aim = Vec3.atLowerCornerOf(facing.getNormal());
@@ -62,14 +68,19 @@ public final class StrobeFlash {
         // A flash in a lit room hardly registers; in the dark it blinds.
         int lightAtEye = level.getMaxLocalRawBrightness(BlockPos.containing(eye));
         float dark = 1f - lightAtEye / 15f * 0.75f;
-        float lit = intensity * exposure * dark;
+        // From "Extreme" up it blinds in daylight too.
+        if (p >= 3) dark = 1f;
+        float lit = intensity * exposure * dark * ROOM[p];
 
         // Glare: staring into the lens hurts more than seeing its flash on the wall.
         float look = dist < 0.1 ? 1f : (float) Math.max(0, -mc.gameRenderer.getMainCamera().getLookVector().dot(toEye.toVector3f().normalize()));
         float stare = seen ? look * look * look : 0f;
 
         nextLight = Math.max(nextLight, lit);
-        nextGlare = Math.max(nextGlare, intensity * exposure * (0.25f + 0.55f * stare) * dark);
+        // "Blinding" whites out the whole screen whenever you can see it, wherever you look.
+        // A steady (redstone) light only glares when you stare into it; a white screen for minutes is no fun.
+        float glareHit = steady ? 0.3f * stare : p == 4 ? (seen ? 1f : 0.35f) : 0.35f + 0.65f * stare;
+        nextGlare = Math.max(nextGlare, intensity * exposure * dark * GLARE[p] * glareHit);
     }
 
     private static void onTick(ClientTickEvent.Post event) {
@@ -82,7 +93,7 @@ public final class StrobeFlash {
 
     private static void onGui(RenderGuiEvent.Pre event) {
         // Shaderpacks usually light the world themselves and ignore the lightmap: then the screen flash does it all.
-        float a = DrunkClient.shaderPack() ? Math.max(glare, light * 0.8f) : glare * 0.6f;
+        float a = Math.min(0.97f, DrunkClient.shaderPack() ? Math.max(glare, light * 0.8f) : glare);
         if (a < 0.01f) return;
         GuiGraphics g = event.getGuiGraphics();
         g.fill(0, 0, g.guiWidth(), g.guiHeight(), (int) (a * 255) << 24 | 0xF2F6FF);

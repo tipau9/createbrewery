@@ -53,8 +53,9 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
         pose.translate(halo.x, halo.y, halo.z);
         pose.mulPose(camera.rotation());
         m = pose.last().pose();
-        glow(v, m, 0.3f + intensity * 0.2f, 1f, 1f, 1f, intensity);
-        glow(v, m, 1.2f + intensity * 1.8f, 0.85f, 0.92f, 1f, intensity * 0.55f);
+        float power = be.getBlockState().getValue(StrobeLightBlock.BRIGHTNESS) / 3f;
+        glow(v, m, (0.3f + intensity * 0.2f) * power, 1f, 1f, 1f, intensity);
+        glow(v, m, (1.2f + intensity * 1.8f) * power, 0.85f, 0.92f, 1f, Math.min(1f, intensity * 0.55f * power));
         pose.popPose();
     }
 
@@ -71,7 +72,7 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
 
     @Override
     public AABB getRenderBoundingBox(StrobeLightBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(5);
+        return new AABB(be.getBlockPos()).inflate(9);
     }
 
     /**

@@ -132,6 +132,11 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.strobe.mode.beat", "Mode: Beat Sync (Kicks)");
         REGISTRATE.addRawLang("createbrewery.strobe.mode.strobe", "Mode: Fast Strobe (~7 Hz)");
         REGISTRATE.addRawLang("createbrewery.strobe.mode.redstone", "Mode: Redstone Signal");
+        REGISTRATE.addRawLang("createbrewery.strobe.brightness.1", "Brightness: Soft (1/5)");
+        REGISTRATE.addRawLang("createbrewery.strobe.brightness.2", "Brightness: Normal (2/5)");
+        REGISTRATE.addRawLang("createbrewery.strobe.brightness.3", "Brightness: Bright (3/5)");
+        REGISTRATE.addRawLang("createbrewery.strobe.brightness.4", "Brightness: Extreme (4/5)");
+        REGISTRATE.addRawLang("createbrewery.strobe.brightness.5", "Brightness: BLINDING (5/5)");
         REGISTRATE.addRawLang("createbrewery.laser.color_changed", "Laser color updated!");
         REGISTRATE.addRawLang("createbrewery.laser.on", "Laser on");
         REGISTRATE.addRawLang("createbrewery.laser.off", "Laser off");

@@ -32,8 +32,10 @@ public class StrobeLightBlockEntity extends BlockEntity {
     /** Client only (see the block's ticker). */
     public void tick(BlockState state) {
         prevFlashIntensity = flashIntensity;
-        // A xenon burst: full on, dark again two ticks later, so there are real dark frames between flashes.
-        flashIntensity = Math.max(0f, flashIntensity - 0.5f);
+        int power = state.getValue(StrobeLightBlock.BRIGHTNESS);
+        // A xenon burst: full on, dark again two ticks later, so there are real dark frames between
+        // flashes. From "Extreme" up it is a single hard frame: on, then black.
+        flashIntensity = Math.max(0f, flashIntensity - (power >= 4 ? 1f : 0.5f));
 
         switch (state.getValue(StrobeLightBlock.MODE)) {
             case BEAT -> {
@@ -46,18 +48,19 @@ public class StrobeLightBlockEntity extends BlockEntity {
                 }
             }
             case STROBE -> {
-                if (++strobeCounter % STROBE_PERIOD == 0) flashIntensity = 1f;
+                // "Blinding" fires every other tick: 10 flashes a second.
+                if (++strobeCounter % (power == 5 ? 2 : STROBE_PERIOD) == 0) flashIntensity = 1f;
             }
             case REDSTONE -> flashIntensity = state.getValue(StrobeLightBlock.POWERED) ? 1f : 0f;
         }
 
         boolean steady = state.getValue(StrobeLightBlock.MODE) == StrobeMode.REDSTONE;
-        if (level != null) StrobeFlash.offer(level, worldPosition, state.getValue(StrobeLightBlock.FACING), flashIntensity, steady);
+        if (level != null) StrobeFlash.offer(level, worldPosition, state.getValue(StrobeLightBlock.FACING), flashIntensity, power, steady);
 
         if (veil) {
             try {
                 roomLight = StrobeRoomLight.update(roomLight, worldPosition, state.getValue(StrobeLightBlock.FACING),
-                    flashIntensity, steady);
+                    flashIntensity * (0.4f + 0.3f * power), steady);
             } catch (RuntimeException | LinkageError e) {
                 veil = false;
                 LOGGER.warn("Veil strobe light unavailable", e);
