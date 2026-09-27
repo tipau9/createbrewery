@@ -2,14 +2,15 @@ package com.createbrewery.block.club;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlockEntity> {
@@ -25,7 +26,7 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
             && be.getBlockState().getValue(StrobeLightBlock.MODE) != StrobeMode.REDSTONE) return;
 
         Direction facing = be.getBlockState().getValue(StrobeLightBlock.FACING);
-        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        VertexConsumer v = buffers.getBuffer(ClubRenderTypes.GLOW);
 
         pose.pushPose();
         pose.translate(0.5, 0.5, 0.5);
@@ -43,9 +44,14 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
 
         // The flash itself: a round glow on the lens, always turned to the camera, hot white in the
         // middle and fading to nothing at the rim (the blend is additive, so it only ever brightens).
+        // Pulled towards the camera, so the wall or ceiling it hangs on does not slice the halo.
+        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        Vec3 lens = new Vec3(0.5 + facing.getStepX() * 0.5, 0.5 + facing.getStepY() * 0.5, 0.5 + facing.getStepZ() * 0.5);
+        Vec3 toCamera = camera.getPosition().subtract(Vec3.atLowerCornerOf(be.getBlockPos()).add(lens));
+        Vec3 halo = lens.add(toCamera.normalize().scale(Math.min(1.5, toCamera.length() * 0.5)));
         pose.pushPose();
-        pose.translate(0.5 + facing.getStepX() * 0.5, 0.5 + facing.getStepY() * 0.5, 0.5 + facing.getStepZ() * 0.5);
-        pose.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
+        pose.translate(halo.x, halo.y, halo.z);
+        pose.mulPose(camera.rotation());
         m = pose.last().pose();
         glow(v, m, 0.3f + intensity * 0.2f, 1f, 1f, 1f, intensity);
         glow(v, m, 1.2f + intensity * 1.8f, 0.85f, 0.92f, 1f, intensity * 0.55f);
@@ -69,7 +75,7 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
     }
 
     /**
-     * A quad seen from both sides ({@code RenderType.lightning()} culls back faces). The first two
+     * A quad seen from both sides (the glow render type culls back faces). The first two
      * corners get alpha {@code a0}, the last two {@code a1}, for fading beams.
      */
     static void quad(VertexConsumer v, Matrix4f m,

@@ -5,7 +5,6 @@ import com.createbrewery.particle.ModParticles;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
@@ -48,7 +47,7 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
         float[][] beams = aim(be, partialTick, beat, drop);
 
-        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        VertexConsumer v = buffers.getBuffer(ClubRenderTypes.GLOW);
         pose.pushPose();
         pose.translate(0.5, 0.5, 0.5);
         Matrix4f m = pose.last().pose();
