@@ -103,5 +103,6 @@
   "createbrewery.dj.ejected": "Discs ausgeworfen",
   "createbrewery.beer_tap.poured": "Frisch gezapftes Bier eingeschenkt!",
   "createbrewery.beer_tap.empty": "Zapfhahn ist leer!",
+  "createbrewery.beer_tap.status": "Bierzapfhahn: %s / %s mB",
   "createbrewery.goggles.beer_tap.header": "Bierzapfhahn"
 }

@@ -6,8 +6,10 @@ import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -63,13 +65,24 @@ public class BeerTapBlock extends Block implements EntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
+        // Bucket interaction (Beer Bucket / Empty Bucket)
+        if (stack.is(Items.BUCKET) || com.createbrewery.ModFluids.BEER.getBucket().map(stack::is).orElse(false)) {
+            boolean success = net.neoforged.neoforge.fluids.FluidUtil.interactWithFluidHandler(player, hand, tap.getTank().getCapability());
+            if (success) {
+                level.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+                return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            }
+        }
+
         // Draft into Glass Bottle -> Beer Bottle
         if (stack.is(Items.GLASS_BOTTLE)) {
             if (tap.dispenseBeer(250)) {
-                if (!player.getAbilities().instabuild) stack.shrink(1);
-                ItemStack beer = new ItemStack(ModItems.BEER_BOTTLE.get());
-                if (!player.addItem(beer)) {
-                    player.drop(beer, false);
+                if (!level.isClientSide) {
+                    if (!player.getAbilities().instabuild) stack.shrink(1);
+                    ItemStack beer = new ItemStack(ModItems.BEER_BOTTLE.get());
+                    if (!player.addItem(beer)) {
+                        player.drop(beer, false);
+                    }
                 }
                 tap.spawnFoamParticles(level, pos, state.getValue(FACING));
                 level.playSound(null, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.0f);
@@ -86,10 +99,12 @@ public class BeerTapBlock extends Block implements EntityBlock {
         // Draft into Empty Can -> Sealed Beer Can
         if (stack.is(ModItems.EMPTY_CAN.get())) {
             if (tap.dispenseBeer(250)) {
-                if (!player.getAbilities().instabuild) stack.shrink(1);
-                ItemStack can = new ItemStack(ModItems.SEALED_CAN.get());
-                if (!player.addItem(can)) {
-                    player.drop(can, false);
+                if (!level.isClientSide) {
+                    if (!player.getAbilities().instabuild) stack.shrink(1);
+                    ItemStack can = new ItemStack(ModItems.SEALED_CAN.get());
+                    if (!player.addItem(can)) {
+                        player.drop(can, false);
+                    }
                 }
                 tap.spawnFoamParticles(level, pos, state.getValue(FACING));
                 level.playSound(null, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.1f);
@@ -104,6 +119,19 @@ public class BeerTapBlock extends Block implements EntityBlock {
         }
 
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof BeerTapBlockEntity tap) {
+            if (level.isClientSide) {
+                int amount = tap.getTank().getPrimaryHandler().getFluidAmount();
+                player.displayClientMessage(Component.translatable("createbrewery.beer_tap.status", amount, BeerTapBlockEntity.TANK_CAPACITY), true);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return InteractionResult.PASS;
     }
 
     @Override

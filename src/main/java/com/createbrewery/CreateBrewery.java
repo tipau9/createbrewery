@@ -160,6 +160,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.dj.ejected", "Discs ejected");
         REGISTRATE.addRawLang("createbrewery.beer_tap.poured", "Fresh draft beer poured!");
         REGISTRATE.addRawLang("createbrewery.beer_tap.empty", "Beer Tap is empty!");
+        REGISTRATE.addRawLang("createbrewery.beer_tap.status", "Draft Beer Tap: %s / %s mB");
         REGISTRATE.addRawLang("createbrewery.goggles.beer_tap.header", "Draft Beer Tap");
         REGISTRATE.addRawLang("createbrewery.ponder.first_aid.header", "Erste Hilfe");
         REGISTRATE.addRawLang("createbrewery.ponder.first_aid.text_1", "Jemand ist bewusstlos: Filmriss, K-Loch, Herzinfarkt, oder die Atmung setzt aus.");
