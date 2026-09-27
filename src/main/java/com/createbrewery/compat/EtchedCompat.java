@@ -127,23 +127,8 @@ public final class EtchedCompat {
     }
 
     public static void stopEtchedDisc(ServerLevel level, BlockPos pos) {
-        if (!isLoaded() || level == null) return;
-
-        try {
-            initPacketConstructor();
-            if (playPacketConstructor == null) return;
-
-            Object stopPacket = playPacketConstructor.newInstance(ItemStack.EMPTY, pos, null);
-            PacketDistributor.sendToPlayersNear(
-                level,
-                null,
-                pos.getX() + 0.5,
-                pos.getY() + 0.5,
-                pos.getZ() + 0.5,
-                64.0,
-                (CustomPacketPayload) stopPacket
-            );
-        } catch (Throwable ignored) {}
+        if (level == null) return;
+        level.levelEvent(1011, pos, 0);
     }
 
     private static void initPacketConstructor() {

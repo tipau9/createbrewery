@@ -46,12 +46,7 @@ public final class MusicPulse {
     /** One buffer as the channel queued it: its length and what was heard in it. */
     private record Chunk(int frames, float[][] heard) {}
 
-    /** The slice of a chunk that is audible right now. */
-    private record Now(float[][] heard, int slice) {
-        float get(int what) {
-            return heard[what][slice];
-        }
-    }
+    private static final float[] CURRENT_SLICE = new float[3];
 
     private static final class Track {
         final int source;
@@ -182,11 +177,10 @@ public final class MusicPulse {
             applyMuffleFilter(t, player, mc, dt);
             float near = player == null ? 0f : closeness(t.sound, player);
             heard |= near > 0.05f;
-            Now at = heardNow(t);
-            if (at == null) continue;
-            k = Math.max(k, at.get(KickDetector.KICK) * near);
-            l = Math.max(l, at.get(KickDetector.LEVEL) * near);
-            h = Math.max(h, at.get(KickDetector.HATS) * near);
+            if (!getHeardNow(t, CURRENT_SLICE)) continue;
+            k = Math.max(k, CURRENT_SLICE[KickDetector.KICK] * near);
+            l = Math.max(l, CURRENT_SLICE[KickDetector.LEVEL] * near);
+            h = Math.max(h, CURRENT_SLICE[KickDetector.HATS] * near);
         }
         playing = heard;
         song.hear(k, l, h, heard, now, dt);
@@ -245,12 +239,12 @@ public final class MusicPulse {
         AL10.alSourcef(t.source, AL10.AL_GAIN, t.louder);
     }
 
-    /** What is audible right now, or null if nothing is known yet. */
-    private static Now heardNow(Track t) {
-        if (!AL10.alIsSource(t.source)) return null;
+    /** What is audible right now, or false if nothing is known yet. */
+    private static boolean getHeardNow(Track t, float[] out) {
+        if (!AL10.alIsSource(t.source)) return false;
         // ponytail: between the read and the queueing (microseconds, once a second) this is one buffer ahead.
         int head = t.chunks.size() - AL10.alGetSourcei(t.source, AL10.AL_BUFFERS_QUEUED);
-        if (head < 0) return null;
+        if (head < 0) return false;
         if (latencyKnown == null) latencyKnown = AL10.alIsExtensionPresent("AL_SOFT_source_latency");
         double frames;
         if (latencyKnown) {
@@ -261,11 +255,14 @@ public final class MusicPulse {
         }
         // The offset counts from the first queued buffer, which may already have played out.
         while (head < t.chunks.size() && frames >= t.chunks.get(head).frames()) frames -= t.chunks.get(head++).frames();
-        if (head >= t.chunks.size()) return null;
+        if (head >= t.chunks.size()) return false;
         float[][] heard = t.chunks.get(head).heard();
         int i = (int) (frames / t.perSlice);
-        if (i >= heard[0].length) return null;
-        return new Now(heard, i);
+        if (i >= heard[0].length) return false;
+        out[KickDetector.KICK] = heard[KickDetector.KICK][i];
+        out[KickDetector.LEVEL] = heard[KickDetector.LEVEL][i];
+        out[KickDetector.HATS] = heard[KickDetector.HATS][i];
+        return true;
     }
 
     /** 1 next to the jukebox (or for music that plays everywhere), 0 out of earshot. */
