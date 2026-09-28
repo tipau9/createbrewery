@@ -15,6 +15,8 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
 
     /** The crossover's corner in Hz; the gain knobs 0..1 as DeckFx.eqGain reads them (0.5 = unity). */
     private float crossover = 100f, subGain = 0.5f, topGain = 0.5f;
+    /** Sound takes its time through the air, and far speakers are delayed to match (delay towers). Off by default. */
+    private boolean propagation;
 
     public AmpRackBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -30,6 +32,15 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
 
     public float getTopGain() {
         return topGain;
+    }
+
+    public boolean isPropagation() {
+        return propagation;
+    }
+
+    public void setPropagation(boolean on) {
+        propagation = on;
+        changed();
     }
 
     public void setCrossover(float hz) {
@@ -58,6 +69,7 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
         tag.putFloat("Crossover", crossover);
         tag.putFloat("SubGain", subGain);
         tag.putFloat("TopGain", topGain);
+        tag.putBoolean("Propagation", propagation);
     }
 
     @Override
@@ -66,5 +78,6 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
         if (tag.contains("Crossover")) crossover = tag.getFloat("Crossover");
         if (tag.contains("SubGain")) subGain = tag.getFloat("SubGain");
         if (tag.contains("TopGain")) topGain = tag.getFloat("TopGain");
+        propagation = tag.getBoolean("Propagation");
     }
 }

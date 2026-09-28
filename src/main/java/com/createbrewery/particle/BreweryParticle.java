@@ -31,6 +31,8 @@ public class BreweryParticle extends TextureSheetParticle {
 
     public static final Style FOAM = new Style(-0.03f, 0.9f, 18, 30, 0.10f, 0f, 0.004f, true, false, false, false, false, true);
     public static final Style SPARK = new Style(0.01f, 0.88f, 14, 24, 0.14f, 0.2f, 0f, true, false, true, false, false, true);
+    /** A cold spark of a spark fountain: glowing, falls under gravity, bounces off what it hits. */
+    public static final Style COLD_SPARK = new Style(1.0f, 0.985f, 16, 28, 0.045f, 0f, 0f, true, false, true, true, false, true);
     public static final Style CONFETTI = new Style(0.035f, 0.93f, 60, 100, 0.08f, 0.35f, 0.012f, false, true, false, true, false, true);
     public static final Style NOTE = new Style(-0.015f, 0.92f, 26, 36, 0.16f, 0f, 0.008f, false, true, true, false, false, true);
     public static final Style CHUNK = new Style(0.9f, 0.98f, 40, 60, 0.09f, 0.15f, 0f, false, false, false, true, true, true);
@@ -134,5 +136,6 @@ public class BreweryParticle extends TextureSheetParticle {
         event.registerSpriteSet(ModParticles.SMOKE.get(), s -> provider(s, SMOKE));
         event.registerSpriteSet(ModParticles.FOG.get(), FogParticle::provider);
         event.registerSpriteSet(ModParticles.CO2.get(), Co2Particle::provider);
+        event.registerSpriteSet(ModParticles.COLD_SPARK.get(), s -> provider(s, COLD_SPARK));
     }
 }

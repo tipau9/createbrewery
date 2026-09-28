@@ -116,6 +116,16 @@ public class ModBlocks {
         .simpleItem()
         .register();
 
+    public static final BlockEntry<com.createbrewery.block.club.MicrophoneBlock> MICROPHONE = REGISTRATE
+        .block("microphone", com.createbrewery.block.club.MicrophoneBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Microphone")
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
     public static final BlockEntry<com.createbrewery.block.club.DmxConsoleBlock> DMX_CONSOLE = REGISTRATE
         .block("dmx_console", com.createbrewery.block.club.DmxConsoleBlock::new)
         .initialProperties(() -> Blocks.IRON_BLOCK)
@@ -171,6 +181,26 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.ColdSparkBlock> COLD_SPARK = REGISTRATE
+        .block("cold_spark", com.createbrewery.block.club.ColdSparkBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Cold Spark Machine")
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.HazerBlock> HAZER = REGISTRATE
+        .block("hazer", com.createbrewery.block.club.HazerBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Hazer")
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
             prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();

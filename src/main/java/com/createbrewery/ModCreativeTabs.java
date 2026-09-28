@@ -63,6 +63,7 @@ public final class ModCreativeTabs {
                 output.accept(ModBlocks.DJ_BOOTH.get());
                 output.accept(ModBlocks.SPEAKER.get());
                 output.accept(ModBlocks.AMP_RACK.get());
+                output.accept(ModBlocks.MICROPHONE.get());
                 output.accept(ModBlocks.DMX_CONSOLE.get());
                 output.accept(ModBlocks.LED_BAR.get());
                 output.accept(ModBlocks.MOVING_HEAD.get());
@@ -70,6 +71,8 @@ public final class ModCreativeTabs {
                 output.accept(ModBlocks.PAR_CAN.get());
                 output.accept(ModBlocks.SUBWOOFER.get());
                 output.accept(ModBlocks.CO2_JET.get());
+                output.accept(ModBlocks.COLD_SPARK.get());
+                output.accept(ModBlocks.HAZER.get());
                 output.accept(ModBlocks.STROBE_LIGHT.get());
                 output.accept(ModBlocks.LASER_PROJECTOR.get());
                 output.accept(ModBlocks.FOG_MACHINE.get());

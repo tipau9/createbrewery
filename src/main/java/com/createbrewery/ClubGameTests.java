@@ -114,6 +114,48 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void recordCrateRotatesAndLosesNothing(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        BlockPos chestPos = POS.north();
+        helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+        net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+        chest.setItem(0, new ItemStack(Items.MUSIC_DISC_13));
+        chest.setItem(1, new ItemStack(Items.MUSIC_DISC_CAT));
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+        dj.insertDisc(new ItemStack(Items.MUSIC_DISC_STAL), false, null);
+
+        // Played in crate order, each record going back as the next comes out: 13, cat, then stal again.
+        net.minecraft.world.item.Item[] order = {Items.MUSIC_DISC_13, Items.MUSIC_DISC_CAT, Items.MUSIC_DISC_STAL, Items.MUSIC_DISC_13};
+        for (net.minecraft.world.item.Item want : order) {
+            helper.assertTrue(com.createbrewery.block.club.ClubTestAccess.restock(dj, DjBoothBlockEntity.A), "no record taken from the crate");
+            helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(want), "deck A has " + dj.getDisc(DjBoothBlockEntity.A) + ", not " + want);
+        }
+        int discs = 0;
+        for (int i = 0; i < chest.getContainerSize(); i++) if (!chest.getItem(i).isEmpty()) discs++;
+        helper.assertTrue(discs == 2, "the crate holds " + discs + " records, not 2");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void microphoneFindsItsBoothsSpeakersOnTheServer(GameTestHelper helper) {
+        BlockPos booth = helper.absolutePos(POS);
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        BlockPos micPos = new BlockPos(0, 1, 0), speakerPos = new BlockPos(4, 1, 0), subPos = new BlockPos(4, 1, 4);
+        helper.setBlock(micPos, ModBlocks.MICROPHONE.get());
+        helper.setBlock(speakerPos, ModBlocks.SPEAKER.get());
+        helper.setBlock(subPos, ModBlocks.SUBWOOFER.get());
+        for (BlockPos at : new BlockPos[] {micPos, speakerPos, subPos}) {
+            ItemStack stack = new ItemStack(helper.getBlockState(at).getBlock().asItem());
+            SpeakerBlock.link(stack, booth);
+            helper.assertTrue(SpeakerBlock.applyLink(helper.getLevel(), helper.absolutePos(at), stack), "not linked: " + at);
+        }
+        var out = com.createbrewery.block.club.ClubTestAccess.micSpeakers(helper.getBlockEntity(micPos));
+        helper.assertTrue(out.size() == 1, "the voice goes to " + out.size() + " places, not the one speaker");
+        helper.assertTrue(BlockPos.containing(out.get(0)).equals(helper.absolutePos(speakerPos)), "the voice goes to " + out.get(0));
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void subsAndAmpRackLinkAndTheRackHoldsItsRange(GameTestHelper helper) {
         BlockPos booth = helper.absolutePos(POS);
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());

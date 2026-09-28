@@ -40,6 +40,8 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FOG = simple("fog");
     /** A billow of a CO2 cannon's jet: fast, dense, swelling and sinking cold. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CO2 = simple("co2");
+    /** A cold spark of a spark fountain. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> COLD_SPARK = simple("cold_spark");
 
     private static DeferredHolder<ParticleType<?>, SimpleParticleType> simple(String name) {
         return PARTICLES.register(name, () -> new SimpleParticleType(false));

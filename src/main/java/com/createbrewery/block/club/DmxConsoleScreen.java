@@ -27,7 +27,7 @@ public class DmxConsoleScreen extends Screen {
     private final VFader[] faders = new VFader[DmxProgram.GROUPS];
     private final FlashPad[] pads = new FlashPad[DmxProgram.GROUPS];
     private VFader master;
-    private Button program, move, rate, blackout;
+    private Button program, move, rate, blackout, record;
     private final Button[] scenes = new Button[DmxProgram.SCENES];
 
     private DmxConsoleScreen(BlockPos pos) {
@@ -71,6 +71,15 @@ public class DmxConsoleScreen extends Screen {
                 .build());
         }
         master = addRenderableWidget(new VFader(px + (pw - 20) / 2, top + 140, 20, 50, DmxControl.MASTER, 0));
+        // Timecode: records the desk's moves to the song playing; shift-click forgets that song's show.
+        record = addRenderableWidget(Button.builder(Component.empty(), b -> {
+                DmxConsoleBlockEntity c = console();
+                if (c == null) return;
+                if (hasShiftDown()) DmxControl.send(pos, DmxControl.CLEAR_SHOW, 0, 0f);
+                else DmxControl.send(pos, DmxControl.RECORD, 0, c.recording ? 0f : 1f);
+            }).bounds(px, top + 140, 40, 16)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("createbrewery.dmx.record_hint")))
+            .build());
         refresh();
     }
 
@@ -93,6 +102,7 @@ public class DmxConsoleScreen extends Screen {
         move.setMessage(Component.translatable("createbrewery.dmx.move." + MOVES[s.move]));
         rate.setMessage(Component.translatable("createbrewery.dmx.rate", DmxProgram.RATES[s.rate]));
         blackout.setMessage(Component.translatable("createbrewery.dmx.blackout", CommonComponents.optionStatus(s.blackout)));
+        record.setMessage(Component.translatable("createbrewery.dmx.record").withStyle(c.recording ? net.minecraft.ChatFormatting.RED : net.minecraft.ChatFormatting.RESET));
         for (int i = 0; i < DmxProgram.SCENES; i++) {
             scenes[i].setMessage(Component.literal((s.scenes[i] != null ? "● " : "") + (i + 1)));
         }
@@ -140,6 +150,7 @@ public class DmxConsoleScreen extends Screen {
             g.drawCenteredString(font, String.valueOf(i + 1), x + 12, top + 18, 0xAAAAAA);
             g.fill(x + 1, top + 27, x + 1 + out, top + 28, 0xFF000000 | c.program.color[i]);
         }
+        g.drawString(font, Component.translatable("createbrewery.dmx.cues", c.cues), left + PANEL, top + 160, c.recording ? 0xFF6060 : 0x888888);
         g.drawCenteredString(font, Component.translatable("createbrewery.dmx.master"), left + PANEL + (W - PANEL - 8) / 2, top + 130, 0xAAAAAA);
     }
 

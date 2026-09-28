@@ -103,7 +103,7 @@ public class DjBoothBlock extends Block implements EntityBlock {
 
         // Speakers, subwoofers or an amp rack in hand: link them to this booth, to be placed around the club.
         if (stack.is(com.createbrewery.ModBlocks.SPEAKER.get().asItem()) || stack.is(com.createbrewery.ModBlocks.SUBWOOFER.get().asItem())
-            || stack.is(com.createbrewery.ModBlocks.AMP_RACK.get().asItem())) {
+            || stack.is(com.createbrewery.ModBlocks.AMP_RACK.get().asItem()) || stack.is(com.createbrewery.ModBlocks.MICROPHONE.get().asItem())) {
             if (!level.isClientSide) SpeakerBlock.linkAtBooth(stack, level, pos, player);
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }

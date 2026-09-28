@@ -114,6 +114,37 @@ class DeckFxTest {
     }
 
     @Test
+    void limiterHoldsPeaksUnderTheCeilingAndLetsQuietThrough() {
+        DeckFx.Limiter lim = new DeckFx.Limiter(RATE);
+        float[] quiet = new float[1024];
+        for (int i = 0; i < quiet.length; i++) quiet[i] = (float) (0.5 * Math.sin(i * 0.05));
+        float[] copy = quiet.clone();
+        lim.process(quiet, quiet.length);
+        assertArrayEquals(copy, quiet, "limited a signal under the ceiling");
+        assertEquals(1f, lim.takeReduction());
+
+        float[] loud = new float[4800];
+        for (int i = 0; i < loud.length; i++) loud[i] = (float) (2.0 * Math.sin(i * 0.05));
+        lim.process(loud, loud.length);
+        for (float v : loud) assertTrue(Math.abs(v) <= DeckFx.Limiter.CEILING + 1e-6, "over the ceiling: " + v);
+        assertTrue(lim.takeReduction() < 0.5f, "a +6 dB signal hardly limited");
+    }
+
+    @Test
+    void soundFliesAndTheServoWalksItBackInStep() {
+        // 34.3 blocks away is a tenth of a second; a delay tower's alignment adds on top.
+        assertEquals(0.1, DeckFx.propagation(0, 34.3), 1e-9);
+        assertEquals(0.15, DeckFx.propagation(0.05, 34.3), 1e-9);
+        assertEquals(1f, DeckFx.servo(0.0005), "in step, yet the speed moved");
+        assertTrue(DeckFx.servo(0.01) < 1f && DeckFx.servo(-0.01) > 1f, "the servo pushes the wrong way");
+        assertEquals(0.97f, DeckFx.servo(1), 1e-6, "more than a 3 % shift");
+        // Walked out of step by 20 ms, it is back within a second of frames.
+        double ahead = 0.02, dt = 0.05;
+        for (int i = 0; i < 20; i++) ahead += (DeckFx.servo(ahead) - 1) * dt;
+        assertTrue(Math.abs(ahead) < 0.002, "still " + ahead + " s out of step");
+    }
+
+    @Test
     void loopsWrapBackToTheirStart() {
         assertEquals(500, DeckFx.loopFrame(500, 1000, 300));
         assertEquals(1000, DeckFx.loopFrame(1300, 1000, 300));

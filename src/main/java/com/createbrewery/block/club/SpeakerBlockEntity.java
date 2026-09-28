@@ -27,8 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SpeakerBlockEntity extends BlockEntity {
 
-    /** Client only: every loaded speaker and the booth it plays. */
+    /** Client: every loaded speaker and the booth it plays. */
     private static final Map<BlockPos, BlockPos> LINKS = new ConcurrentHashMap<>();
+    /** Server: the same, per dimension (in singleplayer both sides share these statics, so they are kept apart). */
+    private static final Map<net.minecraft.resources.ResourceKey<Level>, Map<BlockPos, BlockPos>> SERVER_LINKS = new ConcurrentHashMap<>();
+
+    private static Map<BlockPos, BlockPos> links(Level level) {
+        return level.isClientSide ? LINKS : SERVER_LINKS.computeIfAbsent(level.dimension(), k -> new ConcurrentHashMap<>());
+    }
 
     @Nullable
     private BlockPos booth;
@@ -55,16 +61,23 @@ public class SpeakerBlockEntity extends BlockEntity {
         return Vec3.atCenterOf(worldPosition).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.4));
     }
 
-    /** Client: the speakers, subwoofers and amp racks linked to the booth at {@code boothPos}, in position order. */
+    /** A plain speaker, not a subwoofer, amp rack or microphone. */
+    public boolean isSpeaker() {
+        return getClass() == SpeakerBlockEntity.class;
+    }
+
+    /** Everything loaded that is linked to the booth at {@code boothPos} - speakers, subwoofers, amp racks, microphones - in position order. */
     public static List<SpeakerBlockEntity> linked(Level level, BlockPos boothPos) {
         List<SpeakerBlockEntity> linked = new ArrayList<>();
-        for (Map.Entry<BlockPos, BlockPos> link : LINKS.entrySet()) {
+        Map<BlockPos, BlockPos> links = links(level);
+        for (Map.Entry<BlockPos, BlockPos> link : links.entrySet()) {
             if (!link.getValue().equals(boothPos)) continue;
             // Left behind by another dimension (its chunks are not always unloaded one by one).
-            if (level.getBlockEntity(link.getKey()) instanceof SpeakerBlockEntity speaker && boothPos.equals(speaker.booth)) {
+            // (Never load a chunk for it: the server asks every few ticks.)
+            if (level.isLoaded(link.getKey()) && level.getBlockEntity(link.getKey()) instanceof SpeakerBlockEntity speaker && boothPos.equals(speaker.booth)) {
                 linked.add(speaker);
             } else {
-                LINKS.remove(link.getKey());
+                links.remove(link.getKey());
             }
         }
         // The map's order is arbitrary; with two racks on one booth the same one must win every frame.
@@ -72,10 +85,19 @@ public class SpeakerBlockEntity extends BlockEntity {
         return linked;
     }
 
+    /** Server: the linked microphones and whatever else of this kind, in {@code level}. */
+    public static <T extends SpeakerBlockEntity> List<T> loaded(Level level, Class<T> kind) {
+        List<T> found = new ArrayList<>();
+        for (BlockPos pos : links(level).keySet()) {
+            if (level.isLoaded(pos) && kind.isInstance(level.getBlockEntity(pos))) found.add(kind.cast(level.getBlockEntity(pos)));
+        }
+        return found;
+    }
+
     private void register() {
-        if (level == null || !level.isClientSide) return;
-        if (booth == null || isRemoved()) LINKS.remove(worldPosition);
-        else LINKS.put(worldPosition.immutable(), booth);
+        if (level == null) return;
+        if (booth == null || isRemoved()) links(level).remove(worldPosition);
+        else links(level).put(worldPosition.immutable(), booth);
     }
 
     @Override
@@ -87,7 +109,7 @@ public class SpeakerBlockEntity extends BlockEntity {
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (level != null && level.isClientSide) LINKS.remove(worldPosition);
+        if (level != null) links(level).remove(worldPosition);
     }
 
     @Override

@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=east,on=false": {
+      "model": "createbrewery:block/microphone",
+      "y": 90
+    },
+    "facing=east,on=true": {
+      "model": "createbrewery:block/microphone",
+      "y": 90
+    },
+    "facing=north,on=false": {
+      "model": "createbrewery:block/microphone"
+    },
+    "facing=north,on=true": {
+      "model": "createbrewery:block/microphone"
+    },
+    "facing=south,on=false": {
+      "model": "createbrewery:block/microphone",
+      "y": 180
+    },
+    "facing=south,on=true": {
+      "model": "createbrewery:block/microphone",
+      "y": 180
+    },
+    "facing=west,on=false": {
+      "model": "createbrewery:block/microphone",
+      "y": 270
+    },
+    "facing=west,on=true": {
+      "model": "createbrewery:block/microphone",
+      "y": 270
+    }
+  }
+}

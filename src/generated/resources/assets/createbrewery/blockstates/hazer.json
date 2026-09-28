@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=east,on=false,powered=false": {
+      "model": "createbrewery:block/hazer",
+      "y": 90
+    },
+    "facing=east,on=false,powered=true": {
+      "model": "createbrewery:block/hazer",
+      "y": 90
+    },
+    "facing=east,on=true,powered=false": {
+      "model": "createbrewery:block/hazer",
+      "y": 90
+    },
+    "facing=east,on=true,powered=true": {
+      "model": "createbrewery:block/hazer",
+      "y": 90
+    },
+    "facing=north,on=false,powered=false": {
+      "model": "createbrewery:block/hazer"
+    },
+    "facing=north,on=false,powered=true": {
+      "model": "createbrewery:block/hazer"
+    },
+    "facing=north,on=true,powered=false": {
+      "model": "createbrewery:block/hazer"
+    },
+    "facing=north,on=true,powered=true": {
+      "model": "createbrewery:block/hazer"
+    },
+    "facing=south,on=false,powered=false": {
+      "model": "createbrewery:block/hazer",
+      "y": 180
+    },
+    "facing=south,on=false,powered=true": {
+      "model": "createbrewery:block/hazer",
+      "y": 180
+    },
+    "facing=south,on=true,powered=false": {
+      "model": "createbrewery:block/hazer",
+      "y": 180
+    },
+    "facing=south,on=true,powered=true": {
+      "model": "createbrewery:block/hazer",
+      "y": 180
+    },
+    "facing=west,on=false,powered=false": {
+      "model": "createbrewery:block/hazer",
+      "y": 270
+    },
+    "facing=west,on=false,powered=true": {
+      "model": "createbrewery:block/hazer",
+      "y": 270
+    },
+    "facing=west,on=true,powered=false": {
+      "model": "createbrewery:block/hazer",
+      "y": 270
+    },
+    "facing=west,on=true,powered=true": {
+      "model": "createbrewery:block/hazer",
+      "y": 270
+    }
+  }
+}

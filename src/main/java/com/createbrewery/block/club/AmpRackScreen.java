@@ -13,11 +13,12 @@ import net.minecraft.network.chat.Component;
  * move goes to the server (see {@link AmpControl}) and is heard here at once. Client only.
  */
 public class AmpRackScreen extends Screen {
-    private static final int W = 220, H = 128;
+    private static final int W = 220, H = 150;
 
     private final BlockPos pos;
     private int left, top;
     private Slider crossover, sub, tops;
+    private net.minecraft.client.gui.components.Button flight;
 
     private AmpRackScreen(BlockPos pos) {
         super(Component.translatable("block.createbrewery.amp_rack"));
@@ -50,6 +51,15 @@ public class AmpRackScreen extends Screen {
         crossover = addRenderableWidget(new Slider(top + 20, AmpControl.CROSSOVER, slider(r.getCrossover())));
         sub = addRenderableWidget(new Slider(top + 44, AmpControl.SUB_GAIN, r.getSubGain()));
         tops = addRenderableWidget(new Slider(top + 68, AmpControl.TOP_GAIN, r.getTopGain()));
+        flight = addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.empty(), b -> {
+                AmpRackBlockEntity now = rack();
+                if (now == null) return;
+                float v = now.isPropagation() ? 0f : 1f;
+                AmpControl.send(pos, AmpControl.PROPAGATION, v);
+                AmpControl.apply(now, AmpControl.PROPAGATION, v);
+            }).bounds(left + 10, top + 92, W - 20, 20)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("createbrewery.amp.propagation_hint")))
+            .build());
     }
 
     @Override
@@ -62,6 +72,7 @@ public class AmpRackScreen extends Screen {
         crossover.flush();
         sub.flush();
         tops.flush();
+        flight.setMessage(Component.translatable("createbrewery.amp.propagation", net.minecraft.network.chat.CommonComponents.optionStatus(r.isPropagation())));
     }
 
     @Override
@@ -89,7 +100,7 @@ public class AmpRackScreen extends Screen {
             for (SpeakerBlockEntity s : SpeakerBlockEntity.linked(minecraft.level, booth)) {
                 if (s instanceof SubwooferBlockEntity sw) {
                     if (sw.isActive()) subs++;
-                } else if (!(s instanceof AmpRackBlockEntity)) {
+                } else if (s.isSpeaker()) {
                     speakers++;
                 }
             }
@@ -99,8 +110,16 @@ public class AmpRackScreen extends Screen {
                 color = 0xFFB040;
             }
         }
-        g.drawCenteredString(font, status, left + W / 2, top + 96, color);
-        g.drawCenteredString(font, Component.translatable("createbrewery.amp.hint"), left + W / 2, top + 110, 0x666666);
+        g.drawCenteredString(font, status, left + W / 2, top + 118, color);
+        if (booth != null) {
+            // The limit light: how many dB the amps are taking off their peaks right now.
+            float gr = com.createbrewery.drunk.MusicPulse.limiting(booth);
+            float db = gr >= 0.999f ? 0f : (float) (-20 * Math.log10(Math.max(gr, 1e-4f)));
+            int led = db < 0.1f ? 0xFF203020 : db < 3f ? 0xFFE0B020 : 0xFFFF3030;
+            g.fill(left + W - 18, top + 6, left + W - 10, top + 14, led);
+            if (db >= 0.1f) g.drawString(font, Component.translatable("createbrewery.amp.limit", String.format("%.1f", db)), left + 8, top + 6, led & 0xFFFFFF);
+        }
+        g.drawCenteredString(font, Component.translatable("createbrewery.amp.hint"), left + W / 2, top + 132, 0x666666);
     }
 
     @Override

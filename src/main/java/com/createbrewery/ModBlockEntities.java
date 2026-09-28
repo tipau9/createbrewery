@@ -45,6 +45,16 @@ public class ModBlockEntities {
         })
         .register();
 
+    public static final BlockEntityEntry<com.createbrewery.block.club.ColdSparkBlockEntity> COLD_SPARK = REGISTRATE
+        .blockEntity("cold_spark", com.createbrewery.block.club.ColdSparkBlockEntity::new)
+        .validBlocks(ModBlocks.COLD_SPARK)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.HazerBlockEntity> HAZER = REGISTRATE
+        .blockEntity("hazer", com.createbrewery.block.club.HazerBlockEntity::new)
+        .validBlocks(ModBlocks.HAZER)
+        .register();
+
     public static final BlockEntityEntry<com.createbrewery.block.club.Co2JetBlockEntity> CO2_JET = REGISTRATE
         .blockEntity("co2_jet", com.createbrewery.block.club.Co2JetBlockEntity::new)
         .validBlocks(ModBlocks.CO2_JET)
@@ -63,6 +73,11 @@ public class ModBlockEntities {
     public static final BlockEntityEntry<com.createbrewery.block.club.SpeakerBlockEntity> SPEAKER = REGISTRATE
         .blockEntity("speaker", com.createbrewery.block.club.SpeakerBlockEntity::new)
         .validBlocks(ModBlocks.SPEAKER)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.MicrophoneBlockEntity> MICROPHONE = REGISTRATE
+        .blockEntity("microphone", com.createbrewery.block.club.MicrophoneBlockEntity::new)
+        .validBlocks(ModBlocks.MICROPHONE)
         .register();
 
     public static final BlockEntityEntry<com.createbrewery.block.club.AmpRackBlockEntity> AMP_RACK = REGISTRATE

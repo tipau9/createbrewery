@@ -59,6 +59,24 @@ public final class DeckFx {
         return pair[1].run(pair[0].run(x));
     }
 
+    /** Metres (blocks) a second. */
+    public static final double SPEED_OF_SOUND = 343;
+
+    /** Seconds until a speaker's sound reaches you: its alignment delay, and the flight over {@code distance} blocks. */
+    public static double propagation(double align, double distance) {
+        return align + distance / SPEED_OF_SOUND;
+    }
+
+    /**
+     * The playback speed that brings a speaker {@code aheadSeconds} early (negative: late) back to
+     * where it should be heard, within +-3 % - walking towards a speaker you hear it a touch higher,
+     * which is the Doppler shift it really has.
+     */
+    public static float servo(double aheadSeconds) {
+        if (Math.abs(aheadSeconds) < 0.001) return 1f;
+        return (float) Math.max(0.97, Math.min(1.03, 1 - aheadSeconds * 4));
+    }
+
     /** Song frame {@code from} as heard inside a loop of {@code len} frames from {@code start}. */
     public static long loopFrame(long from, long start, long len) {
         return from < start ? from : start + (from - start) % len;
@@ -152,6 +170,38 @@ public final class DeckFx {
         for (float[] c : combs) java.util.Arrays.fill(c, 0f);
         for (float[] p : passes) java.util.Arrays.fill(p, 0f);
         java.util.Arrays.fill(combLow, 0f);
+    }
+
+    /**
+     * An amp's peak limiter: no look-ahead (so every speaker of a song keeps the same timing and the
+     * crossover still sums), the gain drops at once to keep a peak under the ceiling and comes back
+     * up over about 80 ms.
+     */
+    public static final class Limiter {
+        public static final float CEILING = 0.97f;
+        private final float release;
+        private float gain = 1f, reduction = 1f;
+
+        public Limiter(double rate) {
+            release = (float) (1 - Math.exp(-1 / (0.08 * rate)));
+        }
+
+        public void process(float[] buf, int n) {
+            for (int i = 0; i < n; i++) {
+                float peak = Math.abs(buf[i]);
+                float want = peak > CEILING ? CEILING / peak : 1f;
+                gain = Math.min(want, gain + (1f - gain) * release);
+                buf[i] *= gain;
+                reduction = Math.min(reduction, gain);
+            }
+        }
+
+        /** The lowest gain since the last call (1 = not limiting), then starts over. */
+        public float takeReduction() {
+            float r = reduction;
+            reduction = 1f;
+            return r;
+        }
     }
 
     /**

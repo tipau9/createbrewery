@@ -17,7 +17,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * @param value the crossover in Hz, or a gain knob 0..1
  */
 public record AmpControl(BlockPos pos, byte action, float value) implements CustomPacketPayload {
-    public static final byte CROSSOVER = 0, SUB_GAIN = 1, TOP_GAIN = 2;
+    public static final byte CROSSOVER = 0, SUB_GAIN = 1, TOP_GAIN = 2, PROPAGATION = 3;
 
     public static final Type<AmpControl> TYPE = new Type<>(CreateBrewery.ID("amp_control"));
     public static final StreamCodec<ByteBuf, AmpControl> CODEC = StreamCodec.composite(
@@ -41,6 +41,7 @@ public record AmpControl(BlockPos pos, byte action, float value) implements Cust
             case CROSSOVER -> rack.setCrossover(value);
             case SUB_GAIN -> rack.setSubGain(value);
             case TOP_GAIN -> rack.setTopGain(value);
+            case PROPAGATION -> rack.setPropagation(value > 0.5f);
             default -> {}
         }
     }

@@ -1,0 +1,524 @@
+{
+  "variants": {
+    "auto=false,facing=down,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=down,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=false,facing=east,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=east,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=false,facing=north,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=north,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=false,facing=south,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=south,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=false,facing=up,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=up,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=false,facing=west,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=false,facing=west,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=down,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=down,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 180
+    },
+    "auto=true,facing=east,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=east,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 90
+    },
+    "auto=true,facing=north,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=north,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90
+    },
+    "auto=true,facing=south,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=south,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 180
+    },
+    "auto=true,facing=up,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=up,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark"
+    },
+    "auto=true,facing=west,height=1,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=1,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=2,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=2,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=3,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=3,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=4,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=4,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=5,powered=false": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    },
+    "auto=true,facing=west,height=5,powered=true": {
+      "model": "createbrewery:block/cold_spark",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

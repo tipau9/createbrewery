@@ -42,6 +42,11 @@ final class Emitter {
     int band = FULL;
     float crossover = 100f;
     private DeckFx.Crossover split;
+    /** The amp rack's gain for this side, put into the samples so the limiter sees it (the game's volume stays on the source). */
+    float drive = 1f;
+    /** With the rack's speed of sound on: this speaker's alignment delay in seconds (a delay tower's); -1 off. */
+    double delay = -1;
+    private final DeckFx.Limiter limiter;
     private final BlockPos home;
     /** Which way the sound leaves it. */
     private final Vec3 front;
@@ -84,6 +89,7 @@ final class Emitter {
         this.front = out.lengthSqr() > 0.01 ? out.normalize() : new Vec3(0, 1, 0);
         this.rate = rate;
         this.filter = new WallFilter(rate);
+        this.limiter = new DeckFx.Limiter(rate);
     }
 
     /**
@@ -103,13 +109,21 @@ final class Emitter {
             return;
         }
 
+        // With the speed of sound on, a speaker is heard as far behind the song as its sound takes to reach you.
+        long target = cursor;
+        if (delay >= 0 && !phones && listener != null) {
+            target = cursor - (long) (DeckFx.propagation(delay, listener.getEyePosition().distanceTo(pos)) * rate * pitch);
+        }
         long here = fed - queuedFrames() + AL10.alGetSourcei(source, AL11.AL_SAMPLE_OFFSET);
         boolean running = state == AL10.AL_PLAYING || state == AL10.AL_PAUSED;
-        if (!running || Math.abs(here - cursor) > DRIFT * rate) {
+        if (!running || Math.abs(here - target) > DRIFT * rate) {
             // Only the first start is expected; more mean lag spikes or drift, worth seeing in the log.
             if (fed >= 0 && ++resyncs % 20 == 1) LOGGER.info("Speaker at {} resynced ({} times)", home, resyncs);
-            restart(cursor);
+            restart(target);
+            here = target;
         }
+        // Walking about moves the target a little every frame: follow it by speed, not by jumps.
+        float servo = delay >= 0 && !phones ? DeckFx.servo((here - target) / (rate * pitch)) : 1f;
 
         if (!phones && listener != null && now - lastRay >= RAY_EVERY) {
             lastRay = now;
@@ -130,9 +144,9 @@ final class Emitter {
             if (split == null) split = new DeckFx.Crossover(rate);
             split.set(band == LOW, crossover);
         }
-        feed(t, cursor + (long) (LEAD * rate * pitch));
+        feed(t, target + (long) (LEAD * rate * pitch));
         AL10.alSourcef(source, AL10.AL_GAIN, gain * level);
-        AL10.alSourcef(source, AL10.AL_PITCH, pitch);
+        AL10.alSourcef(source, AL10.AL_PITCH, pitch * servo);
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING && !queued.isEmpty()) AL10.alSourcePlay(source);
     }
 
@@ -193,6 +207,8 @@ final class Emitter {
             if (n <= 0) return;
             if (fx != null && t.deck) fx.process(in, n);
             if (split != null) split.process(in, n);
+            if (drive != 1f) for (int i = 0; i < n; i++) in[i] *= drive;
+            limiter.process(in, n);
             filter.process(in, 0, n, out);
             pcm.clear();
             for (int i = 0; i < n; i++) {
@@ -254,6 +270,11 @@ final class Emitter {
             if (at.distanceToSqr(from) >= length * length) break;
         }
         return walls;
+    }
+
+    /** How hard the limiter worked since last asked: 1 not at all .. 0. */
+    float takeReduction() {
+        return limiter.takeReduction();
     }
 
     private boolean deleted;

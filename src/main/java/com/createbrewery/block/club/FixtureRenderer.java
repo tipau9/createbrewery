@@ -34,6 +34,8 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         Vec3 lens = be.lens(facing).subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
         Vec3 side = Math.abs(facing.getStepY()) > 0 ? new Vec3(1, 0, 0) : new Vec3(-facing.getStepZ(), 0, facing.getStepX());
         float len = be.beam();
+        // Through haze the beams stand out; without any they look as they always did.
+        haze = 1f + 1.5f * HazerBlockEntity.hazeAt(be.getLevel(), Vec3.atCenterOf(be.getBlockPos()));
 
         switch (be.kind()) {
             case PAR -> {
@@ -74,9 +76,13 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         }
     }
 
+    /** 1 in clear air, up to 2.5 in a full haze; set per fixture before its beams (render thread). */
+    private static float haze = 1f;
+
     /** A soft cone of light from {@code from} along {@code dir}, fading out toward its end. */
     private static void cone(VertexConsumer v, PoseStack pose, Vec3 from, Vec3 dir, float len, float r0, float r1,
                              float r, float g, float b, float a) {
+        a = Math.min(1f, a * haze);
         if (len < 0.05f || a < 0.005f) return;
         pose.pushPose();
         pose.translate(from.x, from.y, from.z);

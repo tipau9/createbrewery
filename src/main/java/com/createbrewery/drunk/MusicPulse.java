@@ -61,7 +61,20 @@ public final class MusicPulse {
     private static final float MONITOR = 0.2f;
 
     /** How loud a place plays a song, and which part of it (see {@link Emitter#band}). */
-    private record Want(float level, int band) {}
+    private record Want(float level, int band, float drive, double delay) {}
+
+    /** A speaker's delay-tower alignment in seconds, or -1 with the speed of sound off. */
+    private static double align(boolean flight, Vec3 speaker, Vec3 booth, double nearest) {
+        return flight ? Math.max(0, speaker.distanceTo(booth) - nearest) / DeckFx.SPEED_OF_SOUND : -1;
+    }
+
+    /** Client: per booth, how hard its amps are limiting (1 not at all .. 0), for the rack's clip light. */
+    private static final Map<BlockPos, Float> LIMITING = new ConcurrentHashMap<>();
+
+    /** The lowest limiter gain on the booth's speakers of late: under 1 the amps are being driven into their limiters. */
+    public static float limiting(BlockPos booth) {
+        return LIMITING.getOrDefault(booth, 1f);
+    }
 
     static final class Track {
         final int source;
@@ -343,21 +356,29 @@ public final class MusicPulse {
                 if (rack == null) rack = r;
             } else if (s instanceof SubwooferBlockEntity sub) {
                 if (sub.isActive()) subs.add(sub.mouth());
-            } else {
+            } else if (s.isSpeaker()) {
                 tops.add(s.mouth());
             }
         }
         // Without a rack the speakers play everything and the subs only thump; with one and subs to
         // drive, it splits at the crossover: the lows to the subs, the rest to the speakers.
         boolean split = rack != null && !subs.isEmpty();
-        float topLevel = rack == null ? 1f : DeckFx.eqGain(rack.getTopGain());
+        float topDrive = rack == null ? 1f : DeckFx.eqGain(rack.getTopGain());
+        // Speed of sound (off unless the rack has it on): every speaker is heard as late as its sound
+        // takes to reach you, and those further from the booth than the nearest are held back by the
+        // extra distance - delay towers, so the far ones land in step with the main stack.
+        boolean flight = rack != null && rack.isPropagation();
+        Vec3 boothAt = dj == null ? at : Vec3.atCenterOf(dj.getBlockPos());
+        double ref = Double.MAX_VALUE;
+        for (Vec3 p : tops) ref = Math.min(ref, p.distanceTo(boothAt));
+        for (Vec3 p : subs) ref = Math.min(ref, p.distanceTo(boothAt));
         Map<Vec3, Want> wanted = new HashMap<>();
-        for (Vec3 top : tops) wanted.put(top, new Want(topLevel, split ? Emitter.HIGH : Emitter.FULL));
+        for (Vec3 top : tops) wanted.put(top, new Want(1f, split ? Emitter.HIGH : Emitter.FULL, topDrive, align(flight, top, boothAt, ref)));
         if (split) {
-            float subLevel = DeckFx.eqGain(rack.getSubGain());
-            for (Vec3 sub : subs) wanted.put(sub, new Want(subLevel, Emitter.LOW));
+            float subDrive = DeckFx.eqGain(rack.getSubGain());
+            for (Vec3 sub : subs) wanted.put(sub, new Want(1f, Emitter.LOW, subDrive, align(flight, sub, boothAt, ref)));
         }
-        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL));
+        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, flight ? 0 : -1));
         float crossover = rack == null ? 100f : rack.getCrossover();
 
         for (Iterator<Map.Entry<Vec3, Emitter>> it = t.emitters.entrySet().iterator(); it.hasNext(); ) {
@@ -371,8 +392,17 @@ public final class MusicPulse {
             Emitter e = t.emitters.computeIfAbsent(w.getKey(), pos -> new Emitter(pos, w.getValue().level(), t.rate));
             e.level = w.getValue().level();
             e.band = w.getValue().band();
+            e.drive = w.getValue().drive();
+            e.delay = w.getValue().delay();
             e.crossover = crossover;
             e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt);
+        }
+        if (dj != null) {
+            // The clip light: falls at once with the gain, lets go over about a second.
+            float worst = 1f;
+            for (Emitter e : t.emitters.values()) worst = Math.min(worst, e.takeReduction());
+            float shown = limiting(dj.getBlockPos());
+            LIMITING.put(dj.getBlockPos(), Math.min(worst, shown + (1f - shown) * Math.min(1f, dt * 2f)));
         }
 
         // The DJ's headphones: the cued deck whatever the crossfader says, so the next record can be
@@ -511,7 +541,7 @@ public final class MusicPulse {
                 if (distSq >= 289.0) continue; // within 17 blocks
                 float falloff = (float) Math.max(0.0, 1.0 - Math.sqrt(distSq) / 17.0);
                 float wallFactor = e.muffle > 0.25f ? 1.25f : 0.85f;
-                total += k * falloff * falloff * wallFactor * 0.75f * e.level;
+                total += k * falloff * falloff * wallFactor * 0.75f * e.level * Math.min(1.5f, e.drive);
             }
         }
         return Math.min(1.2f, total);

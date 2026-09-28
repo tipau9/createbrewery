@@ -66,6 +66,8 @@ public class DjBoothBlockEntity extends BlockEntity {
     private long xfStart;
     private int xfTicks;
     private boolean automix = true;
+    /** The record crate's slot the last record was taken from: the next one is looked for after it. */
+    private int crateSlot = -1;
     private int dropTicks = 0;
 
     public DjBoothBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -205,6 +207,9 @@ public class DjBoothBlockEntity extends BlockEntity {
                 d.endsAt = -1;
                 // Song over: keep the floor going with the cued record.
                 if (cued) startDeck(1 - deck, null);
+                // From the record crate: the played record goes back, the next one onto this deck -
+                // cued for the next mix, or straight on if nothing else plays.
+                if (automix && restock(deck) && !decks[1 - deck].playing) startDeck(deck, null);
                 sync();
             } else if (cued && d.endsAt - now <= MIX_TICKS) {
                 // Auto-mix: bring the cued record in and fade across while this one plays out.
@@ -212,6 +217,53 @@ public class DjBoothBlockEntity extends BlockEntity {
                 fadeCrossfader(deck == A ? 1f : 0f, (int) (d.endsAt - now));
             }
         }
+    }
+
+    /**
+     * The record crate: a chest, barrel or any other container next to the booth (hoppers and
+     * funnels can fill it), played in order. Null if there is none.
+     */
+    @Nullable
+    private net.neoforged.neoforge.items.IItemHandler crate() {
+        for (net.minecraft.core.Direction side : new net.minecraft.core.Direction[] {
+            net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.EAST,
+            net.minecraft.core.Direction.WEST, net.minecraft.core.Direction.DOWN}) {
+            BlockPos at = worldPosition.relative(side);
+            if (level.getBlockEntity(at) instanceof DjBoothBlockEntity) continue;
+            var handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, at, side.getOpposite());
+            if (handler != null) return handler;
+        }
+        return null;
+    }
+
+    /**
+     * Swaps the record on {@code deck} for the next one in the crate. A record is never lost: the
+     * old one stays on the deck when there is no next one or no room for it. Server only.
+     */
+    boolean restock(int deck) {
+        var crate = crate();
+        if (crate == null) return false;
+        int slots = crate.getSlots();
+        for (int k = 1; k <= slots; k++) {
+            int slot = Math.floorMod(crateSlot + k, slots);
+            if (!DjBoothBlock.isMusicDisc(crate.getStackInSlot(slot))) continue;
+            ItemStack next = crate.extractItem(slot, 1, false);
+            if (next.isEmpty()) continue;
+            ItemStack old = decks[deck].disc;
+            if (!old.isEmpty()) {
+                ItemStack left = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(crate, old, false);
+                if (!left.isEmpty()) {
+                    // No room for it: put the next one back, keep playing what we have.
+                    ItemStack back = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(crate, next, false);
+                    if (!back.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, back);
+                    return false;
+                }
+            }
+            crateSlot = slot;
+            decks[deck].disc = next;
+            return true;
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- mixer controls
@@ -352,6 +404,7 @@ public class DjBoothBlockEntity extends BlockEntity {
         tag.putLong("XfStart", xfStart);
         tag.putInt("XfTicks", xfTicks);
         tag.putBoolean("Automix", automix);
+        tag.putInt("CrateSlot", crateSlot);
     }
 
     @Override
@@ -377,6 +430,7 @@ public class DjBoothBlockEntity extends BlockEntity {
         xfStart = tag.getLong("XfStart");
         xfTicks = tag.getInt("XfTicks");
         automix = !tag.contains("Automix") || tag.getBoolean("Automix");
+        crateSlot = tag.contains("CrateSlot") ? tag.getInt("CrateSlot") : -1;
     }
 
     @Override

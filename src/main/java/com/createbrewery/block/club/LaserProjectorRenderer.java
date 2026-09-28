@@ -46,6 +46,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.46));
 
         float[][] beams = aim(be, partialTick, beat, drop);
+        // Through haze the beams stand out; without any they look as they always did.
+        haze = 1f + 0.8f * HazerBlockEntity.hazeAt(level, center);
 
         VertexConsumer v = buffers.getBuffer(ClubRenderTypes.GLOW);
         pose.pushPose();
@@ -152,6 +154,9 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         return 128;
     }
 
+    /** 1 in clear air, up to 1.8 in a full haze; set per projector before its beams (render thread). */
+    private static float haze = 1f;
+
     private static void renderBeam(VertexConsumer v, Matrix4f m, Vec3 start, Vec3 end,
                                    float r, float g, float b, float boost) {
         Vec3 diff = end.subtract(start);
@@ -165,7 +170,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
         float coreW = 0.016f + boost * 0.010f;
         float glowW = 0.055f + boost * 0.050f;
-        float glowAlpha = 0.55f + boost * 0.35f;
+        float glowAlpha = Math.min(1f, (0.55f + boost * 0.35f) * haze);
+        glowW *= haze;
 
         // Hot white core inside a coloured sheath
         beamPlane(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f);

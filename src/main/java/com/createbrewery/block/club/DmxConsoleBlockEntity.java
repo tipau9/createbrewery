@@ -29,6 +29,19 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     final DmxProgram program = new DmxProgram();
     private final long[] flashUntil = new long[DmxProgram.GROUPS];
 
+    /** The show recorded to songs, and the booth whose records it follows (server). */
+    final DmxTimecode timecode = new DmxTimecode();
+    @org.jetbrains.annotations.Nullable
+    private BlockPos booth;
+    /** Recording: moves go into the show instead of the show playing. Synced, with the song's cue count. */
+    boolean recording;
+    int cues;
+    /** Song ticks into each deck's record (at its pitch), whether it played last tick, and what is heard now. */
+    private final float[] songTime = new float[2];
+    private final boolean[] wasPlaying = new boolean[2];
+    private int song, songTick, lastCue = -1, lastSong;
+    private boolean hearing;
+
     public DmxConsoleBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
@@ -37,37 +50,37 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 
     void setFader(int g, float v) {
         settings.faders[g] = DmxProgram.clamp(v);
-        sync();
+        changed();
     }
 
     void setMaster(float v) {
         settings.master = DmxProgram.clamp(v);
-        sync();
+        changed();
     }
 
     void setColor(int g, int c) {
         settings.colors[g] = Math.floorMod(c, DmxProgram.PALETTE.length);
-        sync();
+        changed();
     }
 
     void setProgram(int p) {
         settings.program = Math.floorMod(p, DmxProgram.PROGRAMS);
-        sync();
+        changed();
     }
 
     void setMove(int m) {
         settings.move = Math.floorMod(m, DmxProgram.MOVES);
-        sync();
+        changed();
     }
 
     void setRate(int r) {
         settings.rate = Math.floorMod(r, DmxProgram.RATES.length);
-        sync();
+        changed();
     }
 
     void setBlackout(boolean b) {
         settings.blackout = b;
-        sync();
+        changed();
     }
 
     /** A flash button pressed (or still held); it lets go on its own {@link #FLASH_HOLD} ticks after the last press. */
@@ -93,12 +106,95 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         if (sc == null) return false;
         System.arraycopy(sc.levels(), 0, settings.faders, 0, DmxProgram.GROUPS);
         System.arraycopy(sc.colors(), 0, settings.colors, 0, DmxProgram.GROUPS);
+        changed();
+        return true;
+    }
+
+    /** A move on the desk: while recording, it goes into the show at this point of the song. */
+    private void changed() {
+        if (recording && hearing) {
+            timecode.record(song, songTick, DmxTimecode.Look.of(settings));
+            cues = timecode.count(song);
+            lastCue = timecode.at(song, songTick);
+        }
+        sync();
+    }
+
+    /** REC on or off. Turned on, it follows the nearest DJ booth if it follows none yet. False with no booth about. */
+    boolean setRecording(boolean on) {
+        if (on && booth() == null) booth = nearestBooth();
+        if (on && booth == null) return false;
+        recording = on;
         sync();
         return true;
     }
 
+    /** Forgets the show for the record playing now. */
+    void clearShow() {
+        if (!hearing) return;
+        timecode.clear(song);
+        cues = 0;
+        lastCue = -1;
+        sync();
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private DjBoothBlockEntity booth() {
+        return booth != null && level != null && level.isLoaded(booth) && level.getBlockEntity(booth) instanceof DjBoothBlockEntity dj ? dj : null;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private BlockPos nearestBooth() {
+        BlockPos best = null;
+        for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-16, -8, -16), worldPosition.offset(16, 8, 16))) {
+            if (level.getBlockEntity(p) instanceof DjBoothBlockEntity && (best == null || p.distSqr(worldPosition) < best.distSqr(worldPosition))) {
+                best = p.immutable();
+            }
+        }
+        return best;
+    }
+
+    /** Follows the booth's records through their songs, and plays the show recorded to them. */
+    private void followSong() {
+        DjBoothBlockEntity dj = booth();
+        hearing = false;
+        if (dj == null) return;
+        long now = level.getGameTime();
+        for (int d = DjBoothBlockEntity.A; d <= DjBoothBlockEntity.B; d++) {
+            boolean playing = dj.isPlaying(d);
+            if (playing && !wasPlaying[d]) songTime[d] = 0;
+            if (playing) songTime[d] += dj.getPitch(d);
+            wasPlaying[d] = playing;
+        }
+        // The deck the crowd hears most.
+        int deck = dj.deckGain(DjBoothBlockEntity.A, now) >= dj.deckGain(DjBoothBlockEntity.B, now) ? DjBoothBlockEntity.A : DjBoothBlockEntity.B;
+        if (!dj.isPlaying(deck)) deck = 1 - deck;
+        if (!dj.isPlaying(deck)) return;
+        hearing = true;
+        // From the record as saved (its id and components, an Etched disc's track included): the
+        // item's own hash differs from one game start to the next, and the show must find it again.
+        net.minecraft.world.item.ItemStack disc = dj.getDisc(deck);
+        if (disc.isEmpty()) return;
+        song = disc.save(level.registryAccess()).toString().hashCode();
+        songTick = (int) songTime[deck];
+        if (song != lastSong) {
+            lastSong = song;
+            lastCue = -1;
+            cues = timecode.count(song);
+            sync();
+        }
+        if (recording) return;
+        int cue = timecode.at(song, songTick);
+        if (cue >= 0 && cue != lastCue) {
+            timecode.look(song, cue).applyTo(settings);
+            sync();
+        }
+        lastCue = cue;
+    }
+
     void serverTick() {
         if (level == null) return;
+        followSong();
         long now = level.getGameTime();
         int mask = 0;
         for (int g = 0; g < DmxProgram.GROUPS; g++) if (flashUntil[g] > now) mask |= 1 << g;
@@ -137,13 +233,54 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        writeShown(tag);
+        if (booth != null) tag.put("Booth", net.minecraft.nbt.NbtUtils.writeBlockPos(booth));
+        ListTag show = new ListTag();
+        for (var e : timecode.songs.entrySet()) {
+            CompoundTag s = new CompoundTag();
+            s.putInt("Song", e.getKey());
+            ListTag list = new ListTag();
+            for (DmxTimecode.Cue c : e.getValue()) {
+                CompoundTag cue = new CompoundTag();
+                cue.putInt("Tick", c.tick());
+                DmxProgram.Settings look = new DmxProgram.Settings();
+                c.look().applyTo(look);
+                write(look, cue);
+                cue.remove("Scenes");
+                list.add(cue);
+            }
+            s.put("Cues", list);
+            show.add(s);
+        }
+        tag.put("Show", show);
+    }
+
+    /** What the screens and fixtures need: the settings and the recorder's state, not the whole show. */
+    private void writeShown(CompoundTag tag) {
         write(settings, tag);
+        tag.putBoolean("Recording", recording);
+        tag.putInt("Cues", cues);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         read(settings, tag);
+        recording = tag.getBoolean("Recording");
+        cues = tag.getInt("Cues");
+        if (tag.contains("Booth")) booth = net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Booth").orElse(null);
+        if (!tag.contains("Show")) return;
+        timecode.songs.clear();
+        for (Tag t : tag.getList("Show", Tag.TAG_COMPOUND)) {
+            CompoundTag s = (CompoundTag) t;
+            int songKey = s.getInt("Song");
+            for (Tag c : s.getList("Cues", Tag.TAG_COMPOUND)) {
+                CompoundTag cue = (CompoundTag) c;
+                DmxProgram.Settings look = new DmxProgram.Settings();
+                read(look, cue);
+                timecode.record(songKey, cue.getInt("Tick"), DmxTimecode.Look.of(look));
+            }
+        }
     }
 
     static void write(DmxProgram.Settings s, CompoundTag tag) {
@@ -212,7 +349,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
-        saveAdditional(tag, registries);
+        writeShown(tag);
         return tag;
     }
 }
