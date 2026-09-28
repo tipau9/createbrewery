@@ -78,6 +78,8 @@ public final class MusicPulse {
 
     static final class Track {
         final int source;
+        /** Its channel: OpenAL hands a freed source's number straight to the next sound, so this is what tells songs apart. */
+        final Channel channel;
         final float rate;
         final int perSlice;
         /** The buffers read and not yet played out, in the order the channel queued them. */
@@ -88,8 +90,10 @@ public final class MusicPulse {
         /** Frames read so far (sound thread). */
         long read;
         int kicks;
-        /** The gain the game set, and the one set here on top of it (-1: none yet). */
-        float gain, louder = -1f;
+        /** The gain the game set; what is set on the source is this times the mix. */
+        volatile float gain;
+        /** The game's later volume changes come through {@link #holdVolume}, not the source. */
+        volatile boolean holding;
         /** This song's own kick (times its deck gain), dying away like the global one: what a club light near it follows. */
         float pulse;
         /** This song's own beats and drops, heard unmixed so its tempo stays known while it is faded out. */
@@ -108,11 +112,15 @@ public final class MusicPulse {
         long lastBeat = -1, loopStart, loopLen;
         int loopSerial = Integer.MIN_VALUE;
         /** Played from a DJ booth deck (render thread): only then does it get the mixer channel. */
-        boolean deck;
+        volatile boolean deck;
         /** The song frame heard right now (the output latency taken off); -1 until known. */
         long heard = -1;
 
-        Track(int source, AudioFormat format) {
+        /** Game volume changes held since it started (see {@link #holdVolume}), for the log. */
+        volatile int held;
+
+        Track(Channel channel, int source, AudioFormat format) {
+            this.channel = channel;
             this.source = source;
             this.rate = format.getSampleRate();
             this.perSlice = Math.max(1, (int) (rate * KickDetector.SLICE));
@@ -155,10 +163,17 @@ public final class MusicPulse {
          * Played at a fixed spot in the world. Background music plays everywhere, and a moving
          * one (a minecart or backpack jukebox) is left to the game, which follows it about.
          */
+        /** Where a ticking sound was first heard: one that stays there (an Etched record) is placed, one that moves is not. */
+        private Vec3 origin;
+
         boolean placed() {
             SoundInstance s = sound;
-            return s != null && !(s instanceof net.minecraft.client.resources.sounds.TickableSoundInstance) && !s.isRelative() && s.getAttenuation() != SoundInstance.Attenuation.NONE
-                && (s.getX() != 0 || s.getY() != 0 || s.getZ() != 0);
+            if (s == null || s.isRelative() || s.getAttenuation() == SoundInstance.Attenuation.NONE || (s.getX() == 0 && s.getY() == 0 && s.getZ() == 0)) return false;
+            if (!(s instanceof net.minecraft.client.resources.sounds.TickableSoundInstance)) return true;
+            // Etched plays its records as ticking sounds that never move; a minecart's does move.
+            Vec3 at = new Vec3(s.getX(), s.getY(), s.getZ());
+            if (origin == null) origin = at;
+            return origin.distanceToSqr(at) < 1e-4;
         }
     }
 
@@ -203,7 +218,7 @@ public final class MusicPulse {
     /** On the sound thread, as a stream is attached to its channel (ChannelMixin). */
     public static AudioStream listen(AudioStream stream, Channel channel, int source) {
         if (stream.getFormat().getSampleSizeInBits() != 16) return stream;
-        Track track = new Track(source, stream.getFormat());
+        Track track = new Track(channel, source, stream.getFormat());
         starting.put(channel, track);
         return new Listening(stream, track);
     }
@@ -300,7 +315,7 @@ public final class MusicPulse {
                 if (t.phones != null) t.phones.delete();
                 t.phones = null;
                 tracks.remove(t);
-                LOGGER.info("MDMA heard {}: {} kicks", t.sound.getLocation(), t.kicks);
+                LOGGER.info("MDMA heard {}: {} kicks, {} volume changes held", t.sound.getLocation(), t.kicks, t.held);
                 continue;
             }
             deck(t, mc);
@@ -418,15 +433,38 @@ public final class MusicPulse {
         }
     }
 
+    /**
+     * Sound thread (ChannelMixin): the game setting a song's volume. Once the song is known the
+     * volume is only noted, and set here each frame - on a muted source it would otherwise leak out.
+     */
+    public static boolean holdVolume(Channel channel, float volume) {
+        for (Track t : tracks) {
+            if (t.channel == channel && t.holding) {
+                t.gain = volume;
+                t.held++;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Sound thread (ChannelMixin): a deck's pitch is the booth's, not the game's. */
+    public static boolean holdPitch(Channel channel) {
+        for (Track t : tracks) if (t.channel == channel && t.deck) return true;
+        return false;
+    }
+
     /** The gain the game gives the song (volume sliders, a moving sound); what is set here on top is told apart. */
     private static float baseGain(Track t) {
-        float now = AL10.alGetSourcef(t.source, AL10.AL_GAIN);
-        if (Math.abs(now - t.louder) > 1e-4f) t.gain = now;
+        if (!t.holding) {
+            // The volume the game started it at; later ones come through holdVolume.
+            t.gain = AL10.alGetSourcef(t.source, AL10.AL_GAIN);
+            t.holding = true;
+        }
         return t.gain;
     }
 
     private static void setGain(Track t, float gain) {
-        t.louder = gain;
         AL10.alSourcef(t.source, AL10.AL_MAX_GAIN, 2f);
         AL10.alSourcef(t.source, AL10.AL_GAIN, gain);
     }
@@ -434,11 +472,16 @@ public final class MusicPulse {
     /** A DJ booth deck playing this song: take its crossfader gain and pitch. */
     private static void deck(Track t, Minecraft mc) {
         t.mix = t.pitch = 1f;
-        t.deck = false;
-        if (mc.level == null || t.sound == null) return;
-        BlockPos at = BlockPos.containing(t.sound.getX(), t.sound.getY(), t.sound.getZ());
-        DjBoothBlockEntity dj = DjBoothBlockEntity.playingAt(mc.level, at);
-        if (dj == null) return;
+        DjBoothBlockEntity dj = null;
+        BlockPos at = null;
+        if (mc.level != null && t.sound != null) {
+            at = BlockPos.containing(t.sound.getX(), t.sound.getY(), t.sound.getZ());
+            dj = DjBoothBlockEntity.playingAt(mc.level, at);
+        }
+        if (dj == null) {
+            t.deck = false;
+            return;
+        }
         int deck = dj.deckAt(at);
         t.deck = true;
         t.mix = dj.deckGain(deck, mc.level.getGameTime());

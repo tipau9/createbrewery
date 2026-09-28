@@ -66,6 +66,9 @@ public class FogParticle extends TextureSheetParticle {
 
     private final float startSize, endSize, peakAlpha;
     private final float swirl;
+    /** Where it came out, and how far to the side of straight away from there it flows (radians). */
+    protected final double originX, originZ;
+    protected final float fan;
 
     FogParticle(ClientLevel level, double x, double y, double z, double xd, double yd, double zd, SpriteSet sprites) {
         super(level, x, y, z);
@@ -74,9 +77,12 @@ public class FogParticle extends TextureSheetParticle {
         this.zd = zd;
         // The box it collides with: wide and tall enough that the puff hovers instead of cutting into walls and floor.
         setSize(0.5f, 0.8f);
-        this.lifetime = 260 + random.nextInt(160);
+        this.lifetime = 420 + random.nextInt(220);
         this.startSize = 0.25f + random.nextFloat() * 0.1f;
-        this.endSize = 1.3f + random.nextFloat() * 0.6f;
+        this.endSize = 1.8f + random.nextFloat() * 0.8f;
+        this.originX = x;
+        this.originZ = z;
+        this.fan = (random.nextFloat() - 0.5f) * 2.6f;
         this.quadSize = startSize;
         this.peakAlpha = 0.16f + random.nextFloat() * 0.08f;
         this.alpha = 0f;
@@ -104,6 +110,8 @@ public class FogParticle extends TextureSheetParticle {
         xd += Mth.sin(t) * 0.0012 + (random.nextFloat() - 0.5f) * 0.003;
         zd += Mth.cos(t * 1.3f) * 0.0012 + (random.nextFloat() - 0.5f) * 0.003;
         yd += (random.nextFloat() - 0.5f) * 0.001;
+        // Cooled on the floor it flows out over it like a liquid, to the sides as much as ahead.
+        if (age > 25) spread(0.045, 6);
         stir();
 
         move(xd, yd, zd);
@@ -119,6 +127,20 @@ public class FogParticle extends TextureSheetParticle {
         float in = Math.min(1f, age / 12f);
         float out = Math.min(1f, (lifetime - age) / 90f);
         alpha = peakAlpha * in * out;
+    }
+
+    /**
+     * A gravity current: it keeps flowing away from where it came out, fanned out to the sides,
+     * slowing as the layer thins (half the {@code speed} at {@code halfway} blocks out), so the
+     * fog covers the floor instead of hanging as a ball in front of the machine.
+     */
+    protected void spread(double speed, double halfway) {
+        double ox = x - originX, oz = z - originZ, r = Math.sqrt(ox * ox + oz * oz);
+        if (r < 0.3) return;
+        double c = Mth.cos(fan), s = Mth.sin(fan);
+        double v = speed / (1 + r / halfway) * 0.05;
+        xd += (ox * c - oz * s) / r * v;
+        zd += (ox * s + oz * c) / r * v;
     }
 
     /** The local player pushes through the haze and drags some of it along. */

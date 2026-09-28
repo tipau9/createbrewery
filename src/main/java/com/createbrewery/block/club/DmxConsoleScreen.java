@@ -46,7 +46,8 @@ public class DmxConsoleScreen extends Screen {
     @Override
     protected void init() {
         left = (width - W) / 2;
-        top = (height - H) / 2;
+        // At the bottom of the screen, so the lights it runs stay in view above it.
+        top = Math.max(0, height - H - 6);
         for (int g = 0; g < DmxProgram.GROUPS; g++) {
             int group = g, x = left + 8 + g * COL;
             addRenderableWidget(new Swatch(x, top + 30, group));
@@ -132,7 +133,7 @@ public class DmxConsoleScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+        // No blur or dimming of the world: you work the desk watching the lights.
         g.fill(left, top, left + W, top + H, 0xE0101014);
         g.renderOutline(left, top, W, H, 0xFF3A3A48);
     }

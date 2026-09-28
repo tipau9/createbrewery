@@ -136,6 +136,7 @@ public class BreweryParticle extends TextureSheetParticle {
         event.registerSpriteSet(ModParticles.SMOKE.get(), s -> provider(s, SMOKE));
         event.registerSpriteSet(ModParticles.FOG.get(), FogParticle::provider);
         event.registerSpriteSet(ModParticles.CO2.get(), Co2Particle::provider);
+        event.registerSpriteSet(ModParticles.HAZE.get(), HazeParticle::provider);
         event.registerSpriteSet(ModParticles.COLD_SPARK.get(), s -> provider(s, COLD_SPARK));
     }
 }

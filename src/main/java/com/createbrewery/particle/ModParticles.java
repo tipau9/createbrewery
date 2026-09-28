@@ -40,6 +40,8 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FOG = simple("fog");
     /** A billow of a CO2 cannon's jet: fast, dense, swelling and sinking cold. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CO2 = simple("co2");
+    /** The hazer's fine mist: a thin jet out of the nozzle, and the faint veil it leaves in the room. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> HAZE = simple("haze");
     /** A cold spark of a spark fountain. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> COLD_SPARK = simple("cold_spark");
 
