@@ -36,8 +36,9 @@ public class HazerBlockEntity extends BlockEntity {
         fill = Math.max(0f, Math.min(1f, fill + (running ? 1f / (FILL_TIME * 20) : -1f / (CLEAR_TIME * 20))));
         if (fill > 0f) HAZY.put(pos.immutable(), this);
         else HAZY.remove(pos);
-        var player = net.minecraft.client.Minecraft.getInstance().player;
-        if (player == null || !player.position().closerThan(Vec3.atCenterOf(pos), REACH + 16)) return;
+        // Common code, no client classes: this block entity also loads on a dedicated server.
+        net.minecraft.world.entity.player.Player player = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, REACH + 16, false);
+        if (player == null) return;
         Direction facing = state.getValue(HazerBlock.FACING);
         Vec3 ahead = Vec3.atLowerCornerOf(facing.getNormal());
         Vec3 nozzle = Vec3.atCenterOf(pos).add(ahead.scale(0.45)).add(0, -0.15, 0);
