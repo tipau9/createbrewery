@@ -2,6 +2,8 @@
   "entries": [
     "createbrewery:barley_seeds_from_short_grass",
     "createbrewery:barley_seeds_from_tall_grass",
+    "createbrewery:hemp_seeds_from_short_grass",
+    "createbrewery:coca_seedling_from_jungle_leaves",
     "createbrewery:hop_cones_in_village_plains_house"
   ],
   "replace": false

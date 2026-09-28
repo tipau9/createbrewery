@@ -14,12 +14,16 @@ package com.createbrewery.drunk;
  * </ul>
  */
 public final class VoiceFx {
-    /** Strengths 0..1; {@code wahPulse} is where in its sweep the wah is. */
-    public record Params(float drunk, float wah, float wahPulse, float dull, float echo, float bright, float ring) {
-        public static final Params NONE = new Params(0, 0, 0, 0, 0, 0, 0);
+    /** Strengths 0..1; {@code wahPulse} is where in its sweep the wah is; {@code mic} is stage PA preamp boost. */
+    public record Params(float drunk, float wah, float wahPulse, float dull, float echo, float bright, float ring, float mic) {
+        public static final Params NONE = new Params(0, 0, 0, 0, 0, 0, 0, 0);
+
+        public Params(float drunk, float wah, float wahPulse, float dull, float echo, float bright, float ring) {
+            this(drunk, wah, wahPulse, dull, echo, bright, ring, 0f);
+        }
 
         boolean none() {
-            return drunk < 0.01f && wah < 0.01f && dull < 0.01f && echo < 0.01f && bright < 0.01f && ring < 0.01f;
+            return drunk < 0.01f && wah < 0.01f && dull < 0.01f && echo < 0.01f && bright < 0.01f && ring < 0.01f && mic < 0.01f;
         }
     }
 
@@ -29,7 +33,7 @@ public final class VoiceFx {
     private final float[] delay = new float[48000];
     private int write;
     private long samples;
-    private float lowDull, lowBright, bandLow, bandBand;
+    private float lowDull, lowBright, lowMic, bandLow, bandBand;
 
     /** Changes {@code pcm} in place. */
     public void process(short[] pcm, Params p) {
@@ -39,6 +43,7 @@ public final class VoiceFx {
         }
         float dullCut = coefficient(8000f - 6000f * Math.max(p.drunk * 0.6f, p.dull));
         float brightCut = coefficient(2000f);
+        float micCut = coefficient(2500f);
         float wahFreq = 400f + 1600f * p.wahPulse;
         float f = (float) (2 * Math.sin(Math.PI * wahFreq / RATE));
         for (int i = 0; i < pcm.length; i++, samples++) {
@@ -74,6 +79,19 @@ public final class VoiceFx {
             y = (y + p.bright * (y - lowBright)) * (1f + 0.3f * p.bright);
             // Not quite human.
             if (p.ring > 0.01f) y = y + (y * (float) Math.sin(2 * Math.PI * 70.0 * t) - y) * p.ring;
+
+            // Stage microphone pre-amp: presence boost around 2.5-5 kHz and PA level gain
+            if (p.mic > 0.01f) {
+                lowMic += micCut * (y - lowMic);
+                float highs = y - lowMic;
+                y = (y + 0.4f * p.mic * highs) * (1f + 1.0f * p.mic);
+                // Warm stage compressor/soft-limiter: boosts quiet speech, transparently compresses peaks
+                if (y > 0.6f) {
+                    y = 0.6f + (y - 0.6f) / (1f + (y - 0.6f));
+                } else if (y < -0.6f) {
+                    y = -0.6f + (y + 0.6f) / (1f - (y + 0.6f));
+                }
+            }
 
             write = (write + 1) % delay.length;
             pcm[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(y * 32768f)));

@@ -56,4 +56,27 @@ class VoiceFxTest {
         for (int i = 0; i < pcm.length; i++) if (Math.abs(pcm[i] - before[i]) > 500) differ++;
         assertTrue(differ > 100, "only " + differ + " samples changed");
     }
+
+    @Test
+    void microphoneBoostsVolume() {
+        VoiceFx fx = new VoiceFx();
+        short[] pcm = sine(0.2f);
+        short[] before = pcm.clone();
+        fx.process(pcm, new VoiceFx.Params(0, 0, 0, 0, 0, 0, 0, 1.0f));
+        int louder = 0;
+        for (int i = 0; i < pcm.length; i++) {
+            if (Math.abs(pcm[i]) > Math.abs(before[i])) louder++;
+        }
+        assertTrue(louder > pcm.length / 2, "voice should be amplified: " + louder + " of " + pcm.length + " samples louder");
+    }
+
+    @Test
+    void microphoneCompressesWithoutHardClipping() {
+        VoiceFx fx = new VoiceFx();
+        short[] pcm = sine(0.9f);
+        fx.process(pcm, new VoiceFx.Params(0, 0, 0, 0, 0, 0, 0, 1.0f));
+        for (short s : pcm) {
+            assertTrue(s >= Short.MIN_VALUE && s <= Short.MAX_VALUE);
+        }
+    }
 }

@@ -1,0 +1,19 @@
+{
+  "type": "create:milling",
+  "ingredients": [
+    {
+      "item": "createbrewery:weed_trim"
+    }
+  ],
+  "processing_time": 100,
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 0.35
+        }
+      },
+      "id": "createbrewery:weed"
+    }
+  ]
+}

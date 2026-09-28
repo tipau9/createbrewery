@@ -1,0 +1,14 @@
+{
+  "type": "create:milling",
+  "ingredients": [
+    {
+      "item": "createbrewery:dried_coca_leaf"
+    }
+  ],
+  "processing_time": 120,
+  "results": [
+    {
+      "id": "createbrewery:coca_meal"
+    }
+  ]
+}

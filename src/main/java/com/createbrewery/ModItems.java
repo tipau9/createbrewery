@@ -75,6 +75,113 @@ public class ModItems {
         .properties(p -> p.stacksTo(16))
         .register();
 
+    // Koks and Keta come off Create lines (see ModRecipeProvider): made-up steps, nothing like a real process.
+    public static final ItemEntry<net.minecraft.world.item.ItemNameBlockItem> COCA_SEEDLING = REGISTRATE
+        .<net.minecraft.world.item.ItemNameBlockItem>item("coca_seedling", p -> new net.minecraft.world.item.ItemNameBlockItem(ModBlocks.COCA_BUSH.get(), p) {
+            @Override
+            public void appendHoverText(net.minecraft.world.item.ItemStack stack, TooltipContext context,
+                                        java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+                tooltip.add(net.minecraft.network.chat.Component.translatable("item.createbrewery.coca_seedling.hint")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+            }
+        })
+        .lang("Kokasetzling")
+        .register();
+
+    public static final ItemEntry<Item> COCA_LEAF = REGISTRATE
+        .item("coca_leaf", Item::new)
+        .lang("Kokablätter")
+        .register();
+
+    public static final ItemEntry<Item> DRIED_COCA_LEAF = REGISTRATE
+        .item("dried_coca_leaf", Item::new)
+        .lang("Getrocknete Kokablätter")
+        .register();
+
+    public static final ItemEntry<Item> COCA_MEAL = REGISTRATE
+        .item("coca_meal", Item::new)
+        .lang("Kokamehl")
+        .register();
+
+    public static final ItemEntry<Item> COCA_PASTE = REGISTRATE
+        .item("coca_paste", Item::new)
+        .lang("Kokapaste")
+        .register();
+
+    public static final ItemEntry<Item> KOKS_BRICK = REGISTRATE
+        .item("koks_brick", Item::new)
+        .lang("Koks-Ziegel")
+        .register();
+
+    public static final ItemEntry<Item> AMETHYST_GRIT = REGISTRATE
+        .item("amethyst_grit", Item::new)
+        .lang("Amethystgrieß")
+        .register();
+
+    /** The Keta batch half-way through the precision lab (sequenced assembly). */
+    public static final ItemEntry<com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem> KETA_BATCH = REGISTRATE
+        .item("keta_batch", com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem::new)
+        .lang("Unfertige Keta-Charge")
+        .register();
+
+    public static final ItemEntry<Item> RUINED_BATCH = REGISTRATE
+        .item("ruined_batch", Item::new)
+        .lang("Verdorbene Charge")
+        .register();
+
+    public static final ItemEntry<Item> RAW_KETA = REGISTRATE
+        .item("raw_keta", Item::new)
+        .lang("Keta-Rohkristalle")
+        .register();
+
+    public static final ItemEntry<Item> KETA_CRYSTALS = REGISTRATE
+        .item("keta_crystals", Item::new)
+        .lang("Keta-Kristalle")
+        .register();
+
+    // The grow (see CannabisPlantBlock): seeds, the harvest and the steps to a smokable bud.
+    public static final ItemEntry<net.minecraft.world.item.ItemNameBlockItem> HEMP_SEEDS = REGISTRATE
+        .<net.minecraft.world.item.ItemNameBlockItem>item("hemp_seeds", p -> new net.minecraft.world.item.ItemNameBlockItem(ModBlocks.CANNABIS_PLANT.get(), p) {
+            @Override
+            public void appendHoverText(net.minecraft.world.item.ItemStack stack, TooltipContext context,
+                                        java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+                tooltip.add(net.minecraft.network.chat.Component.translatable("item.createbrewery.hemp_seeds.hint")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+            }
+        })
+        .lang("Hanfsamen")
+        .register();
+
+    public static final ItemEntry<Item> WET_BUDS = REGISTRATE
+        .item("wet_buds", Item::new)
+        .lang("Frische Blüten")
+        .register();
+
+    public static final ItemEntry<Item> SEEDED_BUDS = REGISTRATE
+        .item("seeded_buds", Item::new)
+        .lang("Samige Blüten")
+        .register();
+
+    public static final ItemEntry<Item> TRIMMED_BUDS = REGISTRATE
+        .item("trimmed_buds", Item::new)
+        .lang("Getrimmte Blüten")
+        .register();
+
+    public static final ItemEntry<Item> DRIED_BUDS = REGISTRATE
+        .item("dried_buds", Item::new)
+        .lang("Getrocknete Blüten")
+        .register();
+
+    public static final ItemEntry<Item> WEED_TRIM = REGISTRATE
+        .item("weed_trim", Item::new)
+        .lang("Verschnitt")
+        .register();
+
+    public static final ItemEntry<Item> HEMP_FIBER = REGISTRATE
+        .item("hemp_fiber", Item::new)
+        .lang("Hanffasern")
+        .register();
+
     public static final ItemEntry<Item> WEED = REGISTRATE
         .item("weed", Item::new)
         .lang("Cannabis-Blüte")
@@ -169,6 +276,27 @@ public class ModItems {
         .lang("Space-Brownie")
         .properties(p -> p.stacksTo(16).food(new net.minecraft.world.food.FoodProperties.Builder()
             .nutrition(3).saturationModifier(0.3f).alwaysEdible().build()))
+        .register();
+
+    public static final ItemEntry<com.createbrewery.item.TapedSpyglassItem> TAPED_SPYGLASS = REGISTRATE
+        .item("taped_spyglass", com.createbrewery.item.TapedSpyglassItem::new)
+        .lang("Abgeklebtes Fernglas")
+        .properties(p -> p.stacksTo(1))
+        .model((c, p) -> {}) // hand-written: models/item/taped_spyglass.json
+        .register();
+
+    public static final ItemEntry<com.createbrewery.item.ClubStampItem> CLUB_STAMP = REGISTRATE
+        .item("club_stamp", com.createbrewery.item.ClubStampItem::new)
+        .lang("Club-Stempel")
+        .properties(p -> p.stacksTo(1))
+        .model((c, p) -> {}) // hand-written: models/item/club_stamp.json
+        .register();
+
+    public static final ItemEntry<net.minecraft.world.item.SpawnEggItem> BOUNCER_SPAWN_EGG = REGISTRATE
+        .<net.minecraft.world.item.SpawnEggItem>item("bouncer_spawn_egg", p -> new net.minecraft.world.item.SpawnEggItem(
+            com.createbrewery.entity.ModEntities.BOUNCER.get(), 0x1A1A1A, 0xC8A030, p))
+        .lang("Türsteher Spawn-Ei")
+        .model((c, p) -> {}) // hand-written: models/item/bouncer_spawn_egg.json
         .register();
 
     public static void register() {}

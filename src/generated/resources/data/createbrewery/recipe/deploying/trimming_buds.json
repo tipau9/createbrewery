@@ -1,0 +1,21 @@
+{
+  "type": "create:deploying",
+  "ingredients": [
+    {
+      "item": "createbrewery:wet_buds"
+    },
+    {
+      "item": "minecraft:shears"
+    }
+  ],
+  "keep_held_item": true,
+  "results": [
+    {
+      "id": "createbrewery:trimmed_buds"
+    },
+    {
+      "chance": 0.5,
+      "id": "createbrewery:weed_trim"
+    }
+  ]
+}

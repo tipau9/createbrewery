@@ -43,6 +43,77 @@ public class ModBlocks {
         })
         .register();
 
+    // Its item is the seedling (ModItems.COCA_SEEDLING): one drops at any age, so a harvester that
+    // replants keeps its seedling and hands on only the leaves.
+    public static final BlockEntry<com.createbrewery.block.CocaBushBlock> COCA_BUSH = REGISTRATE
+        .block("coca_bush", com.createbrewery.block.CocaBushBlock::new)
+        .initialProperties(() -> Blocks.SWEET_BERRY_BUSH)
+        .blockstate((ctx, prov) -> prov.getVariantBuilder(ctx.getEntry()).forAllStates(state -> {
+            int age = state.getValue(com.createbrewery.block.CocaBushBlock.AGE);
+            return new ConfiguredModel[] {
+                new ConfiguredModel(prov.models()
+                    .withExistingParent(ctx.getName() + "_stage" + age, prov.mcLoc("block/cross"))
+                    .texture("cross", prov.modLoc("block/" + ctx.getName() + "_stage" + age))
+                    .renderType("minecraft:cutout"))
+            };
+        }))
+        .loot((p, b) -> p.add(b, net.minecraft.world.level.storage.loot.LootTable.lootTable()
+            .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ModItems.COCA_SEEDLING.get())))
+            .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                .when(net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(b)
+                    .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties()
+                        .hasProperty(com.createbrewery.block.CocaBushBlock.AGE, com.createbrewery.block.CocaBushBlock.MAX_AGE)))
+                .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ModItems.COCA_LEAF.get())
+                    .apply(net.minecraft.world.level.storage.loot.functions.SetItemCountFunction.setCount(
+                        net.minecraft.world.level.storage.loot.providers.number.UniformGenerator.between(
+                            com.createbrewery.block.CocaBushBlock.MIN_LEAVES, com.createbrewery.block.CocaBushBlock.MAX_LEAVES)))))))
+        .register();
+
+    // Its item is the seed (ModItems.HEMP_SEEDS). Young plants give their seed back; grown, a female
+    // gives buds (seeded ones if a male got to her), a male only fibre.
+    public static final BlockEntry<com.createbrewery.block.CannabisPlantBlock> CANNABIS_PLANT = REGISTRATE
+        .block("cannabis_plant", com.createbrewery.block.CannabisPlantBlock::new)
+        .initialProperties(() -> Blocks.WHEAT)
+        .blockstate((ctx, prov) -> prov.getVariantBuilder(ctx.getEntry()).forAllStates(state -> {
+            int age = state.getValue(com.createbrewery.block.CannabisPlantBlock.AGE);
+            String tex = age < com.createbrewery.block.CannabisPlantBlock.SEXED ? "cannabis_stage" + age
+                : (state.getValue(com.createbrewery.block.CannabisPlantBlock.FEMALE) ? "cannabis_female_stage" : "cannabis_male_stage") + age;
+            return new ConfiguredModel[] {
+                new ConfiguredModel(prov.models()
+                    .withExistingParent(tex, prov.mcLoc("block/cross"))
+                    .texture("cross", prov.modLoc("block/" + tex))
+                    .renderType("minecraft:cutout"))
+            };
+        }))
+        .loot((p, b) -> {
+            java.util.function.IntFunction<net.minecraft.world.level.storage.loot.predicates.LootItemCondition.Builder> age = a ->
+                net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(b)
+                    .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties().hasProperty(com.createbrewery.block.CannabisPlantBlock.AGE, a));
+            java.util.function.BiFunction<Boolean, Boolean, net.minecraft.world.level.storage.loot.predicates.LootItemCondition.Builder> kind = (female, seeded) ->
+                net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(b)
+                    .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties()
+                        .hasProperty(com.createbrewery.block.CannabisPlantBlock.FEMALE, female).hasProperty(com.createbrewery.block.CannabisPlantBlock.SEEDED, seeded));
+            java.util.function.Function<net.minecraft.world.level.ItemLike, net.minecraft.world.level.storage.loot.entries.LootPoolSingletonContainer.Builder<?>> some = item ->
+                net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(item).apply(net.minecraft.world.level.storage.loot.functions.SetItemCountFunction.setCount(
+                    net.minecraft.world.level.storage.loot.providers.number.UniformGenerator.between(3, 5)));
+            p.add(b, net.minecraft.world.level.storage.loot.LootTable.lootTable()
+                // Too young to tell: the seed back.
+                .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                    .when(net.minecraft.world.level.storage.loot.predicates.AnyOfCondition.anyOf(age.apply(0), age.apply(1), age.apply(2)))
+                    .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ModItems.HEMP_SEEDS.get())))
+                .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool().when(age.apply(com.createbrewery.block.CannabisPlantBlock.MAX_AGE)).when(kind.apply(true, false))
+                    .add(some.apply(ModItems.WET_BUDS.get())))
+                .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool().when(age.apply(com.createbrewery.block.CannabisPlantBlock.MAX_AGE)).when(kind.apply(true, true))
+                    .add(some.apply(ModItems.SEEDED_BUDS.get())))
+                .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                    .when(net.minecraft.world.level.storage.loot.predicates.AnyOfCondition.anyOf(age.apply(3), age.apply(4), age.apply(5)))
+                    .when(net.minecraft.world.level.storage.loot.predicates.AnyOfCondition.anyOf(kind.apply(false, false), kind.apply(false, true)))
+                    .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ModItems.HEMP_FIBER.get())
+                        .apply(net.minecraft.world.level.storage.loot.functions.SetItemCountFunction.setCount(net.minecraft.world.level.storage.loot.providers.number.UniformGenerator.between(1, 3))))));
+        })
+        .register();
+
     // simpleItem() is not decoration: without a BlockItem the fermenter cannot be placed
     // and Registrate's default loot table has nothing to drop.
     public static final BlockEntry<FermenterBlock> FERMENTER = REGISTRATE

@@ -35,7 +35,7 @@ public class MicrophoneBlockEntity extends SpeakerBlockEntity {
 
     void serverTick() {
         if (!(level instanceof ServerLevel server) || server.getGameTime() % 5 != 0) return;
-        if (!getBlockState().getValue(MicrophoneBlock.ON) || getBooth() == null) return;
+        if (!getBlockState().getValue(MicrophoneBlock.ON)) return;
         Vec3 head = Vec3.atCenterOf(worldPosition).add(0, 0.4, 0);
         List<ServerPlayer> talking = server.getEntitiesOfClass(ServerPlayer.class, new AABB(head, head).inflate(MicrophoneBlock.REACH),
             p -> p.getEyePosition().distanceToSqr(head) <= MicrophoneBlock.REACH * MicrophoneBlock.REACH);
@@ -45,10 +45,22 @@ public class MicrophoneBlockEntity extends SpeakerBlockEntity {
         for (ServerPlayer p : talking) ROUTES.put(p.getUUID(), new Route(server, speakers, until));
     }
 
-    /** Where the mic's voice comes out: its booth's speakers, the nearest first. */
+    /** Where the mic's voice comes out: its booth's speakers, the nearest first. Falls back to booth or mic itself. */
     List<Vec3> speakers() {
         List<Vec3> out = new ArrayList<>();
-        for (SpeakerBlockEntity s : linked(level, getBooth())) if (s.isSpeaker()) out.add(s.mouth());
+        BlockPos booth = getBooth();
+        if (booth != null) {
+            for (SpeakerBlockEntity s : linked(level, booth)) {
+                if (s.isSpeaker()) out.add(s.mouth());
+            }
+        }
+        if (out.isEmpty()) {
+            if (booth != null) {
+                out.add(Vec3.atCenterOf(booth).add(0, 0.5, 0));
+            } else {
+                out.add(Vec3.atCenterOf(worldPosition).add(0, 0.4, 0));
+            }
+        }
         out.sort(java.util.Comparator.comparingDouble(p -> p.distanceToSqr(Vec3.atCenterOf(worldPosition))));
         return List.copyOf(out.size() > MAX_SPEAKERS ? out.subList(0, MAX_SPEAKERS) : out);
     }

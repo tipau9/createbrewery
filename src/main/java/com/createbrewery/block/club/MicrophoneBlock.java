@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
@@ -46,6 +47,24 @@ public class MicrophoneBlock extends SpeakerBlock {
         return SHAPE;
     }
 
+    /** Whether a player is currently standing in front of a switched-on microphone. */
+    public static boolean isAtActiveMicrophone(@Nullable Player player) {
+        if (player == null || player.level() == null) return false;
+        Vec3 eye = player.getEyePosition();
+        BlockPos center = BlockPos.containing(eye);
+        int r = (int) Math.ceil(REACH);
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-r, -r, -r), center.offset(r, r, r))) {
+            BlockState state = player.level().getBlockState(pos);
+            if (state.is(com.createbrewery.ModBlocks.MICROPHONE.get()) && state.hasProperty(ON) && state.getValue(ON)) {
+                Vec3 head = Vec3.atCenterOf(pos).add(0, 0.4, 0);
+                if (eye.distanceToSqr(head) <= REACH * REACH) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         boolean on = !state.getValue(ON);
@@ -54,8 +73,8 @@ public class MicrophoneBlock extends SpeakerBlock {
             level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, on ? 1.3f : 0.8f);
         } else {
             boolean linked = level.getBlockEntity(pos) instanceof SpeakerBlockEntity mic && mic.getBooth() != null;
-            player.displayClientMessage(Component.translatable(!linked ? "createbrewery.mic.unlinked"
-                : on ? "createbrewery.mic.on" : "createbrewery.mic.off"), true);
+            player.displayClientMessage(Component.translatable(!on ? "createbrewery.mic.off"
+                : linked ? "createbrewery.mic.on" : "createbrewery.mic.on_standalone"), true);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

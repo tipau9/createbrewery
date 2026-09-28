@@ -1,0 +1,86 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "minecraft:glass_bottle"
+  },
+  "loops": 5,
+  "results": [
+    {
+      "chance": 70.0,
+      "id": "createbrewery:raw_keta"
+    },
+    {
+      "chance": 30.0,
+      "id": "createbrewery:ruined_batch"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:keta_batch"
+        },
+        {
+          "item": "createbrewery:amethyst_grit"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:keta_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createbrewery:keta_batch"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 250,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:keta_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:keta_batch"
+        },
+        {
+          "item": "create:precision_mechanism"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "createbrewery:keta_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createbrewery:keta_batch"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:keta_batch"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createbrewery:keta_batch"
+  }
+}

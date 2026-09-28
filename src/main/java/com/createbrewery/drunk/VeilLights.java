@@ -28,6 +28,10 @@ final class VeilLights {
 
     /** Each frame, on the render thread. */
     static void frame(LocalPlayer player, float partial) {
+        if (DrunkClient.shaderPack()) {
+            clear();
+            return;
+        }
         float club = RollClient.beat * DrunkClient.rolling * DrunkClient.screen();
         float glow = DmtClient.beyond * DrunkClient.screen();
         // Freed only once the drug is over: switching Veil's light buffers on and off recompiles

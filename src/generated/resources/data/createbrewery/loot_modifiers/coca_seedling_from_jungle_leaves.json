@@ -1,0 +1,15 @@
+{
+  "type": "createbrewery:add_item",
+  "conditions": [
+    {
+      "condition": "neoforge:loot_table_id",
+      "loot_table_id": "minecraft:blocks/jungle_leaves"
+    },
+    {
+      "chance": 0.025,
+      "condition": "minecraft:random_chance"
+    }
+  ],
+  "count": 1,
+  "item": "createbrewery:coca_seedling"
+}

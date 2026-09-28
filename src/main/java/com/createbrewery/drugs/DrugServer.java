@@ -20,6 +20,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -89,7 +90,7 @@ public final class DrugServer {
     public static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> SWEETS = net.minecraft.tags.TagKey.create(
         Registries.ITEM, ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "sweets"));
     /** A joint lasts this many hits (its durability); each hit is one amplifier step of the high. */
-    public static final int HITS_PER_JOINT = 6;
+    public static final int HITS_PER_JOINT = 10;
     /** Three joints' worth of hits in the body at most. */
     private static final int MAX_HITS = 3 * HITS_PER_JOINT;
 
@@ -116,7 +117,7 @@ public final class DrugServer {
         return weed == null ? 0f : (weed.getAmplifier() + 1) / (float) HITS_PER_JOINT;
     }
 
-    /** One hit of a joint: a sixth of it. The high builds hit by hit, and so does the nausea. */
+    /** One hit of a joint: a tenth of it. The high builds hit by hit, and so does the nausea. */
     public static void hit(Player player) {
         MobEffectInstance before = player.getEffect(ModEffects.WEED_HIGH);
         int hits = before == null ? 0 : Math.min(MAX_HITS - 1, before.getAmplifier() + 1);
@@ -130,6 +131,8 @@ public final class DrugServer {
         if (DrunkServer.state(player).blood >= Intoxication.MERRY) sick = Math.max(sick, 0.15f + 0.1f * joints);
         if (player.getRandom().nextFloat() < sick) greenOut(player);
         smoke(player);
+        // Weed significantly relieves alcohol hangover per hit
+        com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.HANGOVER, 800);
         // The spit dries up: Pappmaul until you drink something.
         player.addEffect(new MobEffectInstance(ModEffects.COTTONMOUTH, COTTONMOUTH_TICKS, 0, false, false, true));
     }
@@ -291,13 +294,6 @@ public final class DrugServer {
         if (!(entity instanceof Player player)) return;
         float felt = DrugEffect.felt(player, ModEffects.WEED_HIGH);
         player.causeFoodExhaustion(0.2f * felt); // the munchies
-        // Giggle fits, about once a minute when properly high - and laughing is contagious.
-        boolean company = !player.level().getEntitiesOfClass(Player.class, player.getBoundingBox().inflate(8.0),
-            p -> p != player).isEmpty();
-        if (player.getRandom().nextFloat() < 0.015f * felt * (company ? 2f : 1f)) {
-            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.GIGGLE.get(),
-                SoundSource.PLAYERS, 1.0f, 0.95f + player.getRandom().nextFloat() * 0.1f);
-        }
         // Alcohol after weed is gentler than weed after alcohol (see hit), but not harmless; and
         // with two joints in you the nausea can come any time.
         float joints = joints(player);
@@ -325,16 +321,49 @@ public final class DrugServer {
         }
     }
 
+    /** Munchies: players can eat any food even when completely full. */
+    @SubscribeEvent
+    public static void onRightClickFood(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
+        Player player = event.getEntity();
+        if (!player.hasEffect(ModEffects.WEED_HIGH)) return;
+        ItemStack stack = event.getItemStack();
+        net.minecraft.world.food.FoodProperties food = stack.getFoodProperties(player);
+        if (food != null && !player.canEat(food.canAlwaysEat())) {
+            player.startUsingItem(event.getHand());
+            event.setCancellationResult(net.minecraft.world.InteractionResult.CONSUME);
+            event.setCanceled(true);
+        }
+    }
+
     /**
      * Cake is eaten off the block, not from the hand, and only after this event: the slice itself
      * feeds as usual (extra food here would fill you up before vanilla takes the slice).
+     * With munchies, players can eat cake even when completely full.
      */
     @SubscribeEvent
     public static void onEatCake(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
         Player player = event.getEntity();
         if (player.level().isClientSide || event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND
-            || !player.hasEffect(ModEffects.WEED_HIGH) || !player.canEat(false)
+            || !player.hasEffect(ModEffects.WEED_HIGH)
             || !(player.level().getBlockState(event.getPos()).getBlock() instanceof net.minecraft.world.level.block.CakeBlock)) {
+            return;
+        }
+        if (!player.canEat(false)) {
+            net.minecraft.core.BlockPos pos = event.getPos();
+            net.minecraft.world.level.block.state.BlockState state = player.level().getBlockState(pos);
+            player.awardStat(net.minecraft.stats.Stats.EAT_CAKE_SLICE);
+            player.getFoodData().eat(2, 0.1F);
+            bliss(player);
+            int bites = state.getValue(net.minecraft.world.level.block.CakeBlock.BITES);
+            player.level().gameEvent(player, net.minecraft.world.level.gameevent.GameEvent.EAT, pos);
+            if (bites < 6) {
+                player.level().setBlock(pos, state.setValue(net.minecraft.world.level.block.CakeBlock.BITES, bites + 1), 3);
+            } else {
+                player.level().removeBlock(pos, false);
+                player.level().gameEvent(player, net.minecraft.world.level.gameevent.GameEvent.BLOCK_DESTROY, pos);
+            }
+            event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+            event.setCanceled(true);
             return;
         }
         bliss(player);
@@ -588,18 +617,14 @@ public final class DrugServer {
     }
 
     /**
-     * Weed, every second, outside the effect ticks (effects may be swapped here): sprinting is
-     * twice the effort for a heavy body, and sitting or crouching down lets a hangover and the
-     * nausea pass twice as fast.
+     * Weed, every second, outside the effect ticks: a joint significantly relieves
+     * an alcohol hangover and passes nausea faster.
      */
     public static void weedBody(Player player) {
         float felt = DrugEffect.felt(player, ModEffects.WEED_HIGH);
         if (felt <= 0f) return;
-        if (player.isSprinting()) player.causeFoodExhaustion(0.55f * felt); // about what sprinting costs anyway
-        if (player.isPassenger() || player.isShiftKeyDown()) {
-            com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.HANGOVER, 20);
-            com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.GREENING_OUT, 20);
-        }
+        com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.HANGOVER, 40);
+        com.createbrewery.event.BreweryCommonEvents.reduceDuration(player, ModEffects.GREENING_OUT, 20);
     }
 
     /**

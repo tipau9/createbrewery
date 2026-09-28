@@ -38,6 +38,10 @@ public class ModLootModifiers {
     // pool entry).
     private static final float GRASS_SEED_CHANCE = 0.0625F;
     private static final float CHEST_HOP_CONE_CHANCE = 0.3F;
+    /** Hemp seeds are rarer than barley in the grass: a few to start a grow, then it seeds itself. */
+    private static final float HEMP_SEED_CHANCE = 0.0125F;
+    /** A seedling now and then out of jungle leaves: the start of a plantation, not a harvest. */
+    private static final float COCA_SEEDLING_CHANCE = 0.025F;
 
     public static void register(IEventBus modEventBus) {
         GLM_SERIALIZERS.register(modEventBus);
@@ -61,6 +65,20 @@ public class ModLootModifiers {
                         LootItemRandomChanceCondition.randomChance(GRASS_SEED_CHANCE).build()
                     },
                     ModItems.BARLEY_SEEDS.get(), 1));
+
+                add("hemp_seeds_from_short_grass", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/short_grass")).build(),
+                        LootItemRandomChanceCondition.randomChance(HEMP_SEED_CHANCE).build()
+                    },
+                    ModItems.HEMP_SEEDS.get(), 1));
+
+                add("coca_seedling_from_jungle_leaves", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/jungle_leaves")).build(),
+                        LootItemRandomChanceCondition.randomChance(COCA_SEEDLING_CHANCE).build()
+                    },
+                    ModItems.COCA_SEEDLING.get(), 1));
 
                 add("hop_cones_in_village_plains_house", new AddItemLootModifier(
                     new LootItemCondition[] {

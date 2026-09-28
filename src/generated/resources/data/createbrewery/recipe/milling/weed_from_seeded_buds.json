@@ -1,0 +1,27 @@
+{
+  "type": "create:milling",
+  "ingredients": [
+    {
+      "item": "createbrewery:seeded_buds"
+    }
+  ],
+  "processing_time": 100,
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 0.6
+        }
+      },
+      "id": "createbrewery:weed"
+    },
+    {
+      "count": 2,
+      "id": "createbrewery:hemp_seeds"
+    },
+    {
+      "chance": 0.5,
+      "id": "createbrewery:hemp_seeds"
+    }
+  ]
+}

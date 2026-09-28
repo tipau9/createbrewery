@@ -1,0 +1,190 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:any_of",
+          "terms": [
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "age": "0"
+              }
+            },
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "age": "1"
+              }
+            },
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "age": "2"
+              }
+            }
+          ]
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "createbrewery:hemp_seeds"
+        }
+      ],
+      "rolls": 1.0
+    },
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "block": "createbrewery:cannabis_plant",
+          "condition": "minecraft:block_state_property",
+          "properties": {
+            "age": "5"
+          }
+        },
+        {
+          "block": "createbrewery:cannabis_plant",
+          "condition": "minecraft:block_state_property",
+          "properties": {
+            "female": "true",
+            "seeded": "false"
+          }
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "add": false,
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 5.0,
+                "min": 3.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "createbrewery:wet_buds"
+        }
+      ],
+      "rolls": 1.0
+    },
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "block": "createbrewery:cannabis_plant",
+          "condition": "minecraft:block_state_property",
+          "properties": {
+            "age": "5"
+          }
+        },
+        {
+          "block": "createbrewery:cannabis_plant",
+          "condition": "minecraft:block_state_property",
+          "properties": {
+            "female": "true",
+            "seeded": "true"
+          }
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "add": false,
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 5.0,
+                "min": 3.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "createbrewery:seeded_buds"
+        }
+      ],
+      "rolls": 1.0
+    },
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:any_of",
+          "terms": [
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "age": "3"
+              }
+            },
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "age": "4"
+              }
+            },
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "age": "5"
+              }
+            }
+          ]
+        },
+        {
+          "condition": "minecraft:any_of",
+          "terms": [
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "female": "false",
+                "seeded": "false"
+              }
+            },
+            {
+              "block": "createbrewery:cannabis_plant",
+              "condition": "minecraft:block_state_property",
+              "properties": {
+                "female": "false",
+                "seeded": "true"
+              }
+            }
+          ]
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "add": false,
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 3.0,
+                "min": 1.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "createbrewery:hemp_fiber"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "createbrewery:blocks/cannabis_plant"
+}

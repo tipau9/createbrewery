@@ -390,10 +390,9 @@ void main() {
     // Clamped, so small bright lights do not get a dark ring around them.
     col += clamp((col - ring(uv, px * 7.0)) * 0.6, -0.01, 0.16) * High;
     lum = dot(col, vec3(0.299, 0.587, 0.114));
-    float sat = length(col - vec3(lum));
-    col = mix(vec3(lum), col, 1.0 + (0.9 - 1.0 * clamp(sat, 0.0, 0.5)) * High); // vibrance: dull colours gain most
-    col *= mix(vec3(1.0), vec3(1.05, 1.02, 0.94), High); // summer warmth
-    col += (1.0 - col) * col * 0.12 * High; // shadows open up a little
+    col = mix(vec3(lum), col, 1.0 + 1.7 * High); // heavily oversaturated, vibrant and rich colours
+    col *= mix(vec3(1.0), vec3(1.14, 1.07, 0.91), High); // summer golden warmth
+    col += (1.0 - col) * col * 0.20 * High; // deep contrast
     float dream = smoothstep(0.25, 0.75, length(d)) * High;
     col = mix(col, ring(uv, px * 4.0), 0.45 * dream);
     col.r = mix(col.r, tap(uv + d * 0.006).r, 0.5 * dream);

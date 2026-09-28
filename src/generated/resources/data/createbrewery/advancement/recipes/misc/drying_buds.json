@@ -1,32 +1,32 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_hop_cones": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "createbrewery:drying_buds"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_trimmed_buds": {
       "conditions": {
         "items": [
           {
-            "items": "createbrewery:hop_cones"
+            "items": "createbrewery:trimmed_buds"
           }
         ]
       },
       "trigger": "minecraft:inventory_changed"
-    },
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "createbrewery:weed"
-      },
-      "trigger": "minecraft:recipe_unlocked"
     }
   },
   "requirements": [
     [
       "has_the_recipe",
-      "has_hop_cones"
+      "has_trimmed_buds"
     ]
   ],
   "rewards": {
     "recipes": [
-      "createbrewery:weed"
+      "createbrewery:drying_buds"
     ]
   }
 }

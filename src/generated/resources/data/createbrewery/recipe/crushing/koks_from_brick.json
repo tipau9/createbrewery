@@ -1,0 +1,38 @@
+{
+  "type": "create:crushing",
+  "ingredients": [
+    {
+      "item": "createbrewery:koks_brick"
+    }
+  ],
+  "processing_time": 200,
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "count": 2,
+      "id": "createbrewery:koks"
+    },
+    {
+      "chance": 0.5,
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "id": "createbrewery:koks"
+    },
+    {
+      "chance": 0.35,
+      "components": {
+        "createbrewery:purity": {
+          "strength": 0.55
+        }
+      },
+      "id": "createbrewery:koks"
+    }
+  ]
+}

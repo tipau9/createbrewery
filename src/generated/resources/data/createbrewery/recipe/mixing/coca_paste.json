@@ -1,0 +1,53 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "heated",
+  "ingredients": [
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "item": "createbrewery:coca_meal"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "minecraft:water"
+    }
+  ],
+  "processing_time": 600,
+  "results": [
+    {
+      "id": "createbrewery:coca_paste"
+    }
+  ]
+}

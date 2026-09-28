@@ -25,6 +25,7 @@ public class CreateBrewery {
         ModCreativeTabs.register(modEventBus);
         com.createbrewery.effect.ModEffects.register(modEventBus);
         com.createbrewery.drugs.HallucinationEntity.register(modEventBus);
+        com.createbrewery.entity.ModEntities.register(modEventBus);
         com.createbrewery.drugs.Purity.register(modEventBus);
         modEventBus.addListener((net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) ->
             event.enqueueWork(com.createbrewery.drugs.TanCompat::init));
@@ -205,6 +206,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.speaker.unlinked", "Not linked - right-click a DJ booth with speakers in hand");
         REGISTRATE.addRawLang("createbrewery.speaker.status", "Plays the DJ booth at %s, %s, %s");
         REGISTRATE.addRawLang("createbrewery.speaker.lore", "Linked to DJ booth at %s, %s, %s");
+        REGISTRATE.addRawLang("item.createbrewery.hemp_seeds.hint", "Auf bewässertem Ackerboden, bei viel Licht (Sonne oder Lampen). Die Hälfte wird männlich: früh raus, sonst bestäuben sie die Weibchen");
+        REGISTRATE.addRawLang("item.createbrewery.coca_seedling.hint", "Wächst nur im Dschungel, langsam: etwa 4 Tage bis zur Ernte");
         REGISTRATE.addRawLang("createbrewery.dmx.console", "DMX Console");
         REGISTRATE.addRawLang("createbrewery.dmx.linked", "Fixtures linked to this console - place them around your club");
         REGISTRATE.addRawLang("createbrewery.dmx.relinked", "Fixture linked to the console");
@@ -315,6 +318,7 @@ public class CreateBrewery {
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::addLayers);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::registerRenderers);
+            modEventBus.addListener(com.createbrewery.drunk.DrunkClient::registerLayerDefinitions);
             modEventBus.addListener(com.createbrewery.particle.BreweryParticle::register);
             modEventBus.addListener(com.createbrewery.particle.FogParticle::registerShaders);
         }

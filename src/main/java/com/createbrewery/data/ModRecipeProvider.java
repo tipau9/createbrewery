@@ -8,6 +8,13 @@ import com.createbrewery.ModRecipeTypes;
 import com.createbrewery.recipe.FermentingRecipe;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
+import com.simibubi.create.api.data.recipe.CompactingRecipeGen;
+import com.simibubi.create.api.data.recipe.CrushingRecipeGen;
+import com.simibubi.create.api.data.recipe.DeployingRecipeGen;
+import com.simibubi.create.api.data.recipe.SequencedAssemblyRecipeGen;
+import com.createbrewery.drugs.Purity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
 import com.simibubi.create.api.data.recipe.FillingRecipeGen;
 import com.simibubi.create.api.data.recipe.HauntingRecipeGen;
 import com.simibubi.create.api.data.recipe.MillingRecipeGen;
@@ -59,6 +66,10 @@ public class ModRecipeProvider {
         generator.addProvider(server, new Basin(output, registries));
         generator.addProvider(server, new Milling(output, registries));
         generator.addProvider(server, new Pressing(output, registries));
+        generator.addProvider(server, new Crushing(output, registries));
+        generator.addProvider(server, new Compacting(output, registries));
+        generator.addProvider(server, new Deploying(output, registries));
+        generator.addProvider(server, new KetaLab(output, registries));
         generator.addProvider(server, new Filling(output, registries));
         generator.addProvider(server, new Fermenting(output, registries));
         generator.addProvider(server, new Haunting(output, registries));
@@ -66,6 +77,13 @@ public class ModRecipeProvider {
     }
 
     /** Basin (Mixer) recipes: steeping, mashing, the boil, yeast culture. */
+    /** A made batch: its strength in normal doses is known, not rolled like a street deal (see Purity). */
+    static ItemStack made(ItemLike item, int count, float strength) {
+        ItemStack stack = new ItemStack(item, count);
+        stack.set(Purity.PURITY.get(), new Purity(strength, false, false));
+        return stack;
+    }
+
     public static class Basin extends MixingRecipeGen {
         public Basin(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
             super(output, registries, CreateBrewery.MOD_ID);
@@ -116,6 +134,21 @@ public class ModRecipeProvider {
                 .duration(200));
 
             // The Apotheke: made-up game recipes, nothing like a real process.
+            // Koks: twelve portions of milled leaf leached out in a heated basin for one paste - a
+            // stack of leaves comes to only a handful of lines.
+            create("coca_paste", b -> {
+                for (int i = 0; i < 12; i++) b.require(ModItems.COCA_MEAL.get());
+                return b.require(Fluids.WATER, 1000)
+                    .output(ModItems.COCA_PASTE.get())
+                    .requiresHeat(HeatCondition.HEATED)
+                    .duration(600);
+            });
+            // Keta: the lab's raw batches crystallised over a superheated burner.
+            create("keta_crystals", b -> b
+                .require(ModItems.RAW_KETA.get()).require(ModItems.RAW_KETA.get())
+                .output(ModItems.KETA_CRYSTALS.get(), 3)
+                .requiresHeat(HeatCondition.SUPERHEATED)
+                .duration(800));
             create("heroin", b -> b
                 .require(Items.POPPY).require(Items.POPPY).require(Items.POPPY)
                 .require(Items.GLASS_BOTTLE)
@@ -159,6 +192,31 @@ public class ModRecipeProvider {
         public Milling(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
             super(output, registries, CreateBrewery.MOD_ID);
 
+            // Weed: trimmed and dried buds ground at a full dose; seeded ones weaker, and their seeds
+            // come out in the grinder; trim makes a weak bag.
+            create("weed_from_buds", b -> b
+                .require(ModItems.DRIED_BUDS.get())
+                .output(made(ModItems.WEED.get(), 2, 1.0f))
+                .duration(100));
+            create("weed_from_seeded_buds", b -> b
+                .require(ModItems.SEEDED_BUDS.get())
+                .output(made(ModItems.WEED.get(), 1, 0.6f))
+                .output(ModItems.HEMP_SEEDS.get(), 2)
+                .output(0.5f, ModItems.HEMP_SEEDS.get())
+                .duration(100));
+            create("weed_from_trim", b -> b
+                .require(ModItems.WEED_TRIM.get())
+                .output(made(ModItems.WEED.get(), 1, 0.35f))
+                .duration(100));
+            create("coca_meal", b -> b
+                .require(ModItems.DRIED_COCA_LEAF.get())
+                .output(ModItems.COCA_MEAL.get())
+                .duration(120));
+            // Lab Keta is pharmacy-steady: a full dose each.
+            create("keta_milling", b -> b
+                .require(ModItems.KETA_CRYSTALS.get())
+                .output(made(ModItems.KETA.get(), 2, 1.0f))
+                .duration(100));
             create("milling_malt", b -> b
                 .require(ModItems.MALT.get())
                 .output(ModItems.GRIST.get(), 2)
@@ -187,6 +245,74 @@ public class ModRecipeProvider {
     }
 
     /** Spout: bottles and cans get filled with beer. */
+    public static class Crushing extends CrushingRecipeGen {
+        public Crushing(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            super(output, registries, CreateBrewery.MOD_ID);
+
+            // The grade split: clean lines at a full dose, and now and then crumbs with residue in them.
+            create("koks_from_brick", b -> b
+                .require(ModItems.KOKS_BRICK.get())
+                .output(made(ModItems.KOKS.get(), 2, 1.0f))
+                .output(0.5f, made(ModItems.KOKS.get(), 1, 1.0f))
+                .output(0.35f, made(ModItems.KOKS.get(), 1, 0.55f))
+                .duration(200));
+            create("amethyst_grit", b -> b
+                .require(Items.AMETHYST_SHARD)
+                .output(ModItems.AMETHYST_GRIT.get(), 2)
+                .output(0.25f, ModItems.AMETHYST_GRIT.get())
+                .duration(150));
+        }
+    }
+
+    public static class Deploying extends DeployingRecipeGen {
+        public Deploying(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            super(output, registries, CreateBrewery.MOD_ID);
+
+            // Trimming: a deployer with shears takes the leaf off the fresh buds.
+            create("trimming_buds", b -> b
+                .require(ModItems.WET_BUDS.get())
+                .require(Items.SHEARS)
+                .toolNotConsumed()
+                .output(ModItems.TRIMMED_BUDS.get())
+                .output(0.5f, ModItems.WEED_TRIM.get()));
+        }
+    }
+
+    public static class Compacting extends CompactingRecipeGen {
+        public Compacting(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            super(output, registries, CreateBrewery.MOD_ID);
+
+            // Two pastes pressed hard into one wrapped brick (press over a basin).
+            create("koks_brick", b -> b
+                .require(ModItems.COCA_PASTE.get()).require(ModItems.COCA_PASTE.get())
+                .output(ModItems.KOKS_BRICK.get()));
+        }
+    }
+
+    /**
+     * The Keta precision lab: a glass flask through five rounds of grit, water, the precision
+     * mechanism's fine work and the press. Three batches in ten come out spoiled.
+     */
+    public static class KetaLab extends SequencedAssemblyRecipeGen {
+        public KetaLab(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+            super(output, registries, CreateBrewery.MOD_ID);
+
+            create("keta_batch", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .transitionTo(ModItems.KETA_BATCH.get())
+                .loops(5)
+                .addStep(com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe::new,
+                    s -> s.require(ModItems.AMETHYST_GRIT.get()))
+                .addStep(com.simibubi.create.content.fluids.transfer.FillingRecipe::new,
+                    s -> s.require(Fluids.WATER, 250))
+                .addStep(com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe::new,
+                    s -> s.require(AllItems.PRECISION_MECHANISM.get()).toolNotConsumed())
+                .addStep(com.simibubi.create.content.kinetics.press.PressingRecipe::new, s -> s)
+                .addOutput(ModItems.RAW_KETA.get(), 70)
+                .addOutput(ModItems.RUINED_BATCH.get(), 30));
+        }
+    }
+
     public static class Filling extends FillingRecipeGen {
         public Filling(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
             super(output, registries, CreateBrewery.MOD_ID);
@@ -265,29 +391,26 @@ public class ModRecipeProvider {
                 .unlockedBy("has_sugar", has(Items.SUGAR))
                 .save(output, CreateBrewery.ID("ibuprofen"));
 
-            // Made-up game recipes, nothing like a real process.
-            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.KOKS.get(), 2)
-                .requires(Items.SUGAR)
-                .requires(Items.BONE_MEAL)
-                .requires(Items.GLOWSTONE_DUST)
-                .unlockedBy("has_glowstone_dust", has(Items.GLOWSTONE_DUST))
-                .save(output, CreateBrewery.ID("koks"));
-            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.KETA.get(), 2)
-                .requires(Items.AMETHYST_SHARD)
-                .requires(Items.SUGAR)
-                .requires(Items.SLIME_BALL)
-                .unlockedBy("has_amethyst_shard", has(Items.AMETHYST_SHARD))
-                .save(output, CreateBrewery.ID("keta"));
-            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.WEED.get(), 1)
-                .requires(ModItems.HOP_CONES.get())
-                .requires(Items.DRIED_KELP)
-                .unlockedBy("has_hop_cones", has(ModItems.HOP_CONES.get()))
-                .save(output, CreateBrewery.ID("weed"));
-            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.JOINT.get(), 1)
-                .requires(Items.PAPER)
-                .requires(ModItems.WEED.get())
-                .unlockedBy("has_weed", has(ModItems.WEED.get()))
-                .save(output, CreateBrewery.ID("joint"));
+            // Drying the coca leaves: smoking, so an encased fan through a campfire does it in bulk.
+            SimpleCookingRecipeBuilder.smoking(Ingredient.of(ModItems.COCA_LEAF.get()), RecipeCategory.MISC,
+                    ModItems.DRIED_COCA_LEAF.get(), 0.1f, 100)
+                .unlockedBy("has_coca_leaf", has(ModItems.COCA_LEAF.get()))
+                .save(output, CreateBrewery.ID("drying_coca_leaf"));
+            // Strecken: one Koks and 1..3 sugar, weaker by as much (KoksCutRecipe).
+            net.minecraft.data.recipes.SpecialRecipeBuilder.special(com.createbrewery.drugs.KoksCutRecipe::new)
+                .save(output, CreateBrewery.ID("koks_cut"));
+            // Drying the trimmed buds: low heat and moving air, an encased fan through a campfire.
+            SimpleCookingRecipeBuilder.smoking(Ingredient.of(ModItems.TRIMMED_BUDS.get()), RecipeCategory.MISC,
+                    ModItems.DRIED_BUDS.get(), 0.1f, 200)
+                .unlockedBy("has_trimmed_buds", has(ModItems.TRIMMED_BUDS.get()))
+                .save(output, CreateBrewery.ID("drying_buds"));
+            // A joint as strong as the weed rolled into it (RollJointRecipe).
+            net.minecraft.data.recipes.SpecialRecipeBuilder.special(com.createbrewery.drugs.RollJointRecipe::new)
+                .save(output, CreateBrewery.ID("roll_joint"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, Items.STRING, 1)
+                .requires(ModItems.HEMP_FIBER.get(), 3)
+                .unlockedBy("has_hemp_fiber", has(ModItems.HEMP_FIBER.get()))
+                .save(output, CreateBrewery.ID("string_from_hemp"));
             ShapelessRecipeBuilder.shapeless(RecipeCategory.FOOD, ModItems.SPACE_BROWNIE.get(), 2)
                 .requires(Items.WHEAT)
                 .requires(Items.COCOA_BEANS)

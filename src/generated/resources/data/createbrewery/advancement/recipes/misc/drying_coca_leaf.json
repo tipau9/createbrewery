@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_amethyst_shard": {
+    "has_coca_leaf": {
       "conditions": {
         "items": [
           {
-            "items": "minecraft:amethyst_shard"
+            "items": "createbrewery:coca_leaf"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "createbrewery:keta"
+        "recipe": "createbrewery:drying_coca_leaf"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_amethyst_shard"
+      "has_coca_leaf"
     ]
   ],
   "rewards": {
     "recipes": [
-      "createbrewery:keta"
+      "createbrewery:drying_coca_leaf"
     ]
   }
 }

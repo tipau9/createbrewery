@@ -320,8 +320,10 @@ public final class DrunkClient {
         // High, and on heroin even more: the world as if through cotton wool.
         muffle = Math.min(1f - 0.55f * high, 1f - 0.6f * opiate);
         // Your voice, as the others hear it (Simple Voice Chat, see VoiceFx).
+        boolean atMic = player != null && com.createbrewery.block.club.MicrophoneBlock.isAtActiveMicrophone(player);
         VoiceFx.params = player == null ? VoiceFx.Params.NONE : new VoiceFx.Params(Intoxication.visualIntensity(blood), wah, wahPulse(0f),
-            Math.max(opiate, BenzoClient.calm), dissoc, Math.max(CokeClient.coke, tweak), Math.max(DmtClient.waiting, DmtClient.beyond));
+            Math.max(opiate, BenzoClient.calm), dissoc, Math.max(CokeClient.coke, tweak), Math.max(DmtClient.waiting, DmtClient.beyond),
+            atMic ? 1.0f : 0.0f);
         debugLog(mc, player);
     }
 
@@ -742,11 +744,10 @@ public final class DrunkClient {
         float drift = (1f + 0.12f * trip * lsdShare * (float) Math.sin(player.tickCount * 0.02)) * (1f - 0.06f * trip * organic);
         if (high > 0.02f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
-            // The listener gain already raises everything; ambience and weather get more on top,
-            // everything else is pulled back so that music and ambience stand out.
+            // Ambient sounds are boosted noticeably and significantly louder than everything else!
             boolean ambience = source == SoundSource.AMBIENT || source == SoundSource.WEATHER;
-            float louder = ambience ? 1f + 0.8f * high : (1f + 0.3f * high) / listenerBoost();
-            event.setSound(new EnhancedSound(sound, louder, (1f - 0.06f * high) * drift));
+            float louder = ambience ? (2.2f + 2.5f * high) : (1.15f + 0.35f * high);
+            event.setSound(new EnhancedSound(sound, louder, (1f - 0.04f * high) * drift));
         } else if (trip > 0.05f && source != SoundSource.MASTER && source != SoundSource.MUSIC && source != SoundSource.RECORDS
             && !(sound instanceof TickableSoundInstance)) {
             event.setSound(new EnhancedSound(sound, 1f, drift));
@@ -895,7 +896,7 @@ public final class DrunkClient {
 
     /** High: music and ambience up to about 2x (+6 dB), which is where the listener gain goes. */
     private static float listenerBoost() {
-        return 1f + 1.0f * loud();
+        return 1f + 1.4f * loud();
     }
 
     /**
@@ -1122,7 +1123,7 @@ public final class DrunkClient {
         if (player == null) return;
         float subShake = com.createbrewery.block.club.SubwooferBlockEntity.getSubwooferBassShake(player);
         if (blood <= 0f && green <= 0f && breakthrough <= 0f && sick <= 0f && wah <= 0f
-            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && WeedClient.laugh <= 0.01f && seizing <= 0.01f && subShake <= 0.01f) return;
+            && TripClient.laughing() <= 0f && TripClient.chill <= 0.01f && RollClient.rush <= 0.01f && RollClient.beat <= 0.01f && RollClient.zap <= 0.01f && NodClient.jerk <= 0.01f && seizing <= 0.01f && subShake <= 0.01f) return;
         // Roll only: yaw/pitch offsets here would split the view from the crosshair.
         double t = seconds(player, (float) event.getPartialTick());
         float roll = noise(t * 0.45, 5) * 11f * Intoxication.visualIntensity(blood);
@@ -1154,8 +1155,6 @@ public final class DrunkClient {
         roll += (float) Math.sin(t * 1.3) * 1.2f * MusicPulse.kick * RollClient.beat;
         // At the peak every kick slams the head.
         roll += noise(t * 30.0, 89) * 7f * MusicPulse.kick * RollClient.beat * RollClient.peak;
-        // Weed: shaking with the giggles.
-        roll += (float) Math.sin(t * 20.0) * 2f * WeedClient.laugh;
         // Heroin: waking from a nod with a jolt.
         roll += noise(t * 30.0, 101) * 4f * NodClient.jerk;
         // A brain zap jerks the head.
@@ -1331,9 +1330,6 @@ public final class DrunkClient {
             input.leftImpulse += noise(seconds(player, 0f) * 0.9, 67) * 0.4f * dissoc * Math.abs(input.forwardImpulse);
             if (player.hasEffect(ModEffects.K_HOLE)) input.jumping = false;
         }
-        // Weed: couchlock - after standing a while, the legs take a moment to get going.
-        input.forwardImpulse *= WeedClient.legs();
-        input.leftImpulse *= WeedClient.legs();
         // Koks: the legs jumped by themselves.
         if (CokeClient.hop) {
             input.jumping = true;
@@ -1579,8 +1575,17 @@ public final class DrunkClient {
             com.createbrewery.block.club.LaserProjectorRenderer::new);
         event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.FIXTURE.get(),
             com.createbrewery.block.club.FixtureRenderer::new);
+        event.registerEntityRenderer(com.createbrewery.entity.ModEntities.BOUNCER.get(),
+            com.createbrewery.entity.client.BouncerRenderer::new);
         event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.DJ_BOOTH.get(),
             com.createbrewery.block.club.DjBoothRenderer::new);
+    }
+
+    public static void registerLayerDefinitions(net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(com.createbrewery.entity.client.BouncerRenderer.LAYER,
+            () -> net.minecraft.client.model.geom.builders.LayerDefinition.create(
+                net.minecraft.client.model.HumanoidModel.createMesh(
+                    new net.minecraft.client.model.geom.builders.CubeDeformation(0f), 0f), 64, 64));
     }
 
     public static void addLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {

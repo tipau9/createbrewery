@@ -26,7 +26,7 @@ final class PoseClient {
         strength[DrugPose.DANCE] = RollClient.beat * DrunkClient.rolling;
         strength[DrugPose.NOD] = NodClient.drooped / 30f;
         strength[DrugPose.SLUMP] = KetaClient.hole;
-        strength[DrugPose.LAUGH] = WeedClient.laugh;
+        strength[DrugPose.LAUGH] = 0f;
         strength[DrugPose.SHIVER] = DrugEffect.strength(player, ModEffects.WITHDRAWAL);
         int kind = DrugPose.NONE;
         for (int i = 1; i < strength.length; i++) if (strength[i] > 0.05f && strength[i] > strength[kind]) kind = i;

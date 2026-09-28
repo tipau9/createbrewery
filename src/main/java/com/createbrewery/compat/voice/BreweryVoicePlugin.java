@@ -66,7 +66,13 @@ public class BreweryVoicePlugin implements VoicechatPlugin {
         if (route.until() < System.currentTimeMillis()) {
             // Walked away from the mic: let go of the channels.
             MicrophoneBlockEntity.ROUTES.remove(talker, route);
-            channels.keySet().removeIf(k -> k.startsWith(talker.toString()));
+            channels.entrySet().removeIf(e -> {
+                if (e.getKey().startsWith(talker.toString())) {
+                    e.getValue().flush();
+                    return true;
+                }
+                return false;
+            });
             return;
         }
         var api = event.getVoicechat();
@@ -79,8 +85,7 @@ public class BreweryVoicePlugin implements VoicechatPlugin {
                     api.createPosition(speaker.x, speaker.y, speaker.z));
                 if (c == null) return null;
                 c.setDistance(PA_DISTANCE);
-                // The talker hears themselves live, not a moment later out of the speakers.
-                c.setFilter(p -> !p.getUuid().equals(talker));
+                // Real-time stage monitoring: the talker hears their amplified voice from the speakers too
                 return c;
             });
             if (channel != null) channel.send(opus);

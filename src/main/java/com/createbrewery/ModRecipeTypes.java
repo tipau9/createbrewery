@@ -39,6 +39,16 @@ public enum ModRecipeTypes implements IRecipeTypeInfo {
         this.typeObject = Registers.TYPE_REGISTER.register(name, () -> RecipeType.simple(this.id));
     }
 
+    /** Koks cut with sugar on the crafting table. */
+    public static RecipeSerializer<?> koksCut() {
+        return Registers.KOKS_CUT.get();
+    }
+
+    /** Paper and weed into a joint as strong as the weed. */
+    public static RecipeSerializer<?> rollJoint() {
+        return Registers.ROLL_JOINT.get();
+    }
+
     public static void register(IEventBus modEventBus) {
         Registers.SERIALIZER_REGISTER.register(modEventBus);
         Registers.TYPE_REGISTER.register(modEventBus);
@@ -66,5 +76,9 @@ public enum ModRecipeTypes implements IRecipeTypeInfo {
             DeferredRegister.create(BuiltInRegistries.RECIPE_SERIALIZER, CreateBrewery.MOD_ID);
         private static final DeferredRegister<RecipeType<?>> TYPE_REGISTER =
             DeferredRegister.create(net.minecraft.core.registries.Registries.RECIPE_TYPE, CreateBrewery.MOD_ID);
+        private static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<?>> KOKS_CUT = SERIALIZER_REGISTER.register("koks_cut",
+            () -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(com.createbrewery.drugs.KoksCutRecipe::new));
+        private static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<?>> ROLL_JOINT = SERIALIZER_REGISTER.register("roll_joint",
+            () -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(com.createbrewery.drugs.RollJointRecipe::new));
     }
 }

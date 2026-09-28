@@ -1,0 +1,16 @@
+{
+  "type": "create:compacting",
+  "ingredients": [
+    {
+      "item": "createbrewery:coca_paste"
+    },
+    {
+      "item": "createbrewery:coca_paste"
+    }
+  ],
+  "results": [
+    {
+      "id": "createbrewery:koks_brick"
+    }
+  ]
+}

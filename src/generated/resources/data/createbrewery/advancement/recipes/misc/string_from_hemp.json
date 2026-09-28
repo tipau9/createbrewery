@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_glowstone_dust": {
+    "has_hemp_fiber": {
       "conditions": {
         "items": [
           {
-            "items": "minecraft:glowstone_dust"
+            "items": "createbrewery:hemp_fiber"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "createbrewery:koks"
+        "recipe": "createbrewery:string_from_hemp"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_glowstone_dust"
+      "has_hemp_fiber"
     ]
   ],
   "rewards": {
     "recipes": [
-      "createbrewery:koks"
+      "createbrewery:string_from_hemp"
     ]
   }
 }

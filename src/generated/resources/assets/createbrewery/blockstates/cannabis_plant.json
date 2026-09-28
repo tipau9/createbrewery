@@ -1,0 +1,76 @@
+{
+  "variants": {
+    "age=0,female=false,seeded=false": {
+      "model": "createbrewery:block/cannabis_stage0"
+    },
+    "age=0,female=false,seeded=true": {
+      "model": "createbrewery:block/cannabis_stage0"
+    },
+    "age=0,female=true,seeded=false": {
+      "model": "createbrewery:block/cannabis_stage0"
+    },
+    "age=0,female=true,seeded=true": {
+      "model": "createbrewery:block/cannabis_stage0"
+    },
+    "age=1,female=false,seeded=false": {
+      "model": "createbrewery:block/cannabis_stage1"
+    },
+    "age=1,female=false,seeded=true": {
+      "model": "createbrewery:block/cannabis_stage1"
+    },
+    "age=1,female=true,seeded=false": {
+      "model": "createbrewery:block/cannabis_stage1"
+    },
+    "age=1,female=true,seeded=true": {
+      "model": "createbrewery:block/cannabis_stage1"
+    },
+    "age=2,female=false,seeded=false": {
+      "model": "createbrewery:block/cannabis_stage2"
+    },
+    "age=2,female=false,seeded=true": {
+      "model": "createbrewery:block/cannabis_stage2"
+    },
+    "age=2,female=true,seeded=false": {
+      "model": "createbrewery:block/cannabis_stage2"
+    },
+    "age=2,female=true,seeded=true": {
+      "model": "createbrewery:block/cannabis_stage2"
+    },
+    "age=3,female=false,seeded=false": {
+      "model": "createbrewery:block/cannabis_male_stage3"
+    },
+    "age=3,female=false,seeded=true": {
+      "model": "createbrewery:block/cannabis_male_stage3"
+    },
+    "age=3,female=true,seeded=false": {
+      "model": "createbrewery:block/cannabis_female_stage3"
+    },
+    "age=3,female=true,seeded=true": {
+      "model": "createbrewery:block/cannabis_female_stage3"
+    },
+    "age=4,female=false,seeded=false": {
+      "model": "createbrewery:block/cannabis_male_stage4"
+    },
+    "age=4,female=false,seeded=true": {
+      "model": "createbrewery:block/cannabis_male_stage4"
+    },
+    "age=4,female=true,seeded=false": {
+      "model": "createbrewery:block/cannabis_female_stage4"
+    },
+    "age=4,female=true,seeded=true": {
+      "model": "createbrewery:block/cannabis_female_stage4"
+    },
+    "age=5,female=false,seeded=false": {
+      "model": "createbrewery:block/cannabis_male_stage5"
+    },
+    "age=5,female=false,seeded=true": {
+      "model": "createbrewery:block/cannabis_male_stage5"
+    },
+    "age=5,female=true,seeded=false": {
+      "model": "createbrewery:block/cannabis_female_stage5"
+    },
+    "age=5,female=true,seeded=true": {
+      "model": "createbrewery:block/cannabis_female_stage5"
+    }
+  }
+}

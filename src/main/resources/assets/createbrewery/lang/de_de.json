@@ -99,6 +99,7 @@
   "createbrewery.amp.propagation_hint": "Schall braucht Zeit durch die Luft (ein ferner Lautsprecher kommt später an), und Lautsprecher weiter weg vom Pult werden verzögert, damit sie mit dem nächsten zusammen ankommen. Aus: alle Lautsprecher sofort, wie sonst in Minecraft",
   "createbrewery.mic.on": "Mikrofon an: mit Simple Voice Chat hineinsprechen",
   "createbrewery.mic.off": "Mikrofon aus",
+  "createbrewery.mic.on_standalone": "Mikrofon an (Standalone) - damit in der Hand das DJ-Pult rechtsklicken",
   "createbrewery.mic.unlinked": "Nicht verbunden - damit in der Hand das DJ-Pult rechtsklicken",
   "createbrewery.dmx.record": "REC",
   "createbrewery.dmx.record_hint": "Timecode: nimmt deine Bewegungen zum laufenden Song des nächsten DJ-Pults auf und spielt sie ab, sobald die Platte wieder läuft. Shift-Klick löscht die Show dieses Songs",
@@ -199,5 +200,9 @@
   "createbrewery.beer_tap.poured": "Frisch gezapftes Bier eingeschenkt!",
   "createbrewery.beer_tap.empty": "Zapfhahn ist leer!",
   "createbrewery.beer_tap.status": "Bierzapfhahn: %s / %s mB",
-  "createbrewery.goggles.beer_tap.header": "Bierzapfhahn"
+  "createbrewery.goggles.beer_tap.header": "Bierzapfhahn",
+  "entity.createbrewery.bouncer": "Türsteher",
+  "item.createbrewery.bouncer_spawn_egg": "Türsteher Spawn-Ei",
+  "item.createbrewery.club_stamp": "Club-Stempel",
+  "item.createbrewery.taped_spyglass": "Abgeklebtes Fernglas"
 }
