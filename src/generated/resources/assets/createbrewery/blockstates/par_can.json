@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "createbrewery:block/par_can",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "createbrewery:block/par_can",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/par_can",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "createbrewery:block/par_can",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "createbrewery:block/par_can"
+    },
+    "facing=west": {
+      "model": "createbrewery:block/par_can",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

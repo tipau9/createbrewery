@@ -1,0 +1,6 @@
+{
+  "parent": "createbrewery:block/speaker",
+  "textures": {
+    "front": "createbrewery:block/amp_rack_front"
+  }
+}

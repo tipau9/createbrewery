@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "createbrewery:block/speaker",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/speaker"
+    },
+    "facing=south": {
+      "model": "createbrewery:block/speaker",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "createbrewery:block/speaker",
+      "y": 270
+    }
+  }
+}

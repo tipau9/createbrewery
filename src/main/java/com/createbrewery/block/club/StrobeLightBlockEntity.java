@@ -39,7 +39,7 @@ public class StrobeLightBlockEntity extends BlockEntity {
 
         switch (state.getValue(StrobeLightBlock.MODE)) {
             case BEAT -> {
-                float kick = MusicPulse.kick();
+                float kick = MusicPulse.kickNear(worldPosition);
                 if (kick > 0.38f && !kickLatched) {
                     flashIntensity = 1f;
                     kickLatched = true;

@@ -36,7 +36,7 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
         pose.mulPose(Axis.YP.rotationDegrees(yRot));
 
         // Render Deck A (left turntable platter)
-        ItemStack deckA = be.getDeckA();
+        ItemStack deckA = be.getDisc(DjBoothBlockEntity.A);
         if (!deckA.isEmpty()) {
             pose.pushPose();
             // Deck A platter center in model space: X=4.0/16 (offset -0.25 from center), Y=14.2/16 (offset +0.388), Z=8.0/16 (0.0)
@@ -45,8 +45,9 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
             pose.mulPose(Axis.XP.rotationDegrees(90f));
 
             // Spin vinyl if Deck A is actively playing
-            if (be.isPlaying() && be.getActiveDeck() == 1) {
-                float spin = (be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f) * 14.0f;
+            if (be.isPlaying(DjBoothBlockEntity.A)) {
+                // Faster on a pitched-up deck, like a real platter.
+                float spin = (be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f) * 14.0f * be.getPitch(DjBoothBlockEntity.A);
                 pose.mulPose(Axis.ZP.rotationDegrees(spin));
             }
 
@@ -56,7 +57,7 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
         }
 
         // Render Deck B (right turntable platter)
-        ItemStack deckB = be.getDeckB();
+        ItemStack deckB = be.getDisc(DjBoothBlockEntity.B);
         if (!deckB.isEmpty()) {
             pose.pushPose();
             // Deck B platter center in model space: X=12.0/16 (offset +0.25 from center), Y=14.2/16 (offset +0.388), Z=8.0/16 (0.0)
@@ -65,8 +66,9 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
             pose.mulPose(Axis.XP.rotationDegrees(90f));
 
             // Spin vinyl if Deck B is actively playing
-            if (be.isPlaying() && be.getActiveDeck() == 2) {
-                float spin = (be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f) * 14.0f;
+            if (be.isPlaying(DjBoothBlockEntity.B)) {
+                // Faster on a pitched-up deck, like a real platter.
+                float spin = (be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f) * 14.0f * be.getPitch(DjBoothBlockEntity.B);
                 pose.mulPose(Axis.ZP.rotationDegrees(spin));
             }
 

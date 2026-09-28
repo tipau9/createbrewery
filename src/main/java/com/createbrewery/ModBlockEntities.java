@@ -45,6 +45,31 @@ public class ModBlockEntities {
         })
         .register();
 
+    public static final BlockEntityEntry<com.createbrewery.block.club.Co2JetBlockEntity> CO2_JET = REGISTRATE
+        .blockEntity("co2_jet", com.createbrewery.block.club.Co2JetBlockEntity::new)
+        .validBlocks(ModBlocks.CO2_JET)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.DmxConsoleBlockEntity> DMX_CONSOLE = REGISTRATE
+        .blockEntity("dmx_console", com.createbrewery.block.club.DmxConsoleBlockEntity::new)
+        .validBlocks(ModBlocks.DMX_CONSOLE)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.FixtureBlockEntity> FIXTURE = REGISTRATE
+        .blockEntity("fixture", com.createbrewery.block.club.FixtureBlockEntity::new)
+        .validBlocks(ModBlocks.LED_BAR, ModBlocks.MOVING_HEAD, ModBlocks.BLINDER, ModBlocks.PAR_CAN)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.SpeakerBlockEntity> SPEAKER = REGISTRATE
+        .blockEntity("speaker", com.createbrewery.block.club.SpeakerBlockEntity::new)
+        .validBlocks(ModBlocks.SPEAKER)
+        .register();
+
+    public static final BlockEntityEntry<com.createbrewery.block.club.AmpRackBlockEntity> AMP_RACK = REGISTRATE
+        .blockEntity("amp_rack", com.createbrewery.block.club.AmpRackBlockEntity::new)
+        .validBlocks(ModBlocks.AMP_RACK)
+        .register();
+
     public static final BlockEntityEntry<com.createbrewery.block.club.SubwooferBlockEntity> SUBWOOFER = REGISTRATE
         .blockEntity("subwoofer", com.createbrewery.block.club.SubwooferBlockEntity::new)
         .validBlocks(ModBlocks.SUBWOOFER)

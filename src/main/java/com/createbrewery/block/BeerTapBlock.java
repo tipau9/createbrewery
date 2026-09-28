@@ -6,7 +6,6 @@ import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -67,9 +66,8 @@ public class BeerTapBlock extends Block implements EntityBlock {
 
         // Bucket interaction (Beer Bucket / Empty Bucket)
         if (stack.is(Items.BUCKET) || com.createbrewery.ModFluids.BEER.getBucket().map(stack::is).orElse(false)) {
-            boolean success = net.neoforged.neoforge.fluids.FluidUtil.interactWithFluidHandler(player, hand, tap.getTank().getCapability());
-            if (success) {
-                level.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+            // FluidUtil plays the bucket sound itself.
+            if (net.neoforged.neoforge.fluids.FluidUtil.interactWithFluidHandler(player, hand, tap.getTank().getCapability())) {
                 return ItemInteractionResult.sidedSuccess(level.isClientSide);
             }
         }
@@ -85,7 +83,7 @@ public class BeerTapBlock extends Block implements EntityBlock {
                     }
                 }
                 tap.spawnFoamParticles(level, pos, state.getValue(FACING));
-                level.playSound(null, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.0f);
+                level.playSound(player, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.0f);
                 if (level.isClientSide) {
                     player.displayClientMessage(Component.translatable("createbrewery.beer_tap.poured"), true);
                 }
@@ -107,7 +105,7 @@ public class BeerTapBlock extends Block implements EntityBlock {
                     }
                 }
                 tap.spawnFoamParticles(level, pos, state.getValue(FACING));
-                level.playSound(null, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.1f);
+                level.playSound(player, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.1f);
                 if (level.isClientSide) {
                     player.displayClientMessage(Component.translatable("createbrewery.beer_tap.poured"), true);
                 }

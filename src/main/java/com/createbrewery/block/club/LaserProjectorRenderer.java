@@ -38,9 +38,9 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         BlockPos pos = be.getBlockPos();
 
         // Music reactivity
-        float drop = MusicPulse.drop();
+        float drop = MusicPulse.dropNear(pos);
         float beat = be.getBeat();
-        float kickBoost = Math.max(Math.max(MusicPulse.kick() * 0.8f, drop * 1.2f), beat);
+        float kickBoost = Math.max(Math.max(MusicPulse.kickNear(pos) * 0.8f, drop * 1.2f), beat);
 
         Vec3 center = Vec3.atCenterOf(pos);
         Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.46));
@@ -185,7 +185,7 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
     }
 
     /** A bright dot lying flat on the face the beam hit, lifted off it a hair against z-fighting. */
-    private static void renderImpactDot(VertexConsumer v, Matrix4f m, Vec3 hit, Direction face,
+    static void renderImpactDot(VertexConsumer v, Matrix4f m, Vec3 hit, Direction face,
                                         float r, float g, float b, float boost) {
         Vec3 n = Vec3.atLowerCornerOf(face.getNormal());
         Vec3 u = face.getAxis() == Direction.Axis.Y ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);

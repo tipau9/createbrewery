@@ -29,6 +29,8 @@ public class BeerTapBlockEntity extends SmartBlockEntity implements IHaveGoggleI
     public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
         tank = new SmartFluidTankBehaviour(SmartFluidTankBehaviour.INPUT, this, 1, TANK_CAPACITY, true)
             .allowInsertion().allowExtraction();
+        // Pipes push whatever they carry; only beer may come out of the tap as beer.
+        tank.getPrimaryHandler().setValidator(f -> f.getFluid().isSame(com.createbrewery.ModFluids.BEER.getSource()));
         behaviours.add(tank);
     }
 
@@ -36,15 +38,14 @@ public class BeerTapBlockEntity extends SmartBlockEntity implements IHaveGoggleI
         return tank;
     }
 
+    /** True if {@code amount} is there; only the server actually drains it (the client copy resyncs). */
     public boolean dispenseBeer(int amount) {
-        if (tank == null) return false;
-        int current = tank.getPrimaryHandler().getFluidAmount();
-        if (current >= amount) {
+        if (tank == null || tank.getPrimaryHandler().getFluidAmount() < amount) return false;
+        if (level != null && !level.isClientSide) {
             tank.getPrimaryHandler().drain(amount, IFluidHandler.FluidAction.EXECUTE);
             setChanged();
-            return true;
         }
-        return false;
+        return true;
     }
 
     public void spawnFoamParticles(Level level, BlockPos pos, Direction facing) {

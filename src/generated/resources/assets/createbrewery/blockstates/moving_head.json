@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "createbrewery:block/moving_head",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "createbrewery:block/moving_head",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/moving_head",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "createbrewery:block/moving_head",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "createbrewery:block/moving_head"
+    },
+    "facing=west": {
+      "model": "createbrewery:block/moving_head",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

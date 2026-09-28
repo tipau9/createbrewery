@@ -26,8 +26,13 @@ final class StrobeRoomLight {
      * allocated until the first flash, and once there it stays (dark between flashes): adding and
      * freeing Veil lights recompiles shaders, which would hitch on every beat.
      */
-    @SuppressWarnings("unchecked")
     static Object update(Object handle, BlockPos pos, Direction facing, float brightness, boolean steady) {
+        return update(handle, pos, facing, brightness, steady, 0xE8F0FF);
+    }
+
+    /** The same in any colour (club fixtures). */
+    @SuppressWarnings("unchecked")
+    static Object update(Object handle, BlockPos pos, Direction facing, float brightness, boolean steady, int color) {
         // Photosensitivity: "Hide Lightning Flashes" keeps the room dark too (a steady redstone light stays).
         if (!steady && Minecraft.getInstance().options.hideLightningFlash().get()) brightness = 0f;
         LightRenderHandle<PointLightData> light = (LightRenderHandle<PointLightData>) handle;
@@ -37,11 +42,10 @@ final class StrobeRoomLight {
             // Cold xenon white, a little in front of the lens so the housing does not shade it.
             light.getLightData()
                 .setPosition(pos.getX() + 0.5 + facing.getStepX(), pos.getY() + 0.5 + facing.getStepY(), pos.getZ() + 0.5 + facing.getStepZ())
-                .setColor(0xE8F0FF)
                 .setRadius(20f);
             ALL.add(light);
         }
-        light.getLightData().setBrightness(brightness * 3.5f);
+        light.getLightData().setColor(color).setBrightness(brightness * 3.5f);
         light.markDirty();
         return light;
     }

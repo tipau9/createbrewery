@@ -1577,6 +1577,8 @@ public final class DrunkClient {
             com.createbrewery.block.club.StrobeLightRenderer::new);
         event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.LASER_PROJECTOR.get(),
             com.createbrewery.block.club.LaserProjectorRenderer::new);
+        event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.FIXTURE.get(),
+            com.createbrewery.block.club.FixtureRenderer::new);
         event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.DJ_BOOTH.get(),
             com.createbrewery.block.club.DjBoothRenderer::new);
     }

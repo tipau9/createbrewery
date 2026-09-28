@@ -1,0 +1,49 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "housing": "createbrewery:block/fixture_housing",
+    "fins": "createbrewery:block/fixture_fins",
+    "face": "createbrewery:block/blinder_face",
+    "particle": "createbrewery:block/fixture_housing"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        4
+      ],
+      "to": [
+        15,
+        6,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#fins"
+        },
+        "south": {
+          "texture": "#fins"
+        },
+        "east": {
+          "texture": "#fins"
+        },
+        "west": {
+          "texture": "#fins"
+        },
+        "up": {
+          "texture": "#face",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#housing"
+        }
+      }
+    }
+  ]
+}

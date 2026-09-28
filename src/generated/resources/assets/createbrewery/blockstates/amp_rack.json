@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "createbrewery:block/amp_rack",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/amp_rack"
+    },
+    "facing=south": {
+      "model": "createbrewery:block/amp_rack",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "createbrewery:block/amp_rack",
+      "y": 270
+    }
+  }
+}

@@ -69,9 +69,31 @@ public class SubwooferBlock extends Block implements EntityBlock {
         if (!level.isClientSide) {
             boolean powered = level.hasNeighborSignal(pos);
             if (powered != state.getValue(POWERED)) {
-                level.setBlock(pos, state.setValue(POWERED, powered).setValue(ACTIVE, powered), 3);
+                // Same rule as on placement: a redstone signal mutes the sub.
+                level.setBlock(pos, state.setValue(POWERED, powered).setValue(ACTIVE, !powered), 3);
             }
         }
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.isClientSide || SpeakerBlock.linkOf(stack).isEmpty()) return;
+        if (!SpeakerBlock.applyLink(level, pos, stack) && placer instanceof Player player) {
+            player.displayClientMessage(Component.translatable("createbrewery.speaker.too_far", SpeakerBlock.MAX_LINK), true);
+        }
+    }
+
+    /** Linked subwoofers in hand: relink this one to their booth. */
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                                                 net.minecraft.world.InteractionHand hand, BlockHitResult hit) {
+        if (!stack.is(asItem()) || SpeakerBlock.linkOf(stack).isEmpty()) return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!level.isClientSide) {
+            boolean linked = SpeakerBlock.applyLink(level, pos, stack);
+            player.displayClientMessage(Component.translatable(linked ? "createbrewery.speaker.relinked" : "createbrewery.speaker.too_far", SpeakerBlock.MAX_LINK), true);
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
@@ -80,7 +102,9 @@ public class SubwooferBlock extends Block implements EntityBlock {
         level.setBlock(pos, state.setValue(ACTIVE, newActive), 3);
         level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, newActive ? 1.3f : 0.8f);
         if (level.isClientSide) {
-            player.displayClientMessage(Component.translatable(newActive ? "createbrewery.subwoofer.active" : "createbrewery.subwoofer.inactive"), true);
+            boolean linked = level.getBlockEntity(pos) instanceof SubwooferBlockEntity sub && sub.getBooth() != null;
+            player.displayClientMessage(Component.translatable(!newActive ? "createbrewery.subwoofer.inactive"
+                : linked ? "createbrewery.subwoofer.active" : "createbrewery.subwoofer.unlinked"), true);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

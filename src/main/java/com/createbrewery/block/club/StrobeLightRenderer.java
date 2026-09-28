@@ -85,7 +85,7 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
     }
 
     /** A disc of radius {@code r} facing +Z, alpha {@code a} in the centre and 0 at the rim. */
-    private static void glow(VertexConsumer v, Matrix4f m, float r, float red, float green, float blue, float a) {
+    static void glow(VertexConsumer v, Matrix4f m, float r, float red, float green, float blue, float a) {
         int n = 16;
         for (int i = 0; i < n; i++) {
             float a0 = Mth.TWO_PI * i / n, a1 = Mth.TWO_PI * (i + 1) / n;

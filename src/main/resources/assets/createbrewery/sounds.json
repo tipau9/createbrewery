@@ -56,5 +56,23 @@
       "createbrewery:giggle2",
       "createbrewery:giggle3"
     ]
+  },
+  "co2_start": {
+    "subtitle": "subtitles.createbrewery.co2",
+    "sounds": [
+      "createbrewery:co2_start"
+    ]
+  },
+  "co2_roar": {
+    "subtitle": "subtitles.createbrewery.co2",
+    "sounds": [
+      "createbrewery:co2_roar"
+    ]
+  },
+  "co2_stop": {
+    "subtitle": "subtitles.createbrewery.co2",
+    "sounds": [
+      "createbrewery:co2_stop"
+    ]
   }
 }

@@ -126,11 +126,6 @@ public final class EtchedCompat {
         }
     }
 
-    public static void stopEtchedDisc(ServerLevel level, BlockPos pos) {
-        if (level == null) return;
-        level.levelEvent(1011, pos, 0);
-    }
-
     private static void initPacketConstructor() {
         if (playPacketConstructor != null) return;
         try {

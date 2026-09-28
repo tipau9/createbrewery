@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "createbrewery:block/led_bar",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "createbrewery:block/led_bar",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/led_bar",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "createbrewery:block/led_bar",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "createbrewery:block/led_bar"
+    },
+    "facing=west": {
+      "model": "createbrewery:block/led_bar",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

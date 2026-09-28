@@ -1,0 +1,219 @@
+package com.createbrewery.drunk;
+
+/**
+ * A DJ mixer channel's sound: a three-band kill EQ, the one-knob filter and an echo or reverb
+ * send. Each {@link Emitter} playing a deck runs its own (the state is per stream). Plain Java,
+ * no game classes.
+ *
+ * <p>The EQ is an isolator: Linkwitz-Riley crossovers (24 dB/oct) split the signal at 250 Hz and
+ * 2.5 kHz and the bands are put back together at their own gains. Flat, the bands sum to the
+ * input's level at every frequency; a killed band is gone - like the kills on a club mixer, not a
+ * gentle shelf.
+ */
+public final class DeckFx {
+    public static final int NONE = 0, ECHO = 1, REVERB = 2, EFFECTS = 3;
+    private static final double LOW_SPLIT = 250, HIGH_SPLIT = 2500;
+
+    private final double rate;
+    /** Low band, the rest; the rest split into mid and high; the low band through the same second split, so the phases line up. */
+    private final Biquad[] low = lr4(true, LOW_SPLIT), rest = lr4(false, LOW_SPLIT), mid = lr4(true, HIGH_SPLIT), high = lr4(false, HIGH_SPLIT),
+        lowLp = lr4(true, HIGH_SPLIT), lowHp = lr4(false, HIGH_SPLIT);
+    private final Biquad sweep = new Biquad();
+    private float gLow = 1, gMid = 1, gHigh = 1, tLow = 1, tMid = 1, tHigh = 1;
+    private double filterAt = 0;
+    private int fx;
+    private float send, sendTarget;
+
+    // Echo: a half-beat delay with feedback, ringing out after the send closes.
+    private final float[] echo;
+    private int echoAt, echoLen;
+    // Reverb: Schroeder - four damped combs in parallel, two all-passes in series.
+    private final float[][] combs;
+    private final int[] combAt = new int[4];
+    private final float[] combLow = new float[4];
+    private final float[][] passes;
+    private final int[] passAt = new int[2];
+
+    public DeckFx(double rate) {
+        this.rate = rate;
+        for (Biquad[] pair : new Biquad[][] {low, rest, mid, high, lowLp, lowHp}) {
+            for (Biquad b : pair) {
+                if (b.lowPassAt > 0) b.lowPass(b.lowPassAt, rate, Math.sqrt(0.5));
+                else b.highPass(-b.lowPassAt, rate, Math.sqrt(0.5));
+            }
+        }
+        echo = new float[(int) (rate * 2)];
+        double s = rate / 44100.0;
+        combs = new float[][] {new float[(int) (1116 * s)], new float[(int) (1188 * s)], new float[(int) (1277 * s)], new float[(int) (1356 * s)]};
+        passes = new float[][] {new float[(int) (556 * s)], new float[(int) (441 * s)]};
+    }
+
+    /** Two Butterworth biquads in a row: one side of a Linkwitz-Riley crossover at {@code f}. */
+    private static Biquad[] lr4(boolean lowPass, double f) {
+        Biquad a = new Biquad(), b = new Biquad();
+        a.lowPassAt = b.lowPassAt = lowPass ? f : -f;
+        return new Biquad[] {a, b};
+    }
+
+    private static double run(Biquad[] pair, double x) {
+        return pair[1].run(pair[0].run(x));
+    }
+
+    /** Song frame {@code from} as heard inside a loop of {@code len} frames from {@code start}. */
+    public static long loopFrame(long from, long start, long len) {
+        return from < start ? from : start + (from - start) % len;
+    }
+
+    /** A knob 0..1 as a gain: 0 kills the band, the middle is unity, fully open is +6 dB. */
+    public static float eqGain(float knob) {
+        knob = Math.max(0f, Math.min(1f, knob));
+        return knob <= 0.5f ? (knob * 2) * (knob * 2) : 1f + (knob - 0.5f) * 2f;
+    }
+
+    /**
+     * The mixer's settings for this deck: EQ knobs 0..1, filter -1 (low-pass closed) .. 0 (off) ..
+     * 1 (high-pass closed), the effect and how much is sent to it, and seconds per beat.
+     */
+    public void set(float low, float mid, float high, float filter, int effect, float amount, double beat) {
+        tLow = eqGain(low);
+        tMid = eqGain(mid);
+        tHigh = eqGain(high);
+        if (Math.abs(filter - filterAt) > 1e-3) {
+            filterAt = filter;
+            // Exponential sweeps: the low-pass from above hearing down to 80 Hz, the high-pass from 20 Hz up to 8 kHz.
+            if (filter < -0.02) sweep.lowPass(Math.exp(Math.log(20000) + (Math.log(80) - Math.log(20000)) * -filter), rate, 1.4);
+            else if (filter > 0.02) sweep.highPass(Math.exp(Math.log(20) + (Math.log(8000) - Math.log(20)) * filter), rate, 1.4);
+        }
+        if (effect != fx) {
+            fx = effect;
+            clearTails();
+        }
+        sendTarget = Math.max(0f, Math.min(1f, amount));
+        echoLen = (int) Math.max(1, Math.min(echo.length - 1, beat * 0.5 * rate));
+    }
+
+    /** In place, {@code n} samples. Gains glide across the block, so turning a knob never clicks. */
+    public void process(float[] buf, int n) {
+        float dl = (tLow - gLow) / n, dm = (tMid - gMid) / n, dh = (tHigh - gHigh) / n, ds = (sendTarget - send) / n;
+        boolean filtering = Math.abs(filterAt) > 0.02;
+        for (int i = 0; i < n; i++) {
+            gLow += dl;
+            gMid += dm;
+            gHigh += dh;
+            send += ds;
+            double x = buf[i];
+            double lo = run(low, x), r = run(rest, x);
+            lo = run(lowLp, lo) + run(lowHp, lo);
+            double y = lo * gLow + run(mid, r) * gMid + run(high, r) * gHigh;
+            if (filtering) y = sweep.run(y);
+            if (fx == ECHO) y = echo(y);
+            else if (fx == REVERB) y = reverb(y);
+            buf[i] = (float) y;
+        }
+        gLow = tLow;
+        gMid = tMid;
+        gHigh = tHigh;
+        send = sendTarget;
+    }
+
+    private double echo(double x) {
+        int read = echoAt - echoLen;
+        if (read < 0) read += echo.length;
+        double delayed = echo[read];
+        echo[echoAt] = (float) (x * send + delayed * 0.55);
+        if (++echoAt == echo.length) echoAt = 0;
+        return x + delayed * 0.8;
+    }
+
+    private double reverb(double x) {
+        double in = x * send * 0.25, wet = 0;
+        for (int c = 0; c < 4; c++) {
+            float[] line = combs[c];
+            double out = line[combAt[c]];
+            // Damped: the highs die sooner, like a real room.
+            combLow[c] = (float) (out * 0.7 + combLow[c] * 0.3);
+            line[combAt[c]] = (float) (in + combLow[c] * 0.84);
+            if (++combAt[c] == line.length) combAt[c] = 0;
+            wet += out;
+        }
+        for (int p = 0; p < 2; p++) {
+            float[] line = passes[p];
+            double stored = line[passAt[p]];
+            double out = -wet + stored;
+            line[passAt[p]] = (float) (wet + stored * 0.5);
+            if (++passAt[p] == line.length) passAt[p] = 0;
+            wet = out;
+        }
+        return x + wet * 0.6;
+    }
+
+    private void clearTails() {
+        java.util.Arrays.fill(echo, 0f);
+        for (float[] c : combs) java.util.Arrays.fill(c, 0f);
+        for (float[] p : passes) java.util.Arrays.fill(p, 0f);
+        java.util.Arrays.fill(combLow, 0f);
+    }
+
+    /**
+     * One side of an amp rack's crossover: a Linkwitz-Riley low-pass for the subs or high-pass for
+     * the tops, at the same corner, so the two add back up flat.
+     */
+    public static final class Crossover {
+        private final double rate;
+        private Biquad[] pair;
+        private boolean lowPass;
+        private double f;
+
+        public Crossover(double rate) {
+            this.rate = rate;
+        }
+
+        /** Retunes only on a change; turned from one side to the other it starts from rest. */
+        public void set(boolean lowPass, double f) {
+            if (pair != null && lowPass == this.lowPass && f == this.f) return;
+            if (pair == null || lowPass != this.lowPass) pair = lr4(lowPass, f);
+            this.lowPass = lowPass;
+            this.f = f;
+            for (Biquad b : pair) {
+                if (lowPass) b.lowPass(f, rate, Math.sqrt(0.5));
+                else b.highPass(f, rate, Math.sqrt(0.5));
+            }
+        }
+
+        public void process(float[] buf, int n) {
+            for (int i = 0; i < n; i++) buf[i] = (float) run(pair, buf[i]);
+        }
+    }
+
+    /** One RBJ biquad, transposed direct form II. */
+    private static final class Biquad {
+        private double b0 = 1, b1, b2, a1, a2, s1, s2;
+        /** For the crossovers: the corner, negative for a high-pass. */
+        double lowPassAt;
+
+        void lowPass(double f, double rate, double q) {
+            double w = 2 * Math.PI * Math.min(f, rate * 0.45) / rate, cos = Math.cos(w), alpha = Math.sin(w) / (2 * q), a0 = 1 + alpha;
+            b0 = (1 - cos) / 2 / a0;
+            b1 = (1 - cos) / a0;
+            b2 = b0;
+            a1 = -2 * cos / a0;
+            a2 = (1 - alpha) / a0;
+        }
+
+        void highPass(double f, double rate, double q) {
+            double w = 2 * Math.PI * Math.min(f, rate * 0.45) / rate, cos = Math.cos(w), alpha = Math.sin(w) / (2 * q), a0 = 1 + alpha;
+            b0 = (1 + cos) / 2 / a0;
+            b1 = -(1 + cos) / a0;
+            b2 = b0;
+            a1 = -2 * cos / a0;
+            a2 = (1 - alpha) / a0;
+        }
+
+        double run(double x) {
+            double y = b0 * x + s1;
+            s1 = b1 * x - a1 * y + s2;
+            s2 = b2 * x - a2 * y;
+            return y;
+        }
+    }
+}

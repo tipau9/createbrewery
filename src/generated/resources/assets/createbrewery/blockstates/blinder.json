@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "createbrewery:block/blinder",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "createbrewery:block/blinder",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/blinder",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "createbrewery:block/blinder",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "createbrewery:block/blinder"
+    },
+    "facing=west": {
+      "model": "createbrewery:block/blinder",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "active=false,facing=east,powered=false": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 90
+    },
+    "active=false,facing=east,powered=true": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 90
+    },
+    "active=false,facing=north,powered=false": {
+      "model": "createbrewery:block/subwoofer"
+    },
+    "active=false,facing=north,powered=true": {
+      "model": "createbrewery:block/subwoofer"
+    },
+    "active=false,facing=south,powered=false": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 180
+    },
+    "active=false,facing=south,powered=true": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 180
+    },
+    "active=false,facing=west,powered=false": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 270
+    },
+    "active=false,facing=west,powered=true": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 270
+    },
+    "active=true,facing=east,powered=false": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 90
+    },
+    "active=true,facing=east,powered=true": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 90
+    },
+    "active=true,facing=north,powered=false": {
+      "model": "createbrewery:block/subwoofer"
+    },
+    "active=true,facing=north,powered=true": {
+      "model": "createbrewery:block/subwoofer"
+    },
+    "active=true,facing=south,powered=false": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 180
+    },
+    "active=true,facing=south,powered=true": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 180
+    },
+    "active=true,facing=west,powered=false": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 270
+    },
+    "active=true,facing=west,powered=true": {
+      "model": "createbrewery:block/subwoofer",
+      "y": 270
+    }
+  }
+}

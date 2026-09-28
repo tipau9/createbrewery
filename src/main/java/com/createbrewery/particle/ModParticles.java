@@ -38,6 +38,8 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POWDER = simple("powder");
     /** Dense, ground-hugging club fog / haze from the fog machine. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FOG = simple("fog");
+    /** A billow of a CO2 cannon's jet: fast, dense, swelling and sinking cold. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CO2 = simple("co2");
 
     private static DeferredHolder<ParticleType<?>, SimpleParticleType> simple(String name) {
         return PARTICLES.register(name, () -> new SimpleParticleType(false));

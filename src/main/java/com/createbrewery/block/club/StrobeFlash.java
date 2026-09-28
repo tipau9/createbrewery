@@ -23,6 +23,9 @@ import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * What the strobes do to your eyes: every strobe that fires this tick offers how hard it hits the
  * camera, the strongest one wins. That lights the whole lightmap up for the tick (the room is lit
@@ -38,6 +41,47 @@ public final class StrobeFlash {
     private static final float[] GLARE = {0.12f, 0.25f, 0.45f, 0.75f, 1f};
 
     private static float nextLight, nextGlare;
+
+    private static final int HIDDEN = 0, BOUNCE = 1, DIRECT = 2;
+    /** How long a line-of-sight result is kept while the eye stays put: a door swinging shut shows within a quarter second. */
+    private static final int SIGHT_TICKS = 5;
+
+    /** The last line of sight from a strobe's lens to the eye (see {@link #sight}). */
+    private record Sight(Vec3 eye, long tick, int seen) {}
+
+    private static final Map<BlockPos, Sight> SIGHTS = new HashMap<>();
+    private static Level sightLevel;
+
+    /**
+     * Whether the eye sees the lens ({@code DIRECT}), only the light bouncing around it ({@code BOUNCE}),
+     * or nothing ({@code HIDDEN}). Up to four raycasts, so a strobe keeps its answer for a few ticks
+     * while the eye stays within half a block: a club full of strobes firing ten times a second
+     * would otherwise cast thousands of rays a second.
+     */
+    private static int sight(Level level, BlockPos pos, Vec3 lens, Vec3 eye, Entity viewer) {
+        if (viewer == null) return HIDDEN;
+        if (level != sightLevel) {
+            SIGHTS.clear();
+            sightLevel = level;
+        }
+        long now = level.getGameTime();
+        Sight last = SIGHTS.get(pos);
+        if (last != null && now - last.tick < SIGHT_TICKS && last.eye.distanceToSqr(eye) < 0.25) return last.seen;
+
+        int seen;
+        if (!isLightOccluded(level, lens, eye, viewer)) {
+            seen = DIRECT;
+        } else if (!isLightOccluded(level, lens, eye.add(0.0, 1.2, 0.0), viewer)
+            || !isLightOccluded(level, lens, eye.add(0.8, 0.0, 0.8), viewer)
+            || !isLightOccluded(level, lens, eye.add(-0.8, 0.0, -0.8), viewer)) {
+            // Not the lens itself, but its flash on the space around you (overhead, the sides).
+            seen = BOUNCE;
+        } else {
+            seen = HIDDEN;
+        }
+        SIGHTS.put(pos.immutable(), new Sight(eye, now, seen));
+        return seen;
+    }
     private static float light, glare;
 
     public static void init() {
@@ -109,22 +153,11 @@ public final class StrobeFlash {
         Vec3 aim = Vec3.atLowerCornerOf(facing.getNormal());
         if (dist > 0.1 && toEye.dot(aim) < 0) exposure *= 0.5f;
 
-        // Optical Line of Sight Check: check if walls/doors physically block the light
-        boolean directSight = mc.player != null && !isLightOccluded(level, lens, eye, mc.player);
-        if (!directSight) {
-            // Check indirect bounce around player space (overhead, sides)
-            // If all are occluded, the player is partitioned in another room / behind closed doors / outside
-            boolean indirectSight = mc.player != null && (
-                !isLightOccluded(level, lens, eye.add(0.0, 1.2, 0.0), mc.player)
-                || !isLightOccluded(level, lens, eye.add(0.8, 0.0, 0.8), mc.player)
-                || !isLightOccluded(level, lens, eye.add(-0.8, 0.0, -0.8), mc.player)
-            );
-            if (!indirectSight) {
-                // Fully occluded by walls/doors - ZERO flash!
-                return;
-            }
-            exposure *= 0.35f;
-        }
+        int seen = sight(level, pos, lens, eye, mc.player);
+        // Fully occluded by walls/doors: in another room, behind a closed door or outside - no flash.
+        if (seen == HIDDEN) return;
+        boolean directSight = seen == DIRECT;
+        if (!directSight) exposure *= 0.35f;
 
         // A flash in a lit room hardly registers; in the dark it blinds.
         int lightAtEye = level.getMaxLocalRawBrightness(BlockPos.containing(eye));
@@ -149,7 +182,15 @@ public final class StrobeFlash {
         light = Mth.clamp(nextLight, 0f, 1f);
         glare = Mth.clamp(nextGlare, 0f, 1f);
         nextLight = nextGlare = 0f;
-        if (Minecraft.getInstance().level == null) light = glare = 0f;
+        Level level = Minecraft.getInstance().level;
+        if (level == null) {
+            light = glare = 0f;
+            SIGHTS.clear();
+        } else if (level.getGameTime() % 200 == 0) {
+            // Strobes broken or left behind.
+            long now = level.getGameTime();
+            SIGHTS.values().removeIf(sight -> now - sight.tick > 100);
+        }
     }
 
     private static void onGui(RenderGuiEvent.Pre event) {

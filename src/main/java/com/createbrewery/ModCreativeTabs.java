@@ -61,6 +61,13 @@ public final class ModCreativeTabs {
 
                 // Club- & Festival-Gadgets
                 output.accept(ModBlocks.DJ_BOOTH.get());
+                output.accept(ModBlocks.SPEAKER.get());
+                output.accept(ModBlocks.AMP_RACK.get());
+                output.accept(ModBlocks.DMX_CONSOLE.get());
+                output.accept(ModBlocks.LED_BAR.get());
+                output.accept(ModBlocks.MOVING_HEAD.get());
+                output.accept(ModBlocks.BLINDER.get());
+                output.accept(ModBlocks.PAR_CAN.get());
                 output.accept(ModBlocks.SUBWOOFER.get());
                 output.accept(ModBlocks.CO2_JET.get());
                 output.accept(ModBlocks.STROBE_LIGHT.get());

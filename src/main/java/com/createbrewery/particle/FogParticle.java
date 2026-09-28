@@ -122,7 +122,7 @@ public class FogParticle extends TextureSheetParticle {
     }
 
     /** The local player pushes through the haze and drags some of it along. */
-    private void stir() {
+    protected void stir() {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
         double dx = x - player.getX(), dy = y + lift() - (player.getY() + 0.9), dz = z - player.getZ();
@@ -165,7 +165,7 @@ public class FogParticle extends TextureSheetParticle {
     }
 
     /** The quad floats above the bottom of the collision box (y), lifting as it swells. */
-    private float lift() {
+    protected float lift() {
         return 0.25f + 0.35f * Math.min(1f, age / 120f);
     }
 

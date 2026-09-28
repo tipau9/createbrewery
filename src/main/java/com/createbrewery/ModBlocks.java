@@ -57,7 +57,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(p -> p.noOcclusion().lightLevel(s -> s.getValue(com.createbrewery.block.club.StrobeLightBlock.LIT) ? 15 : 0))
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -66,7 +66,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -75,7 +75,7 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
-            prov.models().cubeAll(ctx.getName(), prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();
 
@@ -93,6 +93,75 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.SpeakerBlock> SPEAKER = REGISTRATE
+        .block("speaker", com.createbrewery.block.club.SpeakerBlock::new)
+        .initialProperties(() -> Blocks.NOTE_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.AmpRackBlock> AMP_RACK = REGISTRATE
+        .block("amp_rack", com.createbrewery.block.club.AmpRackBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Amp Rack")
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.DmxConsoleBlock> DMX_CONSOLE = REGISTRATE
+        .block("dmx_console", com.createbrewery.block.club.DmxConsoleBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("DMX Console")
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.FixtureBlock> LED_BAR = REGISTRATE
+        .block("led_bar", p -> new com.createbrewery.block.club.FixtureBlock(p, com.createbrewery.block.club.FixtureBlock.Kind.LED_BAR))
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("LED Bar")
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.FixtureBlock> MOVING_HEAD = REGISTRATE
+        .block("moving_head", p -> new com.createbrewery.block.club.FixtureBlock(p, com.createbrewery.block.club.FixtureBlock.Kind.MOVING_HEAD))
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Moving Head")
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.FixtureBlock> BLINDER = REGISTRATE
+        .block("blinder", p -> new com.createbrewery.block.club.FixtureBlock(p, com.createbrewery.block.club.FixtureBlock.Kind.BLINDER))
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Blinder")
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .simpleItem()
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.club.FixtureBlock> PAR_CAN = REGISTRATE
+        .block("par_can", p -> new com.createbrewery.block.club.FixtureBlock(p, com.createbrewery.block.club.FixtureBlock.Kind.PAR))
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Par Can")
+        .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
             prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
         .simpleItem()
         .register();

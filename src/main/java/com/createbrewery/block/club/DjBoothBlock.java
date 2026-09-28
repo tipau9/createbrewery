@@ -79,16 +79,19 @@ public class DjBoothBlock extends Block implements EntityBlock {
         return state.getValue(POWERED) ? 15 : 0;
     }
 
+    /** Only what can actually play: a name containing "disc" also matches disc fragments. */
     public static boolean isMusicDisc(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        if (com.createbrewery.compat.EtchedCompat.isEtchedDisc(stack)) return true;
-        if (stack.has(DataComponents.JUKEBOX_PLAYABLE)) return true;
-        net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-        if (id != null) {
-            String p = id.getPath();
-            if (p.contains("music_disc") || p.contains("record") || p.contains("disc")) return true;
+        return stack.has(DataComponents.JUKEBOX_PLAYABLE) || com.createbrewery.compat.EtchedCompat.isEtchedDisc(stack);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        // Broken or replaced: the records fall out and the music stops, instead of both vanishing mid-song.
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof DjBoothBlockEntity dj) {
+            dj.dropDecks();
         }
-        return stack.is(net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.withDefaultNamespace("music_discs")));
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
     @Override
@@ -96,6 +99,13 @@ public class DjBoothBlock extends Block implements EntityBlock {
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof DjBoothBlockEntity dj)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+
+        // Speakers, subwoofers or an amp rack in hand: link them to this booth, to be placed around the club.
+        if (stack.is(com.createbrewery.ModBlocks.SPEAKER.get().asItem()) || stack.is(com.createbrewery.ModBlocks.SUBWOOFER.get().asItem())
+            || stack.is(com.createbrewery.ModBlocks.AMP_RACK.get().asItem())) {
+            if (!level.isClientSide) SpeakerBlock.linkAtBooth(stack, level, pos, player);
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
 
         // Inserting Music Disc
@@ -128,42 +138,26 @@ public class DjBoothBlock extends Block implements EntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof DjBoothBlockEntity dj)) {
+        if (!(level.getBlockEntity(pos) instanceof DjBoothBlockEntity dj)) {
             return InteractionResult.PASS;
         }
 
-        if (level.isClientSide) {
-            return InteractionResult.SUCCESS;
-        }
-
         if (player.isShiftKeyDown()) {
-            // Shift click: Eject discs
-            dj.ejectDiscs(player);
-            return InteractionResult.SUCCESS;
+            if (!level.isClientSide) dj.ejectDiscs(player);
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        // Relative coordinates on block top face (-0.5 .. 0.5)
+        // Where on the top the click landed: left platter, mixer in the middle, right platter.
         Direction facing = state.getValue(FACING);
-        double hitX = hitResult.getLocation().x - pos.getX();
-        double hitZ = hitResult.getLocation().z - pos.getZ();
-        double localX = getLocalX(facing, hitX, hitZ);
+        double localX = getLocalX(facing, hitResult.getLocation().x - pos.getX(), hitResult.getLocation().z - pos.getZ());
 
-        if (localX < -0.15) {
-            // Left platter: Deck A
-            dj.playDeck(true, player);
+        if (Math.abs(localX) <= 0.15) {
+            if (level.isClientSide) DjMixerScreen.open(pos);
+        } else if (!level.isClientSide) {
+            dj.toggleDeck(localX < 0 ? DjBoothBlockEntity.A : DjBoothBlockEntity.B, player);
             level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.6f, 1.2f);
-            return InteractionResult.SUCCESS;
-        } else if (localX > 0.15) {
-            // Right platter: Deck B
-            dj.playDeck(false, player);
-            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.6f, 1.2f);
-            return InteractionResult.SUCCESS;
-        } else {
-            // Center button: Trigger BEAT DROP!
-            dj.triggerDrop(player);
-            return InteractionResult.SUCCESS;
         }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     private static double getLocalX(Direction facing, double hitX, double hitZ) {
