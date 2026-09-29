@@ -35,6 +35,21 @@ public final class ModCreativeTabs {
                 // Getränke & Edibles
                 output.accept(ModItems.BEER_BOTTLE.get());
                 output.accept(ModItems.SEALED_CAN.get());
+                output.accept(ModItems.WINE_BOTTLE.get());
+                output.accept(ModItems.COGNAC_BOTTLE.get());
+                output.accept(ModItems.WHISKEY_BOTTLE.get());
+                output.accept(ModItems.DOPPELKORN_BOTTLE.get());
+                output.accept(ModItems.VODKA_BOTTLE.get());
+                output.accept(ModItems.GIN_BOTTLE.get());
+                output.accept(ModItems.RUM_BOTTLE.get());
+                output.accept(ModItems.TEQUILA_BOTTLE.get());
+                output.accept(ModItems.GRAPE_CUTTING.get());
+                output.accept(ModItems.GRAPES.get());
+                output.accept(ModItems.AGAVE_PUP.get());
+                output.accept(ModItems.AGAVE_HEART.get());
+                output.accept(ModItems.ROASTED_AGAVE.get());
+                output.accept(ModItems.AGAVE_PULP.get());
+                output.accept(ModItems.JUNIPER_BERRIES.get());
                 output.accept(ModItems.SPACE_BROWNIE.get());
                 output.accept(ModItems.ELECTROLYTE.get());
 
@@ -58,6 +73,42 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.KETA.get());
                 output.accept(ModItems.HEROIN.get());
                 output.accept(ModItems.XANAX.get());
+
+                // Anbau & Labor
+                output.accept(ModItems.HEMP_SEEDS.get());
+                output.accept(ModItems.WET_BUDS.get());
+                output.accept(ModItems.SEEDED_BUDS.get());
+                output.accept(ModItems.TRIMMED_BUDS.get());
+                output.accept(ModItems.DRIED_BUDS.get());
+                output.accept(ModItems.WEED_TRIM.get());
+                output.accept(ModItems.HEMP_FIBER.get());
+                output.accept(ModItems.COCA_SEEDLING.get());
+                output.accept(ModItems.COCA_LEAF.get());
+                output.accept(ModItems.DRIED_COCA_LEAF.get());
+                output.accept(ModItems.COCA_MEAL.get());
+                output.accept(ModItems.COCA_PASTE.get());
+                output.accept(ModItems.KOKS_BRICK.get());
+                output.accept(ModItems.AMETHYST_GRIT.get());
+                output.accept(ModItems.RAW_KETA.get());
+                output.accept(ModItems.KETA_CRYSTALS.get());
+                output.accept(ModItems.RUINED_BATCH.get());
+                output.accept(ModItems.MUSHROOM_SPORES.get());
+                output.accept(ModItems.FRESH_MUSHROOMS.get());
+                output.accept(ModItems.PEYOTE_PUP.get());
+                output.accept(ModItems.PEYOTE_BUTTON.get());
+                output.accept(ModItems.OPIUM_POPPY_SEEDS.get());
+                output.accept(ModItems.POPPY_POD.get());
+                output.accept(ModItems.OPIUM_LATEX.get());
+                output.accept(ModItems.RAW_OPIUM.get());
+                output.accept(ModItems.RAW_HEROIN.get());
+                output.accept(ModItems.RAW_METH.get());
+                output.accept(ModItems.METH_CRYSTALS.get());
+                output.accept(ModItems.MDMA_CRYSTALS.get());
+                output.accept(ModItems.ERGOT.get());
+                output.accept(ModItems.LSD_SOLUTION.get());
+                output.accept(ModItems.BLOTTER_SHEET.get());
+                output.accept(ModItems.ROOT_BARK.get());
+                output.accept(ModItems.XANAX_POWDER.get());
 
                 // Club- & Festival-Gadgets
                 output.accept(ModBlocks.DJ_BOOTH.get());

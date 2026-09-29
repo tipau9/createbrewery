@@ -1,0 +1,35 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "item": "createbrewery:agave_pulp"
+    },
+    {
+      "item": "createbrewery:agave_pulp"
+    },
+    {
+      "item": "createbrewery:agave_pulp"
+    },
+    {
+      "item": "createbrewery:agave_pulp"
+    },
+    {
+      "item": "createbrewery:agave_pulp"
+    },
+    {
+      "item": "createbrewery:agave_pulp"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "minecraft:water"
+    }
+  ],
+  "processing_time": 300,
+  "results": [
+    {
+      "amount": 1000,
+      "id": "createbrewery:agave_juice"
+    }
+  ]
+}

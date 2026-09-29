@@ -1,0 +1,15 @@
+{
+  "type": "createbrewery:add_item",
+  "conditions": [
+    {
+      "condition": "neoforge:loot_table_id",
+      "loot_table_id": "minecraft:blocks/vine"
+    },
+    {
+      "chance": 0.04,
+      "condition": "minecraft:random_chance"
+    }
+  ],
+  "count": 1,
+  "item": "createbrewery:grape_cutting"
+}

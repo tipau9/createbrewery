@@ -1,0 +1,24 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "heated",
+  "ingredients": [
+    {
+      "item": "createbrewery:juniper_berries"
+    },
+    {
+      "item": "createbrewery:juniper_berries"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 250,
+      "fluid": "createbrewery:neutral_spirit"
+    }
+  ],
+  "processing_time": 400,
+  "results": [
+    {
+      "amount": 250,
+      "id": "createbrewery:gin"
+    }
+  ]
+}

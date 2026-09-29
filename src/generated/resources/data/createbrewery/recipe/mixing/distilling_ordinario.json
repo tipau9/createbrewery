@@ -1,0 +1,18 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "heated",
+  "ingredients": [
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "createbrewery:agave_wash"
+    }
+  ],
+  "processing_time": 600,
+  "results": [
+    {
+      "amount": 300,
+      "id": "createbrewery:ordinario"
+    }
+  ]
+}

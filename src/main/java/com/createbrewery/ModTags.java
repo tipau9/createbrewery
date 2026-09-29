@@ -36,6 +36,10 @@ public class ModTags {
     public static final TagKey<Item> C_SEEDS_BARLEY =
         TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "seeds/barley"));
 
+    /** Tobacco a joint can be mixed with (see RollJointRecipe); filled from other mods, e.g. Tobacconery. */
+    public static final TagKey<Item> JOINT_TOBACCO =
+        TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "joint_tobacco"));
+
     public static final TagKey<Item> C_CROPS_HOPS =
         TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "crops/hops"));
 }

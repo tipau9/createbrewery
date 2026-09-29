@@ -4,6 +4,14 @@
     "createbrewery:barley_seeds_from_tall_grass",
     "createbrewery:hemp_seeds_from_short_grass",
     "createbrewery:coca_seedling_from_jungle_leaves",
+    "createbrewery:mushroom_spores_from_brown_mushroom",
+    "createbrewery:peyote_pup_from_dead_bush",
+    "createbrewery:opium_poppy_seeds_from_poppy",
+    "createbrewery:ergot_from_wheat",
+    "createbrewery:ergot_from_barley",
+    "createbrewery:grape_cutting_from_vine",
+    "createbrewery:agave_pup_from_cactus",
+    "createbrewery:juniper_berries_from_spruce_leaves",
     "createbrewery:hop_cones_in_village_plains_house"
   ],
   "replace": false

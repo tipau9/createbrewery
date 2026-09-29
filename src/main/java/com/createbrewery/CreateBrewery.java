@@ -32,6 +32,9 @@ public class CreateBrewery {
         com.createbrewery.drunk.ModAttachments.register(modEventBus);
         com.createbrewery.particle.ModParticles.register(modEventBus);
         com.createbrewery.sound.ModSounds.register(modEventBus);
+        // Optional: only filled when Tobacconery is installed, no dependency on it.
+        REGISTRATE.addDataGenerator(com.tterrag.registrate.providers.ProviderType.ITEM_TAGS, tags -> tags.addTag(ModTags.JOINT_TOBACCO)
+            .addOptional(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("tobacconery", "chopped_tobacco")));
         REGISTRATE.addRawLang("itemGroup.createbrewery", "Create Brewery");
         REGISTRATE.addRawLang("effect.createbrewery.inebriation", "Trunkenheit");
         REGISTRATE.addRawLang("effect.createbrewery.hangover", "Kater des Todes");
@@ -208,6 +211,12 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.speaker.lore", "Linked to DJ booth at %s, %s, %s");
         REGISTRATE.addRawLang("item.createbrewery.hemp_seeds.hint", "Auf bewässertem Ackerboden, bei viel Licht (Sonne oder Lampen). Die Hälfte wird männlich: früh raus, sonst bestäuben sie die Weibchen");
         REGISTRATE.addRawLang("item.createbrewery.coca_seedling.hint", "Wächst nur im Dschungel, langsam: etwa 4 Tage bis zur Ernte");
+        REGISTRATE.addRawLang("item.createbrewery.mushroom_spores.hint", "Auf Myzel, Podsol oder Moos, im Dunkeln. Drei Ernten, dann ist das Beet erschöpft");
+        REGISTRATE.addRawLang("item.createbrewery.peyote_pup.hint", "Auf Sand, in Wüste oder Tafelberg, in der Sonne. Sehr langsam; der Kopf wächst nach dem Schneiden nach");
+        REGISTRATE.addRawLang("createbrewery.drink.sips", "Schlücke: %s / %s");
+        REGISTRATE.addRawLang("item.createbrewery.grape_cutting.hint", "Auf Gras, Erde oder Ackerboden, in der Sonne. Gepflückt trägt die Rebe wieder");
+        REGISTRATE.addRawLang("item.createbrewery.agave_pup.hint", "Auf Sand, in Wüste oder Tafelberg, in der Sonne. Sehr langsam; geerntet stirbt sie und lässt ein Kindel");
+        REGISTRATE.addRawLang("item.createbrewery.opium_poppy_seeds.hint", "Auf bewässertem Ackerboden, in voller Sonne");
         REGISTRATE.addRawLang("createbrewery.dmx.console", "DMX Console");
         REGISTRATE.addRawLang("createbrewery.dmx.linked", "Fixtures linked to this console - place them around your club");
         REGISTRATE.addRawLang("createbrewery.dmx.relinked", "Fixture linked to the console");

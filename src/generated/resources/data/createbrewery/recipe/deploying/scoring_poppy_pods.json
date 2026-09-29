@@ -1,0 +1,24 @@
+{
+  "type": "create:deploying",
+  "ingredients": [
+    {
+      "item": "createbrewery:poppy_pod"
+    },
+    {
+      "item": "minecraft:shears"
+    }
+  ],
+  "keep_held_item": true,
+  "results": [
+    {
+      "id": "createbrewery:opium_latex"
+    },
+    {
+      "id": "createbrewery:opium_poppy_seeds"
+    },
+    {
+      "chance": 0.5,
+      "id": "createbrewery:opium_poppy_seeds"
+    }
+  ]
+}

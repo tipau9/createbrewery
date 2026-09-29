@@ -16,11 +16,13 @@ import com.createbrewery.drugs.Purity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 import com.simibubi.create.api.data.recipe.FillingRecipeGen;
-import com.simibubi.create.api.data.recipe.HauntingRecipeGen;
 import com.simibubi.create.api.data.recipe.MillingRecipeGen;
 import com.simibubi.create.api.data.recipe.MixingRecipeGen;
 import com.simibubi.create.api.data.recipe.PressingRecipeGen;
 import com.simibubi.create.api.data.recipe.StandardProcessingRecipeGen;
+import com.simibubi.create.content.fluids.transfer.FillingRecipe;
+import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
+import com.simibubi.create.content.kinetics.press.PressingRecipe;
 import com.simibubi.create.content.processing.recipe.HeatCondition;
 import com.simibubi.create.foundation.recipe.IRecipeTypeInfo;
 import net.minecraft.core.HolderLookup;
@@ -72,7 +74,6 @@ public class ModRecipeProvider {
         generator.addProvider(server, new KetaLab(output, registries));
         generator.addProvider(server, new Filling(output, registries));
         generator.addProvider(server, new Fermenting(output, registries));
-        generator.addProvider(server, new Haunting(output, registries));
         generator.addProvider(server, new Vanilla(output, registries));
     }
 
@@ -149,28 +150,116 @@ public class ModRecipeProvider {
                 .output(ModItems.KETA_CRYSTALS.get(), 3)
                 .requiresHeat(HeatCondition.SUPERHEATED)
                 .duration(800));
-            create("heroin", b -> b
-                .require(Items.POPPY).require(Items.POPPY).require(Items.POPPY)
-                .require(Items.GLASS_BOTTLE)
-                .output(ModItems.HEROIN.get())
-                .requiresHeat(HeatCondition.HEATED));
-            create("lsd", b -> b
-                .require(Items.PAPER).require(Items.PURPLE_DYE).require(Items.ENDER_EYE)
-                .output(ModItems.LSD.get(), 9));
-            create("mdma", b -> b
-                .require(Items.AMETHYST_SHARD).require(Items.SUGAR).require(Items.PINK_DYE)
-                .output(ModItems.MDMA.get(), 3));
-            create("dmt", b -> b
-                .require(Items.CHORUS_FRUIT).require(Items.GLOW_BERRIES).require(Items.GLASS_BOTTLE)
-                .output(ModItems.DMT.get())
-                .requiresHeat(HeatCondition.SUPERHEATED));
-            create("meth", b -> b
-                .require(Items.SUGAR).require(Items.REDSTONE).require(Items.BLUE_DYE)
-                .output(ModItems.METH.get(), 2)
-                .requiresHeat(HeatCondition.SUPERHEATED));
-            create("xanax", b -> b
+            // Heroin: the lab's raw mass refined over a superheated burner; some comes out weak.
+            create("heroin_refining", b -> b
+                .require(ModItems.RAW_HEROIN.get())
+                .output(made(ModItems.HEROIN.get(), 2, 1.0f))
+                .output(0.35f, made(ModItems.HEROIN.get(), 1, 0.5f))
+                .requiresHeat(HeatCondition.SUPERHEATED)
+                .duration(600));
+            // Crystal: the raw mass crystallised, superheated.
+            create("meth_crystals", b -> b
+                .require(ModItems.RAW_METH.get()).require(ModItems.RAW_METH.get())
+                .output(ModItems.METH_CRYSTALS.get(), 3)
+                .requiresHeat(HeatCondition.SUPERHEATED)
+                .duration(800));
+            // DMT: a stack of root bark for a pipe or two.
+            create("dmt", b -> {
+                for (int i = 0; i < 8; i++) b.require(ModItems.ROOT_BARK.get());
+                return b.require(Items.GLASS_BOTTLE)
+                    .require(Fluids.WATER, 1000)
+                    .output(made(ModItems.DMT.get(), 1, 1.0f))
+                    .output(0.3f, made(ModItems.DMT.get(), 1, 1.0f))
+                    .requiresHeat(HeatCondition.SUPERHEATED)
+                    .duration(800);
+            });
+            // Xanax: pharmacy powder, pressed into pills (Pressing).
+            create("xanax_powder", b -> b
                 .require(Items.BONE_MEAL).require(Items.SUGAR).require(Items.LAPIS_LAZULI)
-                .output(ModItems.XANAX.get(), 4));
+                .output(ModItems.XANAX_POWDER.get(), 2)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(300));
+            // Wine and spirits. Distilling is a heated basin: a lot of wash in, a little spirit out.
+            create("grain_mash", b -> {
+                for (int i = 0; i < 6; i++) b.require(AllItems.WHEAT_FLOUR.get());
+                return b.require(Fluids.WATER, 1000).output(ModFluids.GRAIN_MASH.get(), 1000)
+                    .requiresHeat(HeatCondition.HEATED).duration(400);
+            });
+            create("potato_mash", b -> {
+                for (int i = 0; i < 8; i++) b.require(Items.POTATO);
+                return b.require(Fluids.WATER, 1000).output(ModFluids.POTATO_MASH.get(), 1000)
+                    .requiresHeat(HeatCondition.HEATED).duration(400);
+            });
+            create("molasses", b -> {
+                for (int i = 0; i < 8; i++) b.require(Items.SUGAR_CANE);
+                return b.require(Fluids.WATER, 1000).output(ModFluids.MOLASSES.get(), 1000)
+                    .requiresHeat(HeatCondition.HEATED).duration(400);
+            });
+            create("agave_juice", b -> {
+                for (int i = 0; i < 6; i++) b.require(ModItems.AGAVE_PULP.get());
+                return b.require(Fluids.WATER, 1000).output(ModFluids.AGAVE_JUICE.get(), 1000).duration(300);
+            });
+            create("distilling_brouillis", b -> b
+                .require(ModFluids.WINE.get(), 1000)
+                .output(ModFluids.BROUILLIS.get(), 300)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_eau_de_vie", b -> b
+                .require(ModFluids.BROUILLIS.get(), 600)
+                .output(ModFluids.EAU_DE_VIE.get(), 250)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_low_wines", b -> b
+                .require(ModFluids.WASH.get(), 1000)
+                .output(ModFluids.LOW_WINES.get(), 300)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_new_make", b -> b
+                .require(ModFluids.LOW_WINES.get(), 600)
+                .output(ModFluids.NEW_MAKE.get(), 250)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_raw_korn", b -> b
+                .require(ModFluids.GRAIN_WASH.get(), 1000)
+                .output(ModFluids.RAW_KORN.get(), 300)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_doppelkorn", b -> b
+                .require(ModFluids.RAW_KORN.get(), 600)
+                .output(ModFluids.DOPPELKORN.get(), 250)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("rectifying_neutral_spirit", b -> b
+                .require(ModFluids.POTATO_WASH.get(), 1000)
+                .output(ModFluids.NEUTRAL_SPIRIT.get(), 250)
+                .requiresHeat(HeatCondition.SUPERHEATED)
+                .duration(600));
+            create("distilling_raw_rum", b -> b
+                .require(ModFluids.RUM_WASH.get(), 1000)
+                .output(ModFluids.RAW_RUM.get(), 250)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_ordinario", b -> b
+                .require(ModFluids.AGAVE_WASH.get(), 1000)
+                .output(ModFluids.ORDINARIO.get(), 300)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            create("distilling_tequila", b -> b
+                .require(ModFluids.ORDINARIO.get(), 600)
+                .output(ModFluids.TEQUILA.get(), 250)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(600));
+            // Vodka: neutral spirit filtered through charcoal. Gin: redistilled with juniper.
+            create("vodka", b -> b
+                .require(ModFluids.NEUTRAL_SPIRIT.get(), 250).require(Items.CHARCOAL)
+                .output(ModFluids.VODKA.get(), 250)
+                .duration(200));
+            create("gin", b -> b
+                .require(ModFluids.NEUTRAL_SPIRIT.get(), 250)
+                .require(ModItems.JUNIPER_BERRIES.get()).require(ModItems.JUNIPER_BERRIES.get())
+                .output(ModFluids.GIN.get(), 250)
+                .requiresHeat(HeatCondition.HEATED)
+                .duration(400));
             create("naloxon", b -> b
                 .require(Items.GHAST_TEAR).require(Items.GLASS_BOTTLE).require(Items.SUGAR)
                 .output(ModItems.NALOXON.get(), 2));
@@ -208,6 +297,14 @@ public class ModRecipeProvider {
                 .require(ModItems.WEED_TRIM.get())
                 .output(made(ModItems.WEED.get(), 1, 0.35f))
                 .duration(100));
+            create("root_bark", b -> b
+                .require(Items.HANGING_ROOTS)
+                .output(ModItems.ROOT_BARK.get())
+                .duration(120));
+            create("agave_pulp", b -> b
+                .require(ModItems.ROASTED_AGAVE.get())
+                .output(ModItems.AGAVE_PULP.get(), 3)
+                .duration(150));
             create("coca_meal", b -> b
                 .require(ModItems.DRIED_COCA_LEAF.get())
                 .output(ModItems.COCA_MEAL.get())
@@ -241,6 +338,10 @@ public class ModRecipeProvider {
             create("empty_can", b -> b
                 .require(AllItems.IRON_SHEET.get())
                 .output(ModItems.EMPTY_CAN.get(), 2));
+            // A pill press: pharmacy-steady, a full dose each.
+            create("xanax_pills", b -> b
+                .require(ModItems.XANAX_POWDER.get())
+                .output(made(ModItems.XANAX.get(), 4, 1.0f)));
         }
     }
 
@@ -255,6 +356,11 @@ public class ModRecipeProvider {
                 .output(made(ModItems.KOKS.get(), 2, 1.0f))
                 .output(0.5f, made(ModItems.KOKS.get(), 1, 1.0f))
                 .output(0.35f, made(ModItems.KOKS.get(), 1, 0.55f))
+                .duration(200));
+            create("meth_from_crystals", b -> b
+                .require(ModItems.METH_CRYSTALS.get())
+                .output(made(ModItems.METH.get(), 3, 1.0f))
+                .output(0.4f, made(ModItems.METH.get(), 1, 0.6f))
                 .duration(200));
             create("amethyst_grit", b -> b
                 .require(Items.AMETHYST_SHARD)
@@ -275,6 +381,25 @@ public class ModRecipeProvider {
                 .toolNotConsumed()
                 .output(ModItems.TRIMMED_BUDS.get())
                 .output(0.5f, ModItems.WEED_TRIM.get()));
+            // Scoring the ripe pods: a deployer with shears; the pod gives up its seeds too.
+            create("scoring_poppy_pods", b -> b
+                .require(ModItems.POPPY_POD.get())
+                .require(Items.SHEARS)
+                .toolNotConsumed()
+                .output(ModItems.OPIUM_LATEX.get())
+                .output(ModItems.OPIUM_POPPY_SEEDS.get())
+                .output(0.5f, ModItems.OPIUM_POPPY_SEEDS.get()));
+            // LSD: the solution dripped onto paper, then the sheet cut into tabs.
+            create("soaking_blotter", b -> b
+                .require(Items.PAPER)
+                .require(ModItems.LSD_SOLUTION.get())
+                .output(ModItems.BLOTTER_SHEET.get())
+                .output(Items.GLASS_BOTTLE));
+            create("cutting_blotter", b -> b
+                .require(ModItems.BLOTTER_SHEET.get())
+                .require(Items.SHEARS)
+                .toolNotConsumed()
+                .output(made(ModItems.LSD.get(), 9, 1.0f)));
         }
     }
 
@@ -286,12 +411,26 @@ public class ModRecipeProvider {
             create("koks_brick", b -> b
                 .require(ModItems.COCA_PASTE.get()).require(ModItems.COCA_PASTE.get())
                 .output(ModItems.KOKS_BRICK.get()));
+            // Grapes pressed in a basin: must for the fermenter.
+            create("grape_must", b -> {
+                for (int i = 0; i < 8; i++) b.require(ModItems.GRAPES.get());
+                return b.output(ModFluids.GRAPE_MUST.get(), 500);
+            });
+            create("raw_opium", b -> b
+                .require(ModItems.OPIUM_LATEX.get()).require(ModItems.OPIUM_LATEX.get())
+                .require(ModItems.OPIUM_LATEX.get()).require(ModItems.OPIUM_LATEX.get())
+                .output(ModItems.RAW_OPIUM.get()));
+            // Pressing pills: mostly a normal dose, now and then a dangerous "super pill".
+            create("mdma_pills", b -> b
+                .require(ModItems.MDMA_CRYSTALS.get()).require(Items.SUGAR)
+                .output(made(ModItems.MDMA.get(), 3, 1.0f))
+                .output(0.25f, made(ModItems.MDMA.get(), 1, 1.8f)));
         }
     }
 
     /**
-     * The Keta precision lab: a glass flask through five rounds of grit, water, the precision
-     * mechanism's fine work and the press. Three batches in ten come out spoiled.
+     * The precision labs: a glass flask through rounds of ingredients, water, the precision
+     * mechanism's fine work and the press; a share of batches comes out spoiled. Made-up steps.
      */
     public static class KetaLab extends SequencedAssemblyRecipeGen {
         public KetaLab(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
@@ -310,6 +449,47 @@ public class ModRecipeProvider {
                 .addStep(com.simibubi.create.content.kinetics.press.PressingRecipe::new, s -> s)
                 .addOutput(ModItems.RAW_KETA.get(), 70)
                 .addOutput(ModItems.RUINED_BATCH.get(), 30));
+            create("heroin_batch", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .transitionTo(ModItems.HEROIN_BATCH.get())
+                .loops(4)
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(ModItems.RAW_OPIUM.get()))
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(Items.BLAZE_POWDER))
+                .addStep(FillingRecipe::new, s -> s.require(Fluids.WATER, 250))
+                .addStep(PressingRecipe::new, s -> s)
+                .addOutput(ModItems.RAW_HEROIN.get(), 70)
+                .addOutput(ModItems.RUINED_BATCH.get(), 30));
+            create("meth_batch", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .transitionTo(ModItems.METH_BATCH.get())
+                .loops(6)
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(Items.GLOWSTONE_DUST))
+                .addStep(FillingRecipe::new, s -> s.require(Fluids.LAVA, 50))
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(AllItems.PRECISION_MECHANISM.get()).toolNotConsumed())
+                .addStep(PressingRecipe::new, s -> s)
+                .addOutput(ModItems.RAW_METH.get(), 65)
+                .addOutput(ModItems.RUINED_BATCH.get(), 35));
+            create("mdma_batch", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .transitionTo(ModItems.MDMA_BATCH.get())
+                .loops(5)
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(Items.PRISMARINE_CRYSTALS))
+                .addStep(FillingRecipe::new, s -> s.require(Fluids.WATER, 250))
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(AllItems.PRECISION_MECHANISM.get()).toolNotConsumed())
+                .addStep(PressingRecipe::new, s -> s)
+                .addOutput(ModItems.MDMA_CRYSTALS.get(), 70)
+                .addOutput(ModItems.RUINED_BATCH.get(), 30));
+            // The hardest line: ergot is rare, and four batches in ten are lost.
+            create("lsd_batch", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .transitionTo(ModItems.LSD_BATCH.get())
+                .loops(3)
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(ModItems.ERGOT.get()))
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(Items.GLOW_INK_SAC))
+                .addStep(FillingRecipe::new, s -> s.require(Fluids.WATER, 250))
+                .addStep(DeployerApplicationRecipe::new, s -> s.require(AllItems.PRECISION_MECHANISM.get()).toolNotConsumed())
+                .addOutput(ModItems.LSD_SOLUTION.get(), 60)
+                .addOutput(ModItems.RUINED_BATCH.get(), 40));
         }
     }
 
@@ -327,6 +507,38 @@ public class ModRecipeProvider {
                 .require(ModFluids.BEER.get(), 250)
                 .output(ModItems.SEALED_CAN.get()));
 
+            create("bottling_wine", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.WINE.get(), 250)
+                .output(ModItems.WINE_BOTTLE.get()));
+            create("bottling_cognac", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.COGNAC.get(), 250)
+                .output(ModItems.COGNAC_BOTTLE.get()));
+            create("bottling_whiskey", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.WHISKEY.get(), 250)
+                .output(ModItems.WHISKEY_BOTTLE.get()));
+            create("bottling_doppelkorn", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.DOPPELKORN.get(), 250)
+                .output(ModItems.DOPPELKORN_BOTTLE.get()));
+            create("bottling_vodka", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.VODKA.get(), 250)
+                .output(ModItems.VODKA_BOTTLE.get()));
+            create("bottling_gin", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.GIN.get(), 250)
+                .output(ModItems.GIN_BOTTLE.get()));
+            create("bottling_rum", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.RUM.get(), 250)
+                .output(ModItems.RUM_BOTTLE.get()));
+            create("bottling_tequila", b -> b
+                .require(Items.GLASS_BOTTLE)
+                .require(ModFluids.TEQUILA.get(), 250)
+                .output(ModItems.TEQUILA_BOTTLE.get()));
             create("filling_lachgas_balloon", b -> b
                 .require(ModItems.BALLOON.get())
                 .require(ModFluids.LACHGAS.get(), 250)
@@ -344,25 +556,56 @@ public class ModRecipeProvider {
                 .require(ModFluids.HOPPED_WORT.get(), 500)
                 .output(ModFluids.BEER.get(), 500)
                 .duration(24000));
+            create("fermenting_wine", b -> b
+                .require(ModItems.YEAST.get())
+                .require(ModFluids.GRAPE_MUST.get(), 1000)
+                .output(ModFluids.WINE.get(), 1000)
+                .duration(48000));
+            create("fermenting_wash", b -> b
+                .require(ModItems.YEAST.get())
+                .require(ModFluids.WORT.get(), 1000)
+                .output(ModFluids.WASH.get(), 1000)
+                .duration(24000));
+            create("fermenting_grain_wash", b -> b
+                .require(ModItems.YEAST.get())
+                .require(ModFluids.GRAIN_MASH.get(), 1000)
+                .output(ModFluids.GRAIN_WASH.get(), 1000)
+                .duration(24000));
+            create("fermenting_potato_wash", b -> b
+                .require(ModItems.YEAST.get())
+                .require(ModFluids.POTATO_MASH.get(), 1000)
+                .output(ModFluids.POTATO_WASH.get(), 1000)
+                .duration(24000));
+            create("fermenting_rum_wash", b -> b
+                .require(ModItems.YEAST.get())
+                .require(ModFluids.MOLASSES.get(), 1000)
+                .output(ModFluids.RUM_WASH.get(), 1000)
+                .duration(24000));
+            create("fermenting_agave_wash", b -> b
+                .require(ModItems.YEAST.get())
+                .require(ModFluids.AGAVE_JUICE.get(), 1000)
+                .output(ModFluids.AGAVE_WASH.get(), 1000)
+                .duration(36000));
+            create("aging_whiskey", b -> b
+                .require(Items.OAK_PLANKS)
+                .require(ModFluids.NEW_MAKE.get(), 1000)
+                .output(ModFluids.WHISKEY.get(), 900)
+                .duration(72000));
+            create("aging_cognac", b -> b
+                .require(Items.OAK_PLANKS)
+                .require(ModFluids.EAU_DE_VIE.get(), 1000)
+                .output(ModFluids.COGNAC.get(), 900)
+                .duration(72000));
+            create("aging_rum", b -> b
+                .require(Items.OAK_PLANKS)
+                .require(ModFluids.RAW_RUM.get(), 1000)
+                .output(ModFluids.RUM.get(), 900)
+                .duration(48000));
         }
 
         @Override
         protected IRecipeTypeInfo getRecipeType() {
             return ModRecipeTypes.FERMENTING;
-        }
-    }
-
-    /** Encased Fan through soul fire: ordinary plants turn into something else. */
-    public static class Haunting extends HauntingRecipeGen {
-        public Haunting(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
-            super(output, registries, CreateBrewery.MOD_ID);
-
-            create("magic_mushroom", b -> b
-                .require(Items.BROWN_MUSHROOM)
-                .output(ModItems.MAGIC_MUSHROOM.get()));
-            create("peyote", b -> b
-                .require(Items.CACTUS)
-                .output(ModItems.PEYOTE.get()));
         }
     }
 
@@ -404,6 +647,20 @@ public class ModRecipeProvider {
                     ModItems.DRIED_BUDS.get(), 0.1f, 200)
                 .unlockedBy("has_trimmed_buds", has(ModItems.TRIMMED_BUDS.get()))
                 .save(output, CreateBrewery.ID("drying_buds"));
+            // The agave heart cooked slowly: an encased fan through a campfire, or a smoker.
+            SimpleCookingRecipeBuilder.smoking(Ingredient.of(ModItems.AGAVE_HEART.get()), RecipeCategory.MISC,
+                    ModItems.ROASTED_AGAVE.get(), 0.1f, 400)
+                .unlockedBy("has_agave_heart", has(ModItems.AGAVE_HEART.get()))
+                .save(output, CreateBrewery.ID("roasting_agave"));
+            // Mushrooms and peyote are only dried: their strength is nature's, rolled on first use.
+            SimpleCookingRecipeBuilder.smoking(Ingredient.of(ModItems.FRESH_MUSHROOMS.get()), RecipeCategory.MISC,
+                    ModItems.MAGIC_MUSHROOM.get(), 0.1f, 200)
+                .unlockedBy("has_fresh_mushrooms", has(ModItems.FRESH_MUSHROOMS.get()))
+                .save(output, CreateBrewery.ID("drying_mushrooms"));
+            SimpleCookingRecipeBuilder.smoking(Ingredient.of(ModItems.PEYOTE_BUTTON.get()), RecipeCategory.MISC,
+                    ModItems.PEYOTE.get(), 0.1f, 200)
+                .unlockedBy("has_peyote_button", has(ModItems.PEYOTE_BUTTON.get()))
+                .save(output, CreateBrewery.ID("drying_peyote"));
             // A joint as strong as the weed rolled into it (RollJointRecipe).
             net.minecraft.data.recipes.SpecialRecipeBuilder.special(com.createbrewery.drugs.RollJointRecipe::new)
                 .save(output, CreateBrewery.ID("roll_joint"));

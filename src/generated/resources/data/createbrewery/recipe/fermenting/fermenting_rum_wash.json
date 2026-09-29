@@ -1,0 +1,20 @@
+{
+  "type": "createbrewery:fermenting",
+  "ingredients": [
+    {
+      "item": "createbrewery:yeast"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "createbrewery:molasses"
+    }
+  ],
+  "processing_time": 24000,
+  "results": [
+    {
+      "amount": 1000,
+      "id": "createbrewery:rum_wash"
+    }
+  ]
+}

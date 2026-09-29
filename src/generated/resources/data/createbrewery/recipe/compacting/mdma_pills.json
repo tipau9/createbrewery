@@ -1,0 +1,31 @@
+{
+  "type": "create:compacting",
+  "ingredients": [
+    {
+      "item": "createbrewery:mdma_crystals"
+    },
+    {
+      "item": "minecraft:sugar"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "count": 3,
+      "id": "createbrewery:mdma"
+    },
+    {
+      "chance": 0.25,
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.8
+        }
+      },
+      "id": "createbrewery:mdma"
+    }
+  ]
+}

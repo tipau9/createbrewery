@@ -1,0 +1,23 @@
+{
+  "type": "create:deploying",
+  "ingredients": [
+    {
+      "item": "createbrewery:blotter_sheet"
+    },
+    {
+      "item": "minecraft:shears"
+    }
+  ],
+  "keep_held_item": true,
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "count": 9,
+      "id": "createbrewery:lsd"
+    }
+  ]
+}

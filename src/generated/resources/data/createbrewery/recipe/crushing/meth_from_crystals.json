@@ -1,0 +1,29 @@
+{
+  "type": "create:crushing",
+  "ingredients": [
+    {
+      "item": "createbrewery:meth_crystals"
+    }
+  ],
+  "processing_time": 200,
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "count": 3,
+      "id": "createbrewery:meth"
+    },
+    {
+      "chance": 0.4,
+      "components": {
+        "createbrewery:purity": {
+          "strength": 0.6
+        }
+      },
+      "id": "createbrewery:meth"
+    }
+  ]
+}

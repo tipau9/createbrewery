@@ -2,6 +2,9 @@ package com.createbrewery;
 
 import com.createbrewery.block.CannabisPlantBlock;
 import com.createbrewery.block.CocaBushBlock;
+import com.createbrewery.block.OpiumPoppyBlock;
+import com.createbrewery.block.PeyoteBlock;
+import com.createbrewery.block.PsilocybeBlock;
 import com.createbrewery.drugs.Purity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -195,6 +198,95 @@ public class DrugLineGameTests {
         Purity p = joint.get(Purity.PURITY.get());
         if (!joint.is(ModItems.JOINT.get()) || p == null || p.strength() != 0.6f) helper.fail("rolled " + joint + " " + p);
         helper.succeed();
+    }
+
+    @GameTest(template = "platform")
+    public static void otherDrugLinesLoadWithoutShortcuts(GameTestHelper helper) {
+        RecipeManager recipes = helper.getLevel().getRecipeManager();
+        Object[][] steps = {
+            {"drying_mushrooms", ModItems.MAGIC_MUSHROOM.get()},
+            {"drying_peyote", ModItems.PEYOTE.get()},
+            {"deploying/scoring_poppy_pods", ModItems.OPIUM_LATEX.get()},
+            {"compacting/raw_opium", ModItems.RAW_OPIUM.get()},
+            {"sequenced_assembly/heroin_batch", ModItems.RAW_HEROIN.get()},
+            {"mixing/heroin_refining", ModItems.HEROIN.get()},
+            {"sequenced_assembly/meth_batch", ModItems.RAW_METH.get()},
+            {"mixing/meth_crystals", ModItems.METH_CRYSTALS.get()},
+            {"crushing/meth_from_crystals", ModItems.METH.get()},
+            {"sequenced_assembly/mdma_batch", ModItems.MDMA_CRYSTALS.get()},
+            {"compacting/mdma_pills", ModItems.MDMA.get()},
+            {"sequenced_assembly/lsd_batch", ModItems.LSD_SOLUTION.get()},
+            {"deploying/soaking_blotter", ModItems.BLOTTER_SHEET.get()},
+            {"deploying/cutting_blotter", ModItems.LSD.get()},
+            {"milling/root_bark", ModItems.ROOT_BARK.get()},
+            {"mixing/dmt", ModItems.DMT.get()},
+            {"mixing/xanax_powder", ModItems.XANAX_POWDER.get()},
+            {"pressing/xanax_pills", ModItems.XANAX.get()},
+        };
+        for (Object[] step : steps) {
+            RecipeHolder<?> r = recipes.byKey(CreateBrewery.ID((String) step[0])).orElse(null);
+            if (r == null) helper.fail("missing recipe " + step[0]);
+            Item made = r.value().getResultItem(helper.getLevel().registryAccess()).getItem();
+            if (made != step[1]) helper.fail(step[0] + " makes " + made + ", not " + step[1]);
+        }
+        for (String last : new String[] {"mixing/heroin_refining", "crushing/meth_from_crystals", "compacting/mdma_pills",
+                                         "deploying/cutting_blotter", "mixing/dmt", "pressing/xanax_pills"}) {
+            ItemStack out = recipes.byKey(CreateBrewery.ID(last)).orElseThrow().value().getResultItem(helper.getLevel().registryAccess());
+            Purity purity = out.get(Purity.PURITY.get());
+            if (purity == null || purity.strength() != 1.0f) helper.fail(last + " makes " + out + " without a full-dose purity: " + purity);
+        }
+        for (String old : new String[] {"mixing/heroin", "mixing/lsd", "mixing/mdma", "mixing/meth", "mixing/xanax",
+                                        "haunting/magic_mushroom", "haunting/peyote"}) {
+            if (recipes.byKey(CreateBrewery.ID(old)).isPresent()) helper.fail("old shortcut " + old + " is back");
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "platform")
+    public static void aMushroomPatchIsSpentAfterItsLastFlush(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 2, 2);
+        BlockPos pos = helper.absolutePos(rel);
+        BlockState patch = ModBlocks.PSILOCYBE.get().defaultBlockState();
+        helper.setBlock(rel.below(), Blocks.DIRT);
+        if (patch.canSurvive(helper.getLevel(), pos)) helper.fail("mushrooms take on plain dirt");
+        helper.setBlock(rel.below(), Blocks.MYCELIUM);
+        if (!patch.canSurvive(helper.getLevel(), pos)) helper.fail("mushrooms do not take on mycelium");
+
+        BlockState grown = patch.setValue(PsilocybeBlock.AGE, PsilocybeBlock.MAX_AGE).setValue(PsilocybeBlock.FLUSHES, 1);
+        List<ItemStack> youngDrops = Block.getDrops(patch, helper.getLevel(), pos, null);
+        if (!youngDrops.isEmpty()) helper.fail("young patch drops " + youngDrops);
+        List<ItemStack> grownDrops = Block.getDrops(grown, helper.getLevel(), pos, null);
+        int picked = count(grownDrops, ModItems.FRESH_MUSHROOMS.get());
+        if (picked < PsilocybeBlock.MIN_PICKED || picked > PsilocybeBlock.MAX_PICKED || count(grownDrops, ModItems.MUSHROOM_SPORES.get()) != 1) {
+            helper.fail("grown patch drops " + grownDrops);
+        }
+        // Picked after the last flush: the next tick it is gone.
+        BlockState spent = patch.setValue(PsilocybeBlock.FLUSHES, PsilocybeBlock.MAX_FLUSHES);
+        helper.setBlock(rel, spent);
+        spent.randomTick(helper.getLevel(), pos, helper.getLevel().random);
+        if (!helper.getBlockState(rel).isAir()) helper.fail("spent patch still there: " + helper.getBlockState(rel));
+        helper.succeed();
+    }
+
+    @GameTest(template = "platform")
+    public static void peyoteRegrowsFromTheRootAndPoppiesGivePods(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 2, 2);
+        BlockPos pos = helper.absolutePos(rel);
+        helper.setBlock(rel.below(), Blocks.SAND);
+        BlockState grown = ModBlocks.PEYOTE_CACTUS.get().defaultBlockState().setValue(PeyoteBlock.AGE, PeyoteBlock.MAX_AGE);
+        helper.setBlock(rel, grown);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        grown.useWithoutItem(helper.getLevel(), player, new BlockHitResult(Vec3.atCenterOf(pos), net.minecraft.core.Direction.UP, pos, false));
+        if (helper.getBlockState(rel).getValue(PeyoteBlock.AGE) != PeyoteBlock.CUT_BACK) helper.fail("cut peyote not back to its root");
+
+        BlockState poppy = ModBlocks.OPIUM_POPPY.get().defaultBlockState();
+        List<ItemStack> young = Block.getDrops(poppy, helper.getLevel(), pos, null);
+        if (count(young, ModItems.POPPY_POD.get()) != 0 || count(young, ModItems.OPIUM_POPPY_SEEDS.get()) != 1) helper.fail("young poppy drops " + young);
+        List<ItemStack> ripe = Block.getDrops(poppy.setValue(OpiumPoppyBlock.AGE, OpiumPoppyBlock.MAX_AGE), helper.getLevel(), pos, null);
+        if (count(ripe, ModItems.POPPY_POD.get()) < 2 || count(ripe, ModItems.OPIUM_POPPY_SEEDS.get()) != 1) helper.fail("ripe poppy drops " + ripe);
+        helper.succeedWhen(() -> helper.assertTrue(helper.getEntities(net.minecraft.world.entity.EntityType.ITEM).stream()
+            .anyMatch(e -> e.getItem().is(ModItems.PEYOTE_BUTTON.get())), "no button cut"));
     }
 
     private static int count(List<ItemStack> drops, Item item) {

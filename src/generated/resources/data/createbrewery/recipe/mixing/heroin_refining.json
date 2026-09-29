@@ -1,0 +1,30 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "superheated",
+  "ingredients": [
+    {
+      "item": "createbrewery:raw_heroin"
+    }
+  ],
+  "processing_time": 600,
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "count": 2,
+      "id": "createbrewery:heroin"
+    },
+    {
+      "chance": 0.35,
+      "components": {
+        "createbrewery:purity": {
+          "strength": 0.5
+        }
+      },
+      "id": "createbrewery:heroin"
+    }
+  ]
+}

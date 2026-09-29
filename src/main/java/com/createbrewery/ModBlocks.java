@@ -114,6 +114,82 @@ public class ModBlocks {
         })
         .register();
 
+    // The other grows (see the block classes). Each drops its own item where a harvester should
+    // replant it, so the harvester keeps one back and hands on the rest.
+    public static final BlockEntry<com.createbrewery.block.PsilocybeBlock> PSILOCYBE = REGISTRATE
+        .block("psilocybe", com.createbrewery.block.PsilocybeBlock::new)
+        .initialProperties(() -> Blocks.BROWN_MUSHROOM)
+        .blockstate((ctx, prov) -> crossStages(ctx, prov, com.createbrewery.block.PsilocybeBlock.AGE))
+        // Only a grown patch gives anything: its mushrooms, and spores for the next.
+        .loot((p, b) -> p.add(b, stagedLoot(b, com.createbrewery.block.PsilocybeBlock.AGE, com.createbrewery.block.PsilocybeBlock.MAX_AGE,
+            null, ModItems.FRESH_MUSHROOMS.get(), com.createbrewery.block.PsilocybeBlock.MIN_PICKED, com.createbrewery.block.PsilocybeBlock.MAX_PICKED)
+            .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool().when(atAge(b, com.createbrewery.block.PsilocybeBlock.AGE, com.createbrewery.block.PsilocybeBlock.MAX_AGE))
+                .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ModItems.MUSHROOM_SPORES.get())))))
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.PeyoteBlock> PEYOTE_CACTUS = REGISTRATE
+        .block("peyote_cactus", com.createbrewery.block.PeyoteBlock::new)
+        .initialProperties(() -> Blocks.SWEET_BERRY_BUSH)
+        .blockstate((ctx, prov) -> crossStages(ctx, prov, com.createbrewery.block.PeyoteBlock.AGE))
+        .loot((p, b) -> p.add(b, stagedLoot(b, com.createbrewery.block.PeyoteBlock.AGE, com.createbrewery.block.PeyoteBlock.MAX_AGE,
+            ModItems.PEYOTE_PUP.get(), ModItems.PEYOTE_BUTTON.get(), 1, 1)))
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.OpiumPoppyBlock> OPIUM_POPPY = REGISTRATE
+        .block("opium_poppy", com.createbrewery.block.OpiumPoppyBlock::new)
+        .initialProperties(() -> Blocks.WHEAT)
+        .blockstate((ctx, prov) -> crossStages(ctx, prov, com.createbrewery.block.OpiumPoppyBlock.AGE))
+        .loot((p, b) -> p.add(b, stagedLoot(b, com.createbrewery.block.OpiumPoppyBlock.AGE, com.createbrewery.block.OpiumPoppyBlock.MAX_AGE,
+            ModItems.OPIUM_POPPY_SEEDS.get(), ModItems.POPPY_POD.get(), 2, 4)))
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.GrapeVineBlock> GRAPE_VINE = REGISTRATE
+        .block("grape_vine", com.createbrewery.block.GrapeVineBlock::new)
+        .initialProperties(() -> Blocks.SWEET_BERRY_BUSH)
+        .blockstate((ctx, prov) -> crossStages(ctx, prov, com.createbrewery.block.GrapeVineBlock.AGE))
+        .loot((p, b) -> p.add(b, stagedLoot(b, com.createbrewery.block.GrapeVineBlock.AGE, com.createbrewery.block.GrapeVineBlock.MAX_AGE,
+            ModItems.GRAPE_CUTTING.get(), ModItems.GRAPES.get(), com.createbrewery.block.GrapeVineBlock.MIN_GRAPES, com.createbrewery.block.GrapeVineBlock.MAX_GRAPES)))
+        .register();
+
+    // The agave dies at harvest: its heart, and the pup it leaves (which a harvester replants).
+    public static final BlockEntry<com.createbrewery.block.AgaveBlock> AGAVE = REGISTRATE
+        .block("agave", com.createbrewery.block.AgaveBlock::new)
+        .initialProperties(() -> Blocks.SWEET_BERRY_BUSH)
+        .blockstate((ctx, prov) -> crossStages(ctx, prov, com.createbrewery.block.AgaveBlock.AGE))
+        .loot((p, b) -> p.add(b, stagedLoot(b, com.createbrewery.block.AgaveBlock.AGE, com.createbrewery.block.AgaveBlock.MAX_AGE,
+            ModItems.AGAVE_PUP.get(), ModItems.AGAVE_HEART.get(), 1, 1)))
+        .register();
+
+    /** One cross model per growth stage, {@code <name>_stage<age>}. */
+    private static <T extends Block> void crossStages(DataGenContext<Block, T> ctx, RegistrateBlockstateProvider prov,
+                                                      net.minecraft.world.level.block.state.properties.IntegerProperty age) {
+        prov.getVariantBuilder(ctx.getEntry()).forAllStates(state -> new ConfiguredModel[] {
+            new ConfiguredModel(prov.models()
+                .withExistingParent(ctx.getName() + "_stage" + state.getValue(age), prov.mcLoc("block/cross"))
+                .texture("cross", prov.modLoc("block/" + ctx.getName() + "_stage" + state.getValue(age)))
+                .renderType("minecraft:cutout"))
+        });
+    }
+
+    private static net.minecraft.world.level.storage.loot.predicates.LootItemCondition.Builder atAge(
+            Block b, net.minecraft.world.level.block.state.properties.IntegerProperty age, int value) {
+        return net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(b)
+            .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties().hasProperty(age, value));
+    }
+
+    /** {@code always} (if any) at every age, and {@code min..max} of {@code ripe} when fully grown. */
+    private static net.minecraft.world.level.storage.loot.LootTable.Builder stagedLoot(
+            Block b, net.minecraft.world.level.block.state.properties.IntegerProperty age, int maxAge,
+            net.minecraft.world.level.ItemLike always, net.minecraft.world.level.ItemLike ripe, int min, int max) {
+        var table = net.minecraft.world.level.storage.loot.LootTable.lootTable();
+        if (always != null) table.withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+            .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(always)));
+        return table.withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool().when(atAge(b, age, maxAge))
+            .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ripe)
+                .apply(net.minecraft.world.level.storage.loot.functions.SetItemCountFunction.setCount(
+                    net.minecraft.world.level.storage.loot.providers.number.UniformGenerator.between(min, max)))));
+    }
+
     // simpleItem() is not decoration: without a BlockItem the fermenter cannot be placed
     // and Registrate's default loot table has nothing to drop.
     public static final BlockEntry<FermenterBlock> FERMENTER = REGISTRATE

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": {
+    "item": "createbrewery:peyote_button"
+  },
+  "result": {
+    "count": 1,
+    "id": "createbrewery:peyote"
+  }
+}

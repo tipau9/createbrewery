@@ -1,0 +1,85 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "minecraft:glass_bottle"
+  },
+  "loops": 4,
+  "results": [
+    {
+      "chance": 70.0,
+      "id": "createbrewery:raw_heroin"
+    },
+    {
+      "chance": 30.0,
+      "id": "createbrewery:ruined_batch"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:heroin_batch"
+        },
+        {
+          "item": "createbrewery:raw_opium"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:heroin_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:heroin_batch"
+        },
+        {
+          "item": "minecraft:blaze_powder"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:heroin_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createbrewery:heroin_batch"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 250,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:heroin_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createbrewery:heroin_batch"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:heroin_batch"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createbrewery:heroin_batch"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "type": "createbrewery:fermenting",
+  "ingredients": [
+    {
+      "item": "minecraft:oak_planks"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "createbrewery:new_make"
+    }
+  ],
+  "processing_time": 72000,
+  "results": [
+    {
+      "amount": 900,
+      "id": "createbrewery:whiskey"
+    }
+  ]
+}

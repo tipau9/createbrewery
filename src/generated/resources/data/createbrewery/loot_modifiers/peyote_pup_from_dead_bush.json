@@ -1,0 +1,15 @@
+{
+  "type": "createbrewery:add_item",
+  "conditions": [
+    {
+      "condition": "neoforge:loot_table_id",
+      "loot_table_id": "minecraft:blocks/dead_bush"
+    },
+    {
+      "chance": 0.03,
+      "condition": "minecraft:random_chance"
+    }
+  ],
+  "count": 1,
+  "item": "createbrewery:peyote_pup"
+}

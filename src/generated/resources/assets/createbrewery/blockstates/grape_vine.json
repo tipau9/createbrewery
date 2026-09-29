@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "age=0": {
+      "model": "createbrewery:block/grape_vine_stage0"
+    },
+    "age=1": {
+      "model": "createbrewery:block/grape_vine_stage1"
+    },
+    "age=2": {
+      "model": "createbrewery:block/grape_vine_stage2"
+    },
+    "age=3": {
+      "model": "createbrewery:block/grape_vine_stage3"
+    },
+    "age=4": {
+      "model": "createbrewery:block/grape_vine_stage4"
+    }
+  }
+}

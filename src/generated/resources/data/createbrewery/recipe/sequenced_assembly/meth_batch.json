@@ -1,0 +1,86 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "minecraft:glass_bottle"
+  },
+  "loops": 6,
+  "results": [
+    {
+      "chance": 65.0,
+      "id": "createbrewery:raw_meth"
+    },
+    {
+      "chance": 35.0,
+      "id": "createbrewery:ruined_batch"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:meth_batch"
+        },
+        {
+          "item": "minecraft:glowstone_dust"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:meth_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createbrewery:meth_batch"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 50,
+          "fluid": "minecraft:lava"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:meth_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:meth_batch"
+        },
+        {
+          "item": "create:precision_mechanism"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "createbrewery:meth_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createbrewery:meth_batch"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:meth_batch"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createbrewery:meth_batch"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "create:deploying",
+  "ingredients": [
+    {
+      "item": "minecraft:paper"
+    },
+    {
+      "item": "createbrewery:lsd_solution"
+    }
+  ],
+  "results": [
+    {
+      "id": "createbrewery:blotter_sheet"
+    },
+    {
+      "id": "minecraft:glass_bottle"
+    }
+  ]
+}

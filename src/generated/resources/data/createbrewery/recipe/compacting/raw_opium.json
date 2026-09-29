@@ -1,0 +1,22 @@
+{
+  "type": "create:compacting",
+  "ingredients": [
+    {
+      "item": "createbrewery:opium_latex"
+    },
+    {
+      "item": "createbrewery:opium_latex"
+    },
+    {
+      "item": "createbrewery:opium_latex"
+    },
+    {
+      "item": "createbrewery:opium_latex"
+    }
+  ],
+  "results": [
+    {
+      "id": "createbrewery:raw_opium"
+    }
+  ]
+}

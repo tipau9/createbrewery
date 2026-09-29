@@ -1,0 +1,89 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "minecraft:glass_bottle"
+  },
+  "loops": 3,
+  "results": [
+    {
+      "chance": 60.0,
+      "id": "createbrewery:lsd_solution"
+    },
+    {
+      "chance": 40.0,
+      "id": "createbrewery:ruined_batch"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:lsd_batch"
+        },
+        {
+          "item": "createbrewery:ergot"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:lsd_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:lsd_batch"
+        },
+        {
+          "item": "minecraft:glow_ink_sac"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:lsd_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createbrewery:lsd_batch"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 250,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:lsd_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:lsd_batch"
+        },
+        {
+          "item": "create:precision_mechanism"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "createbrewery:lsd_batch"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createbrewery:lsd_batch"
+  }
+}

@@ -42,6 +42,18 @@ public class ModLootModifiers {
     private static final float HEMP_SEED_CHANCE = 0.0125F;
     /** A seedling now and then out of jungle leaves: the start of a plantation, not a harvest. */
     private static final float COCA_SEEDLING_CHANCE = 0.025F;
+    /** The other grows start from a rare find too. */
+    private static final float SPORES_CHANCE = 0.04F, PEYOTE_PUP_CHANCE = 0.03F, OPIUM_POPPY_SEEDS_CHANCE = 0.05F;
+    /** Ergot: now and then a ripe ear carries the fungus. */
+    private static final float ERGOT_CHANCE = 0.01F;
+    /** Wine, tequila and gin start from a find too. */
+    private static final float GRAPE_CUTTING_CHANCE = 0.04F, AGAVE_PUP_CHANCE = 0.03F, JUNIPER_CHANCE = 0.03F;
+
+    private static LootItemCondition ripe(net.minecraft.world.level.block.Block crop) {
+        return net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition.hasBlockStateProperties(crop)
+            .setProperties(net.minecraft.advancements.critereon.StatePropertiesPredicate.Builder.properties()
+                .hasProperty(net.minecraft.world.level.block.CropBlock.AGE, net.minecraft.world.level.block.CropBlock.MAX_AGE)).build();
+    }
 
     public static void register(IEventBus modEventBus) {
         GLM_SERIALIZERS.register(modEventBus);
@@ -79,6 +91,64 @@ public class ModLootModifiers {
                         LootItemRandomChanceCondition.randomChance(COCA_SEEDLING_CHANCE).build()
                     },
                     ModItems.COCA_SEEDLING.get(), 1));
+
+                add("mushroom_spores_from_brown_mushroom", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/brown_mushroom")).build(),
+                        LootItemRandomChanceCondition.randomChance(SPORES_CHANCE).build()
+                    },
+                    ModItems.MUSHROOM_SPORES.get(), 1));
+
+                add("peyote_pup_from_dead_bush", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/dead_bush")).build(),
+                        LootItemRandomChanceCondition.randomChance(PEYOTE_PUP_CHANCE).build()
+                    },
+                    ModItems.PEYOTE_PUP.get(), 1));
+
+                add("opium_poppy_seeds_from_poppy", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/poppy")).build(),
+                        LootItemRandomChanceCondition.randomChance(OPIUM_POPPY_SEEDS_CHANCE).build()
+                    },
+                    ModItems.OPIUM_POPPY_SEEDS.get(), 1));
+
+                add("ergot_from_wheat", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/wheat")).build(),
+                        ripe(net.minecraft.world.level.block.Blocks.WHEAT),
+                        LootItemRandomChanceCondition.randomChance(ERGOT_CHANCE).build()
+                    },
+                    ModItems.ERGOT.get(), 1));
+
+                add("ergot_from_barley", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "blocks/barley_crop")).build(),
+                        ripe(com.createbrewery.ModBlocks.BARLEY_CROP.get()),
+                        LootItemRandomChanceCondition.randomChance(ERGOT_CHANCE).build()
+                    },
+                    ModItems.ERGOT.get(), 1));
+
+                add("grape_cutting_from_vine", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/vine")).build(),
+                        LootItemRandomChanceCondition.randomChance(GRAPE_CUTTING_CHANCE).build()
+                    },
+                    ModItems.GRAPE_CUTTING.get(), 1));
+
+                add("agave_pup_from_cactus", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/cactus")).build(),
+                        LootItemRandomChanceCondition.randomChance(AGAVE_PUP_CHANCE).build()
+                    },
+                    ModItems.AGAVE_PUP.get(), 1));
+
+                add("juniper_berries_from_spruce_leaves", new AddItemLootModifier(
+                    new LootItemCondition[] {
+                        LootTableIdCondition.builder(ResourceLocation.fromNamespaceAndPath("minecraft", "blocks/spruce_leaves")).build(),
+                        LootItemRandomChanceCondition.randomChance(JUNIPER_CHANCE).build()
+                    },
+                    ModItems.JUNIPER_BERRIES.get(), 1));
 
                 add("hop_cones_in_village_plains_house", new AddItemLootModifier(
                     new LootItemCondition[] {

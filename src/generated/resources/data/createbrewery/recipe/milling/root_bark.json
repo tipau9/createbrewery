@@ -1,0 +1,14 @@
+{
+  "type": "create:milling",
+  "ingredients": [
+    {
+      "item": "minecraft:hanging_roots"
+    }
+  ],
+  "processing_time": 120,
+  "results": [
+    {
+      "id": "createbrewery:root_bark"
+    }
+  ]
+}

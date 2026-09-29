@@ -1,0 +1,52 @@
+{
+  "variants": {
+    "age=0,flushes=0": {
+      "model": "createbrewery:block/psilocybe_stage0"
+    },
+    "age=0,flushes=1": {
+      "model": "createbrewery:block/psilocybe_stage0"
+    },
+    "age=0,flushes=2": {
+      "model": "createbrewery:block/psilocybe_stage0"
+    },
+    "age=0,flushes=3": {
+      "model": "createbrewery:block/psilocybe_stage0"
+    },
+    "age=1,flushes=0": {
+      "model": "createbrewery:block/psilocybe_stage1"
+    },
+    "age=1,flushes=1": {
+      "model": "createbrewery:block/psilocybe_stage1"
+    },
+    "age=1,flushes=2": {
+      "model": "createbrewery:block/psilocybe_stage1"
+    },
+    "age=1,flushes=3": {
+      "model": "createbrewery:block/psilocybe_stage1"
+    },
+    "age=2,flushes=0": {
+      "model": "createbrewery:block/psilocybe_stage2"
+    },
+    "age=2,flushes=1": {
+      "model": "createbrewery:block/psilocybe_stage2"
+    },
+    "age=2,flushes=2": {
+      "model": "createbrewery:block/psilocybe_stage2"
+    },
+    "age=2,flushes=3": {
+      "model": "createbrewery:block/psilocybe_stage2"
+    },
+    "age=3,flushes=0": {
+      "model": "createbrewery:block/psilocybe_stage3"
+    },
+    "age=3,flushes=1": {
+      "model": "createbrewery:block/psilocybe_stage3"
+    },
+    "age=3,flushes=2": {
+      "model": "createbrewery:block/psilocybe_stage3"
+    },
+    "age=3,flushes=3": {
+      "model": "createbrewery:block/psilocybe_stage3"
+    }
+  }
+}

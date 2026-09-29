@@ -1,0 +1,20 @@
+{
+  "type": "createbrewery:fermenting",
+  "ingredients": [
+    {
+      "item": "createbrewery:yeast"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "createbrewery:grape_must"
+    }
+  ],
+  "processing_time": 48000,
+  "results": [
+    {
+      "amount": 1000,
+      "id": "createbrewery:wine"
+    }
+  ]
+}

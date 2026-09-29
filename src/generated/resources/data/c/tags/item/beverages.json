@@ -1,6 +1,14 @@
 {
   "values": [
     "createbrewery:beer_bottle",
-    "createbrewery:sealed_can"
+    "createbrewery:sealed_can",
+    "createbrewery:wine_bottle",
+    "createbrewery:cognac_bottle",
+    "createbrewery:whiskey_bottle",
+    "createbrewery:doppelkorn_bottle",
+    "createbrewery:vodka_bottle",
+    "createbrewery:gin_bottle",
+    "createbrewery:rum_bottle",
+    "createbrewery:tequila_bottle"
   ]
 }

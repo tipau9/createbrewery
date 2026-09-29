@@ -3,17 +3,55 @@
   "heat_requirement": "superheated",
   "ingredients": [
     {
-      "item": "minecraft:chorus_fruit"
+      "item": "createbrewery:root_bark"
     },
     {
-      "item": "minecraft:glow_berries"
+      "item": "createbrewery:root_bark"
+    },
+    {
+      "item": "createbrewery:root_bark"
+    },
+    {
+      "item": "createbrewery:root_bark"
+    },
+    {
+      "item": "createbrewery:root_bark"
+    },
+    {
+      "item": "createbrewery:root_bark"
+    },
+    {
+      "item": "createbrewery:root_bark"
+    },
+    {
+      "item": "createbrewery:root_bark"
     },
     {
       "item": "minecraft:glass_bottle"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "minecraft:water"
     }
   ],
+  "processing_time": 800,
   "results": [
     {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "id": "createbrewery:dmt"
+    },
+    {
+      "chance": 0.3,
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
       "id": "createbrewery:dmt"
     }
   ]

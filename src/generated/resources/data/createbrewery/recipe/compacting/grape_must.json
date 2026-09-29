@@ -1,0 +1,35 @@
+{
+  "type": "create:compacting",
+  "ingredients": [
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    },
+    {
+      "item": "createbrewery:grapes"
+    }
+  ],
+  "results": [
+    {
+      "amount": 500,
+      "id": "createbrewery:grape_must"
+    }
+  ]
+}

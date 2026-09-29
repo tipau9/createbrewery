@@ -1,0 +1,86 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "minecraft:glass_bottle"
+  },
+  "loops": 5,
+  "results": [
+    {
+      "chance": 70.0,
+      "id": "createbrewery:mdma_crystals"
+    },
+    {
+      "chance": 30.0,
+      "id": "createbrewery:ruined_batch"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:mdma_batch"
+        },
+        {
+          "item": "minecraft:prismarine_crystals"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:mdma_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createbrewery:mdma_batch"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 250,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:mdma_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createbrewery:mdma_batch"
+        },
+        {
+          "item": "create:precision_mechanism"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "createbrewery:mdma_batch"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createbrewery:mdma_batch"
+        }
+      ],
+      "results": [
+        {
+          "id": "createbrewery:mdma_batch"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createbrewery:mdma_batch"
+  }
+}

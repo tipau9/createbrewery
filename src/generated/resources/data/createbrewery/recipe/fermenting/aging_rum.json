@@ -1,0 +1,20 @@
+{
+  "type": "createbrewery:fermenting",
+  "ingredients": [
+    {
+      "item": "minecraft:oak_planks"
+    },
+    {
+      "type": "neoforge:single",
+      "amount": 1000,
+      "fluid": "createbrewery:raw_rum"
+    }
+  ],
+  "processing_time": 48000,
+  "results": [
+    {
+      "amount": 900,
+      "id": "createbrewery:rum"
+    }
+  ]
+}

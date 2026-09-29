@@ -1,0 +1,19 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "item": "createbrewery:xanax_powder"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "createbrewery:purity": {
+          "strength": 1.0
+        }
+      },
+      "count": 4,
+      "id": "createbrewery:xanax"
+    }
+  ]
+}
