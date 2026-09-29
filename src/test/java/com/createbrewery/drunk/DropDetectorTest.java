@@ -10,8 +10,15 @@ class DropDetectorTest {
 
     /** Plays a stretch of a track at 60 frames a second; returns how many drops were heard. */
     private static int play(DropDetector d, double[] clock, double seconds, boolean kicks, float level, float hats) {
+        return play(d, clock, seconds, kicks ? BEAT : 0, level, hats);
+    }
+
+    private static final double BEAT = 60.0 / 128.0;
+
+    /** Same, with a kick every {@code beat} seconds (0: none). */
+    private static int play(DropDetector d, double[] clock, double seconds, double beat, float level, float hats) {
         int drops = 0;
-        double beat = 60.0 / 128.0;
+        boolean kicks = beat > 0;
         for (double end = clock[0] + seconds; clock[0] < end; clock[0] += DT) {
             boolean onBeat = kicks && (clock[0] % beat) < 0.05;
             d.hear(onBeat ? 1f : 0f, level, hats, true, clock[0], DT);
@@ -50,5 +57,54 @@ class DropDetectorTest {
         double[] clock = {0};
         assertEquals(0, play(d, clock, 90, false, 0.5f, 0.1f));
         assertTrue(d.tension < 0.1f, "no endless build-up: " + d.tension);
+    }
+
+    @Test
+    void aKickRollIntoThePauseIsABuildUp() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        play(d, clock, 30, true, 0.8f, 0.3f);
+        // The kick doubles up for four bars while a riser climbs, never leaving...
+        for (int i = 0; i < 8; i++) assertEquals(0, play(d, clock, 1, BEAT / 2, 0.5f + 0.05f * i, 0.3f + 0.05f * i));
+        // ...one bar of breath...
+        play(d, clock, 4 * BEAT, false, 0.05f, 0f);
+        // ...and the drop.
+        assertEquals(1, play(d, clock, 5, true, 0.9f, 0.3f), "one drop");
+    }
+
+    @Test
+    void aLongBreakdownStillDrops() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        play(d, clock, 30, true, 0.8f, 0.3f);
+        play(d, clock, 45, false, 0.4f, 0.1f); // a trance breakdown, three quarters of a minute
+        assertEquals(1, play(d, clock, 5, true, 0.9f, 0.3f), "one drop");
+    }
+
+    @Test
+    void aStrayKickInTheBreakdownIsNotTheDrop() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        play(d, clock, 30, true, 0.8f, 0.3f);
+        play(d, clock, 8, false, 0.4f, 0.1f);
+        // One lone thump...
+        d.hear(1f, 0.5f, 0.1f, true, clock[0], DT);
+        clock[0] += DT;
+        assertTrue(d.drop > 0f, "flashes up at once");
+        assertEquals(0, play(d, clock, 6, false, 0.4f, 0.1f), "no drop without a second kick");
+        assertEquals(0f, d.drop, 1e-6, "taken back");
+        assertTrue(d.tension > 0.3f, "build-up goes on: " + d.tension);
+        // ...and the real drop is still heard, not blocked for a quarter of a minute.
+        assertEquals(1, play(d, clock, 5, true, 0.9f, 0.3f), "the real drop");
+    }
+
+    @Test
+    void aSteadyGrooveNeverDrops() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        // A normal track: steady kick, the level wandering about.
+        for (int i = 0; i < 60; i++) assertEquals(0, play(d, clock, 1, true, 0.6f + 0.3f * (i % 3) / 2f, 0.2f + 0.2f * (i % 2)));
+        assertEquals(0, play(d, clock, 1.5, false, 0.7f, 0.3f), "short break");
+        assertEquals(0, play(d, clock, 5, true, 0.8f, 0.3f), "no drop after a short break");
     }
 }
