@@ -9,6 +9,7 @@ public class Config {
     public static final ModConfigSpec.BooleanValue ENABLE_DRUGS;
     public static final ModConfigSpec CLIENT_SPEC;
     public static final ModConfigSpec.DoubleValue SCREEN_EFFECTS;
+    public static final ModConfigSpec.BooleanValue RECORD_MUSIC;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -29,6 +30,10 @@ public class Config {
                 "1.0 = full, 0.0 = off. Lower this if the effects are uncomfortable or you are sensitive to motion or flicker.",
                 "Gameplay effects (weaving walk, aim drift, blackout) are not affected.")
             .defineInRange("drunkScreenEffects", 1.0, 0.0, 1.0);
+        RECORD_MUSIC = client
+            .comment("Debug: write what the MDMA beat and drop detection hears of every song to logs/brewery-traces/*.csv.",
+                "One line per 20 ms of the song. Leave off unless you are tuning drop detection.")
+            .define("recordMusicTraces", false);
         CLIENT_SPEC = client.build();
     }
 }

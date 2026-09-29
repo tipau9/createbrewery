@@ -1,5 +1,6 @@
 package com.createbrewery.drunk;
 
+import com.createbrewery.Config;
 import com.createbrewery.block.club.AmpRackBlockEntity;
 import com.createbrewery.block.club.DjBoothBlockEntity;
 import com.createbrewery.block.club.SpeakerBlockEntity;
@@ -234,8 +235,27 @@ public final class MusicPulse {
             return;
         }
         track.sound = sound;
+        if (Config.CLIENT_SPEC.isLoaded() && Config.RECORD_MUSIC.get()) trace(track, sound);
         tracks.add(track);
         LOGGER.info("MDMA hears {} ({} Hz)", sound.getLocation(), track.rate);
+    }
+
+    /** Starts writing what the detector hears of this song to logs/brewery-traces (Config.RECORD_MUSIC). */
+    private static void trace(Track track, SoundInstance sound) {
+        try {
+            java.nio.file.Path dir = net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("logs").resolve("brewery-traces");
+            java.nio.file.Files.createDirectories(dir);
+            String name = sound.getLocation().toString().replaceAll("[^a-zA-Z0-9._-]", "_") + "-"
+                + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".csv";
+            java.io.PrintWriter out = new java.io.PrintWriter(java.nio.file.Files.newBufferedWriter(dir.resolve(name)), true); // flushed per line: survives quitting mid-song
+            out.println(KickDetector.TRACE_HEADER);
+            // Buffers queued before the song was known are already heard: keep the song clock right.
+            track.detector.traced = track.read / track.perSlice;
+            track.detector.trace = out;
+            LOGGER.info("MDMA records {} to {}", sound.getLocation(), dir.resolve(name));
+        } catch (IOException e) {
+            LOGGER.warn("Could not record music trace", e);
+        }
     }
 
     /** Hands every buffer on unchanged, after noting what is in it. */
@@ -316,6 +336,9 @@ public final class MusicPulse {
                 t.phones = null;
                 tracks.remove(t);
                 LOGGER.info("MDMA heard {}: {} kicks, {} volume changes held", t.sound.getLocation(), t.kicks, t.held);
+                java.io.PrintWriter trace = t.detector.trace;
+                t.detector.trace = null;
+                if (trace != null) trace.close();
                 continue;
             }
             deck(t, mc);

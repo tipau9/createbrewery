@@ -100,4 +100,19 @@ class KickDetectorTest {
         for (float kick : out[KICK]) assertTrue(kick < 0.1f, "no kick in a pad: " + kick);
         assertTrue(out[LEVEL][30] > 0.3f, "the pad is heard: " + out[LEVEL][30]);
     }
+
+    @Test
+    void theTraceHasOneLinePerSliceOnTheSongClock() {
+        AudioFormat format = new AudioFormat(RATE, 16, 1, true, false);
+        KickDetector detector = new KickDetector();
+        java.io.StringWriter text = new java.io.StringWriter();
+        detector.trace = new java.io.PrintWriter(text);
+        ByteBuffer pcm = ByteBuffer.allocate((int) RATE * 2).order(ByteOrder.LITTLE_ENDIAN);
+        for (int i = 0; i < RATE; i++) pcm.putShort((short) (drum(i / RATE) * 32767));
+        pcm.flip();
+        int slices = detector.slices(format, pcm)[KICK].length;
+        String[] lines = text.toString().split("\\R");
+        assertTrue(lines.length == slices, lines.length + " lines for " + slices + " slices");
+        assertTrue(lines[1].startsWith("0.02,") && lines[1].split(",").length == KickDetector.TRACE_HEADER.split(",").length, lines[1]);
+    }
 }

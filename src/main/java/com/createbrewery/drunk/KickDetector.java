@@ -26,6 +26,11 @@ final class KickDetector {
     /** The last three 5 ms loudnesses of the bass and of the highs, newest first. */
     private final float[] bassWas = new float[3], highWas = new float[3];
     private final Onsets kicks = new Onsets(), hats = new Onsets();
+    /** When set, every slice goes in here as one CSV line (see {@link #TRACE_HEADER}), for tuning drop detection offline. */
+    volatile java.io.PrintWriter trace;
+    /** Slices heard so far while tracing: the song time of the next line. */
+    long traced;
+    static final String TRACE_HEADER = "time,bass,all,kickRise,hatRise,kick,level,hats";
 
     /** Per slice: [KICK], [LEVEL] and [HATS], each 0..1. */
     float[][] slices(AudioFormat format, ByteBuffer pcm) {
@@ -38,7 +43,7 @@ final class KickDetector {
         float[][] out = new float[3][n];
         float fade = (float) Math.exp(-SLICE / 8.0); // the loudest point is forgotten over some seconds
         for (int s = 0; s < n; s++) {
-            double allE = 0;
+            double allE = 0, bassAll = 0;
             float kickRise = 0f, hatRise = 0f;
             // In 5 ms steps: how much louder the last 10 ms are than the 10 ms before. A kick hits
             // within a few milliseconds; bass notes swelling in and two low notes beating against
@@ -56,6 +61,7 @@ final class KickDetector {
                     float high = mono - last;
                     last = mono;
                     bassE += low2 * low2;
+                    bassAll += low2 * low2;
                     highE += high * high;
                     allE += mono * mono;
                 }
@@ -67,6 +73,11 @@ final class KickDetector {
             float all = (float) Math.sqrt(allE / perSlice);
             peak = Math.max(all, peak * fade);
             out[LEVEL][s] = all < 0.003f ? 0f : all / peak;
+            java.io.PrintWriter tr = trace;
+            if (tr != null) {
+                tr.printf(java.util.Locale.ROOT, "%.2f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%.3f%n", traced++ * SLICE,
+                    Math.sqrt(bassAll / perSlice), all, kickRise, hatRise, out[KICK][s], out[LEVEL][s], out[HATS][s]);
+            }
         }
         return out;
     }
