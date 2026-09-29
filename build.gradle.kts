@@ -93,6 +93,8 @@ dependencies {
     compileOnly("com.github.glitchfiend:GlitchCore-neoforge:${property("minecraft_version")}-2.1.0.2") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    // MP3 decoding for the drop trainer (DropTrainer, ./gradlew trainDrops); tests only, not in the mod.
+    testImplementation("javazoom:jlayer:1.0.1")
     // Required to actually launch the JUnit Platform. Without it, the first unit
     // test in the repo fails with "Could not start Gradle Test Executor 1: Failed
     // to load JUnit Platform." Gradle does not pull this in implicitly.
@@ -111,4 +113,13 @@ tasks.processResources {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Tunes DropDetector.DEFAULT on your own songs: ./gradlew trainDrops --args="C:/path/to/songs"
+tasks.register<JavaExec>("trainDrops") {
+    group = "verification"
+    description = "Learns the drop detection settings from MP3s and their drops.txt"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.createbrewery.drunk.DropTrainer")
+    workingDir = projectDir
 }

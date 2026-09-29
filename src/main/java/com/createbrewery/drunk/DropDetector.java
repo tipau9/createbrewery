@@ -5,7 +5,7 @@ package com.createbrewery.drunk;
  * tempo, and hears the shape of a rave track - the build-up and the drop.
  *
  * <ul>
- *   <li>Groove: sixteen kicks in a row on the beat. Only a song that has had one can build up and
+ *   <li>Groove: kicks in a row on the beat (the numbers here are the defaults, see {@link Params}). Only a song that has had one can build up and
  *       drop - hip-hop, breakbeats and songs whose kick comes and goes never had it, so a pause
  *       in them is just a pause.</li>
  *   <li>Build-up, two kinds, within a minute of the groove: the kick has been gone for more than a
@@ -20,7 +20,25 @@ package com.createbrewery.drunk;
  * two drops are at least a quarter of a minute apart.
  */
 final class DropDetector {
-    private static final int GROOVE = 16;
+    /**
+     * Everything that decides what counts as a build-up and a drop, in seconds, beats and 0..1.
+     * DEFAULT is learnt from real songs by DropTrainer (./gradlew trainDrops).
+     */
+    record Params(int groove, double grooveMemory, double goneBeats, double goneMin, float buildRate, float letGo,
+                  float threshold, double backBeats, double backMin, float hushLevel, double spacing) {}
+
+    // trained: DropTrainer rewrites the next line
+    static final Params DEFAULT = new Params(16, 60.0, 4.0, 2.0, 0.1f, 0.25f, 0.3f, 2.0, 1.0, 0.12f, 15.0);
+
+    private final Params p;
+
+    DropDetector() {
+        this(DEFAULT);
+    }
+
+    DropDetector(Params p) {
+        this.p = p;
+    }
 
     int beats;
     /** 0..1 how far into a build-up. */
@@ -49,19 +67,19 @@ final class DropDetector {
         }
 
         double quiet = now - lastKick;
-        boolean grooved = now - lastGroove < 60.0;
+        boolean grooved = now - lastGroove < p.grooveMemory();
         float rising = Math.max(0f, level - calm) * 3f + Math.max(0f, hats - busy) * 2f;
-        boolean gone = heard && grooved && quiet > Math.max(2.0, 4.0 * period);
+        boolean gone = heard && grooved && quiet > Math.max(p.goneMin(), p.goneBeats() * period);
         boolean rolling = heard && grooved && now - rollAt < period;
         if (gone || rolling) {
-            tension += dt * (1f / 10f + rising);
+            tension += dt * (p.buildRate() + rising);
         } else if (heard) {
-            tension -= dt / 4f; // the groove goes on, or there never was one: a build-up slowly let go
+            tension -= dt * p.letGo(); // the groove goes on, or there never was one: a build-up slowly let go
         } else {
             tension -= dt / 2f;
         }
         tension = Math.max(0f, Math.min(1f, tension));
-        if (heard && level < 0.12f) hush = now;
+        if (heard && level < p.hushLevel()) hush = now;
         calm += (level - calm) * Math.min(1f, dt / 3f);
         busy += (hats - busy) * Math.min(1f, dt / 1f);
         drop *= (float) Math.exp(-dt * 1.2);
@@ -71,11 +89,11 @@ final class DropDetector {
         beats++;
         double gap = now - lastKick;
         // Once the tempo is known, a kick roll (or a stray kick) does not drag it away.
-        boolean learn = beats < GROOVE ? gap > 0.25 && gap < 1.2 : gap > 0.75 * period && gap < 1.5 * period;
+        boolean learn = beats < p.groove() ? gap > 0.25 && gap < 1.2 : gap > 0.75 * period && gap < 1.5 * period;
         if (learn) period += (gap - period) * 0.2;
         boolean onBeat = gap > 0.8 * period && gap < 1.25 * period;
         streak = onBeat ? streak + 1 : 0;
-        if (streak >= GROOVE) lastGroove = now;
+        if (streak >= p.groove()) lastGroove = now;
         // Two fast kicks in a row: a roll. One alone is a ghost kick or a broken beat.
         boolean fast = gap > 0.05 && gap < 0.6 * period;
         if (fast && lastFast) rollAt = now;
@@ -90,8 +108,8 @@ final class DropDetector {
             }
             candidate = Double.NaN;
         }
-        boolean back = gap > Math.max(1.0, 2.0 * period) || now - hush < 1.0;
-        if (back && tension > 0.3f && now - lastDrop > 15.0) {
+        boolean back = gap > Math.max(p.backMin(), p.backBeats() * period) || now - hush < 1.0;
+        if (back && tension > p.threshold() && now - lastDrop > p.spacing()) {
             candidate = now;
             keptLastKick = lastKick;
             candidateDrop = Math.min(1f, 0.4f + tension + (now - hush < 1.0 ? 0.3f : 0f));
