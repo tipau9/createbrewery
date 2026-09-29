@@ -39,7 +39,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
-            TAG="v0.1.0"
+            TAG="v$(grep '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '\r')"
           fi
           echo "Target release tag: $TAG"
           
