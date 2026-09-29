@@ -5,55 +5,58 @@ package com.createbrewery.drunk;
  * tempo, and hears the shape of a rave track - the build-up and the drop.
  *
  * <ul>
- *   <li>Build-up, two kinds: the kick has been gone for more than a bar while the music goes on
- *       (a breakdown), or the kick rolls, coming faster than the beat. Risers - louder than a few
- *       seconds ago, the hats busier - speed it up. A breakdown may last up to a minute.</li>
+ *   <li>Groove: sixteen kicks in a row on the beat. Only a song that has had one can build up and
+ *       drop - hip-hop, breakbeats and songs whose kick comes and goes never had it, so a pause
+ *       in them is just a pause.</li>
+ *   <li>Build-up, two kinds, within a minute of the groove: the kick has been gone for more than a
+ *       bar while the music goes on (a breakdown), or the kick rolls, coming faster than the beat.
+ *       Risers - louder than a few seconds ago, the hats busier - speed it up.</li>
  *   <li>Drop: the kick comes back after a build-up and a pause of at least half a bar, or right
- *       after a moment of near silence. Harder the longer the build-up, and hardest right after
- *       that silence.</li>
- *   <li>A single stray kick in the middle of a breakdown is not the drop: if no second kick
- *       follows on the beat, the drop is taken back and the build-up goes on. So {@link #takeDrop}
- *       only answers once that second kick is in, a beat after {@link #drop} flashed up.</li>
+ *       after a moment of near silence - and the next kick lands on the beat. Only then does it
+ *       count, one beat in: a single stray kick in a breakdown is not the drop, and the build-up
+ *       goes on. Harder the longer the build-up, and hardest right after that silence.</li>
  * </ul>
  * A pause of a bar or two is not a build-up, a song without drums is not one long build-up, and
  * two drops are at least a quarter of a minute apart.
  */
 final class DropDetector {
+    private static final int GROOVE = 16;
+
     int beats;
     /** 0..1 how far into a build-up. */
     float tension;
     /** 1 at a drop, dying away over a second or two. */
     float drop;
     private double lastKick = Double.NEGATIVE_INFINITY, lastDrop = Double.NEGATIVE_INFINITY, hush = Double.NEGATIVE_INFINITY;
-    private double rollAt = Double.NEGATIVE_INFINITY;
+    private double rollAt = Double.NEGATIVE_INFINITY, lastGroove = Double.NEGATIVE_INFINITY;
     private double period = 0.5;
     private float calm, busy;
     private boolean kicking, dropped, lastFast;
-    /** A drop not yet confirmed by a second kick (NaN when none), and what it replaced, to take it back. */
-    private double pending = Double.NaN, keptLastDrop, keptLastKick;
-    private float keptTension;
+    /** Kicks in a row on the beat. */
+    private int streak;
+    /** The kick that may be the drop, waiting for the next one on the beat (NaN when none). */
+    private double candidate = Double.NaN, keptLastKick;
+    private float candidateDrop;
 
     /** Once a frame: what is heard now (kick, level and hats, each 0..1), the time in seconds. */
     void hear(float kick, float level, float hats, boolean heard, double now, float dt) {
         if (kick > 0.5f && !kicking) onKick(now);
         kicking = kick > 0.5f;
-        // No second kick on the beat: that was a stray kick in the breakdown, not the drop.
-        if (!Double.isNaN(pending) && now - pending > 2.5 * period) {
-            lastDrop = keptLastDrop;
+        // No second kick on the beat: a stray kick in the breakdown, the build-up goes on.
+        if (!Double.isNaN(candidate) && now - candidate > 1.5 * period) {
             lastKick = keptLastKick;
-            tension = keptTension;
-            drop = 0f;
-            pending = Double.NaN;
+            candidate = Double.NaN;
         }
 
         double quiet = now - lastKick;
+        boolean grooved = now - lastGroove < 60.0;
         float rising = Math.max(0f, level - calm) * 3f + Math.max(0f, hats - busy) * 2f;
-        boolean gone = heard && quiet > Math.max(2.0, 4.0 * period) && quiet < 60.0;
-        boolean rolling = heard && now - rollAt < period;
+        boolean gone = heard && grooved && quiet > Math.max(2.0, 4.0 * period);
+        boolean rolling = heard && grooved && now - rollAt < period;
         if (gone || rolling) {
             tension += dt * (1f / 10f + rising);
-        } else if (heard && quiet < 60.0) {
-            tension -= dt / 4f; // a steady kick: the groove, slowly letting a build-up go
+        } else if (heard) {
+            tension -= dt / 4f; // the groove goes on, or there never was one: a build-up slowly let go
         } else {
             tension -= dt / 2f;
         }
@@ -68,31 +71,35 @@ final class DropDetector {
         beats++;
         double gap = now - lastKick;
         // Once the tempo is known, a kick roll (or a stray kick) does not drag it away.
-        boolean onBeat = beats < 16 ? gap > 0.25 && gap < 1.2 : gap > 0.75 * period && gap < 1.5 * period;
-        if (onBeat) period += (gap - period) * 0.2;
-        if (!Double.isNaN(pending) && gap < 2.5 * period) { // the kick is really back
-            pending = Double.NaN;
-            dropped = true;
-        }
+        boolean learn = beats < GROOVE ? gap > 0.25 && gap < 1.2 : gap > 0.75 * period && gap < 1.5 * period;
+        if (learn) period += (gap - period) * 0.2;
+        boolean onBeat = gap > 0.8 * period && gap < 1.25 * period;
+        streak = onBeat ? streak + 1 : 0;
+        if (streak >= GROOVE) lastGroove = now;
         // Two fast kicks in a row: a roll. One alone is a ghost kick or a broken beat.
         boolean fast = gap > 0.05 && gap < 0.6 * period;
         if (fast && lastFast) rollAt = now;
         lastFast = fast;
 
+        if (!Double.isNaN(candidate)) {
+            if (gap > 0.75 * period && gap < 1.5 * period) { // the kick is really back: the drop
+                drop = candidateDrop;
+                dropped = true;
+                lastDrop = candidate;
+                tension = 0f;
+            }
+            candidate = Double.NaN;
+        }
         boolean back = gap > Math.max(1.0, 2.0 * period) || now - hush < 1.0;
         if (back && tension > 0.3f && now - lastDrop > 15.0) {
-            keptLastDrop = lastDrop;
+            candidate = now;
             keptLastKick = lastKick;
-            keptTension = tension;
-            pending = now;
-            drop = Math.min(1f, 0.4f + tension + (now - hush < 1.0 ? 0.3f : 0f));
-            lastDrop = now;
-            tension = 0f;
+            candidateDrop = Math.min(1f, 0.4f + tension + (now - hush < 1.0 ? 0.3f : 0f));
         }
         lastKick = now;
     }
 
-    /** True once after each drop, a beat in (see above). */
+    /** True once after each drop. */
     boolean takeDrop() {
         boolean was = dropped;
         dropped = false;

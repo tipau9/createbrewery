@@ -90,9 +90,13 @@ class DropDetectorTest {
         // One lone thump...
         d.hear(1f, 0.5f, 0.1f, true, clock[0], DT);
         clock[0] += DT;
-        assertTrue(d.drop > 0f, "flashes up at once");
-        assertEquals(0, play(d, clock, 6, false, 0.4f, 0.1f), "no drop without a second kick");
-        assertEquals(0f, d.drop, 1e-6, "taken back");
+        float flash = 0f;
+        for (int i = 0; i < 6 / DT; i++, clock[0] += DT) {
+            d.hear(0f, 0.4f, 0.1f, true, clock[0], DT);
+            flash = Math.max(flash, d.drop);
+            assertTrue(!d.takeDrop(), "no drop without a second kick");
+        }
+        assertEquals(0f, flash, 1e-6, "not even a flash");
         assertTrue(d.tension > 0.3f, "build-up goes on: " + d.tension);
         // ...and the real drop is still heard, not blocked for a quarter of a minute.
         assertEquals(1, play(d, clock, 5, true, 0.9f, 0.3f), "the real drop");
@@ -106,5 +110,21 @@ class DropDetectorTest {
         for (int i = 0; i < 60; i++) assertEquals(0, play(d, clock, 1, true, 0.6f + 0.3f * (i % 3) / 2f, 0.2f + 0.2f * (i % 2)));
         assertEquals(0, play(d, clock, 1.5, false, 0.7f, 0.3f), "short break");
         assertEquals(0, play(d, clock, 5, true, 0.8f, 0.3f), "no drop after a short break");
+    }
+
+    @Test
+    void aBeatWithoutGrooveNeverDrops() {
+        // Hip-hop or a broken beat: kicks come and go, gaps of a beat up to several seconds.
+        java.util.Random r = new java.util.Random(7);
+        DropDetector d = new DropDetector();
+        int drops = 0;
+        double t = 0, nextKick = 0;
+        for (int i = 0; i < 180 / DT; i++, t += DT) {
+            boolean k = t >= nextKick;
+            if (k) nextKick = t + (r.nextFloat() < 0.3f ? 2.0 + 4.0 * r.nextFloat() : 0.3 + 0.6 * r.nextFloat());
+            d.hear(k ? 1f : 0f, 0.3f + 0.6f * r.nextFloat(), 0.4f * r.nextFloat(), true, t, DT);
+            if (d.takeDrop()) drops++;
+        }
+        assertEquals(0, drops, "no drops in three minutes");
     }
 }
