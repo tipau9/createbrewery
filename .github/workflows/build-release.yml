@@ -42,11 +42,13 @@ jobs:
             TAG="v$(grep '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '\r')"
           fi
           echo "Target release tag: $TAG"
+          # Fixed-name copy so releases/latest/download/createbrewery.jar always works (update bat).
+          cp build/libs/createbrewery-*.jar build/createbrewery.jar
           
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Uploading asset to existing release $TAG..."
-            gh release upload "$TAG" build/libs/*.jar --clobber
+            gh release upload "$TAG" build/libs/*.jar build/createbrewery.jar --clobber
           else
             echo "Creating new release $TAG..."
-            gh release create "$TAG" build/libs/*.jar --title "Create Brewery $TAG" --generate-notes
+            gh release create "$TAG" build/libs/*.jar build/createbrewery.jar --title "Create Brewery $TAG" --generate-notes
           fi
