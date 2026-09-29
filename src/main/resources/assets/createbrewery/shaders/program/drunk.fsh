@@ -400,7 +400,7 @@ void main() {
 
     // Psychedelics: colours intensify and slowly cycle, most in what is already colourful.
     lum = dot(col, vec3(0.299, 0.587, 0.114));
-    sat = length(col - vec3(lum));
+    float sat = length(col - vec3(lum));
     // Everything electric here is LSD's; mushrooms (Organic) and peyote (Desert) have their own look.
     float lsdLook = clamp(1.0 - Organic - Desert, 0.0, 1.0);
     float shift = Trip * lsdLook * (0.6 * sin(t * 0.25) + 1.2 * peak * sin(t * 0.11 + lum * 4.0));
