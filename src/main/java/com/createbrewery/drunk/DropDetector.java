@@ -143,6 +143,7 @@ final class DropDetector {
     }
 
     private void judge(double now) {
+        if (now < 12.0) return; // the window first fills up after the intro; that is no drop
         int r = Math.max(1, (int) Math.round(p.eRecent() / BUCKET));
         int gap = Math.max(0, (int) Math.round(p.eGap() / BUCKET));
         int prior = Math.max(2, (int) Math.round(p.ePrior() / BUCKET));
