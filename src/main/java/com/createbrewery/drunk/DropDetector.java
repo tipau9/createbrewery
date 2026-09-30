@@ -28,7 +28,7 @@ final class DropDetector {
                   float threshold, double backBeats, double backMin, float hushLevel, double spacing) {}
 
     // trained: DropTrainer rewrites the next line
-    static final Params DEFAULT = new Params(8, 45.0, 3.5, 2.0, 0.194f, 0.307f, 0.188f, 2.51, 0.69, 0.107f, 29.3);
+    static final Params DEFAULT = new Params(5, 45.0, 3.5, 2.0, 0.187f, 0.2f, 0.25f, 3.75, 0.97, 0.03f, 28.4);
 
     private final Params p;
 

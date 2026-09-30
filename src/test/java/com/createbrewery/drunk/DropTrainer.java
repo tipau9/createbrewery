@@ -176,7 +176,7 @@ public final class DropTrainer {
     // --- Search ---
 
     private static final double[][] RANGE = {
-        {4, 32}, {45, 120}, {3.5, 8}, {2.0, 4.0}, {0.03, 0.4}, {0.15, 1.0}, {0.1, 0.8}, {1, 4}, {0.5, 2.5}, {0.03, 0.3}, {8, 30}};
+        {4, 32}, {45, 120}, {3.5, 8}, {2.0, 4.0}, {0.03, 0.4}, {0.15, 1.0}, {0.25, 0.8}, {1, 4}, {0.5, 2.5}, {0.03, 0.3}, {8, 30}};
 
     private static double[] values(DropDetector.Params p) {
         return new double[] {p.groove(), p.grooveMemory(), p.goneBeats(), p.goneMin(), p.buildRate(), p.letGo(),
