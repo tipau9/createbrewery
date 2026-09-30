@@ -35,6 +35,9 @@ public class IbuprofenItem extends Item {
         return UseAnim.EAT;
     }
 
+    /** Amplifier is saved as an unsigned byte: never let it grow past that. */
+    public static final int MAX_PILLS = 9;
+
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
         return 20;
@@ -54,7 +57,7 @@ public class IbuprofenItem extends Item {
         }
         if (!level.isClientSide) {
             MobEffectInstance before = player.getEffect(ModEffects.PAINKILLER);
-            int pills = before == null ? 0 : before.getAmplifier() + 1;
+            int pills = before == null ? 0 : Math.min(MAX_PILLS, before.getAmplifier() + 1);
             player.addEffect(new MobEffectInstance(ModEffects.PAINKILLER, PainkillerEffect.DURATION, pills, false, false, true));
             player.getCooldowns().addCooldown(this, COOLDOWN);
             level.playSound(null, player.getX(), player.getY(), player.getZ(),

@@ -35,6 +35,11 @@ public final class BenzoClient {
     private static int gapTicks, nextGap = 1200, nextThought = 400, reboundTicks, forgetTicks = -1, lastLevel;
     private static boolean had;
 
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        gapTicks = 0; nextGap = 1200; nextThought = 400; reboundTicks = 0; forgetTicks = -1; had = false;
+    }
+
     static void tick(Minecraft mc, LocalPlayer player) {
         RandomSource r = player.getRandom();
         var instance = player.getEffect(ModEffects.CALM);

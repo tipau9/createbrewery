@@ -17,6 +17,11 @@ final class PoseClient {
 
     private static int sentKind = -1, sentAmount, sentEyes, nextSend;
 
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        sentKind = -1; sentAmount = 0; sentEyes = 0; nextSend = 0;
+    }
+
     static void init() {
         if (ModList.get().isLoaded("playeranimator")) PoseAnimation.register();
     }

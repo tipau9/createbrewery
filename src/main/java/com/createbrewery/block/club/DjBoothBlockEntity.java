@@ -193,7 +193,9 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide) return;
-        if (dropTicks > 0 && --dropTicks == 0 && state.getValue(DjBoothBlock.POWERED)) {
+        // dropTicks is not saved: a booth reloaded mid-drop would keep its redstone signal for good.
+        if (dropTicks > 0) dropTicks--;
+        if (dropTicks == 0 && state.getValue(DjBoothBlock.POWERED)) {
             level.setBlock(pos, state.setValue(DjBoothBlock.POWERED, false), 3);
         }
 

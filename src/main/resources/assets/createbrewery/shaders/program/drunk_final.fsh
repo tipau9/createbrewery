@@ -61,7 +61,7 @@ void main() {
     float smear = max(Tweak, Coke) * World * Trail;
     if (smear > 0.01) {
         vec4 was = PrevViewProj * vec4(worldAt(texCoord) + CamDelta, 1.0);
-        vec2 vel = (texCoord - (was.xy / was.w * 0.5 + 0.5)) * step(0.0, was.w) * 2.0 * FrameScale * smear;
+        vec2 vel = (texCoord - (was.xy / max(was.w, 1e-4) * 0.5 + 0.5)) * step(1e-4, was.w) * 2.0 * FrameScale * smear;
         float len = length(vel);
         if (len > 0.08) vel *= 0.08 / len;
         vec3 sum = col;

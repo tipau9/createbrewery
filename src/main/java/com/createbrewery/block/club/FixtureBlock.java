@@ -114,7 +114,7 @@ public class FixtureBlock extends Block implements EntityBlock {
     static boolean applyLink(Level level, BlockPos pos, ItemStack stack) {
         Optional<BlockPos> console = linkOf(stack);
         if (console.isEmpty() || !(level.getBlockEntity(pos) instanceof FixtureBlockEntity fixture)) return false;
-        if (!console.get().closerThan(pos, MAX_LINK) || !(level.getBlockEntity(console.get()) instanceof DmxConsoleBlockEntity)) return false;
+        if (!console.get().closerThan(pos, MAX_LINK) || !level.isLoaded(console.get()) || !(level.getBlockEntity(console.get()) instanceof DmxConsoleBlockEntity)) return false;
         fixture.setConsole(console.get());
         return true;
     }

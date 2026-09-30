@@ -25,6 +25,7 @@ public class ClubStampItem extends Item {
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (target instanceof Player targetPlayer) {
+            if (targetPlayer.level().isClientSide) return InteractionResult.SUCCESS;
             targetPlayer.getPersistentData().putLong("createbrewery:club_stamp", targetPlayer.level().getGameTime() + 24000L);
             targetPlayer.level().playSound(null, targetPlayer.getX(), targetPlayer.getY(), targetPlayer.getZ(),
                 SoundEvents.WOODEN_BUTTON_CLICK_ON, SoundSource.PLAYERS, 1.0f, 1.4f);

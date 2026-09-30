@@ -51,6 +51,11 @@ public final class RollClient {
     private static boolean wasOnGround = true, buildUpSaid, peakSaid;
 
     private static int rushTicks = -1, nextRush = 400, nextThought = 300, wiggleTicks, nextWiggle = 600;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        rushTicks = -1; nextRush = 400; nextThought = 300; nextWiggle = 600;
+    }
     private static float sweat, lastWalk;
 
     static void init() {

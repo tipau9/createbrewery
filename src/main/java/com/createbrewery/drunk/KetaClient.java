@@ -31,6 +31,11 @@ public final class KetaClient {
     private static CameraType before;
     private static int nextThought = 300;
 
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        nextThought = 300;
+    }
+
     static void init() {
         NeoForge.EVENT_BUS.addListener(KetaClient::onCameraDistance);
     }

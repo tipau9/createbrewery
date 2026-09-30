@@ -80,6 +80,11 @@ public final class TripClient {
     private static boolean wasAbsorption;
     private static int sprintTicks;
     private static int stepNote, nextThought = 600, nextNoise = 300;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        nextThought = 600; nextNoise = 300;
+    }
     /** Out of body: ticks since it began (-1 = in the body), the view to go back to, and once per trip. */
     private static final int OBE_TICKS = 240;
     private static int obeTicks = -1;

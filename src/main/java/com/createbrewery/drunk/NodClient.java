@@ -34,6 +34,11 @@ public final class NodClient {
     static float lid, jerk;
 
     private static int lastDuration, rushTicks = -1, nodTicks = -1, nodLength, nextNod = 400, nextItch = 600, nextThought = 300, itching;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        rushTicks = -1; nodTicks = -1; nextNod = 400; nextItch = 600; nextThought = 300;
+    }
     /** How far the head has sunk on the nod, in degrees (0..30). */
     static float drooped;
     private static double breathPhase;

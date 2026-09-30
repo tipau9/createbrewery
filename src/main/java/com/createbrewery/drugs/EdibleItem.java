@@ -26,7 +26,7 @@ public class EdibleItem extends Item {
             MobEffectInstance before = entity.getEffect(ModEffects.EDIBLE_PENDING);
             // A second one while the first still waits: both come on together.
             entity.addEffect(new MobEffectInstance(ModEffects.EDIBLE_PENDING, before == null ? DELAY : before.getDuration(),
-                before == null ? 0 : before.getAmplifier() + 1, false, false, false));
+                before == null ? 0 : Math.min(9, before.getAmplifier() + 1), false, false, false));
         }
         return super.finishUsingItem(stack, level, entity);
     }

@@ -552,8 +552,8 @@ public class FermenterGameTests {
         com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.KETA);
         com.createbrewery.drugs.DrugServer.take(player, com.createbrewery.drugs.DrugServer.Kind.KETA);
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.K_HOLE), "weed did not pull the K-Loch closer");
-        // Two and a half joints, hit by hit: the circulation gives up for sure.
-        for (int i = 1; i < 15; i++) com.createbrewery.drugs.DrugServer.take(player, weed);
+        // Two and a half joints (25 hits), hit by hit: the circulation gives up for sure.
+        for (int i = 1; i < 26; i++) com.createbrewery.drugs.DrugServer.take(player, weed);
         helper.assertTrue(player.hasEffect(com.createbrewery.effect.ModEffects.GREENING_OUT), "two and a half joints did not green out");
         helper.succeed();
     }
@@ -646,6 +646,7 @@ public class FermenterGameTests {
         player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
         net.minecraft.world.item.ItemStack joint = new net.minecraft.world.item.ItemStack(com.createbrewery.ModItems.JOINT.get());
         joint.set(com.createbrewery.drugs.Purity.PURITY.get(), new com.createbrewery.drugs.Purity(1f, false, false)); // an average joint
+        com.createbrewery.drugs.DrugItem.setLit(joint, true); // an unlit one is not smoked
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, joint);
         joint.finishUsingItem(helper.getLevel(), player);
         helper.assertTrue(joint.getDamageValue() == 1, "a hit did not wear the joint");
@@ -662,6 +663,7 @@ public class FermenterGameTests {
         net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.CREATIVE);
         player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1.5, 2, 1.5)));
         net.minecraft.world.item.ItemStack joint = new net.minecraft.world.item.ItemStack(com.createbrewery.ModItems.JOINT.get());
+        com.createbrewery.drugs.DrugItem.setLit(joint, true);
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, joint);
         joint.finishUsingItem(helper.getLevel(), player);
         helper.assertTrue(joint.getDamageValue() == 1 && joint.isBarVisible(), "a creative hit did not wear the joint");
@@ -712,19 +714,6 @@ public class FermenterGameTests {
         net.minecraft.world.entity.player.Player sober = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         finishUsing(sober, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKIE));
         helper.assertTrue(!sober.hasEffect(com.createbrewery.effect.ModEffects.SNACK_BLISS), "bliss without being high");
-        helper.succeed();
-    }
-
-    /** High, crouched down: the nausea passes twice as fast. */
-    @GameTest(template = TEMPLATE)
-    public static void sittingDownHelpsTheNausea(GameTestHelper helper) {
-        net.minecraft.world.entity.player.Player player = stonedPlayer(helper);
-        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.createbrewery.effect.ModEffects.GREENING_OUT, 400));
-        com.createbrewery.drugs.DrugServer.weedBody(player);
-        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.GREENING_OUT).getDuration() == 400, "standing helped");
-        player.setShiftKeyDown(true);
-        com.createbrewery.drugs.DrugServer.weedBody(player);
-        helper.assertTrue(player.getEffect(com.createbrewery.effect.ModEffects.GREENING_OUT).getDuration() == 380, "crouching did not help");
         helper.succeed();
     }
 

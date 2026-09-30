@@ -19,6 +19,11 @@ public final class WeedClient {
     /** Eyelid narrowing (subtle black rim at screen borders). */
     static float lid;
     private static int nextThought = 400;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        nextThought = 400;
+    }
     private static String lastThought;
 
     static void tick(Minecraft mc, LocalPlayer player) {

@@ -30,6 +30,9 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
+      - name: Unit tests and GameTests
+        run: ./gradlew test runGameTestServer --no-daemon
+
       - name: Build JAR with Gradle
         run: ./gradlew jar --no-daemon
 

@@ -101,7 +101,7 @@ public class SpeakerBlock extends Block implements EntityBlock {
     public static boolean applyLink(Level level, BlockPos pos, ItemStack stack) {
         Optional<BlockPos> booth = linkOf(stack);
         if (booth.isEmpty() || !(level.getBlockEntity(pos) instanceof SpeakerBlockEntity speaker)) return false;
-        if (!booth.get().closerThan(pos, MAX_LINK) || !(level.getBlockEntity(booth.get()) instanceof DjBoothBlockEntity)) return false;
+        if (!booth.get().closerThan(pos, MAX_LINK) || !level.isLoaded(booth.get()) || !(level.getBlockEntity(booth.get()) instanceof DjBoothBlockEntity)) return false;
         speaker.setBooth(booth.get());
         return true;
     }

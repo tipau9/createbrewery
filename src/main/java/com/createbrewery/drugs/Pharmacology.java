@@ -88,6 +88,8 @@ public final class Pharmacology {
 
     /** Body heat above normal from which you overheat (Hitzschlag) and take damage. */
     public static final float OVERHEATED = 1.0f;
+    /** Body heat never climbs past this: it feeds {@link #heartLoad} and is saved with the player. */
+    public static final float HEAT_MAX = 2.0f;
 
     /**
      * Body heat after one second. MDMA (and Meth) drive it up, dancing and sprinting far more,
@@ -96,7 +98,7 @@ public final class Pharmacology {
     public static float heatStep(float heat, float stimulated, boolean exertion, boolean hot, boolean inWater) {
         float gain = stimulated * (exertion ? 0.035f : 0.006f) * (hot ? 2f : 1f);
         float loss = inWater ? 0.08f : 0.01f;
-        return Math.max(0f, heat + gain - loss);
+        return Math.min(HEAT_MAX, Math.max(0f, heat + gain - loss));
     }
 
     /** Breathing load from which the breath stops (Atemlähmung): the air runs out like under water. */
@@ -139,7 +141,7 @@ public final class Pharmacology {
 
     /** Chance per second that a strained heart gives out. */
     public static float heartAttackChance(float load) {
-        if (load >= HEART_CRITICAL) return 0.03f + 0.12f * (load - HEART_CRITICAL);
+        if (load >= HEART_CRITICAL) return Math.min(1f, 0.03f + 0.12f * (load - HEART_CRITICAL));
         return load >= 1.4f ? 0.003f : 0f;
     }
 

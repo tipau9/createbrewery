@@ -40,6 +40,11 @@ public final class CokeClient {
     /** The legs jump by themselves, once (read by the movement input). */
     static boolean hop;
     private static int lastDuration, nextSniff = 200, nextThought = 300, still, nextParanoia = 400, dripAt = -1;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        nextSniff = 200; nextThought = 300; nextParanoia = 400; dripAt = -1;
+    }
     private static boolean reached;
 
     static void tick(Minecraft mc, LocalPlayer player) {

@@ -109,6 +109,13 @@ public class DrugEffect extends MobEffect {
         return felt;
     }
 
+    /** Milk does not cure a drug: it is in the blood, not the stomach. Also keeps the pending comedowns and habits. */
+    @Override
+    public void fillEffectCures(java.util.Set<net.neoforged.neoforge.common.EffectCure> cures, MobEffectInstance instance) {
+        super.fillEffectCures(cures, instance);
+        cures.remove(net.neoforged.neoforge.common.EffectCures.MILK);
+    }
+
     @Override
     public boolean applyEffectTick(LivingEntity entity, int amplifier) {
         // Server only: the client runs effect ticks too, and random rolls there would disagree.

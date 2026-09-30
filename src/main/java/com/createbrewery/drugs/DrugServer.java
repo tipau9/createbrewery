@@ -24,6 +24,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -174,8 +177,6 @@ public final class DrugServer {
             case KETA -> KETA_TICKS;
             default -> WEED_TICKS;
         };
-        // Koks on alcohol: the liver makes cocaethylene, which lasts about three times as long.
-        if (kind == Kind.COKE && DrunkServer.state(player).blood >= Intoxication.TIPSY) ticks = ticks * 3 / 2;
         // Keta wears the bladder, dose by dose.
         if (kind == Kind.KETA) DrunkServer.state(player).bladder = Math.min(1f, DrunkServer.state(player).bladder + 0.06f);
         MobEffectInstance before = player.getEffect(high);
@@ -310,12 +311,23 @@ public final class DrugServer {
         if (player.getRandom().nextFloat() < 0.12f * strength) DrunkServer.vomit(player);
     }
 
+    /**
+     * Food the munchies apply to: something eaten (not a drink of beer), and either vanilla's or a
+     * plain item with a food component. Another mod's food with its own use() keeps its behaviour.
+     */
+    private static boolean munchable(ItemStack stack, Player player) {
+        return stack.getFoodProperties(player) != null && stack.getUseDuration(player) > 0
+            && !(stack.getItem() instanceof com.createbrewery.item.BeerDrinkItem)
+            && (stack.getItem().getClass() == net.minecraft.world.item.Item.class
+                || net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace().equals("minecraft"));
+    }
+
     /** The munchies: food tastes twice as good and fills more; sweets most of all. */
     @SubscribeEvent
     public static void onFinishEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
         if (event.getEntity() instanceof Player player && !player.level().isClientSide
             && player.hasEffect(ModEffects.WEED_HIGH)
-            && event.getItem().getFoodProperties(player) != null) {
+            && munchable(event.getItem(), player)) {
             player.getFoodData().eat(2, 0.3f);
             if (event.getItem().is(SWEETS)) sweet(player);
         }
@@ -328,7 +340,7 @@ public final class DrugServer {
         if (!player.hasEffect(ModEffects.WEED_HIGH)) return;
         ItemStack stack = event.getItemStack();
         net.minecraft.world.food.FoodProperties food = stack.getFoodProperties(player);
-        if (food != null && !player.canEat(food.canAlwaysEat())) {
+        if (food != null && munchable(stack, player) && !player.canEat(food.canAlwaysEat())) {
             player.startUsingItem(event.getHand());
             event.setCancellationResult(net.minecraft.world.InteractionResult.CONSUME);
             event.setCanceled(true);
@@ -424,11 +436,36 @@ public final class DrugServer {
         MobEffectInstance instance = event.getEffectInstance();
         LivingEntity entity = event.getEntity();
         if (instance == null || entity.level().isClientSide) return;
+        // Vanilla posts this while it walks the effect map and removes the instance afterwards: an
+        // effect added from here throws a swallowed ConcurrentModificationException, the instance
+        // stays, and Expired fires a second time. So what follows waits for the end of the tick.
+        AFTER_EXPIRY.add(() -> expired(entity, instance));
+    }
+
+    private static final java.util.List<Runnable> AFTER_EXPIRY = new java.util.ArrayList<>();
+
+    @SubscribeEvent
+    public static void afterExpiry(ServerTickEvent.Post event) {
+        runAfterExpiry();
+    }
+
+    /** Runs what {@link #onExpired} put off; the tick event does it, tests may too. */
+    public static void runAfterExpiry() {
+        if (AFTER_EXPIRY.isEmpty()) return;
+        java.util.List<Runnable> now = new java.util.ArrayList<>(AFTER_EXPIRY);
+        AFTER_EXPIRY.clear();
+        for (Runnable r : now) r.run();
+    }
+
+    private static void expired(LivingEntity entity, MobEffectInstance instance) {
+        if (entity.isRemoved()) return;
         Psychedelics.expired(entity, instance);
         Stimulants.expired(entity, instance);
         Mixes.expired(entity, instance);
         // After a CK session everything lasts half again as long.
         float worse = entity.hasEffect(ModEffects.CK_MIX) ? 1.5f : 1f;
+        // Koks on alcohol: the liver makes cocaethylene, and the comedown lasts half as long again.
+        if (entity.hasEffect(ModEffects.COCAETHYLENE)) worse *= 1.5f;
         if (instance.is(ModEffects.COKE_HIGH)) {
             entity.addEffect(new MobEffectInstance(ModEffects.COKE_CRASH, (int) ((1200 + 600 * instance.getAmplifier()) * worse), 0));
             // After a binge (more than one line), or on a habit, the craving sets in; longer the more it was.
@@ -582,6 +619,24 @@ public final class DrugServer {
     /** Server: what happens to a player a moment later - the line goes in once the straw is at the nose. */
     private record Later(long due, java.util.function.Consumer<Player> then) {}
     private static final java.util.Map<java.util.UUID, java.util.List<Later>> LATER = new java.util.HashMap<>();
+
+    /** Nothing waiting or routed outlives its player or its world (singleplayer keeps these statics from one world to the next). */
+    @SubscribeEvent
+    public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        java.util.UUID id = event.getEntity().getUUID();
+        LATER.remove(id);
+        com.createbrewery.block.club.MicrophoneBlockEntity.ROUTES.remove(id);
+        TanCompat.forget(id);
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        LATER.clear();
+        AFTER_EXPIRY.clear();
+        com.createbrewery.block.club.MicrophoneBlockEntity.ROUTES.clear();
+        TanCompat.forgetAll();
+        com.createbrewery.block.club.SpeakerBlockEntity.clearServerLinks();
+    }
 
     public static void later(Player player, int ticks, java.util.function.Consumer<Player> then) {
         LATER.computeIfAbsent(player.getUUID(), id -> new java.util.ArrayList<>())

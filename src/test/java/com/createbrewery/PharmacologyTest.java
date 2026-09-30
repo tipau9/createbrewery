@@ -114,4 +114,19 @@ class PharmacologyTest {
         assertEquals(0.7f, Pharmacology.shroomWave(1200), 1e-5f);
         assertEquals(1f, Pharmacology.shroomWave(2400), 1e-5f);
     }
+
+    @Test
+    void bodyHeatIsCapped() {
+        float heat = 0f;
+        for (int i = 0; i < 10_000; i++) heat = Pharmacology.heatStep(heat, 5f, true, true, false);
+        assertEquals(Pharmacology.HEAT_MAX, heat, 1e-6f);
+    }
+
+    @Test
+    void heartAttackChanceIsAProbability() {
+        for (float load = 0f; load <= 50f; load += 0.25f) {
+            float chance = Pharmacology.heartAttackChance(load);
+            assertTrue(chance >= 0f && chance <= 1f, "load " + load + " gave " + chance);
+        }
+    }
 }

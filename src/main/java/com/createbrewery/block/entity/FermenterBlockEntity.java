@@ -46,6 +46,7 @@ public class FermenterBlockEntity extends SmartBlockEntity implements IHaveGoggl
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
+            if (level != null && !level.isClientSide) sendData();
         }
     };
 

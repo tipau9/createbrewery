@@ -515,7 +515,7 @@ void main() {
     float alive = min(1.0, foliage) * Organic * Trip * solid * (0.75 + 0.25 * sin(t * 1.1 + wp.x * 0.3 + wp.z * 0.2));
     col = mix(col, col * vec3(0.8, 1.3, 0.85) + vec3(0.02, 0.07, 0.03), 0.7 * alive);
     // The sky cycles through colours, and stars come out even by day.
-    vec3 dir = normalize(rel);
+    vec3 dir = normalize(rel + vec3(1e-6));
     vec3 starCell = floor(dir * 150.0);
     float star = step(0.996, hash(starCell.xy + starCell.z * 17.0)) * (0.5 + 0.5 * sin(t * 3.0 + hash(starCell.yz) * 30.0));
     col = mix(col, hueShift(col, t * 0.3 + dir.y * 3.0) * 1.1, 0.7 * Trip * lvl3 * lsdLook * sky * World);
@@ -961,8 +961,8 @@ void main() {
     // looked up where this spot of the world was on screen then, so standing things stay sharp
     // while you look around, and only real movement leaves ghost copies behind.
     vec4 was = PrevViewProj * vec4(posAt(texCoord).xyz + CamDelta, 1.0);
-    vec2 wasUv = was.xy / was.w * 0.5 + 0.5;
-    float onScreen = step(0.0, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
+    vec2 wasUv = was.xy / max(was.w, 1e-4) * 0.5 + 0.5;
+    float onScreen = step(1e-4, was.w) * step(0.0, wasUv.x) * step(wasUv.x, 1.0) * step(0.0, wasUv.y) * step(wasUv.y, 1.0);
     // MDMA: tracers too, shorter - distinct from medium doses on.
     col = mix(col, texture(PrevSampler, wasUv).rgb, min(0.9, (0.55 + 0.3 * Desert) * Trip * lvl2 + 0.45 * smoothstep(0.4, 1.0, Roll)) * Trail * World * onScreen);
 

@@ -76,7 +76,7 @@ public class DrugItem extends Item {
             || stack.is(Items.FIRE_CHARGE)
             || stack.getItem() instanceof net.minecraft.world.item.FlintAndSteelItem
             || id.getNamespace().equals("tobacconery") && path.contains("lighter")
-            || path.contains("lighter")
+            || path.contains("lighter") && !path.contains("fluid")
             || path.contains("feuerzeug");
         if (!lighter) return false;
         if (stack.isDamageableItem()) {
@@ -150,8 +150,11 @@ public class DrugItem extends Item {
                     SoundEvents.FLINTANDSTEEL_USE, SoundSource.PLAYERS,
                     1.0f, level.random.nextFloat() * 0.4f + 0.8f);
                 if (!level.isClientSide && !player.hasInfiniteMaterials()) {
-                    if (lighter.isDamageableItem()) {
-                        lighter.setDamageValue(lighter.getDamageValue() + 1);
+                    if (lighter.is(Items.FLINT_AND_STEEL)) {
+                        lighter.hurtAndBreak(1, (net.minecraft.server.level.ServerLevel) level,
+                            player instanceof net.minecraft.server.level.ServerPlayer sp ? sp : null, item -> {});
+                    } else if (lighter.isDamageableItem()) {
+                        lighter.setDamageValue(Math.min(lighter.getMaxDamage(), lighter.getDamageValue() + 1));
                     } else if (lighter.is(Items.FIRE_CHARGE)) {
                         lighter.shrink(1);
                     }
@@ -234,6 +237,8 @@ public class DrugItem extends Item {
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
         if (!(entity instanceof Player player)) return stack;
+        // Rain or a dunk put it out mid-drag: nothing to smoke.
+        if (kind == DrugServer.Kind.WEED && !isLit(stack)) return stack;
         // Advancements: before the stack shrinks, or the last dose reads as air.
         if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
             net.minecraft.advancements.CriteriaTriggers.CONSUME_ITEM.trigger(sp, stack);

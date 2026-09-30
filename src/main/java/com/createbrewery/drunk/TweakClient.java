@@ -43,6 +43,11 @@ public final class TweakClient {
     /** Sleepless on meth, 0..1: its misread edges of the view (drunk.fsh). */
     static float tired;
     private static int awake, nextThought = 200, dartAge = -1;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        nextThought = 200; dartAge = -1;
+    }
     private static float dartYaw, dartDir;
 
     static void init() {

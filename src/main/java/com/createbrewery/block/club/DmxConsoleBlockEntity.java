@@ -87,12 +87,12 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     void flash(int g) {
         if (level == null) return;
         flashUntil[g] = level.getGameTime() + FLASH_HOLD;
-        serverTick();
+        updateFlash();
     }
 
     void release(int g) {
         flashUntil[g] = 0;
-        serverTick();
+        updateFlash();
     }
 
     void storeScene(int i) {
@@ -122,7 +122,10 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 
     /** REC on or off. Turned on, it follows the nearest DJ booth if it follows none yet. False with no booth about. */
     boolean setRecording(boolean on) {
-        if (on && booth() == null) booth = nearestBooth();
+        if (on && booth() == null && level != null && level.getGameTime() - scannedAt >= SCAN_COOLDOWN) {
+            scannedAt = level.getGameTime();
+            booth = nearestBooth();
+        }
         if (on && booth == null) return false;
         recording = on;
         sync();
@@ -143,11 +146,15 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         return booth != null && level != null && level.isLoaded(booth) && level.getBlockEntity(booth) instanceof DjBoothBlockEntity dj ? dj : null;
     }
 
+    /** The scan below visits about 18k positions; a spammed REC button must not repeat it every packet. */
+    private static final int SCAN_COOLDOWN = 20;
+    private long scannedAt = Long.MIN_VALUE / 2;
+
     @org.jetbrains.annotations.Nullable
     private BlockPos nearestBooth() {
         BlockPos best = null;
         for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-16, -8, -16), worldPosition.offset(16, 8, 16))) {
-            if (level.getBlockEntity(p) instanceof DjBoothBlockEntity && (best == null || p.distSqr(worldPosition) < best.distSqr(worldPosition))) {
+            if (level.isLoaded(p) && level.getBlockEntity(p) instanceof DjBoothBlockEntity && (best == null || p.distSqr(worldPosition) < best.distSqr(worldPosition))) {
                 best = p.immutable();
             }
         }
@@ -195,6 +202,12 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     void serverTick() {
         if (level == null) return;
         followSong();
+        updateFlash();
+    }
+
+    /** The flash buttons alone: a press must not run the show clock ({@link #followSong}) a second time in a tick. */
+    private void updateFlash() {
+        if (level == null) return;
         long now = level.getGameTime();
         int mask = 0;
         for (int g = 0; g < DmxProgram.GROUPS; g++) if (flashUntil[g] > now) mask |= 1 << g;

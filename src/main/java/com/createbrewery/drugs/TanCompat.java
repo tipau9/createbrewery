@@ -37,6 +37,17 @@ public final class TanCompat {
     private static final Map<UUID, Integer> lastThirst = new ConcurrentHashMap<>();
     private static final Map<UUID, Integer> lastItemDrink = new ConcurrentHashMap<>();
 
+    /** A player left: their bookkeeping goes with them. */
+    public static void forget(UUID player) {
+        lastThirst.remove(player);
+        lastItemDrink.remove(player);
+    }
+
+    public static void forgetAll() {
+        lastThirst.clear();
+        lastItemDrink.clear();
+    }
+
     /** Common setup: the temperature modifier. */
     public static void init() {
         if (!on) return;

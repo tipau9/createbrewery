@@ -154,7 +154,8 @@ public class BouncerEntity extends PathfinderMob {
             // Empty hand: collect cashbox & status
             if (held.isEmpty()) {
                 if (collectedEmeralds > 0) {
-                    player.addItem(new ItemStack(Items.EMERALD, collectedEmeralds));
+                    ItemStack cash = new ItemStack(Items.EMERALD, collectedEmeralds);
+                    if (!player.addItem(cash)) player.drop(cash, false);
                     say(player, "§aKasse geleert: " + collectedEmeralds + " Smaragde entnommen.");
                     collectedEmeralds = 0;
                     level().playSound(null, getX(), getY(), getZ(), SoundEvents.ITEM_PICKUP, SoundSource.NEUTRAL, 1.0f, 1.0f);
@@ -317,12 +318,7 @@ public class BouncerEntity extends PathfinderMob {
     }
 
     private void addNames(String text) {
-        for (String line : text.split("[\\r\\n,;]+")) {
-            String trimmed = line.trim().toLowerCase();
-            if (!trimmed.isEmpty()) {
-                guestList.add(trimmed);
-            }
-        }
+        GuestList.add(guestList, text);
     }
 
     private void say(Player player, String message) {

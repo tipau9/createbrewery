@@ -9,7 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 /**
  * A player's alcohol, in per-mille. The single source of truth for every drunk symptom:
  * the server mutates it in place every tick and syncs it to the owning client, which derives
- * all of its visuals from {@link #blood}. Not copied on death - dying sobers you up.
+ * all of its visuals from {@link #blood}. On death only what the body keeps is copied (see DrunkServer#onClone).
  */
 public final class DrunkState {
     /** Blood alcohol, ‰. What every symptom reads. */
@@ -39,15 +39,15 @@ public final class DrunkState {
     transient boolean clientSawAlcohol;
     /** Server-only: load on the heart from drugs (see Pharmacology#heartLoad). Not saved: it rebuilds in seconds. */
     public transient float heart;
-    /** Server-only: body heat above normal from MDMA and meth (see Pharmacology#heatStep). */
-    public transient float heat;
-    /** Server-only: seconds awake on meth, towards psychosis. */
-    public transient int awake;
+    /** Server-only: body heat above normal from MDMA and meth (see Pharmacology#heatStep). Saved, so logging out is no cure. */
+    public float heat;
+    /** Server-only: seconds awake on meth, towards psychosis. Saved. */
+    public int awake;
     /** Server-only: meth punding - the block mined over and over, and how many in a row. */
     public transient net.minecraft.world.level.block.Block pundBlock;
     public transient int pundStreak;
-    /** Server-only: water drunk on MDMA and not yet got rid of, towards water poisoning. */
-    public transient float water;
+    /** Server-only: water drunk on MDMA and not yet got rid of, towards water poisoning. Saved. */
+    public float water;
     /** Server-only: game time of the last drink, to spot two players clinking glasses. */
     transient long lastDrinkTime = Long.MIN_VALUE / 2;
 
@@ -68,11 +68,25 @@ public final class DrunkState {
     }
 
     private DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime, float dependence,
-                       float breathTolerance, float benzo, float b12, float bladder, float weedHabit, float cokeHabit, float methHabit) {
+                       float breathTolerance, float benzo, float b12, float bladder, float weedHabit, float cokeHabit, float methHabit,
+                       Body body) {
         this(blood, stomach, peak, tolerance, toleranceTime, dependence, breathTolerance, benzo, b12, bladder);
         this.weedHabit = weedHabit;
         this.cokeHabit = cokeHabit;
         this.methHabit = methHabit;
+        this.heat = body.heat;
+        this.water = body.water;
+        this.awake = body.awake;
+    }
+
+    /** The saved server-side body state, nested so {@link #CODEC} stays under RecordCodecBuilder's 16-field cap. */
+    private record Body(float heat, float water, int awake) {
+        static final Body NONE = new Body(0f, 0f, 0);
+        static final Codec<Body> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Codec.FLOAT.optionalFieldOf("heat", 0f).forGetter(Body::heat),
+            Codec.FLOAT.optionalFieldOf("water", 0f).forGetter(Body::water),
+            Codec.INT.optionalFieldOf("awake", 0).forGetter(Body::awake)
+        ).apply(i, Body::new));
     }
 
     public DrunkState(float blood, float stomach, float peak, float tolerance, long toleranceTime) {
@@ -104,7 +118,7 @@ public final class DrunkState {
     public boolean isEmpty() {
         return blood <= 0f && stomach <= 0f && peak <= 0f && tolerance <= 0f && dependence <= 0f
             && breathTolerance <= 0f && benzo <= 0f && b12 <= 0f && bladder <= 0f
-            && weedHabit <= 0f && cokeHabit <= 0f && methHabit <= 0f;
+            && weedHabit <= 0f && cokeHabit <= 0f && methHabit <= 0f && heat <= 0f && water <= 0f && awake <= 0;
     }
 
     public static final Codec<DrunkState> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -120,7 +134,8 @@ public final class DrunkState {
         Codec.FLOAT.optionalFieldOf("bladder", 0f).forGetter(s -> s.bladder),
         Codec.FLOAT.optionalFieldOf("weed_habit", 0f).forGetter(s -> s.weedHabit),
         Codec.FLOAT.optionalFieldOf("coke_habit", 0f).forGetter(s -> s.cokeHabit),
-        Codec.FLOAT.optionalFieldOf("meth_habit", 0f).forGetter(s -> s.methHabit)
+        Codec.FLOAT.optionalFieldOf("meth_habit", 0f).forGetter(s -> s.methHabit),
+        Body.CODEC.optionalFieldOf("body", Body.NONE).forGetter(s -> new Body(s.heat, s.water, s.awake))
     ).apply(i, DrunkState::new));
 
     public static final StreamCodec<ByteBuf, DrunkState> STREAM_CODEC = StreamCodec.composite(

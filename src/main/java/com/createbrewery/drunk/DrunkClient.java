@@ -109,6 +109,24 @@ public final class DrunkClient {
     private static long wahCycle;
     /** Next tick a paranoid footstep plays behind the player (weed, worse with Koks). */
     private static int nextFootstep = 400;
+
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void resetGates() {
+        nextFootstep = 400;
+        nextPhantomStep = 0;
+        BenzoClient.reset();
+        CokeClient.reset();
+        DmtClient.reset();
+        KetaClient.reset();
+        NodClient.reset();
+        PoseClient.reset();
+        RollClient.reset();
+        TripClient.reset();
+        TweakClient.reset();
+        WeedClient.reset();
+        com.createbrewery.drugs.DrugPose.SEEN.clear();
+        com.createbrewery.drugs.DrugPose.ACTING.clear();
+    }
     private static int lastCokeBeat;
     /** Aim offset already applied to the player; drift is applied as the change of this each frame. */
     private static float appliedYaw, appliedPitch;
@@ -201,9 +219,16 @@ public final class DrunkClient {
 
     // ---- state + shader ----
 
+    /** Weak: a strong reference would keep the left world alive. */
+    private static java.lang.ref.WeakReference<LocalPlayer> lastPlayer = new java.lang.ref.WeakReference<>(null);
+
     private static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
+        if (lastPlayer.get() != player) {
+            lastPlayer = new java.lang.ref.WeakReference<>(player);
+            resetGates();
+        }
         SniffProps.tick(mc);
         float target = player == null ? 0f : DrunkServer.feltFor(player, player.getData(ModAttachments.DRUNK));
         blood = player == null ? 0f : blood + (target - blood) * 0.1f;

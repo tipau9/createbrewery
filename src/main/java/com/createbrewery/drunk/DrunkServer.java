@@ -4,6 +4,7 @@ import com.createbrewery.CreateBrewery;
 import com.createbrewery.drugs.DrugEffect;
 import com.createbrewery.drugs.DrugServer;
 import com.createbrewery.effect.ModEffects;
+import com.createbrewery.item.IbuprofenItem;
 import com.createbrewery.effect.PainkillerEffect;
 import com.createbrewery.effect.VomitingEffect;
 import com.createbrewery.particle.ModParticles;
@@ -27,6 +28,7 @@ import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingUseTotemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -61,7 +63,7 @@ public final class DrunkServer {
      */
     public static void irritateStomach(Player player) {
         MobEffectInstance painkiller = player.getEffect(ModEffects.PAINKILLER);
-        int pills = painkiller == null ? 1 : painkiller.getAmplifier() + 1;
+        int pills = painkiller == null ? 1 : Math.min(IbuprofenItem.MAX_PILLS, painkiller.getAmplifier() + 1);
         player.hurt(new DamageSource(player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
             .getHolderOrThrow(STOMACH_DAMAGE)), 1f + 2f * pills);
     }
@@ -126,6 +128,30 @@ public final class DrunkServer {
         DrunkState fresh = state(event.getEntity());
         fresh.tolerance = old.tolerance;
         fresh.toleranceTime = old.toleranceTime;
+        fresh.dependence = old.dependence;
+        fresh.breathTolerance = old.breathTolerance;
+        fresh.benzo = old.benzo;
+        fresh.b12 = old.b12;
+        fresh.bladder = old.bladder;
+        fresh.weedHabit = old.weedHabit;
+        fresh.cokeHabit = old.cokeHabit;
+        fresh.methHabit = old.methHabit;
+    }
+
+    /**
+     * A totem saves you from the drug that was killing you: what re-fires the lethal loops (poisoning,
+     * heat, the heart) is wiped with the effects the totem clears, or you would die again a second later.
+     */
+    @SubscribeEvent
+    public static void onTotem(LivingUseTotemEvent event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide) return;
+        DrunkState s = state(player);
+        s.blood = Math.min(s.blood, Intoxication.POISONING * 0.5f);
+        s.stomach = 0f;
+        s.heart = 0f;
+        s.heat = 0f;
+        s.water = 0f;
+        sync(player, s);
     }
 
     /** Throw up now, e.g. a painkiller on top of too much alcohol. */

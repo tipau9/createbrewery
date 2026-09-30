@@ -32,6 +32,11 @@ public class SpeakerBlockEntity extends BlockEntity {
     /** Server: the same, per dimension (in singleplayer both sides share these statics, so they are kept apart). */
     private static final Map<net.minecraft.resources.ResourceKey<Level>, Map<BlockPos, BlockPos>> SERVER_LINKS = new ConcurrentHashMap<>();
 
+    /** The server is gone (singleplayer: the world was left): its links must not leak into the next one. */
+    public static void clearServerLinks() {
+        SERVER_LINKS.clear();
+    }
+
     private static Map<BlockPos, BlockPos> links(Level level) {
         return level.isClientSide ? LINKS : SERVER_LINKS.computeIfAbsent(level.dimension(), k -> new ConcurrentHashMap<>());
     }

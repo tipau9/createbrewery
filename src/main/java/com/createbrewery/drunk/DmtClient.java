@@ -26,6 +26,11 @@ public final class DmtClient {
     static float crack, waiting, beyond, descent;
     private static int start, lastDuration, said, nextTone;
 
+    /** A new player entity (respawn, new world): the tickCount gates start over. */
+    static void reset() {
+        nextTone = 0;
+    }
+
     static void tick(Minecraft mc, LocalPlayer player) {
         RandomSource r = player.getRandom();
         var effect = player.getEffect(ModEffects.BREAKTHROUGH);
