@@ -19,6 +19,8 @@ import java.util.ArrayDeque;
 final class KickDetector {
     static final double SLICE = 0.02;
     static final int KICK = 0, LEVEL = 1, HATS = 2;
+    /** Absolute loudness of the bass, of everything and of the highs, on a dB scale mapped to 0..1 (unlike the peak-relative LEVEL). */
+    static final int BASS = 3, LOUD = 4, HIGH = 5, CHANNELS = 6;
 
     private static final int SUBS = 4;
 
@@ -32,7 +34,7 @@ final class KickDetector {
     long traced;
     static final String TRACE_HEADER = "time,bass,all,kickRise,hatRise,kick,level,hats";
 
-    /** Per slice: [KICK], [LEVEL] and [HATS], each 0..1. */
+    /** Per slice: [KICK], [LEVEL], [HATS], [BASS], [LOUD] and [HIGH], each 0..1. */
     float[][] slices(AudioFormat format, ByteBuffer pcm) {
         pcm.order(format.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
         int channels = Math.max(1, format.getChannels());
@@ -40,10 +42,10 @@ final class KickDetector {
         if (alpha < 0f) alpha = (float) (1.0 - Math.exp(-2.0 * Math.PI * 150.0 / rate));
         int perSlice = Math.max(SUBS, (int) (rate * SLICE));
         int n = pcm.remaining() / (2 * channels) / perSlice;
-        float[][] out = new float[3][n];
+        float[][] out = new float[CHANNELS][n];
         float fade = (float) Math.exp(-SLICE / 8.0); // the loudest point is forgotten over some seconds
         for (int s = 0; s < n; s++) {
-            double allE = 0, bassAll = 0;
+            double allE = 0, bassAll = 0, highAll = 0;
             float kickRise = 0f, hatRise = 0f;
             // In 5 ms steps: how much louder the last 10 ms are than the 10 ms before. A kick hits
             // within a few milliseconds; bass notes swelling in and two low notes beating against
@@ -63,6 +65,7 @@ final class KickDetector {
                     bassE += low2 * low2;
                     bassAll += low2 * low2;
                     highE += high * high;
+                    highAll += high * high;
                     allE += mono * mono;
                 }
                 kickRise = Math.max(kickRise, rise(bassWas, (float) Math.sqrt(bassE / frames)));
@@ -73,6 +76,9 @@ final class KickDetector {
             float all = (float) Math.sqrt(allE / perSlice);
             peak = Math.max(all, peak * fade);
             out[LEVEL][s] = all < 0.003f ? 0f : all / peak;
+            out[BASS][s] = loudness(Math.sqrt(bassAll / perSlice));
+            out[LOUD][s] = loudness(all);
+            out[HIGH][s] = loudness(Math.sqrt(highAll / perSlice));
             java.io.PrintWriter tr = trace;
             if (tr != null) {
                 tr.printf(java.util.Locale.ROOT, "%.2f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%.3f%n", traced++ * SLICE,
@@ -80,6 +86,12 @@ final class KickDetector {
             }
         }
         return out;
+    }
+
+    /** RMS to 0..1 on a dB scale: -70 dB (or less) is 0, -10 dB is 1. */
+    private static float loudness(double rms) {
+        double db = 20.0 * Math.log10(rms + 1e-7);
+        return (float) Math.max(0.0, Math.min(1.0, (db + 70.0) / 60.0));
     }
 
     /** The last 10 ms against the 10 ms before, then remembers this 5 ms step. */

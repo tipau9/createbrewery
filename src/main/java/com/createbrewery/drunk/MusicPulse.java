@@ -57,7 +57,7 @@ public final class MusicPulse {
     /** One buffer as the channel queued it: where it starts in the song, what was heard in it, and its samples in mono. */
     private record Chunk(long start, int frames, float[][] heard, float[] mono) {}
 
-    private static final float[] CURRENT_SLICE = new float[3];
+    private static final float[] CURRENT_SLICE = new float[KickDetector.CHANNELS];
     /** With linked speakers the booth itself is only the DJ's monitor. */
     private static final float MONITOR = 0.2f;
 
@@ -89,8 +89,8 @@ public final class MusicPulse {
         volatile SoundInstance sound;
         volatile boolean ignored;
         /** Frames read so far (sound thread). */
-        long read;
-        int kicks;
+        volatile long read;
+        volatile int kicks;
         /** The gain the game set; what is set on the source is this times the mix. */
         volatile float gain;
         /** The game's later volume changes come through {@link #holdVolume}, not the source. */
@@ -326,7 +326,7 @@ public final class MusicPulse {
         double now = System.nanoTime() / 1e9;
         float dt = (float) Math.min(0.1, now - lastFrame);
         lastFrame = now;
-        float k = 0f, l = 0f, h = 0f;
+        float k = 0f, l = 0f, h = 0f, bass = 0f, loud = 0f, high = 0f;
         boolean heard = false;
         for (Track t : tracks) {
             if (!mc.getSoundManager().isActive(t.sound) || !AL10.alIsSource(t.source)) {
@@ -353,15 +353,19 @@ public final class MusicPulse {
             t.pulse = Math.max(kickNow * t.mix, t.pulse * (float) Math.exp(-dt * Math.max(9.0, 4.5 / t.song.period())));
             if (!known) continue;
             int beatsBefore = t.song.beats;
-            t.song.hear(kickNow, CURRENT_SLICE[KickDetector.LEVEL], CURRENT_SLICE[KickDetector.HATS], true, now, dt);
+            t.song.hear(kickNow, CURRENT_SLICE[KickDetector.LEVEL], CURRENT_SLICE[KickDetector.HATS], CURRENT_SLICE[KickDetector.BASS],
+                CURRENT_SLICE[KickDetector.LOUD], CURRENT_SLICE[KickDetector.HIGH], true, now, dt);
             // Where a loop set now would start: on the beat as heard, a few ms early so the splice misses the kick.
             if (t.song.beats != beatsBefore && t.heard >= 0) t.lastBeat = Math.max(0, t.heard - (long) (t.rate * 0.004));
             k = Math.max(k, kickNow * near);
             l = Math.max(l, CURRENT_SLICE[KickDetector.LEVEL] * near);
             h = Math.max(h, CURRENT_SLICE[KickDetector.HATS] * near);
+            bass = Math.max(bass, CURRENT_SLICE[KickDetector.BASS] * near);
+            loud = Math.max(loud, CURRENT_SLICE[KickDetector.LOUD] * near);
+            high = Math.max(high, CURRENT_SLICE[KickDetector.HIGH] * near);
         }
         playing = heard;
-        song.hear(k, l, h, heard, now, dt);
+        song.hear(k, l, h, bass, loud, high, heard, now, dt);
         // At techno tempos each kick dies away faster, so hits stay apart instead of smearing.
         kick = Math.max(k, kick * (float) Math.exp(-dt * Math.max(9.0, 4.5 / song.period())));
         hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
@@ -652,6 +656,9 @@ public final class MusicPulse {
         out[KickDetector.KICK] = heard[KickDetector.KICK][i];
         out[KickDetector.LEVEL] = heard[KickDetector.LEVEL][i];
         out[KickDetector.HATS] = heard[KickDetector.HATS][i];
+        out[KickDetector.BASS] = heard[KickDetector.BASS][i];
+        out[KickDetector.LOUD] = heard[KickDetector.LOUD][i];
+        out[KickDetector.HIGH] = heard[KickDetector.HIGH][i];
         return true;
     }
 

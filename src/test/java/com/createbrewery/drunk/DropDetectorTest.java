@@ -127,4 +127,56 @@ class DropDetectorTest {
         }
         assertEquals(0, drops, "no drops in three minutes");
     }
+
+    // ---- the genre-blind path: no kick, no tempo, only how loud the bands are ----
+
+    /** Plays {@code seconds} of a track with the given band loudnesses (0..1); returns the drops heard. */
+    private static int band(DropDetector d, double[] clock, double seconds, float bass, float loud, float high) {
+        int drops = 0;
+        for (double end = clock[0] + seconds; clock[0] < end; clock[0] += DT) {
+            d.hear(0f, loud, 0.1f, bass, loud, high, true, clock[0], DT);
+            if (d.takeDrop()) drops++;
+        }
+        return drops;
+    }
+
+    @Test
+    void aBassEntryAfterADipDropsWithoutAnyKick() {
+        // Trap, pop, a beat switch: no four-on-the-floor, the bass drops out for a moment and hits.
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        assertEquals(0, band(d, clock, 30, 0.6f, 0.7f, 0.3f));
+        assertEquals(0, band(d, clock, 1.5, 0.2f, 0.5f, 0.3f), "the dip alone is no drop");
+        assertEquals(1, band(d, clock, 5, 0.95f, 0.95f, 0.4f), "one drop");
+        assertTrue(d.drop > 0f);
+    }
+
+    @Test
+    void steadyBassNeverDropsWhateverTheGenre() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        for (int i = 0; i < 90; i++) assertEquals(0, band(d, clock, 1, 0.6f + 0.05f * (i % 4), 0.7f, 0.3f));
+    }
+
+    @Test
+    void aSlowFadeInIsNoDrop() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        int drops = 0;
+        for (int i = 0; i < 60; i++) drops += band(d, clock, 1, 0.3f + 0.01f * i, 0.5f + 0.005f * i, 0.2f);
+        assertEquals(0, drops);
+    }
+
+    @Test
+    void twoDropsAreNeverCloserThanTheSpacing() {
+        DropDetector d = new DropDetector();
+        double[] clock = {0};
+        band(d, clock, 20, 0.6f, 0.7f, 0.3f);
+        int drops = 0;
+        for (int round = 0; round < 3; round++) {
+            band(d, clock, 1.5, 0.2f, 0.5f, 0.3f);
+            drops += band(d, clock, 3, 0.95f, 0.95f, 0.4f);
+        }
+        assertEquals(1, drops, "dips and hits every five seconds are one drop per spacing");
+    }
 }

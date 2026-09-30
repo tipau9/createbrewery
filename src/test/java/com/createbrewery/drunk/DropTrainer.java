@@ -21,7 +21,9 @@ import java.util.stream.Stream;
  * Learns {@link DropDetector#DEFAULT} from your own songs.
  *
  * <pre>./gradlew trainDrops --args="C:/Musik/drops"            (learn, show the result)
- * ./gradlew trainDrops --args="C:/Musik/drops --apply"    (and write it into DropDetector.java)</pre>
+ * ./gradlew trainDrops --args="C:/Musik/drops --apply"    (and write it into DropDetector.java)
+ * --holdout 3   every third song is only scored, not learnt from: how it does on songs it has not heard
+ * --energy      also learn the genre-blind energy path (overfits below a few hundred marked drops)</pre>
  *
  * The folder holds MP3s and a {@code drops.txt} saying where their drops are, one song a line:
  * <pre>Pursuit of Happiness.mp3: 1:02, 2:35
@@ -34,9 +36,9 @@ import java.util.stream.Stream;
 public final class DropTrainer {
     /** A detected drop counts when it is this close to a marked one: it fires a beat in, and marks are by ear. */
     private static final double EARLY = 1.5, LATE = 2.5;
-    private static final Pattern DEFAULT_LINE = Pattern.compile("static final Params DEFAULT = new Params\\(.*\\);");
+    private static final Pattern DEFAULT_LINE = Pattern.compile("static final Params DEFAULT = new Params\\([^;]*;");
 
-    record Song(String name, float[] kick, float[] level, float[] hats) {}
+    record Song(String name, float[] kick, float[] level, float[] hats, float[] bass, float[] loud, float[] high) {}
 
     record Label(boolean checked, List<Double> drops) {}
 
@@ -59,7 +61,12 @@ public final class DropTrainer {
         Path dir = Path.of(args[0]);
         boolean apply = Arrays.asList(args).contains("--apply");
         int runs = 3000;
-        for (int i = 1; i + 1 < args.length; i++) if (args[i].equals("--runs")) runs = Integer.parseInt(args[i + 1]);
+        int holdout = 0;
+        tuneEnergy = Arrays.asList(args).contains("--energy");
+        for (int i = 1; i + 1 < args.length; i++) {
+            if (args[i].equals("--runs")) runs = Integer.parseInt(args[i + 1]);
+            if (args[i].equals("--holdout")) holdout = Integer.parseInt(args[i + 1]);
+        }
 
         List<Path> mp3s;
         try (Stream<Path> files = Files.list(dir)) {
@@ -94,6 +101,13 @@ public final class DropTrainer {
         }
 
         List<Song> train = songs.stream().filter(s -> labels.containsKey(s.name) && labels.get(s.name).checked).toList();
+        // --holdout N: every Nth song is not learnt from, only scored, to see how it does on songs it has not seen.
+        List<Song> unseen = new ArrayList<>();
+        if (holdout > 1) {
+            List<Song> learn = new ArrayList<>();
+            for (int i = 0; i < train.size(); i++) (i % holdout == 0 ? unseen : learn).add(train.get(i));
+            train = learn;
+        }
         if (train.size() < 3) {
             System.out.println("Erst " + train.size() + " gepruefte Songs in drops.txt - mindestens 3 zum Lernen.");
             return;
@@ -118,6 +132,10 @@ public final class DropTrainer {
         System.out.println();
         System.out.println("Vorher:  " + before);
         System.out.println("Gelernt: " + bestScore);
+        if (!unseen.isEmpty()) {
+            System.out.println("Ungesehene Songs (" + unseen.size() + "), vorher:  " + score(unseen, labels, DropDetector.DEFAULT));
+            System.out.println("Ungesehene Songs (" + unseen.size() + "), gelernt: " + score(unseen, labels, best));
+        }
         for (Song s : train) {
             System.out.printf("  %-40s markiert %-20s erkannt %s%n", s.name, times(labels.get(s.name).drops()), times(detect(s, best)));
         }
@@ -145,7 +163,7 @@ public final class DropTrainer {
         float dt = (float) KickDetector.SLICE;
         List<Double> drops = new ArrayList<>();
         for (int i = 0; i < s.kick.length; i++) {
-            d.hear(s.kick[i], s.level[i], s.hats[i], true, i * KickDetector.SLICE, dt);
+            d.hear(s.kick[i], s.level[i], s.hats[i], s.bass[i], s.loud[i], s.high[i], true, i * KickDetector.SLICE, dt);
             if (d.takeDrop()) drops.add(i * KickDetector.SLICE);
         }
         return drops;
@@ -176,28 +194,42 @@ public final class DropTrainer {
     // --- Search ---
 
     private static final double[][] RANGE = {
-        {4, 32}, {45, 120}, {3.5, 8}, {2.0, 4.0}, {0.03, 0.4}, {0.15, 1.0}, {0.25, 0.8}, {1, 4}, {0.5, 2.5}, {0.03, 0.3}, {8, 30}};
+        {4, 32}, {45, 120}, {3.5, 8}, {2.0, 4.0}, {0.03, 0.4}, {0.15, 1.0}, {0.25, 0.8}, {1, 4}, {0.5, 2.5}, {0.03, 0.3}, {8, 30},
+        {0.3, 1.5}, {2.0, 8.0}, {0.5, 2.0}, {0, 1.5}, {-0.3, 0.6}, {-0.3, 0.6}, {0, 1.0}, {0.1, 0.8}, {-0.2, 0.15}};
 
     private static double[] values(DropDetector.Params p) {
         return new double[] {p.groove(), p.grooveMemory(), p.goneBeats(), p.goneMin(), p.buildRate(), p.letGo(),
-            p.threshold(), p.backBeats(), p.backMin(), p.hushLevel(), p.spacing()};
+            p.threshold(), p.backBeats(), p.backMin(), p.hushLevel(), p.spacing(),
+            p.eRecent(), p.ePrior(), p.eGap(), p.wBass(), p.wLoud(), p.wHigh(), p.wDip(), p.eThreshold(), p.eSustain()};
     }
 
     private static DropDetector.Params params(double[] v) {
         for (int i = 0; i < v.length; i++) v[i] = Math.max(RANGE[i][0], Math.min(RANGE[i][1], v[i]));
         return new DropDetector.Params((int) Math.round(v[0]), round(v[1], 1), round(v[2], 2), round(v[3], 2), (float) round(v[4], 3),
-            (float) round(v[5], 3), (float) round(v[6], 3), round(v[7], 2), round(v[8], 2), (float) round(v[9], 3), round(v[10], 1));
+            (float) round(v[5], 3), (float) round(v[6], 3), round(v[7], 2), round(v[8], 2), (float) round(v[9], 3), round(v[10], 1),
+            round(v[11], 1), round(v[12], 1), round(v[13], 1), (float) round(v[14], 2), (float) round(v[15], 2), (float) round(v[16], 2),
+            (float) round(v[17], 2), (float) round(v[18], 2), (float) round(v[19], 2));
     }
 
+    /**
+     * The first KICK_PARAMS values are the four-on-the-floor path's; the rest are the genre-blind energy path's.
+     * With 83 marked drops the energy path overfits when learnt freely (41% on the songs it learnt from, 18% on
+     * songs it had not heard, from a hand-set 43%), so it is only tuned with --energy.
+     */
+    private static final int KICK_PARAMS = 11;
+    private static boolean tuneEnergy;
+
     private static DropDetector.Params random(Random r) {
-        double[] v = new double[RANGE.length];
-        for (int i = 0; i < v.length; i++) v[i] = RANGE[i][0] + r.nextDouble() * (RANGE[i][1] - RANGE[i][0]);
+        double[] v = values(DropDetector.DEFAULT);
+        int n = tuneEnergy ? v.length : KICK_PARAMS;
+        for (int i = 0; i < n; i++) v[i] = RANGE[i][0] + r.nextDouble() * (RANGE[i][1] - RANGE[i][0]);
         return params(v);
     }
 
     private static DropDetector.Params nudge(DropDetector.Params p, Random r) {
         double[] v = values(p);
-        for (int i = 0; i < v.length; i++) if (r.nextBoolean()) v[i] += r.nextGaussian() * 0.1 * (RANGE[i][1] - RANGE[i][0]);
+        int n = tuneEnergy ? v.length : KICK_PARAMS;
+        for (int i = 0; i < n; i++) if (r.nextBoolean()) v[i] += r.nextGaussian() * 0.1 * (RANGE[i][1] - RANGE[i][0]);
         return params(v);
     }
 
@@ -207,9 +239,11 @@ public final class DropTrainer {
     }
 
     static String code(DropDetector.Params p) {
-        return String.format(Locale.ROOT, "static final Params DEFAULT = new Params(%d, %s, %s, %s, %sf, %sf, %sf, %s, %s, %sf, %s);",
+        return String.format(Locale.ROOT, "static final Params DEFAULT = new Params(%d, %s, %s, %s, %sf, %sf, %sf, %s, %s, %sf, %s,"
+                + " %s, %s, %s, %sf, %sf, %sf, %sf, %sf, %sf);",
             p.groove(), p.grooveMemory(), p.goneBeats(), p.goneMin(), p.buildRate(), p.letGo(), p.threshold(),
-            p.backBeats(), p.backMin(), p.hushLevel(), p.spacing());
+            p.backBeats(), p.backMin(), p.hushLevel(), p.spacing(),
+            p.eRecent(), p.ePrior(), p.eGap(), p.wBass(), p.wLoud(), p.wHigh(), p.wDip(), p.eThreshold(), p.eSustain());
     }
 
     // --- drops.txt ---
@@ -257,17 +291,13 @@ public final class DropTrainer {
     /** What the kick detector hears of an MP3, slice by slice, as in the game; cached per file. */
     static Song listen(Path mp3, Path cacheDir) throws Exception {
         String name = mp3.getFileName().toString();
-        Path cache = cacheDir.resolve(name + "." + Files.size(mp3) + "." + Files.getLastModifiedTime(mp3).toMillis() + ".bin");
+        Path cache = cacheDir.resolve(name + "." + Files.size(mp3) + "." + Files.getLastModifiedTime(mp3).toMillis() + ".v2.bin");
         if (Files.exists(cache)) {
             try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(cache)))) {
                 int n = in.readInt();
-                float[] kick = new float[n], level = new float[n], hats = new float[n];
-                for (int i = 0; i < n; i++) {
-                    kick[i] = in.readFloat();
-                    level[i] = in.readFloat();
-                    hats[i] = in.readFloat();
-                }
-                return new Song(name, kick, level, hats);
+                float[][] c = new float[KickDetector.CHANNELS][n];
+                for (int i = 0; i < n; i++) for (int ch = 0; ch < KickDetector.CHANNELS; ch++) c[ch][i] = in.readFloat();
+                return new Song(name, c[KickDetector.KICK], c[KickDetector.LEVEL], c[KickDetector.HATS], c[KickDetector.BASS], c[KickDetector.LOUD], c[KickDetector.HIGH]);
             }
         }
         System.out.println("Hoere " + name + " ...");
@@ -279,6 +309,9 @@ public final class DropTrainer {
                 out.writeFloat(song.kick[i]);
                 out.writeFloat(song.level[i]);
                 out.writeFloat(song.hats[i]);
+                out.writeFloat(song.bass[i]);
+                out.writeFloat(song.loud[i]);
+                out.writeFloat(song.high[i]);
             }
         }
         return song;
@@ -318,15 +351,13 @@ public final class DropTrainer {
             }
         }
         int n = parts.stream().mapToInt(p -> p[KickDetector.KICK].length).sum();
-        float[] kick = new float[n], level = new float[n], hats = new float[n];
+        float[][] c = new float[KickDetector.CHANNELS][n];
         int at = 0;
         for (float[][] p : parts) {
             int len = p[KickDetector.KICK].length;
-            System.arraycopy(p[KickDetector.KICK], 0, kick, at, len);
-            System.arraycopy(p[KickDetector.LEVEL], 0, level, at, len);
-            System.arraycopy(p[KickDetector.HATS], 0, hats, at, len);
+            for (int ch = 0; ch < KickDetector.CHANNELS; ch++) System.arraycopy(p[ch], 0, c[ch], at, len);
             at += len;
         }
-        return new Song(name, kick, level, hats);
+        return new Song(name, c[KickDetector.KICK], c[KickDetector.LEVEL], c[KickDetector.HATS], c[KickDetector.BASS], c[KickDetector.LOUD], c[KickDetector.HIGH]);
     }
 }
