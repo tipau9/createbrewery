@@ -35,7 +35,7 @@ final class DropDetector {
                   float eThreshold, float eSustain) {}
 
     // trained: DropTrainer rewrites the next line
-    static final Params DEFAULT = new Params(5, 45.0, 3.5, 2.0, 0.187f, 0.2f, 0.25f, 3.75, 0.97, 0.03f, 28.4,
+    static final Params DEFAULT = new Params(5, 45.0, 3.5, 2.0, 0.187f, 0.2f, 0.25f, 3.75, 0.97, 0.03f, 12.0,
         0.5, 3.0, 1.0, 0.47f, 0.0f, 0.32f, 0.56f, 0.48f, -1.0f);
 
     private final Params p;
