@@ -5,3 +5,4 @@ run/
 *.class
 src/generated/resources/.cache/
 .worktrees/
+Musik/
