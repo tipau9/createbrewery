@@ -81,7 +81,7 @@ public class StrobeLightBlockEntity extends BlockEntity implements ConsoleLinked
         float gate = level != null ? link.gate(level) : 1f;
         if (level != null) StrobeFlash.offer(level, worldPosition, state.getValue(StrobeLightBlock.FACING), flashIntensity * gate, power, steady);
 
-        if (veil) {
+        if (veil && com.createbrewery.Config.ENABLE_VEIL_LIGHTS.get()) {
             try {
                 roomLight = StrobeRoomLight.update(roomLight, worldPosition, state.getValue(StrobeLightBlock.FACING),
                     flashIntensity * gate * (0.4f + 0.3f * power), steady);

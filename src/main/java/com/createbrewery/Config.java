@@ -10,6 +10,7 @@ public class Config {
     public static final ModConfigSpec CLIENT_SPEC;
     public static final ModConfigSpec.DoubleValue SCREEN_EFFECTS;
     public static final ModConfigSpec.BooleanValue RECORD_MUSIC;
+    public static final ModConfigSpec.BooleanValue ENABLE_VEIL_LIGHTS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -34,6 +35,11 @@ public class Config {
             .comment("Debug: write what the MDMA beat and drop detection hears of every song to logs/brewery-traces/*.csv.",
                 "One line per 20 ms of the song. Leave off unless you are tuning drop detection.")
             .define("recordMusicTraces", false);
+        ENABLE_VEIL_LIGHTS = client
+            .comment("Enable dynamic room lighting through Veil for club fixtures, strobes and drugs.",
+                "Disabled by default because Veil's VoxelShadowGrid crashes Nvidia OpenGL drivers (nvoglv64.dll glTexImage3D).",
+                "Leave false unless your GPU driver and Veil version support voxel shadow textures.")
+            .define("enableVeilLights", false);
         CLIENT_SPEC = client.build();
     }
 }

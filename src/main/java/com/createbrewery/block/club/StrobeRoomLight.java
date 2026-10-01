@@ -33,6 +33,10 @@ final class StrobeRoomLight {
     /** The same in any colour (club fixtures). */
     @SuppressWarnings("unchecked")
     static Object update(Object handle, BlockPos pos, Direction facing, float brightness, boolean steady, int color) {
+        if (!com.createbrewery.Config.ENABLE_VEIL_LIGHTS.get() || com.createbrewery.drunk.DrunkClient.shaderPack()) {
+            if (handle != null) free(handle);
+            return null;
+        }
         // Photosensitivity: "Hide Lightning Flashes" keeps the room dark too (a steady redstone light stays).
         if (!steady && Minecraft.getInstance().options.hideLightningFlash().get()) brightness = 0f;
         LightRenderHandle<PointLightData> light = (LightRenderHandle<PointLightData>) handle;
@@ -53,6 +57,10 @@ final class StrobeRoomLight {
     /** A light at {@code at} (a moving head's spot), in any colour; the handle is kept the way {@link #update} keeps it. */
     @SuppressWarnings("unchecked")
     static Object updateAt(Object handle, net.minecraft.world.phys.Vec3 at, float brightness, int color) {
+        if (!com.createbrewery.Config.ENABLE_VEIL_LIGHTS.get() || com.createbrewery.drunk.DrunkClient.shaderPack()) {
+            if (handle != null) free(handle);
+            return null;
+        }
         LightRenderHandle<PointLightData> light = (LightRenderHandle<PointLightData>) handle;
         if (light == null || !light.isValid()) {
             if (brightness <= 0f) return null;
