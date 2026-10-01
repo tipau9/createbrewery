@@ -44,6 +44,37 @@ public final class ClubTestAccess {
         level.getBlockEntity(pos).loadCustomOnly(tag, level.registryAccess());
     }
 
+    /** Sets the light settings (out of range on purpose), writes and reads them back: true if they wrapped and survived. */
+    public static boolean lightSettingsRoundTrip(DmxConsoleBlockEntity dmx) {
+        dmx.setColorFx(99);
+        dmx.setGobo(-1);
+        dmx.setZoom(7);
+        dmx.setPrism(true);
+        dmx.setMove(13);
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        DmxConsoleBlockEntity.write(dmx.settings, tag);
+        DmxProgram.Settings back = new DmxProgram.Settings();
+        DmxConsoleBlockEntity.read(back, tag);
+        return back.colorFx == Math.floorMod(99, DmxProgram.COLOR_FX) && back.gobo == Math.floorMod(-1, DmxProgram.GOBOS)
+            && back.zoom == Math.floorMod(7, DmxProgram.ZOOMS) && back.prism && back.move == Math.floorMod(13, DmxProgram.MOVES);
+    }
+
+    /** A tag from before the light settings: only the old keys. */
+    public static boolean oldTagDefaults() {
+        DmxProgram.Settings old = new DmxProgram.Settings();
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        DmxConsoleBlockEntity.write(old, tag);
+        tag.remove("ColorFx");
+        tag.remove("Gobo");
+        tag.remove("Prism");
+        tag.remove("Zoom");
+        DmxProgram.Settings back = new DmxProgram.Settings();
+        back.zoom = 2;
+        back.colorFx = 3;
+        DmxConsoleBlockEntity.read(back, tag);
+        return back.colorFx == 0 && back.gobo == 0 && back.zoom == 1 && !back.prism;
+    }
+
     /** Swaps deck {@code deck}'s record for the next one from the crate beside the booth. */
     public static boolean restock(DjBoothBlockEntity dj, int deck) {
         return dj.restock(deck);

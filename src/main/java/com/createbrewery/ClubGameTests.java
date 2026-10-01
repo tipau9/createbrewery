@@ -343,6 +343,20 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void lightSettingsWrapAndPersist(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        DmxConsoleBlockEntity dmx = helper.getBlockEntity(CONSOLE);
+        helper.assertTrue(ClubTestAccess.lightSettingsRoundTrip(dmx), "the light settings did not survive a save and load");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void anOldConsoleTagLoadsLightDefaults(GameTestHelper helper) {
+        helper.assertTrue(ClubTestAccess.oldTagDefaults(), "an old save did not come up with today's look");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void consoleFindsItsBoothWithoutRec(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
         BlockPos consolePos = POS.offset(3, 0, 0);

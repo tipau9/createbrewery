@@ -14,7 +14,9 @@ final class DmxProgram {
     /** With flashing lights hidden, the most a level may change in one tick. */
     static final float GLIDE = 0.1f;
     static final int MANUAL = 0, AUTO = 1, CHASE = 2, PROGRAMS = 3;
-    static final int CIRCLE = 0, FIGURE8 = 1, SWEEP = 2, BALLYHOO = 3, MOVES = 4;
+    static final int CIRCLE = 0, FIGURE8 = 1, SWEEP = 2, BALLYHOO = 3, CROWD = 4, STRAIGHT = 5, FAN = 6, MIRROR = 7, MOVES = 8;
+    static final int STATIC = 0, FADE = 1, RAINBOW = 2, COMPLEMENT = 3, COLOR_FX = 4;
+    static final int GOBOS = 4, ZOOMS = 3;
     /** Beats per chase step. */
     static final int[] RATES = {1, 2, 4};
     /** White, red, amber, green, cyan, blue, magenta, UV. */
@@ -26,6 +28,9 @@ final class DmxProgram {
         final int[] colors = new int[GROUPS];
         float master = 1f;
         int program = AUTO, move = CIRCLE, rate;
+        /** Colour program (see COLOR_FX), the moving heads' gobo and zoom, and whether their prism is in. */
+        int colorFx, gobo, zoom = 1;
+        boolean prism;
         boolean blackout;
         /** Groups whose flash button is held, one bit each. */
         int flash;

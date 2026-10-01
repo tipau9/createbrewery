@@ -19,7 +19,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  */
 public record DmxControl(BlockPos pos, byte action, byte index, float value) implements CustomPacketPayload {
     public static final byte FADER = 0, MASTER = 1, COLOR = 2, FLASH = 3, RELEASE = 4, PROGRAM = 5, MOVE = 6, RATE = 7,
-        BLACKOUT = 8, STORE = 9, RECALL = 10, RECORD = 11, CLEAR_SHOW = 12;
+        BLACKOUT = 8, STORE = 9, RECALL = 10, RECORD = 11, CLEAR_SHOW = 12, COLORFX = 13, GOBO = 14, PRISM = 15, ZOOM = 16;
 
     public static final Type<DmxControl> TYPE = new Type<>(CreateBrewery.ID("dmx_control"));
     public static final StreamCodec<ByteBuf, DmxControl> CODEC = StreamCodec.composite(
@@ -30,8 +30,8 @@ public record DmxControl(BlockPos pos, byte action, byte index, float value) imp
         DmxControl::new);
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        // "2": timecode recording was added.
-        event.registrar("2").optional().playToServer(TYPE, CODEC, DmxControl::handle);
+        // "3": colour programs, gobo, prism and zoom were added.
+        event.registrar("3").optional().playToServer(TYPE, CODEC, DmxControl::handle);
     }
 
     /** Client side. */
@@ -63,6 +63,10 @@ public record DmxControl(BlockPos pos, byte action, byte index, float value) imp
                 if (!dmx.setRecording(c.value > 0.5f)) player.displayClientMessage(net.minecraft.network.chat.Component.translatable("createbrewery.dmx.no_booth"), true);
             }
             case CLEAR_SHOW -> dmx.clearShow();
+            case COLORFX -> dmx.setColorFx((int) c.value);
+            case GOBO -> dmx.setGobo((int) c.value);
+            case PRISM -> dmx.setPrism(c.value > 0.5f);
+            case ZOOM -> dmx.setZoom((int) c.value);
             default -> {}
         }
     }

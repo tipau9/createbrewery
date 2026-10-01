@@ -76,6 +76,26 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         changed();
     }
 
+    void setColorFx(int v) {
+        settings.colorFx = Math.floorMod(v, DmxProgram.COLOR_FX);
+        changed();
+    }
+
+    void setGobo(int v) {
+        settings.gobo = Math.floorMod(v, DmxProgram.GOBOS);
+        changed();
+    }
+
+    void setZoom(int v) {
+        settings.zoom = Math.floorMod(v, DmxProgram.ZOOMS);
+        changed();
+    }
+
+    void setPrism(boolean on) {
+        settings.prism = on;
+        changed();
+    }
+
     void setBlackout(boolean b) {
         settings.blackout = b;
         changed();
@@ -320,6 +340,10 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         tag.putInt("Move", s.move);
         tag.putInt("Rate", s.rate);
         tag.putBoolean("Blackout", s.blackout);
+        tag.putInt("ColorFx", s.colorFx);
+        tag.putInt("Gobo", s.gobo);
+        tag.putInt("Zoom", s.zoom);
+        tag.putBoolean("Prism", s.prism);
         tag.putInt("Flash", s.flash);
         ListTag scenes = new ListTag();
         for (int i = 0; i < DmxProgram.SCENES; i++) {
@@ -343,6 +367,10 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         s.move = Math.floorMod(tag.getInt("Move"), DmxProgram.MOVES);
         s.rate = Math.floorMod(tag.getInt("Rate"), DmxProgram.RATES.length);
         s.blackout = tag.getBoolean("Blackout");
+        s.colorFx = Math.floorMod(tag.getInt("ColorFx"), DmxProgram.COLOR_FX);
+        s.gobo = Math.floorMod(tag.getInt("Gobo"), DmxProgram.GOBOS);
+        s.zoom = tag.contains("Zoom") ? Math.floorMod(tag.getInt("Zoom"), DmxProgram.ZOOMS) : 1;
+        s.prism = tag.getBoolean("Prism");
         s.flash = tag.getInt("Flash");
         ListTag scenes = tag.getList("Scenes", Tag.TAG_COMPOUND);
         for (int i = 0; i < DmxProgram.SCENES; i++) {

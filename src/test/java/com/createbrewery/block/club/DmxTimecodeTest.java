@@ -5,6 +5,32 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DmxTimecodeTest {
+
+    @Test
+    void aLookCarriesTheLightSettingsAndAppliesThemBack() {
+        DmxProgram.Settings s = new DmxProgram.Settings();
+        s.colorFx = 2;
+        s.gobo = 3;
+        s.zoom = 0;
+        s.prism = true;
+        DmxTimecode.Look look = DmxTimecode.Look.of(s);
+        DmxProgram.Settings back = new DmxProgram.Settings();
+        look.applyTo(back);
+        assertEquals(2, back.colorFx);
+        assertEquals(3, back.gobo);
+        assertEquals(0, back.zoom);
+        assertTrue(back.prism);
+    }
+
+    @Test
+    void freshSettingsLookLikeToday() {
+        DmxProgram.Settings s = new DmxProgram.Settings();
+        assertEquals(0, s.colorFx);
+        assertEquals(0, s.gobo);
+        assertEquals(1, s.zoom, "zoom defaults to normal");
+        assertFalse(s.prism);
+        assertEquals(8, DmxProgram.MOVES);
+    }
     private static DmxTimecode.Look look(float fader) {
         DmxProgram.Settings s = new DmxProgram.Settings();
         s.faders[0] = fader;

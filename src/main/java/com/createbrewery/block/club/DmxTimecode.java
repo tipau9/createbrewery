@@ -16,9 +16,11 @@ final class DmxTimecode {
     static final int MAX_CUES = 256, MAX_SONGS = 16;
 
     /** The console's look without its stored scenes and held flashes. */
-    record Look(float[] faders, int[] colors, float master, int program, int move, int rate, boolean blackout) {
+    record Look(float[] faders, int[] colors, float master, int program, int move, int rate, boolean blackout,
+                int colorFx, int gobo, int zoom, boolean prism) {
         static Look of(DmxProgram.Settings s) {
-            return new Look(s.faders.clone(), s.colors.clone(), s.master, s.program, s.move, s.rate, s.blackout);
+            return new Look(s.faders.clone(), s.colors.clone(), s.master, s.program, s.move, s.rate, s.blackout,
+                s.colorFx, s.gobo, s.zoom, s.prism);
         }
 
         void applyTo(DmxProgram.Settings s) {
@@ -29,6 +31,10 @@ final class DmxTimecode {
             s.move = move;
             s.rate = rate;
             s.blackout = blackout;
+            s.colorFx = colorFx;
+            s.gobo = gobo;
+            s.zoom = zoom;
+            s.prism = prism;
         }
     }
 
