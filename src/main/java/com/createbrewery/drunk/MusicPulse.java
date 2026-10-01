@@ -584,7 +584,7 @@ public final class MusicPulse {
             e.drive = w.getValue().drive();
             e.delay = w.getValue().delay();
             e.crossover = crossover;
-            e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt);
+            e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt, false);
         }
         if (dj != null) {
             // The clip light: falls at once with the gain, lets go over about a second.
@@ -600,7 +600,7 @@ public final class MusicPulse {
             && player.position().closerThan(Vec3.atCenterOf(cueBooth), CUE_REACH);
         if (cued) {
             if (t.phones == null) t.phones = Emitter.headphones(t.rate);
-            t.phones.update(t, t.source, cursor, base * CUE_GAIN, t.pitch, mc.level, player, now, dt);
+            t.phones.update(t, t.source, cursor, base * CUE_GAIN, t.pitch, mc.level, player, now, dt, false);
         } else if (t.phones != null) {
             t.phones.delete();
             t.phones = null;

@@ -26,8 +26,6 @@ final class Emitter {
     private static final int PIECE = 1024;
     /** Seconds queued ahead of the game's source: rides out a slow frame. */
     private static final double LEAD = 0.3;
-    /** Out of step by more than this (seconds) and it starts again from where the song is. */
-    private static final double DRIFT = 0.07;
     /** Rays at 20 Hz are plenty for walking about, and cheap with a dozen speakers. */
     private static final double RAY_EVERY = 0.05;
     /** Highs fade over distance in air too, even with nothing in the way. */
@@ -66,8 +64,20 @@ final class Emitter {
     /** 0 in plain view .. 1 walled off, and how many solid blocks are in the way; both eased. */
     float muffle;
     private float walls, targetMuffle, targetWalls;
-    private double lastRay = -1;
-    private int resyncs;
+    double lastRay = -1;
+    private final SyncPolicy sync = new SyncPolicy();
+    /** Restarts so far, and how many of them were for each reason (see {@link SyncPolicy}); logged every 20th. */
+    private int resyncs, stoppedResyncs, starvedResyncs, driftResyncs;
+    /** Processed buffers kept to be filled again: no alGenBuffers / alDeleteBuffers every 23 ms. */
+    private final ArrayDeque<Integer> free = new ArrayDeque<>();
+    private static final int POOL = 48;
+    /** Bass carries further than the highs: a subwoofer is heard from this much further away. */
+    static final float SUB_REACH = 1.5f;
+    /** Set each frame to the PA's stack gain (see {@link PaLevel}) and eased, so a speaker crossing the radius does not step the level. */
+    float stack = 1f;
+    private float stackNow = 1f;
+    private float baseRef;
+    private int reachBand = -1;
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     Emitter(Vec3 pos, float level, double rate) {
@@ -96,9 +106,9 @@ final class Emitter {
      * Once a frame. {@code original} is the game's own source for the song, {@code cursor} the song
      * frame it is playing (-1 if not known yet).
      */
-    void update(MusicPulse.Track t, int original, long cursor, float gain, float pitch, Level world, Entity listener, double now, float dt) {
+    boolean update(MusicPulse.Track t, int original, long cursor, float gain, float pitch, Level world, Entity listener, double now, float dt, boolean mayRay) {
         if (source <= 0 || !AL10.alIsSource(source)) create(original);
-        if (source <= 0) return;
+        if (source <= 0) return false;
         reclaim();
 
         int songState = AL10.alGetSourcei(original, AL10.AL_SOURCE_STATE);
@@ -106,7 +116,7 @@ final class Emitter {
         if (songState != AL10.AL_PLAYING || (t.deck ? t.deckFrame < 0 : cursor < 0)) {
             // The game paused (menu) or the song has not started: hold still with it.
             if (state == AL10.AL_PLAYING) AL10.alSourcePause(source);
-            return;
+            return false;
         }
 
         // With the speed of sound on, a speaker is heard as far behind the song as its sound takes to reach you.
@@ -116,18 +126,30 @@ final class Emitter {
         }
         long here = fed - queuedFrames() + AL10.alGetSourcei(source, AL11.AL_SAMPLE_OFFSET);
         boolean running = state == AL10.AL_PLAYING || state == AL10.AL_PAUSED;
-        if (!running || Math.abs(here - target) > DRIFT * rate) {
+        SyncPolicy.Decision decision = sync.decide(running, queued.size(), here, target, rate, now);
+        if (decision.action() == SyncPolicy.Action.RESTART) {
             // Only the first start is expected; more mean lag spikes or drift, worth seeing in the log.
-            if (fed >= 0 && ++resyncs % 20 == 1) LOGGER.info("Speaker at {} resynced ({} times)", home, resyncs);
+            if (fed >= 0) {
+                switch (decision.reason()) {
+                    case "stopped" -> stoppedResyncs++;
+                    case "starved" -> starvedResyncs++;
+                    default -> driftResyncs++;
+                }
+                if (++resyncs % 20 == 1) {
+                    LOGGER.info("Speaker at {} resynced ({} times: {} stopped, {} starved, {} drift; now {})",
+                        home, resyncs, stoppedResyncs, starvedResyncs, driftResyncs, decision.reason());
+                }
+            }
             restart(target);
-            here = target;
         }
-        // Walking about moves the target a little every frame: follow it by speed, not by jumps.
-        float servo = delay >= 0 && !phones ? DeckFx.servo((here - target) / (rate * pitch)) : 1f;
+        // A small drift is pulled back through the playing speed (within 2 %), not by a restart.
+        float servo = decision.action() == SyncPolicy.Action.SERVO ? decision.pitch() : 1f;
 
-        if (!phones && listener != null && now - lastRay >= RAY_EVERY) {
+        boolean cast = false;
+        if (mayRay && !phones && listener != null && now - lastRay >= RAY_EVERY) {
             lastRay = now;
             hear(world, listener);
+            cast = true;
         }
         // Eased, so walking through a door opens the sound up over a fifth of a second, not in one click.
         float ease = Math.min(1f, dt * 10f);
@@ -148,9 +170,15 @@ final class Emitter {
             split.set(band == LOW, crossover);
         }
         feed(t, target + (long) (LEAD * rate * pitch));
-        AL10.alSourcef(source, AL10.AL_GAIN, gain * level);
+        stackNow += (stack - stackNow) * Math.min(1f, dt * 5f);
+        if (!phones && reachBand != band) {
+            reachBand = band;
+            AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, baseRef * (band == LOW ? SUB_REACH : 1f));
+        }
+        AL10.alSourcef(source, AL10.AL_GAIN, gain * level * stackNow);
         AL10.alSourcef(source, AL10.AL_PITCH, pitch * servo);
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING && !queued.isEmpty()) AL10.alSourcePlay(source);
+        return cast;
     }
 
     private void create(int original) {
@@ -170,6 +198,8 @@ final class Emitter {
             for (int param : new int[] {AL10.AL_REFERENCE_DISTANCE, AL10.AL_MAX_DISTANCE, AL10.AL_ROLLOFF_FACTOR}) {
                 AL10.alSourcef(source, param, AL10.alGetSourcef(original, param));
             }
+            baseRef = AL10.alGetSourcef(original, AL10.AL_REFERENCE_DISTANCE);
+            reachBand = -1;
             AL10.alSourcef(source, AL10.AL_MAX_GAIN, 2f);
             try {
                 AL10.alSourcef(source, EXTEfx.AL_AIR_ABSORPTION_FACTOR, AIR_ABSORPTION);
@@ -184,10 +214,15 @@ final class Emitter {
     /** Drops the buffers the source has played. */
     private void reclaim() {
         for (int n = AL10.alGetSourcei(source, AL10.AL_BUFFERS_PROCESSED); n > 0; n--) {
-            int buffer = AL10.alSourceUnqueueBuffers(source);
+            recycle(AL10.alSourceUnqueueBuffers(source));
             queued.pollFirst();
-            AL10.alDeleteBuffers(buffer);
         }
+    }
+
+    /** Keeps an unqueued buffer to fill again; past the pool's size it is freed. */
+    private void recycle(int buffer) {
+        if (free.size() < POOL) free.addLast(buffer);
+        else AL10.alDeleteBuffers(buffer);
     }
 
     private long queuedFrames() {
@@ -199,7 +234,7 @@ final class Emitter {
     /** Starts over from where the song is: first start, after a lag spike, or once it drifted. */
     private void restart(long cursor) {
         AL10.alSourceStop(source);
-        for (int n = AL10.alGetSourcei(source, AL10.AL_BUFFERS_QUEUED); n > 0; n--) AL10.alDeleteBuffers(AL10.alSourceUnqueueBuffers(source));
+        for (int n = AL10.alGetSourcei(source, AL10.AL_BUFFERS_QUEUED); n > 0; n--) recycle(AL10.alSourceUnqueueBuffers(source));
         queued.clear();
         fed = cursor;
     }
@@ -219,7 +254,7 @@ final class Emitter {
                 pcm.putShort((short) (s * 32767));
             }
             pcm.flip();
-            int buffer = AL10.alGenBuffers();
+            int buffer = free.isEmpty() ? AL10.alGenBuffers() : free.pollFirst();
             AL10.alBufferData(buffer, AL10.AL_FORMAT_MONO16, pcm, (int) rate);
             AL10.alSourceQueueBuffers(source, buffer);
             queued.addLast(new int[] {buffer, n});
@@ -295,6 +330,10 @@ final class Emitter {
             } catch (Throwable ignored) {}
         }
         source = -1;
+        try {
+            for (int buffer : free) AL10.alDeleteBuffers(buffer);
+        } catch (Throwable ignored) {}
+        free.clear();
         queued.clear();
         MemoryUtil.memFree(pcm);
     }
