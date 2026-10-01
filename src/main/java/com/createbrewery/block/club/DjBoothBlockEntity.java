@@ -1,6 +1,7 @@
 package com.createbrewery.block.club;
 
 import com.createbrewery.compat.EtchedCompat;
+import com.createbrewery.sound.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -80,6 +81,8 @@ public class DjBoothBlockEntity extends BlockEntity {
         boolean vinylMode = true;
         boolean slipMode = false;
         boolean reverse = false;
+        boolean scratchHeld = false;
+        long scratchStartTime = 0;
     }
 
     public static final int HIGH = 0, MID = 1, LOW = 2;
@@ -273,6 +276,9 @@ public class DjBoothBlockEntity extends BlockEntity {
         for (int deck = 0; deck < DECKS; deck++) {
             Deck d = decks[deck];
             if (!d.playing || d.endsAt < 0) continue;
+            if (d.scratchHeld && !d.slipMode) {
+                d.endsAt++;
+            }
             int nextDeck = (deck + 1) % DECKS;
             Deck other = decks[nextDeck];
             boolean cued = automix && !other.disc.isEmpty() && !other.playing;
@@ -430,11 +436,51 @@ public class DjBoothBlockEntity extends BlockEntity {
         return xfGain * decks[deck].fader * (decks[deck].trim * 2.0f);
     }
 
-    public void jogScrub(int deck, float scrubTicks) {
+    public boolean isScratchHeld(int deck) {
+        return deck >= 0 && deck < DECKS && decks[deck].scratchHeld;
+    }
+
+    public void setScratchHeld(int deck, boolean held) {
         if (deck < 0 || deck >= DECKS) return;
         Deck d = decks[deck];
-        if (d.playing && d.endsAt > 0 && level != null) {
-            d.endsAt -= (long) scrubTicks;
+        if (d.scratchHeld == held) return;
+        d.scratchHeld = held;
+        if (held) {
+            d.scratchStartTime = level != null ? level.getGameTime() : 0;
+            if (level != null && d.playing && d.vinylMode) {
+                BlockPos at = deckPos(deck);
+                float vol = Math.max(0.3f, deckGain(deck, level.getGameTime()));
+                level.playSound(null, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
+                    ModSounds.DJ_SCRATCH_STOP.get(), SoundSource.RECORDS, vol, 1.0f);
+            }
+        } else {
+            if (!d.slipMode && d.playing && d.endsAt > 0 && level != null && d.scratchStartTime > 0) {
+                long heldTicks = level.getGameTime() - d.scratchStartTime;
+                if (heldTicks > 0) {
+                    d.endsAt += heldTicks;
+                }
+            }
+            d.scratchStartTime = 0;
+        }
+        sync();
+    }
+
+    public void jogScrub(int deck, float scrubAmount) {
+        if (deck < 0 || deck >= DECKS || level == null) return;
+        Deck d = decks[deck];
+        if (!d.playing && d.disc.isEmpty()) return;
+
+        BlockPos at = deckPos(deck);
+        var sound = scrubAmount >= 0 ? ModSounds.DJ_SCRATCH_FWD : ModSounds.DJ_SCRATCH_BACK;
+        float gain = deckGain(deck, level.getGameTime());
+        float vol = Mth.clamp(gain * (0.6f + Math.min(0.6f, Math.abs(scrubAmount) * 2.5f)), 0.2f, 1.2f);
+        float pitch = Mth.clamp(0.8f + Math.abs(scrubAmount) * 3.0f, 0.6f, 1.8f);
+
+        level.playSound(null, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
+            sound.get(), SoundSource.RECORDS, vol, pitch);
+
+        if (!d.slipMode && d.playing && d.endsAt > 0) {
+            d.endsAt -= (long) (scrubAmount * 30.0f);
             sync();
         }
     }
@@ -760,6 +806,7 @@ public class DjBoothBlockEntity extends BlockEntity {
             tag.putBoolean(keys[deck] + "Vinyl", d.vinylMode);
             tag.putBoolean(keys[deck] + "Slip", d.slipMode);
             tag.putBoolean(keys[deck] + "Reverse", d.reverse);
+            tag.putBoolean(keys[deck] + "ScratchHeld", d.scratchHeld);
         }
         tag.putFloat("XfFrom", xfFrom);
         tag.putFloat("XfTo", xfTo);
@@ -801,6 +848,7 @@ public class DjBoothBlockEntity extends BlockEntity {
             d.vinylMode = !tag.contains(keys[deck] + "Vinyl") || tag.getBoolean(keys[deck] + "Vinyl");
             d.slipMode = tag.getBoolean(keys[deck] + "Slip");
             d.reverse = tag.getBoolean(keys[deck] + "Reverse");
+            d.scratchHeld = tag.getBoolean(keys[deck] + "ScratchHeld");
         }
         xfFrom = tag.getFloat("XfFrom");
         xfTo = tag.getFloat("XfTo");
@@ -822,6 +870,7 @@ public class DjBoothBlockEntity extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         if (level != null && level.isClientSide) BOOTHS.add(worldPosition.immutable());
+        for (Deck d : decks) d.scratchHeld = false;
         // The songs do not survive a reload; a saved "playing" would spin silent platters.
         if (level != null && !level.isClientSide) {
             for (Deck d : decks) {

@@ -515,6 +515,9 @@ public final class MusicPulse {
         int deck = dj.deckAt(at);
         t.deck = true;
         t.mix = dj.deckGain(deck, mc.level.getGameTime());
+        if (dj.isScratchHeld(deck) && dj.isVinylMode(deck)) {
+            t.mix = 0f;
+        }
         t.pitch = dj.getPitch(deck);
         AL10.alSourcef(t.source, AL10.AL_PITCH, t.pitch);
         t.eq[0] = dj.getEq(deck, DjBoothBlockEntity.HIGH);

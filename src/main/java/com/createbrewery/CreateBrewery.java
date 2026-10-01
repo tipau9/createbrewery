@@ -119,6 +119,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("subtitles.createbrewery.heartbeat", "Herzklopfen");
         REGISTRATE.addRawLang("subtitles.createbrewery.beer_open", "Bier zischt");
         REGISTRATE.addRawLang("subtitles.createbrewery.ear_ringing", "Ohrenpfeifen");
+        REGISTRATE.addRawLang("subtitles.createbrewery.dj_scratch", "DJ scratches record");
         REGISTRATE.addRawLang("death.attack.createbrewery.alcohol_poisoning", "%1$s hat sich zu Tode gesoffen");
         // Hand-written strings with no registry object of their own to hang a .lang() call
         // off of. addRawLang feeds the same RegistrateLangProvider as every other entry, so

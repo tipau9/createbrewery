@@ -74,5 +74,34 @@
     "sounds": [
       "createbrewery:co2_stop"
     ]
+  },
+  "dj_scratch": {
+    "subtitle": "subtitles.createbrewery.dj_scratch",
+    "sounds": [
+      "createbrewery:scratch_baby",
+      "createbrewery:scratch_fwd",
+      "createbrewery:scratch_back",
+      "createbrewery:scratch_spin"
+    ]
+  },
+  "dj_scratch_fwd": {
+    "subtitle": "subtitles.createbrewery.dj_scratch",
+    "sounds": [
+      "createbrewery:scratch_fwd",
+      "createbrewery:scratch_baby"
+    ]
+  },
+  "dj_scratch_back": {
+    "subtitle": "subtitles.createbrewery.dj_scratch",
+    "sounds": [
+      "createbrewery:scratch_back",
+      "createbrewery:scratch_spin"
+    ]
+  },
+  "dj_scratch_stop": {
+    "subtitle": "subtitles.createbrewery.dj_scratch",
+    "sounds": [
+      "createbrewery:scratch_stop"
+    ]
   }
 }

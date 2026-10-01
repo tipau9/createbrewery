@@ -1,6 +1,7 @@
 package com.createbrewery.block.club;
 
 import com.createbrewery.drunk.MusicPulse;
+import com.createbrewery.sound.ModSounds;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,6 +14,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
@@ -733,6 +735,22 @@ public class DjMixerScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        for (JogWheelWidget jw : jogWheels) {
+            if (jw != null) jw.releasePlatter();
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public void onClose() {
+        for (JogWheelWidget jw : jogWheels) {
+            if (jw != null) jw.releasePlatter();
+        }
+        super.onClose();
+    }
+
     private boolean isMouseOver(int x, int y, int w, int h) {
         if (minecraft == null) return false;
         double mx = minecraft.mouseHandler.xpos() * width / minecraft.getWindow().getScreenWidth();
@@ -823,10 +841,31 @@ public class DjMixerScreen extends Screen {
         private float visualRotation = 0f;
         private double grabAngle = 0;
         private boolean innerTouch = false;
+        private float accumulatedDelta = 0;
+        private long lastScratchSoundTime = 0;
+        private int lastDirection = 0;
 
         JogWheelWidget(int x, int y, int w, int h, boolean isLeft) {
             super(x, y, w, h, Component.literal("Jog"));
             this.isLeft = isLeft;
+        }
+
+        public boolean isHoldingPlatter() {
+            return innerTouch;
+        }
+
+        void releasePlatter() {
+            if (innerTouch) {
+                innerTouch = false;
+                DjBoothBlockEntity dj = booth();
+                int deck = currentDeck(isLeft);
+                if (dj != null && dj.isVinylMode(deck)) {
+                    dj.setScratchHeld(deck, false);
+                    DjControl.send(pos, DjControl.JOG_TOUCH, deck, 0.0f);
+                }
+            }
+            accumulatedDelta = 0;
+            lastDirection = 0;
         }
 
         @Override
@@ -846,8 +885,9 @@ public class DjMixerScreen extends Screen {
             g.renderOutline(cx - pr, cy - pr, pr * 2, pr * 2, 0xFF1E2129);
             g.renderOutline(cx - pr + 4, cy - pr + 4, (pr - 4) * 2, (pr - 4) * 2, 0xFF14161C);
 
-            // Spin platter rotation when playing
-            if (dj != null && dj.isPlaying(deck)) {
+            // Spin platter rotation when playing and not physically held by DJ hand
+            boolean held = innerTouch || (dj != null && dj.isScratchHeld(deck) && dj.isVinylMode(deck));
+            if (dj != null && dj.isPlaying(deck) && !held) {
                 visualRotation += 14.0f * dj.getPitch(deck) * (dj.isReverse(deck) ? -1 : 1);
             }
 
@@ -881,13 +921,18 @@ public class DjMixerScreen extends Screen {
         public void onClick(double mouseX, double mouseY) {
             int cx = getX() + width / 2, cy = getY() + height / 2;
             double dx = mouseX - cx, dy = mouseY - cy;
-            innerTouch = (dx * dx + dy * dy <= 22 * 22);
+            innerTouch = (dx * dx + dy * dy <= 27 * 27);
             grabAngle = Math.atan2(dy, dx);
+            accumulatedDelta = 0;
+            lastDirection = 0;
+
             DjBoothBlockEntity dj = booth();
             int deck = currentDeck(isLeft);
-            if (dj != null && dj.isPlaying(deck) && innerTouch && dj.isVinylMode(deck)) {
+            if (dj != null && innerTouch && dj.isVinylMode(deck)) {
+                dj.setScratchHeld(deck, true);
+                DjControl.send(pos, DjControl.JOG_TOUCH, deck, 1.0f);
                 if (minecraft != null && minecraft.player != null) {
-                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.35f, 1.8f);
+                    minecraft.player.playSound(ModSounds.DJ_SCRATCH_STOP.get(), 0.65f, 1.0f);
                 }
             }
         }
@@ -899,18 +944,34 @@ public class DjMixerScreen extends Screen {
             double delta = curAngle - grabAngle;
             while (delta < -Math.PI) delta += 2 * Math.PI;
             while (delta > Math.PI) delta -= 2 * Math.PI;
+            if (Math.abs(delta) < 1e-4) return;
             grabAngle = curAngle;
             visualRotation += (float) Math.toDegrees(delta);
 
             DjBoothBlockEntity dj = booth();
             int deck = currentDeck(isLeft);
-            if (dj == null || !dj.isPlaying(deck)) return;
+            if (dj == null) return;
 
             if (innerTouch && dj.isVinylMode(deck)) {
-                float scrubTicks = (float) (delta / (2 * Math.PI) * 40.0);
-                DjControl.send(pos, DjControl.JOG_SCRUB, deck, scrubTicks);
-                if (Math.abs(delta) > 0.08 && minecraft != null && minecraft.player != null) {
-                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.2f, 1.6f + (float) Math.abs(delta) * 2f);
+                accumulatedDelta += (float) delta;
+                int dir = delta > 0 ? 1 : -1;
+                long now = net.minecraft.Util.getMillis();
+                boolean directionFlipped = (lastDirection != 0 && dir != lastDirection);
+                boolean timeElapsed = (now - lastScratchSoundTime > 75);
+
+                if (directionFlipped || (timeElapsed && Math.abs(accumulatedDelta) > 0.04f)) {
+                    lastDirection = dir;
+                    lastScratchSoundTime = now;
+                    float scrubVal = accumulatedDelta;
+                    accumulatedDelta = 0;
+
+                    DjControl.send(pos, DjControl.JOG_SCRUB, deck, scrubVal);
+                    if (minecraft != null && minecraft.player != null) {
+                        SoundEvent sound = dir > 0 ? ModSounds.DJ_SCRATCH_FWD.get() : ModSounds.DJ_SCRATCH_BACK.get();
+                        float pitch = Mth.clamp(0.75f + Math.abs(scrubVal) * 3.5f, 0.6f, 1.8f);
+                        float vol = Mth.clamp(0.6f + Math.abs(scrubVal) * 2.5f, 0.4f, 1.0f);
+                        minecraft.player.playSound(sound, vol, pitch);
+                    }
                 }
             } else {
                 float cur = dj.getPitch(deck);
@@ -921,23 +982,30 @@ public class DjMixerScreen extends Screen {
         }
 
         @Override
+        public void onRelease(double mouseX, double mouseY) {
+            releasePlatter();
+        }
+
+        @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
             if (!isHovered()) return false;
             visualRotation += (float) (scrollY * 18.0);
             DjBoothBlockEntity dj = booth();
             int deck = currentDeck(isLeft);
-            if (dj != null && dj.isPlaying(deck)) {
+            if (dj != null) {
                 if (dj.isVinylMode(deck)) {
-                    float scrubTicks = (float) (scrollY * 8.0);
+                    float scrubTicks = (float) (scrollY * 0.15f);
                     DjControl.send(pos, DjControl.JOG_SCRUB, deck, scrubTicks);
+                    if (minecraft != null && minecraft.player != null) {
+                        SoundEvent sound = scrollY > 0 ? ModSounds.DJ_SCRATCH_FWD.get() : ModSounds.DJ_SCRATCH_BACK.get();
+                        float pitch = Mth.clamp(0.85f + (float) Math.abs(scrollY) * 0.2f, 0.7f, 1.6f);
+                        minecraft.player.playSound(sound, 0.75f, pitch);
+                    }
                 } else {
                     float cur = dj.getPitch(deck);
                     float nudge = Mth.clamp((float) (cur + scrollY * 0.005), 1f - DjBoothBlockEntity.PITCH_RANGE, 1f + DjBoothBlockEntity.PITCH_RANGE);
                     DjControl.send(pos, DjControl.PITCH, deck, nudge);
                     dj.setPitch(deck, nudge);
-                }
-                if (minecraft != null && minecraft.player != null) {
-                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.25f, 1.8f);
                 }
             }
             return true;

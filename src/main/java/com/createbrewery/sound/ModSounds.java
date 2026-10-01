@@ -26,6 +26,10 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> CO2_START = sound("co2_start");
     public static final DeferredHolder<SoundEvent, SoundEvent> CO2_ROAR = sound("co2_roar");
     public static final DeferredHolder<SoundEvent, SoundEvent> CO2_STOP = sound("co2_stop");
+    public static final DeferredHolder<SoundEvent, SoundEvent> DJ_SCRATCH = sound("dj_scratch");
+    public static final DeferredHolder<SoundEvent, SoundEvent> DJ_SCRATCH_FWD = sound("dj_scratch_fwd");
+    public static final DeferredHolder<SoundEvent, SoundEvent> DJ_SCRATCH_BACK = sound("dj_scratch_back");
+    public static final DeferredHolder<SoundEvent, SoundEvent> DJ_SCRATCH_STOP = sound("dj_scratch_stop");
 
     private static DeferredHolder<SoundEvent, SoundEvent> sound(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(
