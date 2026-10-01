@@ -77,11 +77,11 @@ public final class MusicPulse {
         return LIMITING.getOrDefault(booth, 1f);
     }
 
-    static final class Track {
+    public static final class Track {
         final int source;
         /** Its channel: OpenAL hands a freed source's number straight to the next sound, so this is what tells songs apart. */
         final Channel channel;
-        final float rate;
+        public final float rate;
         final int perSlice;
         /** The buffers read and not yet played out, in the order the channel queued them. */
         final List<Chunk> chunks = new CopyOnWriteArrayList<>();
@@ -116,7 +116,20 @@ public final class MusicPulse {
         long lastBeat = -1, loopStart, loopLen;
         int loopSerial = Integer.MIN_VALUE;
         /** Played from a DJ booth deck (render thread): only then does it get the mixer channel. */
-        volatile boolean deck;
+        public volatile boolean deck;
+        public BlockPos boothPos;
+        public int deckIndex = -1;
+
+        AudioStream delegate;
+        final Object streamLock = new Object();
+        final java.util.Queue<ByteBuffer> pendingBuffers = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        volatile boolean eof;
+        volatile boolean preloading;
+        public volatile long deckFrame;
+        public volatile long slipFrame;
+        volatile boolean deckFrameInitialized;
+        private double lastUpdateTime;
+
         /** The song frame heard right now (the output latency taken off); -1 until known. */
         long heard = -1;
 
@@ -128,6 +141,124 @@ public final class MusicPulse {
             this.source = source;
             this.rate = format.getSampleRate();
             this.perSlice = Math.max(1, (int) (rate * KickDetector.SLICE));
+        }
+
+        ByteBuffer readNext(int size, AudioStream stream) throws IOException {
+            synchronized (streamLock) {
+                if (!pendingBuffers.isEmpty()) {
+                    return pendingBuffers.poll();
+                }
+                if (eof) return null;
+                ByteBuffer buffer = stream.read(size);
+                if (buffer != null && !ignored) {
+                    processDecodedBuffer(buffer);
+                } else if (buffer == null) {
+                    eof = true;
+                }
+                return buffer;
+            }
+        }
+
+        void processDecodedBuffer(ByteBuffer buffer) {
+            AudioFormat format = delegate != null ? delegate.getFormat() : new AudioFormat(rate, 16, 2, true, false);
+            float[][] heard = detector.slices(format, buffer.duplicate());
+            for (float k : heard[KickDetector.KICK]) if (k > 0.5f) kicks++;
+            float[] mono = MusicPulse.mono(format, buffer.duplicate());
+            chunks.add(new Chunk(read, mono.length, heard, mono));
+            read += mono.length;
+        }
+
+        public void pumpAhead(long untilFrame) {
+            if (delegate == null || eof) return;
+            synchronized (streamLock) {
+                while (read < untilFrame && !eof) {
+                    try {
+                        ByteBuffer buffer = delegate.read(16384);
+                        if (buffer == null || buffer.remaining() == 0) {
+                            eof = true;
+                            break;
+                        }
+                        processDecodedBuffer(buffer);
+                        pendingBuffers.add(buffer);
+                    } catch (IOException e) {
+                        LOGGER.warn("Failed to pump audio ahead", e);
+                        eof = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        void startPreload() {
+            if (preloading || eof || delegate == null) return;
+            preloading = true;
+            Thread preloader = new Thread(() -> {
+                try {
+                    while (!eof && AL10.alIsSource(source)) {
+                        synchronized (streamLock) {
+                            if (eof) break;
+                            ByteBuffer buf = delegate.read(16384);
+                            if (buf == null || buf.remaining() == 0) {
+                                eof = true;
+                                break;
+                            }
+                            processDecodedBuffer(buf);
+                            pendingBuffers.add(buf);
+                        }
+                        Thread.sleep(1);
+                    }
+                } catch (Exception ignored) {
+                }
+            }, "Brewery-Deck-Preload");
+            preloader.setDaemon(true);
+            preloader.start();
+        }
+
+        public void scrub(long deltaFrames) {
+            deckFrame = Math.max(0, deckFrame + deltaFrames);
+            if (deltaFrames > 0 && !eof) {
+                pumpAhead(deckFrame + (long) (5 * rate));
+            }
+        }
+
+        /** Returns {bass, loud, high, kick} for the given frame, or null if outside loaded audio. */
+        public float[] getWaveformSlice(long frame) {
+            if (frame < 0 || chunks.isEmpty()) return null;
+            int low = 0, high = chunks.size() - 1;
+            while (low <= high) {
+                int mid = (low + high) >>> 1;
+                Chunk c = chunks.get(mid);
+                if (frame < c.start()) {
+                    high = mid - 1;
+                } else if (frame >= c.start() + c.frames()) {
+                    low = mid + 1;
+                } else {
+                    float[][] heard = c.heard();
+                    int sliceIdx = Math.min(heard[0].length - 1, (int) ((frame - c.start()) / perSlice));
+                    if (sliceIdx >= 0) {
+                        return new float[] {
+                            heard[KickDetector.BASS][sliceIdx],
+                            heard[KickDetector.LOUD][sliceIdx],
+                            heard[KickDetector.HIGH][sliceIdx],
+                            heard[KickDetector.KICK][sliceIdx]
+                        };
+                    }
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        public double getBeatPeriod() {
+            return song.period();
+        }
+
+        public int getBeats() {
+            return song.beats;
+        }
+
+        public long getFramesRead() {
+            return read;
         }
 
         /** Copies up to {@code n} mono samples from song frame {@code from} on; how many there were. */
@@ -223,6 +354,7 @@ public final class MusicPulse {
     public static AudioStream listen(AudioStream stream, Channel channel, int source) {
         if (stream.getFormat().getSampleSizeInBits() != 16) return stream;
         Track track = new Track(channel, source, stream.getFormat());
+        track.delegate = stream;
         starting.put(channel, track);
         return new Listening(stream, track);
     }
@@ -270,22 +402,14 @@ public final class MusicPulse {
 
         @Override
         public ByteBuffer read(int size) throws IOException {
-            ByteBuffer buffer = delegate.read(size);
-            // The channel queues every buffer it gets, so every one is counted, even an empty one.
-            if (buffer != null && !track.ignored) {
-                AudioFormat format = delegate.getFormat();
-                float[][] heard = track.detector.slices(format, buffer.duplicate());
-                for (float k : heard[KickDetector.KICK]) if (k > 0.5f) track.kicks++;
-                float[] mono = mono(format, buffer.duplicate());
-                track.chunks.add(new Chunk(track.read, mono.length, heard, mono));
-                track.read += mono.length;
-            }
-            return buffer;
+            return track.readNext(size, delegate);
         }
 
         @Override
         public void close() throws IOException {
-            delegate.close();
+            synchronized (track.streamLock) {
+                delegate.close();
+            }
         }
     }
 
@@ -510,12 +634,43 @@ public final class MusicPulse {
         }
         if (dj == null) {
             t.deck = false;
+            t.boothPos = null;
+            t.deckIndex = -1;
             return;
         }
         int deck = dj.deckAt(at);
         t.deck = true;
+        t.boothPos = dj.getBlockPos();
+        t.deckIndex = deck;
+
+        if (!t.deckFrameInitialized) {
+            long c = cursor(t);
+            t.deckFrame = Math.max(0, c);
+            t.slipFrame = t.deckFrame;
+            t.deckFrameInitialized = true;
+            t.lastUpdateTime = System.nanoTime() / 1e9;
+            t.startPreload();
+        }
+
+        double now = System.nanoTime() / 1e9;
+        double dt = t.lastUpdateTime > 0 ? Math.min(0.1, now - t.lastUpdateTime) : 0.0;
+        t.lastUpdateTime = now;
+
+        boolean held = dj.isScratchHeld(deck) && dj.isVinylMode(deck);
+        boolean playing = dj.isPlaying(deck);
+        float speed = dj.getPitch(deck) * (dj.isReverse(deck) ? -1f : 1f);
+
+        if (playing) {
+            t.slipFrame = Math.max(0, t.slipFrame + (long) (dt * t.rate * speed));
+            if (!held) {
+                t.deckFrame = Math.max(0, t.deckFrame + (long) (dt * t.rate * speed));
+            }
+        }
+
+        t.pumpAhead(Math.max(t.deckFrame, t.slipFrame) + (long) (10 * t.rate));
+
         t.mix = dj.deckGain(deck, mc.level.getGameTime());
-        if (dj.isScratchHeld(deck) && dj.isVinylMode(deck)) {
+        if (held) {
             t.mix = 0f;
         }
         t.pitch = dj.getPitch(deck);
@@ -648,7 +803,8 @@ public final class MusicPulse {
         // Buffers before the queue have played out; forget them so an hour-long stream stays a few chunks long.
         // One is kept: in the race above head is one too far, and dropping a still-queued chunk would misalign for good.
         // Two seconds are kept too, so a loop can start on a beat already played, and a loop keeps its own.
-        long keepFrom = head < t.chunks.size() ? t.chunks.get(head).start() - (long) (2 * t.rate) : Long.MIN_VALUE;
+        // For DJ decks, all chunks are preserved so the DJ can scrub all the way back to the beginning.
+        long keepFrom = t.deck ? Long.MIN_VALUE : (head < t.chunks.size() ? t.chunks.get(head).start() - (long) (2 * t.rate) : Long.MIN_VALUE);
         if (t.loopLen > 0) keepFrom = Math.min(keepFrom, t.loopStart);
         for (; head > 1 && t.chunks.get(0).start() + t.chunks.get(0).frames() < keepFrom; head--) t.chunks.remove(0);
         long frames = AL10.alGetSourcei(t.source, AL11.AL_SAMPLE_OFFSET);
@@ -659,6 +815,20 @@ public final class MusicPulse {
 
     /** What is audible right now, or false if nothing is known yet. */
     private static boolean heardNow(Track t, float[] out) {
+        if (t.deck) {
+            t.heard = Math.max(0, t.deckFrame);
+            float[] slice = t.getWaveformSlice(t.heard);
+            if (slice != null) {
+                out[KickDetector.BASS] = slice[0];
+                out[KickDetector.LOUD] = slice[1];
+                out[KickDetector.HIGH] = slice[2];
+                out[KickDetector.KICK] = slice[3];
+                out[KickDetector.LEVEL] = slice[1];
+                out[KickDetector.HATS] = slice[2];
+                return true;
+            }
+            return false;
+        }
         if (!AL10.alIsSource(t.source) || t.chunks.isEmpty()) return false;
         int head = Math.max(0, t.chunks.size() - AL10.alGetSourcei(t.source, AL10.AL_BUFFERS_QUEUED));
         if (latencyKnown == null) latencyKnown = AL10.alIsExtensionPresent("AL_SOFT_source_latency");
@@ -692,5 +862,16 @@ public final class MusicPulse {
         float best = 0f;
         for (Vec3 from : heardFrom(t)) best = Math.max(best, (float) Math.max(0.0, 1.0 - Math.sqrt(listener.distanceToSqr(from)) / reach));
         return best;
+    }
+
+    /** Returns the Track playing on the given DJ booth and deck, or null if not currently playing. */
+    public static Track trackFor(BlockPos boothPos, int deck) {
+        if (boothPos == null) return null;
+        for (Track t : tracks) {
+            if (t.deck && boothPos.equals(t.boothPos) && t.deckIndex == deck) {
+                return t;
+            }
+        }
+        return null;
     }
 }

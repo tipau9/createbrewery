@@ -480,7 +480,8 @@ public class DjBoothBlockEntity extends BlockEntity {
             sound.get(), SoundSource.RECORDS, vol, pitch);
 
         if (!d.slipMode && d.playing && d.endsAt > 0) {
-            d.endsAt -= (long) (scrubAmount * 30.0f);
+            long shift = (long) ((scrubAmount / (2.0 * Math.PI)) * 36.0f);
+            d.endsAt = Math.max(level.getGameTime() + 1, d.endsAt - shift);
             sync();
         }
     }

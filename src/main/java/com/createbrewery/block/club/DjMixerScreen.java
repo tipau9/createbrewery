@@ -758,39 +758,131 @@ public class DjMixerScreen extends Screen {
         return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 
-    /** 3-band pioneer full-color scrolling waveform rendering. */
+    /** 3-band Pioneer full-color scrolling audio waveform with live slice decoding & full-track overview. */
     private void renderWaveform(GuiGraphics g, int x, int y, int w, int h, int deck, DjBoothBlockEntity dj, int colorHigh, int colorLow, long time, float pt) {
-        g.fill(x, y, x + w, y + h, 0xFF080E1A);
-        g.renderOutline(x, y, w, h, 0xFF142034);
+        g.fill(x, y, x + w, y + h, 0xFF080C14);
+        g.renderOutline(x, y, w, h, 0xFF182234);
 
         boolean playing = dj.isPlaying(deck);
+        MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
+
+        // Deck number & BPM text
         double period = MusicPulse.beatPeriodAt(dj.deckPos(deck));
         String bpmText = playing && period > 0 ? bpm(period) : "--";
         g.drawString(font, (deck + 1) + ": " + bpmText, x + 3, y + 2, colorHigh);
 
-        int cx = x + w / 2;
-        g.fill(cx, y, cx + 1, y + h, 0xFFFFFFFF);
-
-        if (!playing && dj.getDisc(deck).isEmpty()) {
+        ItemStack disc = dj.getDisc(deck);
+        if (disc.isEmpty()) {
+            int cx = x + w / 2;
             g.drawString(font, "NO TRACK", cx - 22, y + 5, 0xFF35445A);
             return;
         }
 
-        int bars = 36;
-        float barW = (float) w / bars;
-        float pulse = playing ? MusicPulse.kickNear(dj.deckPos(deck)) : 0.1f;
-        float scrollOffset = playing ? (time + pt) * 0.8f * dj.getPitch(deck) : 0f;
+        int cx = x + w / 2;
+        int waveH = h - 4; // Reserve bottom 3px for track overview mini-bar
+        int cy = y + waveH / 2;
 
-        for (int i = 0; i < bars; i++) {
-            float bx = x + i * barW;
-            double wavePhase = (i * 0.45) + scrollOffset;
-            float rawAmp = (float) (Math.sin(wavePhase) * 0.5 + Math.sin(wavePhase * 2.3) * 0.3 + 0.8);
-            float amp = Math.min(1.0f, rawAmp * (0.35f + pulse * 0.65f));
-            int barHeight = Math.max(2, (int) (amp * (h - 4)));
-            int by = y + (h - barHeight) / 2;
+        if (track == null || track.rate <= 0) {
+            g.fill(x + 2, cy, x + w - 2, cy + 1, 0xFF1E2A3A);
+            g.drawCenteredString(font, "LOADED", cx, y + 5, 0xFF455870);
+            return;
+        }
 
-            int col = (i % 2 == 0) ? colorHigh : colorLow;
-            g.fill((int) bx, by, (int) (bx + Math.max(1, barW - 1)), by + barHeight, col);
+        long currentFrame = track.deckFrame;
+        float rate = track.rate;
+
+        // Elapsed time MM:SS in top right
+        long elapsedSec = (long) (Math.max(0, currentFrame) / rate);
+        String timeStr = String.format("%02d:%02d", elapsedSec / 60, elapsedSec % 60);
+        g.drawString(font, timeStr, x + w - font.width(timeStr) - 3, y + 2, 0xFFE0E0E0);
+
+        // Zoom scale: 3.5 seconds across visible window of width w
+        float visibleSeconds = 3.5f;
+        float framesPerPixel = (visibleSeconds * rate) / (float) w;
+
+        // 1. Beat Grid Markers (subtle vertical lines, bolder every 4 beats)
+        double beatPeriod = track.getBeatPeriod();
+        if (beatPeriod > 0 && track.getBeats() >= 4) {
+            long beatFrames = (long) (beatPeriod * rate);
+            if (beatFrames > 0) {
+                long startBeat = (currentFrame - (long) (visibleSeconds * 0.5f * rate)) / beatFrames;
+                long endBeat = (currentFrame + (long) (visibleSeconds * 0.5f * rate)) / beatFrames + 1;
+                for (long b = startBeat; b <= endBeat; b++) {
+                    long bFrame = b * beatFrames;
+                    int bx = cx + (int) ((bFrame - currentFrame) / framesPerPixel);
+                    if (bx >= x + 2 && bx < x + w - 2) {
+                        boolean isBar = (b % 4 == 0);
+                        int lineCol = isBar ? 0x88FFFFFF : 0x445588AA;
+                        int lineTop = isBar ? y + 2 : y + 4;
+                        int lineBot = isBar ? y + waveH : y + waveH - 2;
+                        g.fill(bx, lineTop, bx + 1, lineBot, lineCol);
+                    }
+                }
+            }
+        }
+
+        // 2. Render Pioneer 3-band decoded audio slices
+        // Blue = Bass, Amber = Mids, White = Highs
+        int halfH = Math.max(2, waveH / 2 - 1);
+        for (int col = 0; col < w - 4; col++) {
+            int px = x + 2 + col;
+            long sampleFrame = currentFrame + (long) ((px - cx) * framesPerPixel);
+            float[] slice = track.getWaveformSlice(sampleFrame);
+            if (slice == null) continue;
+
+            float bass = slice[0];
+            float loud = slice[1];
+            float high = slice[2];
+            float kick = slice[3];
+
+            int bH = (int) (Math.min(1.0f, bass * 1.3f) * halfH);
+            int mH = (int) (Math.min(1.0f, Math.max(0f, loud - bass * 0.4f) * 1.1f) * halfH);
+            int hH = (int) (Math.min(1.0f, high * 1.2f) * (halfH - 2));
+
+            // Bass band (Pioneer Electric Blue)
+            if (bH > 0) {
+                int blueCol = (kick > 0.4f) ? 0xFF00AAFF : 0xFF0066EE;
+                g.fill(px, cy - bH, px + 1, cy + bH + 1, blueCol);
+            }
+
+            // Mid band (Pioneer Warm Amber / Orange)
+            if (mH > 0) {
+                g.fill(px, cy - mH, px + 1, cy + mH + 1, 0xFFFFAA00);
+            }
+
+            // High band (Pioneer Crisp White)
+            if (hH > 0) {
+                g.fill(px, cy - hH, px + 1, cy + hH + 1, 0xFFFFFFFF);
+            }
+        }
+
+        // 3. Center Playhead Needle
+        g.fill(cx, y + 1, cx + 1, y + waveH, 0xFFFF2233);
+        g.fill(cx - 2, y + 1, cx + 3, y + 2, 0xFFFF2233);
+        g.fill(cx - 1, y + 2, cx + 2, y + 3, 0xFFFF2233);
+        g.fill(cx - 1, y + waveH - 2, cx + 2, y + waveH - 1, 0xFFFF2233);
+        g.fill(cx - 2, y + waveH - 1, cx + 3, y + waveH, 0xFFFF2233);
+
+        // 4. Full-Track Overview Mini-Bar (bottom 3 pixels)
+        int overviewY = y + h - 3;
+        int overviewW = w - 4;
+        g.fill(x + 2, overviewY, x + 2 + overviewW, overviewY + 2, 0xFF0C1018);
+
+        long totalTrackFrames = Math.max(track.getFramesRead(), (long) (120 * rate));
+        if (totalTrackFrames > 0) {
+            float progress = Mth.clamp((float) currentFrame / (float) totalTrackFrames, 0f, 1f);
+
+            for (int ox = 0; ox < overviewW; ox += 2) {
+                long oFrame = (long) (((float) ox / (float) overviewW) * totalTrackFrames);
+                float[] s = track.getWaveformSlice(oFrame);
+                if (s != null) {
+                    int c = (s[0] > 0.4f) ? 0xFF0077DD : ((s[1] > 0.3f) ? 0xFFDD8800 : 0xFF284060);
+                    g.fill(x + 2 + ox, overviewY, x + 2 + ox + 2, overviewY + 2, c);
+                }
+            }
+
+            int needleOx = x + 2 + (int) (progress * overviewW);
+            g.fill(needleOx - 1, overviewY - 1, needleOx + 2, overviewY + 3, 0xFFFFFFFF);
         }
     }
 
@@ -862,6 +954,14 @@ public class DjMixerScreen extends Screen {
                 if (dj != null && dj.isVinylMode(deck)) {
                     dj.setScratchHeld(deck, false);
                     DjControl.send(pos, DjControl.JOG_TOUCH, deck, 0.0f);
+                    MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
+                    if (track != null) {
+                        if (dj.isSlipMode(deck)) {
+                            track.deckFrame = track.slipFrame;
+                        } else {
+                            track.slipFrame = track.deckFrame;
+                        }
+                    }
                 }
             }
             accumulatedDelta = 0;
@@ -959,6 +1059,13 @@ public class DjMixerScreen extends Screen {
                 boolean directionFlipped = (lastDirection != 0 && dir != lastDirection);
                 boolean timeElapsed = (now - lastScratchSoundTime > 75);
 
+                // Real-time audio spooling/scrubbing
+                MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
+                if (track != null) {
+                    long deltaFrames = (long) ((delta / (2.0 * Math.PI)) * 1.8 * track.rate);
+                    track.scrub(deltaFrames);
+                }
+
                 if (directionFlipped || (timeElapsed && Math.abs(accumulatedDelta) > 0.04f)) {
                     lastDirection = dir;
                     lastScratchSoundTime = now;
@@ -996,6 +1103,11 @@ public class DjMixerScreen extends Screen {
                 if (dj.isVinylMode(deck)) {
                     float scrubTicks = (float) (scrollY * 0.15f);
                     DjControl.send(pos, DjControl.JOG_SCRUB, deck, scrubTicks);
+                    MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
+                    if (track != null) {
+                        long deltaFrames = (long) (scrollY * 0.25 * track.rate);
+                        track.scrub(deltaFrames);
+                    }
                     if (minecraft != null && minecraft.player != null) {
                         SoundEvent sound = scrollY > 0 ? ModSounds.DJ_SCRATCH_FWD.get() : ModSounds.DJ_SCRATCH_BACK.get();
                         float pitch = Mth.clamp(0.85f + (float) Math.abs(scrollY) * 0.2f, 0.7f, 1.6f);

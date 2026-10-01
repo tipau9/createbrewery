@@ -103,16 +103,16 @@ final class Emitter {
 
         int songState = AL10.alGetSourcei(original, AL10.AL_SOURCE_STATE);
         int state = AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE);
-        if (songState != AL10.AL_PLAYING || cursor < 0) {
+        if (songState != AL10.AL_PLAYING || (t.deck ? t.deckFrame < 0 : cursor < 0)) {
             // The game paused (menu) or the song has not started: hold still with it.
             if (state == AL10.AL_PLAYING) AL10.alSourcePause(source);
             return;
         }
 
         // With the speed of sound on, a speaker is heard as far behind the song as its sound takes to reach you.
-        long target = cursor;
+        long target = t.deck ? Math.max(0, t.deckFrame) : cursor;
         if (delay >= 0 && !phones && listener != null) {
-            target = cursor - (long) (DeckFx.propagation(delay, listener.getEyePosition().distanceTo(pos)) * rate * pitch);
+            target = target - (long) (DeckFx.propagation(delay, listener.getEyePosition().distanceTo(pos)) * rate * pitch);
         }
         long here = fed - queuedFrames() + AL10.alGetSourcei(source, AL11.AL_SAMPLE_OFFSET);
         boolean running = state == AL10.AL_PLAYING || state == AL10.AL_PAUSED;
