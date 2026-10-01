@@ -134,16 +134,21 @@ final class Emitter {
         if (decision.action() == SyncPolicy.Action.RESTART) {
             // Only the first start is expected; more mean lag spikes or drift, worth seeing in the log.
             if (fed >= 0) {
-                switch (decision.reason()) {
+                // A streaming source that runs dry is stopped by OpenAL, so that is what starving looks like.
+                String reason = decision.reason().equals("stopped") && state == AL10.AL_STOPPED ? "starved" : decision.reason();
+                switch (reason) {
                     case "stopped" -> stoppedResyncs++;
                     case "starved" -> starvedResyncs++;
                     default -> driftResyncs++;
                 }
                 if (++resyncs % 20 == 1) {
-                    LOGGER.info("Speaker at {} resynced ({} times: {} stopped, {} starved, {} drift; now {})",
-                        home, resyncs, stoppedResyncs, starvedResyncs, driftResyncs, decision.reason());
+                    LOGGER.info("Speaker at {} resynced ({} times: {} stopped, {} starved, {} drift; now {}, {} ms off)",
+                        home, resyncs, stoppedResyncs, starvedResyncs, driftResyncs, reason, Math.round((here - target) * 1000 / rate));
                 }
             }
+            restart(target);
+        } else if (!running) {
+            // Silent anyway, so starting over costs no click; feeding on from the old position would replay stale audio.
             restart(target);
         }
         // A small drift is pulled back through the playing speed (within 2 %), not by a restart.
@@ -209,8 +214,12 @@ final class Emitter {
         sendOn = true;
     }
 
+    /** The OpenAL context this emitter's names belong to: after a sound reload they are all stale. */
+    private long context;
+
     private void create(int original) {
         try {
+            context = org.lwjgl.openal.ALC10.alcGetCurrentContext();
             source = AL10.alGenSources();
             sendOn = false;
             sent = -1f;
@@ -350,6 +359,17 @@ final class Emitter {
     void delete() {
         if (deleted) return;
         deleted = true;
+        // The context was recreated (F3+T, another device): every name here is stale, and deleting one could
+        // hit a new sound's buffer or flag an error the game would log as its own. Only the Java side goes.
+        boolean stale = context != 0 && org.lwjgl.openal.ALC10.alcGetCurrentContext() != context;
+        if (stale) {
+            source = -1;
+            sendFilter = -1;
+            free.clear();
+            queued.clear();
+            MemoryUtil.memFree(pcm);
+            return;
+        }
         if (source > 0) {
             try {
                 if (AL10.alIsSource(source)) {
@@ -365,6 +385,7 @@ final class Emitter {
         try {
             for (int buffer : free) AL10.alDeleteBuffers(buffer);
         } catch (Throwable ignored) {}
+        AL10.alGetError();
         free.clear();
         queued.clear();
         MemoryUtil.memFree(pcm);

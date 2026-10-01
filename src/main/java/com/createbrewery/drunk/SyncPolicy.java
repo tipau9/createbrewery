@@ -27,8 +27,9 @@ final class SyncPolicy {
      */
     Decision decide(boolean running, int queued, long here, long target, double rate, double now) {
         double ahead = (here - target) / rate;
-        float pitch = Math.abs(ahead) < DRIFT_SOFT ? 1f
-            : (float) Math.max(1 - SERVO_RANGE, Math.min(1 + SERVO_RANGE, 1 - ahead * 4));
+        // Eases in from nothing at the soft edge to the full 2 % at 120 ms: no jump when a drift hovers there.
+        float shift = (float) Math.min(SERVO_RANGE, Math.max(0, Math.abs(ahead) - DRIFT_SOFT) * 0.2);
+        float pitch = ahead > 0 ? 1 - shift : 1 + shift;
         boolean stopped = !running, starved = running && queued == 0, drifted = Math.abs(ahead) > DRIFT_HARD;
         if ((stopped || starved || drifted) && now - lastRestart >= COOLDOWN) {
             lastRestart = now;

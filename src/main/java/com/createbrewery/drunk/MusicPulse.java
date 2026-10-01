@@ -84,9 +84,10 @@ public final class MusicPulse {
             ROOM.reset();
             return;
         }
+        boolean on = Config.CLIENT_SPEC.isLoaded() && Config.CLUB_REVERB.get();
+        if (!on && ReverbBus.slot() == 0) return;
         if (player == null || mc.level == null || !ReverbBus.ensure()) return;
         ROOM.update(mc.level, player, now, dt);
-        boolean on = Config.CLIENT_SPEC.isLoaded() && Config.CLUB_REVERB.get();
         float amount = on ? Config.REVERB_AMOUNT.get().floatValue() : 0f;
         if (ROOM.params() != null) ReverbBus.apply(ROOM.params(), amount, now);
     }
@@ -504,7 +505,6 @@ public final class MusicPulse {
         double now = System.nanoTime() / 1e9;
         float dt = (float) Math.min(0.1, now - lastFrame);
         lastFrame = now;
-        raysLeft = RAYS_PER_FRAME;
         float k = 0f, l = 0f, h = 0f, bass = 0f, loud = 0f, high = 0f;
         boolean heard = false;
         for (Track t : tracks) {
@@ -566,6 +566,8 @@ public final class MusicPulse {
             return;
         }
         setGain(t, 0f);
+        // Each song gets its own rays: one deck must not use them all up and leave another's speakers unmuffled.
+        raysLeft = RAYS_PER_FRAME;
 
         Vec3 at = new Vec3(t.sound.getX(), t.sound.getY(), t.sound.getZ());
         DjBoothBlockEntity dj = DjBoothBlockEntity.playingAt(mc.level, BlockPos.containing(at));

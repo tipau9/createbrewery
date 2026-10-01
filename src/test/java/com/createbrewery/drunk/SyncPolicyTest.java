@@ -34,6 +34,21 @@ class SyncPolicyTest {
     }
 
     @Test
+    void theServoEasesInInsteadOfJumpingToTheFullShift() {
+        // Right at the soft edge the pitch is nearly untouched (a speaker hovering there must not warble) ...
+        assertEquals(1f, decide(new SyncPolicy(), 0.021, 1).pitch(), 0.001f);
+        // ... and it grows steadily with the drift up to the 2 % limit.
+        float last = 1f;
+        for (double ahead = 0.021; ahead <= 0.24; ahead += 0.01) {
+            float p = decide(new SyncPolicy(), ahead, 1).pitch();
+            assertTrue(p <= last + 1e-6f, "pitch rose at " + ahead);
+            assertTrue(p >= 1f - SyncPolicy.SERVO_RANGE - 1e-6f);
+            last = p;
+        }
+        assertEquals(1f - SyncPolicy.SERVO_RANGE, decide(new SyncPolicy(), 0.2, 1).pitch(), 1e-6f);
+    }
+
+    @Test
     void hugeDriftRestarts() {
         SyncPolicy.Decision d = decide(new SyncPolicy(), 0.5, 1);
         assertEquals(SyncPolicy.Action.RESTART, d.action());
