@@ -18,16 +18,19 @@ import net.minecraft.network.chat.Component;
  * read back from the console. Client only.
  */
 public class DmxConsoleScreen extends Screen {
-    private static final int W = 380, H = 200, COL = 30, PANEL = 256;
+    private static final int BASE_W = 380, EXTRA = 124, W = BASE_W + EXTRA, H = 200, COL = 30, PANEL = 256, PW = BASE_W - PANEL - 8;
     private static final String[] PROGRAMS = {"manual", "auto", "chase"};
-    private static final String[] MOVES = {"circle", "figure8", "sweep", "ballyhoo"};
+    private static final String[] MOVES = {"circle", "figure8", "sweep", "ballyhoo", "crowd", "straight", "fan", "mirror"};
+    private static final String[] COLOR_FX = {"static", "fade", "rainbow", "complement"};
+    private static final String[] GOBOS = {"circle", "star", "dots", "bar"};
+    private static final String[] ZOOMS = {"narrow", "normal", "wide"};
 
     private final BlockPos pos;
     private int left, top;
     private final VFader[] faders = new VFader[DmxProgram.GROUPS];
     private final FlashPad[] pads = new FlashPad[DmxProgram.GROUPS];
     private VFader master;
-    private Button program, move, rate, blackout, record;
+    private Button program, move, rate, blackout, record, colorFx, gobo, prism, zoom;
     private final Button[] scenes = new Button[DmxProgram.SCENES];
 
     private DmxConsoleScreen(BlockPos pos) {
@@ -54,7 +57,7 @@ public class DmxConsoleScreen extends Screen {
             faders[g] = addRenderableWidget(new VFader(x, top + 44, 24, 110, DmxControl.FADER, g));
             pads[g] = addRenderableWidget(new FlashPad(x, top + 158, group));
         }
-        int px = left + PANEL, pw = W - PANEL - 8;
+        int px = left + PANEL, pw = PW;
         program = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.PROGRAM, s -> s.program)).bounds(px, top + 18, pw, 16).build());
         move = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.MOVE, s -> s.move)).bounds(px, top + 36, pw, 16).build());
         rate = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.RATE, s -> s.rate)).bounds(px, top + 54, pw, 16).build());
@@ -81,6 +84,14 @@ public class DmxConsoleScreen extends Screen {
             }).bounds(px, top + 140, 40, 16)
             .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("createbrewery.dmx.record_hint")))
             .build());
+        int px2 = left + BASE_W + 4, pw2 = EXTRA - 12;
+        colorFx = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.COLORFX, s -> s.colorFx)).bounds(px2, top + 18, pw2, 16).build());
+        gobo = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.GOBO, s -> s.gobo)).bounds(px2, top + 36, pw2, 16).build());
+        prism = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            DmxConsoleBlockEntity c = console();
+            if (c != null) DmxControl.send(pos, DmxControl.PRISM, 0, c.settings.prism ? 0f : 1f);
+        }).bounds(px2, top + 54, pw2, 16).build());
+        zoom = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.ZOOM, s -> s.zoom)).bounds(px2, top + 72, pw2, 16).build());
         refresh();
     }
 
@@ -102,6 +113,10 @@ public class DmxConsoleScreen extends Screen {
         program.setMessage(Component.translatable("createbrewery.dmx.program." + PROGRAMS[s.program]));
         move.setMessage(Component.translatable("createbrewery.dmx.move." + MOVES[s.move]));
         rate.setMessage(Component.translatable("createbrewery.dmx.rate", DmxProgram.RATES[s.rate]));
+        colorFx.setMessage(Component.translatable("createbrewery.dmx.colorfx." + COLOR_FX[s.colorFx]));
+        gobo.setMessage(Component.translatable("createbrewery.dmx.gobo." + GOBOS[s.gobo]));
+        prism.setMessage(Component.translatable("createbrewery.dmx.prism", CommonComponents.optionStatus(s.prism)));
+        zoom.setMessage(Component.translatable("createbrewery.dmx.zoom." + ZOOMS[s.zoom]));
         blackout.setMessage(Component.translatable("createbrewery.dmx.blackout", CommonComponents.optionStatus(s.blackout)));
         record.setMessage(Component.translatable("createbrewery.dmx.record").withStyle(c.recording ? net.minecraft.ChatFormatting.RED : net.minecraft.ChatFormatting.RESET));
         for (int i = 0; i < DmxProgram.SCENES; i++) {
@@ -152,7 +167,7 @@ public class DmxConsoleScreen extends Screen {
             g.fill(x + 1, top + 27, x + 1 + out, top + 28, 0xFF000000 | c.program.color[i]);
         }
         g.drawString(font, Component.translatable("createbrewery.dmx.cues", c.cues), left + PANEL, top + 160, c.recording ? 0xFF6060 : 0x888888);
-        g.drawCenteredString(font, Component.translatable("createbrewery.dmx.master"), left + PANEL + (W - PANEL - 8) / 2, top + 130, 0xAAAAAA);
+        g.drawCenteredString(font, Component.translatable("createbrewery.dmx.master"), left + PANEL + PW / 2, top + 130, 0xAAAAAA);
     }
 
     @Override
