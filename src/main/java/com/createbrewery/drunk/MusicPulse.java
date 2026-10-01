@@ -109,6 +109,8 @@ public final class MusicPulse {
         final float[] eq = {0.5f, 0.5f, 0.5f};
         float filter, fxAmount;
         int fx;
+        int colorType = DeckFx.COLOR_FILTER;
+        float colorParam = 0.5f;
         /** The song frame of the last beat heard, and the loop playing (slip mode), in song frames; 0 long while not looping. */
         long lastBeat = -1, loopStart, loopLen;
         int loopSerial = Integer.MIN_VALUE;
@@ -520,6 +522,8 @@ public final class MusicPulse {
         t.filter = dj.getFilter(deck);
         t.fx = dj.getFx(deck);
         t.fxAmount = dj.getFxAmount(deck);
+        t.colorType = dj.getActiveColorFx();
+        t.colorParam = dj.getColorFxParam();
         int serial = dj.getLoopSerial(deck), beats = dj.getLoopBeats(deck);
         if (serial != t.loopSerial) {
             boolean first = t.loopSerial == Integer.MIN_VALUE;

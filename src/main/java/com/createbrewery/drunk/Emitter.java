@@ -136,8 +136,10 @@ final class Emitter {
         filter.set(muffle, Math.max(1f, walls));
 
         if (t.deck && fx == null) fx = new DeckFx(rate);
-        // The echo runs in song samples, played at the pitch: a heard half-beat is period * pitch of them.
-        if (fx != null) fx.set(t.eq[2], t.eq[1], t.eq[0], t.filter, t.fx, t.fxAmount, t.song.period() * pitch);
+        if (fx != null) {
+            fx.set(t.eq[2], t.eq[1], t.eq[0], t.filter, t.fx, t.fxAmount, t.song.period() * pitch);
+            fx.setColorFx(t.colorType, t.filter, t.colorParam);
+        }
         // A rack placed or removed, the last sub switched off, the corner moved: taken up at once.
         if (band == FULL) split = null;
         else {

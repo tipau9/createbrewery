@@ -21,6 +21,9 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     /** Per deck (see {@code deck}): EQ bands, filter, effect, effect amount, loop length in beats. */
     public static final byte EQ_HIGH = 8, EQ_MID = 9, EQ_LOW = 10, FILTER = 11, FX = 12, FX_AMOUNT = 13, LOOP = 14;
     public static final byte AUTO_DROP = 15, DROP_DETECTED = 16;
+    public static final byte TOGGLE_PLAY = 17, CHANNEL_FADER = 18, COLOR_FX_SELECT = 19, COLOR_FX_PARAM = 20;
+    public static final byte BEAT_FX_TYPE = 21, BEAT_FX_BEATS = 22, BEAT_FX_CHANNEL = 23, BEAT_FX_ON = 24, BEAT_FX_DEPTH = 25;
+    public static final byte PAD_TRIGGER = 26, LOAD_TRACK = 27, VINYL_MODE = 28, SLIP_MODE = 29, REVERSE = 30, CROSSFADER_ASSIGN = 31, TRIM = 32, PAD_MODE = 33;
 
     public static final Type<DjControl> TYPE = new Type<>(CreateBrewery.ID("dj_control"));
     public static final StreamCodec<ByteBuf, DjControl> CODEC = StreamCodec.composite(
@@ -31,8 +34,8 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
         DjControl::new);
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        // "3": auto-drop added.
-        event.registrar("3").optional().playToServer(TYPE, CODEC, DjControl::handle);
+        // "4": AlphaTheta XDJ-AZ 4-deck, Sound Color FX, Beat FX, and Pads added.
+        event.registrar("4").optional().playToServer(TYPE, CODEC, DjControl::handle);
     }
 
     /** Client side. */
@@ -61,11 +64,12 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
         if (!player.canInteractWithBlock(control.pos, 1.0)) return;
         if (!(player.level().getBlockEntity(control.pos) instanceof DjBoothBlockEntity dj)) return;
         int deck = control.deck;
-        if (control.action >= EQ_HIGH && control.action <= LOOP && deck != DjBoothBlockEntity.A && deck != DjBoothBlockEntity.B) return;
+        if (deck < 0 || deck >= DjBoothBlockEntity.DECKS) deck = 0;
 
         switch (control.action) {
             case TOGGLE_A -> dj.toggleDeck(DjBoothBlockEntity.A, player);
             case TOGGLE_B -> dj.toggleDeck(DjBoothBlockEntity.B, player);
+            case TOGGLE_PLAY -> dj.toggleDeck(deck, player);
             case CROSSFADER -> dj.setCrossfader(control.value);
             case PITCH_A -> dj.setPitch(DjBoothBlockEntity.A, control.value);
             case PITCH_B -> dj.setPitch(DjBoothBlockEntity.B, control.value);
@@ -80,6 +84,22 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case FX -> dj.setFx(deck, (int) control.value);
             case FX_AMOUNT -> dj.setFxAmount(deck, control.value);
             case LOOP -> dj.setLoop(deck, (int) control.value);
+            case CHANNEL_FADER -> dj.setChannelFader(deck, control.value);
+            case COLOR_FX_SELECT -> dj.setActiveColorFx((int) control.value);
+            case COLOR_FX_PARAM -> dj.setColorFxParam(control.value);
+            case BEAT_FX_TYPE -> dj.setBeatFxType((int) control.value);
+            case BEAT_FX_BEATS -> dj.setBeatFxBeats(control.value);
+            case BEAT_FX_CHANNEL -> dj.setBeatFxChannel((int) control.value);
+            case BEAT_FX_ON -> dj.setBeatFxOn(control.value > 0.5f);
+            case BEAT_FX_DEPTH -> dj.setBeatFxDepth(control.value);
+            case PAD_TRIGGER -> dj.handlePad(deck, (int) control.value, player);
+            case PAD_MODE -> dj.setPadMode(deck, (int) control.value);
+            case LOAD_TRACK -> dj.loadFromCrate(deck, (int) control.value, player);
+            case VINYL_MODE -> dj.setVinylMode(deck, control.value > 0.5f);
+            case SLIP_MODE -> dj.setSlipMode(deck, control.value > 0.5f);
+            case REVERSE -> dj.setReverse(deck, control.value > 0.5f);
+            case CROSSFADER_ASSIGN -> dj.setCrossfaderAssign(deck, (int) control.value);
+            case TRIM -> dj.setTrim(deck, control.value);
             default -> {}
         }
     }

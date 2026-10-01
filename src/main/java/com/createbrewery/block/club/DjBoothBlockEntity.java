@@ -34,11 +34,27 @@ import org.jetbrains.annotations.Nullable;
  */
 public class DjBoothBlockEntity extends BlockEntity {
 
-    public static final int A = 0, B = 1;
+    public static final int A = 0, B = 1, C = 2, D = 3;
+    public static final int DECKS = 4;
     /** A turntable's pitch fader: +-8 %. */
     public static final float PITCH_RANGE = 0.08f;
     /** Auto-mix starts the cued deck this long before the playing song ends and crossfades over it. */
     static final int MIX_TICKS = 200;
+
+    // Performance Pad Modes
+    public static final int PAD_HOT_CUE = 0, PAD_BEAT_LOOP = 1, PAD_SLIP_LOOP = 2, PAD_BEAT_JUMP = 3;
+
+    // Sound Color FX
+    public static final int COLOR_SPACE = 0, COLOR_DUB_ECHO = 1, COLOR_SWEEP = 2, COLOR_NOISE = 3, COLOR_CRUSH = 4, COLOR_FILTER = 5;
+    public static final int COLOR_FX_COUNT = 6;
+    public static final String[] COLOR_FX_NAMES = {"SPACE", "DUB ECHO", "SWEEP", "NOISE", "CRUSH", "FILTER"};
+
+    // Beat FX Unit
+    public static final int BFX_DELAY = 0, BFX_ECHO = 1, BFX_REVERB = 2, BFX_FLANGER = 3, BFX_PHASER = 4, BFX_ROLL = 5, BFX_TRANS = 6, BFX_HELIX = 7, BFX_PINGPONG = 8;
+    public static final int BFX_COUNT = 9;
+    public static final String[] BFX_NAMES = {"DELAY", "ECHO", "REVERB", "FLANGER", "PHASER", "ROLL", "TRANS", "HELIX", "PING PONG"};
+    public static final float[] BFX_BEAT_FRACTIONS = {0.125f, 0.25f, 0.5f, 0.75f, 1f, 2f, 4f, 8f, 16f};
+    public static final String[] BFX_BEAT_LABELS = {"1/8", "1/4", "1/2", "3/4", "1", "2", "4", "8", "16"};
 
     private static final class Deck {
         ItemStack disc = ItemStack.EMPTY;
@@ -54,13 +70,23 @@ public class DjBoothBlockEntity extends BlockEntity {
         float fxAmount;
         /** Beats in the loop, 0 while not looping; the serial tells clients a new loop was set. */
         int loopBeats, loopSerial;
+
+        // XDJ-AZ Channel Strip & Deck Controls
+        float fader = 1f;
+        float trim = 0.5f;
+        int xfAssign = 0; // 0 = A, 1 = B, 2 = THRU
+        int padMode = PAD_BEAT_LOOP;
+        final long[] hotCues = {-1, -1, -1, -1, -1, -1, -1, -1};
+        boolean vinylMode = true;
+        boolean slipMode = false;
+        boolean reverse = false;
     }
 
     public static final int HIGH = 0, MID = 1, LOW = 2;
     /** The loop lengths on the mixer, in beats. */
-    public static final int[] LOOPS = {1, 2, 4, 8};
+    public static final int[] LOOPS = {1, 2, 4, 8, 16, 32};
 
-    private final Deck[] decks = {new Deck(), new Deck()};
+    private final Deck[] decks = {new Deck(), new Deck(), new Deck(), new Deck()};
     /** The crossfader, 0 = only A .. 1 = only B, moving from {@code xfFrom} to {@code xfTo} over {@code xfTicks} from {@code xfStart}. */
     private float xfFrom = 0f, xfTo = 0f;
     private long xfStart;
@@ -72,60 +98,97 @@ public class DjBoothBlockEntity extends BlockEntity {
     private int crateSlot = -1;
     private int dropTicks = 0;
 
+    // Sound Color FX Unit State
+    private int activeColorFx = COLOR_FILTER;
+    private float colorFxParam = 0.5f;
+
+    // Beat FX Unit State
+    private int beatFxType = BFX_ECHO;
+    private float beatFxBeats = 1.0f;
+    private int beatFxChannel = -1; // -1 = Master, 0..3 = Ch 1..4
+    private boolean beatFxOn = false;
+    private float beatFxDepth = 0.5f;
+
     public DjBoothBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+        decks[A].xfAssign = 0;
+        decks[B].xfAssign = 1;
+        decks[C].xfAssign = 0;
+        decks[D].xfAssign = 1;
     }
 
     // ---------------------------------------------------------------- where the decks sound
 
     /** Where deck {@code deck}'s song plays. */
     public BlockPos deckPos(int deck) {
-        return deck == A ? worldPosition : worldPosition.above();
+        return switch (deck) {
+            case B -> worldPosition.above();
+            case C -> worldPosition.above(2);
+            case D -> worldPosition.above(3);
+            default -> worldPosition;
+        };
     }
 
-    /** Which deck plays from {@code soundBlock}: the booth itself is A, the block above it B. */
+    /** Which deck plays from {@code soundBlock}: the booth itself is A, the block above it B, then C, D. */
     public int deckAt(BlockPos soundBlock) {
-        return soundBlock.equals(worldPosition) ? A : B;
+        if (soundBlock.getX() == worldPosition.getX() && soundBlock.getZ() == worldPosition.getZ()) {
+            int diff = soundBlock.getY() - worldPosition.getY();
+            if (diff >= 0 && diff < DECKS) return diff;
+        }
+        return A;
     }
 
     /** The booth whose deck plays from {@code soundBlock}, or null. */
     @Nullable
     public static DjBoothBlockEntity playingAt(Level level, BlockPos soundBlock) {
-        if (level.getBlockEntity(soundBlock) instanceof DjBoothBlockEntity dj) return dj;
-        return level.getBlockEntity(soundBlock.below()) instanceof DjBoothBlockEntity dj ? dj : null;
+        for (int dy = 0; dy < DECKS; dy++) {
+            if (level.getBlockEntity(soundBlock.below(dy)) instanceof DjBoothBlockEntity dj) return dj;
+        }
+        return null;
     }
 
     // ---------------------------------------------------------------- records
 
     public boolean insertDisc(ItemStack disc, boolean preferDeckB, Player player) {
         if (!DjBoothBlock.isMusicDisc(disc)) return false;
-        int deck = preferDeckB ? (decks[B].disc.isEmpty() ? B : A) : (decks[A].disc.isEmpty() ? A : B);
-        if (!decks[deck].disc.isEmpty()) return false;
+        int deck = preferDeckB
+            ? (!decks[B].disc.isEmpty() ? (!decks[A].disc.isEmpty() ? (!decks[D].disc.isEmpty() ? C : D) : A) : B)
+            : (!decks[A].disc.isEmpty() ? (!decks[B].disc.isEmpty() ? (!decks[C].disc.isEmpty() ? D : C) : B) : A);
+        return insertDisc(disc, deck, player);
+    }
 
-        decks[deck].disc = disc.copyWithCount(1);
+    public boolean insertDisc(ItemStack disc, int targetDeck, Player player) {
+        if (!DjBoothBlock.isMusicDisc(disc) || targetDeck < 0 || targetDeck >= DECKS) return false;
+        if (!decks[targetDeck].disc.isEmpty()) return false;
+
+        decks[targetDeck].disc = disc.copyWithCount(1);
         sync();
         if (level == null || level.isClientSide) return true;
 
-        // Nothing playing: start right away. Otherwise cue it, like a DJ lining up the next record.
-        if (!decks[A].playing && !decks[B].playing) {
-            startDeck(deck, player);
+        boolean anyPlaying = false;
+        for (int i = 0; i < DECKS; i++) if (decks[i].playing) anyPlaying = true;
+
+        if (!anyPlaying) {
+            startDeck(targetDeck, player);
         } else if (player != null) {
-            player.displayClientMessage(Component.translatable("createbrewery.dj.cued", name(deck), title(decks[deck].disc)), true);
+            player.displayClientMessage(Component.translatable("createbrewery.dj.cued", name(targetDeck), title(decks[targetDeck].disc)), true);
         }
         return true;
     }
 
-    /** Drops both records and stops the music; true if there was anything to drop. Server only. */
+    /** Drops all records and stops the music; true if there was anything to drop. Server only. */
     boolean dropDecks() {
-        if (level == null || level.isClientSide || (decks[A].disc.isEmpty() && decks[B].disc.isEmpty())) return false;
-        for (int deck = A; deck <= B; deck++) {
+        if (level == null || level.isClientSide) return false;
+        boolean hadAny = false;
+        for (int deck = 0; deck < DECKS; deck++) {
+            if (!decks[deck].disc.isEmpty()) hadAny = true;
             stopDeck(deck);
             ItemStack disc = decks[deck].disc;
             if (!disc.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, disc);
             decks[deck].disc = ItemStack.EMPTY;
         }
-        sync();
-        return true;
+        if (hadAny) sync();
+        return hadAny;
     }
 
     public void ejectDiscs(Player player) {
@@ -175,14 +238,19 @@ public class DjBoothBlockEntity extends BlockEntity {
 
         d.playing = true;
         level.gameEvent(null, GameEvent.JUKEBOX_PLAY, at);
-        // The only song: pull the crossfader over to it, so a single record plays at full volume.
-        if (!decks[1 - deck].playing) setCrossfader(deck == A ? 0f : 1f);
+        // If only this song plays, pull the crossfader to its assigned side if assigned to A or B
+        boolean otherPlaying = false;
+        for (int i = 0; i < DECKS; i++) if (i != deck && decks[i].playing) otherPlaying = true;
+        if (!otherPlaying) {
+            if (d.xfAssign == 0) setCrossfader(0f);
+            else if (d.xfAssign == 1) setCrossfader(1f);
+        }
         if (player != null) player.displayClientMessage(Component.translatable("createbrewery.dj.playing", name(deck), title(d.disc)), true);
         sync();
     }
 
     private void stopDeck(int deck) {
-        if (level == null || level.isClientSide) return;
+        if (level == null || level.isClientSide || deck < 0 || deck >= DECKS) return;
         Deck d = decks[deck];
         if (d.playing) {
             // Stops Etched streams too: Etched keeps them in the same per-position jukebox map.
@@ -202,23 +270,24 @@ public class DjBoothBlockEntity extends BlockEntity {
         }
 
         long now = level.getGameTime();
-        for (int deck = A; deck <= B; deck++) {
-            Deck d = decks[deck], other = decks[1 - deck];
+        for (int deck = 0; deck < DECKS; deck++) {
+            Deck d = decks[deck];
             if (!d.playing || d.endsAt < 0) continue;
+            int nextDeck = (deck + 1) % DECKS;
+            Deck other = decks[nextDeck];
             boolean cued = automix && !other.disc.isEmpty() && !other.playing;
             if (now >= d.endsAt) {
                 d.playing = false;
                 d.endsAt = -1;
                 // Song over: keep the floor going with the cued record.
-                if (cued) startDeck(1 - deck, null);
-                // From the record crate: the played record goes back, the next one onto this deck -
-                // cued for the next mix, or straight on if nothing else plays.
-                if (automix && restock(deck) && !decks[1 - deck].playing) startDeck(deck, null);
+                if (cued) startDeck(nextDeck, null);
+                // From the record crate: the played record goes back, the next one onto this deck
+                if (automix && restock(deck) && !decks[nextDeck].playing) startDeck(deck, null);
                 sync();
             } else if (cued && d.endsAt - now <= MIX_TICKS) {
                 // Auto-mix: bring the cued record in and fade across while this one plays out.
-                startDeck(1 - deck, null);
-                fadeCrossfader(deck == A ? 1f : 0f, (int) (d.endsAt - now));
+                startDeck(nextDeck, null);
+                fadeCrossfader(other.xfAssign == 1 ? 1f : 0f, (int) (d.endsAt - now));
             }
         }
     }
@@ -228,7 +297,8 @@ public class DjBoothBlockEntity extends BlockEntity {
      * funnels can fill it), played in order. Null if there is none.
      */
     @Nullable
-    private net.neoforged.neoforge.items.IItemHandler crate() {
+    public net.neoforged.neoforge.items.IItemHandler crate() {
+        if (level == null) return null;
         for (net.minecraft.core.Direction side : new net.minecraft.core.Direction[] {
             net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.EAST,
             net.minecraft.core.Direction.WEST, net.minecraft.core.Direction.DOWN}) {
@@ -270,6 +340,62 @@ public class DjBoothBlockEntity extends BlockEntity {
         return false;
     }
 
+    /** Loads a specific record from the adjacent crate slot directly onto {@code deck}. */
+    public boolean loadFromCrate(int deck, int slot, Player player) {
+        if (level == null || level.isClientSide || deck < 0 || deck >= DECKS) return false;
+        var crate = crate();
+        if (crate == null || slot < 0 || slot >= crate.getSlots()) return false;
+        ItemStack stack = crate.getStackInSlot(slot);
+        if (!DjBoothBlock.isMusicDisc(stack)) return false;
+
+        ItemStack next = crate.extractItem(slot, 1, false);
+        if (next.isEmpty()) return false;
+
+        ItemStack old = decks[deck].disc;
+        if (!old.isEmpty()) {
+            stopDeck(deck);
+            ItemStack left = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(crate, old, false);
+            if (!left.isEmpty()) {
+                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, left);
+            }
+        }
+        decks[deck].disc = next;
+        sync();
+        if (player != null) {
+            player.displayClientMessage(Component.translatable("createbrewery.dj.cued", name(deck), title(next)), true);
+        }
+        return true;
+    }
+
+    /** Triggers performance pad action for a deck depending on its pad mode. */
+    public void handlePad(int deck, int pad, Player player) {
+        if (deck < 0 || deck >= DECKS || pad < 0 || pad >= 8) return;
+        Deck d = decks[deck];
+        switch (d.padMode) {
+            case PAD_BEAT_LOOP, PAD_SLIP_LOOP -> {
+                int beats = LOOPS[pad % LOOPS.length];
+                setLoop(deck, beats);
+            }
+            case PAD_HOT_CUE -> {
+                if (d.hotCues[pad] < 0) {
+                    d.hotCues[pad] = level != null ? level.getGameTime() : 0;
+                    if (player != null) player.displayClientMessage(Component.translatable("createbrewery.dj.hot_cue_set", pad + 1), true);
+                } else {
+                    if (player != null) player.displayClientMessage(Component.translatable("createbrewery.dj.hot_cue_jump", pad + 1), true);
+                }
+                sync();
+            }
+            case PAD_BEAT_JUMP -> {
+                int[] jumps = {-8, -4, -2, -1, 1, 2, 4, 8};
+                int jumpBeats = jumps[pad];
+                if (d.playing && d.endsAt > 0 && level != null) {
+                    d.endsAt -= (long) (jumpBeats * 10 / (double) d.pitch);
+                    sync();
+                }
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- mixer controls
 
     public void setCrossfader(float value) {
@@ -292,13 +418,20 @@ public class DjBoothBlockEntity extends BlockEntity {
         return Mth.lerp(Mth.clamp((gameTime - xfStart) / (float) xfTicks, 0f, 1f), xfFrom, xfTo);
     }
 
-    /** How loud deck {@code deck} is at {@code gameTime}: an equal-power crossfade, so the mix does not dip in the middle. */
+    /** How loud deck {@code deck} is at {@code gameTime}: routed by crossfader assignment (A, B, or THRU) and channel fader. */
     public float deckGain(int deck, long gameTime) {
+        if (deck < 0 || deck >= DECKS) return 0f;
         float x = crossfader(gameTime) * Mth.HALF_PI;
-        return deck == A ? Mth.cos(x) : Mth.sin(x);
+        float xfGain = switch (decks[deck].xfAssign) {
+            case 0 -> Mth.cos(x);
+            case 1 -> Mth.sin(x);
+            default -> 1.0f; // THRU
+        };
+        return xfGain * decks[deck].fader;
     }
 
     public void setPitch(int deck, float pitch) {
+        if (deck < 0 || deck >= DECKS) return;
         Deck d = decks[deck];
         float p = Mth.clamp(pitch, 1f - PITCH_RANGE, 1f + PITCH_RANGE);
         // The rest of the song now plays at the new speed.
@@ -311,33 +444,180 @@ public class DjBoothBlockEntity extends BlockEntity {
     }
 
     public void setEq(int deck, int band, float knob) {
+        if (deck < 0 || deck >= DECKS || band < 0 || band >= 3) return;
         decks[deck].eq[band] = Mth.clamp(knob, 0f, 1f);
         sync();
     }
 
     public void setFilter(int deck, float value) {
+        if (deck < 0 || deck >= DECKS) return;
         // Snaps to off in the middle, like the detent on a real filter knob.
         decks[deck].filter = Math.abs(value) < 0.03f ? 0f : Mth.clamp(value, -1f, 1f);
         sync();
     }
 
     public void setFx(int deck, int fx) {
+        if (deck < 0 || deck >= DECKS) return;
         decks[deck].fx = Math.floorMod(fx, com.createbrewery.drunk.DeckFx.EFFECTS);
         sync();
     }
 
     public void setFxAmount(int deck, float amount) {
+        if (deck < 0 || deck >= DECKS) return;
         decks[deck].fxAmount = Mth.clamp(amount, 0f, 1f);
         sync();
     }
 
     /** Loops the last {@code beats} beats (slip mode: the song runs on underneath); the same length again lets go. */
     public void setLoop(int deck, int beats) {
+        if (deck < 0 || deck >= DECKS) return;
         Deck d = decks[deck];
         boolean valid = false;
         for (int l : LOOPS) valid |= l == beats;
         d.loopBeats = !valid || d.loopBeats == beats ? 0 : beats;
         d.loopSerial++;
+        sync();
+    }
+
+    public void setChannelFader(int deck, float fader) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].fader = Mth.clamp(fader, 0f, 1f);
+            sync();
+        }
+    }
+
+    public float getChannelFader(int deck) {
+        return deck >= 0 && deck < DECKS ? decks[deck].fader : 1f;
+    }
+
+    public void setCrossfaderAssign(int deck, int assign) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].xfAssign = Math.floorMod(assign, 3);
+            sync();
+        }
+    }
+
+    public int getCrossfaderAssign(int deck) {
+        return deck >= 0 && deck < DECKS ? decks[deck].xfAssign : 0;
+    }
+
+    public void setTrim(int deck, float trim) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].trim = Mth.clamp(trim, 0f, 1f);
+            sync();
+        }
+    }
+
+    public float getTrim(int deck) {
+        return deck >= 0 && deck < DECKS ? decks[deck].trim : 0.5f;
+    }
+
+    public void setPadMode(int deck, int mode) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].padMode = Math.floorMod(mode, 4);
+            sync();
+        }
+    }
+
+    public int getPadMode(int deck) {
+        return deck >= 0 && deck < DECKS ? decks[deck].padMode : PAD_BEAT_LOOP;
+    }
+
+    public void setVinylMode(int deck, boolean vinyl) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].vinylMode = vinyl;
+            sync();
+        }
+    }
+
+    public boolean isVinylMode(int deck) {
+        return deck >= 0 && deck < DECKS && decks[deck].vinylMode;
+    }
+
+    public void setSlipMode(int deck, boolean slip) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].slipMode = slip;
+            sync();
+        }
+    }
+
+    public boolean isSlipMode(int deck) {
+        return deck >= 0 && deck < DECKS && decks[deck].slipMode;
+    }
+
+    public void setReverse(int deck, boolean rev) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].reverse = rev;
+            sync();
+        }
+    }
+
+    public boolean isReverse(int deck) {
+        return deck >= 0 && deck < DECKS && decks[deck].reverse;
+    }
+
+    // Sound Color FX Unit
+    public int getActiveColorFx() {
+        return activeColorFx;
+    }
+
+    public void setActiveColorFx(int type) {
+        this.activeColorFx = Math.floorMod(type, COLOR_FX_COUNT);
+        sync();
+    }
+
+    public float getColorFxParam() {
+        return colorFxParam;
+    }
+
+    public void setColorFxParam(float param) {
+        this.colorFxParam = Mth.clamp(param, 0f, 1f);
+        sync();
+    }
+
+    // Beat FX Unit
+    public int getBeatFxType() {
+        return beatFxType;
+    }
+
+    public void setBeatFxType(int type) {
+        this.beatFxType = Math.floorMod(type, BFX_COUNT);
+        sync();
+    }
+
+    public float getBeatFxBeats() {
+        return beatFxBeats;
+    }
+
+    public void setBeatFxBeats(float beats) {
+        this.beatFxBeats = Math.max(0.0625f, beats);
+        sync();
+    }
+
+    public int getBeatFxChannel() {
+        return beatFxChannel;
+    }
+
+    public void setBeatFxChannel(int channel) {
+        this.beatFxChannel = channel;
+        sync();
+    }
+
+    public boolean isBeatFxOn() {
+        return beatFxOn;
+    }
+
+    public void setBeatFxOn(boolean on) {
+        this.beatFxOn = on;
+        sync();
+    }
+
+    public float getBeatFxDepth() {
+        return beatFxDepth;
+    }
+
+    public void setBeatFxDepth(float depth) {
+        this.beatFxDepth = Mth.clamp(depth, 0f, 1f);
         sync();
     }
 
@@ -372,16 +652,16 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     // ---------------------------------------------------------------- state
 
-    public ItemStack getDisc(int deck) { return decks[deck].disc; }
-    public boolean isPlaying(int deck) { return decks[deck].playing; }
-    public float getPitch(int deck) { return decks[deck].pitch; }
+    public ItemStack getDisc(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].disc : ItemStack.EMPTY; }
+    public boolean isPlaying(int deck) { return deck >= 0 && deck < DECKS && decks[deck].playing; }
+    public float getPitch(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].pitch : 1f; }
     public boolean isAutomix() { return automix; }
-    public float getEq(int deck, int band) { return decks[deck].eq[band]; }
-    public float getFilter(int deck) { return decks[deck].filter; }
-    public int getFx(int deck) { return decks[deck].fx; }
-    public float getFxAmount(int deck) { return decks[deck].fxAmount; }
-    public int getLoopBeats(int deck) { return decks[deck].loopBeats; }
-    public int getLoopSerial(int deck) { return decks[deck].loopSerial; }
+    public float getEq(int deck, int band) { return deck >= 0 && deck < DECKS && band >= 0 && band < 3 ? decks[deck].eq[band] : 0.5f; }
+    public float getFilter(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].filter : 0f; }
+    public int getFx(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].fx : 0; }
+    public float getFxAmount(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].fxAmount : 0f; }
+    public int getLoopBeats(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].loopBeats : 0; }
+    public int getLoopSerial(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].loopSerial : 0; }
 
     /** Client: every loaded booth, for the lights and effects that follow whichever booth plays near them. */
     private static final java.util.Set<BlockPos> BOOTHS = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -394,11 +674,18 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     /** What the mixer is doing to the music the crowd hears (client). */
     public ClubState.Mixer mixer(long gameTime) {
-        boolean[] playing = {isPlaying(A), isPlaying(B)};
-        float[] gain = {deckGain(A, gameTime), deckGain(B, gameTime)};
-        float[] low = {getEq(A, LOW), getEq(B, LOW)};
-        float[] filter = {getFilter(A), getFilter(B)};
-        boolean[] loop = {getLoopBeats(A) > 0, getLoopBeats(B) > 0};
+        boolean[] playing = new boolean[DECKS];
+        float[] gain = new float[DECKS];
+        float[] low = new float[DECKS];
+        float[] filter = new float[DECKS];
+        boolean[] loop = new boolean[DECKS];
+        for (int i = 0; i < DECKS; i++) {
+            playing[i] = isPlaying(i);
+            gain[i] = deckGain(i, gameTime);
+            low[i] = getEq(i, LOW);
+            filter[i] = getFilter(i);
+            loop[i] = getLoopBeats(i) > 0;
+        }
         return ClubState.loudestMixer(playing, gain, low, filter, loop);
     }
 
@@ -408,7 +695,10 @@ public class DjBoothBlockEntity extends BlockEntity {
         DjBoothBlockEntity best = null;
         double bestDist = reach * reach;
         for (BlockPos p : BOOTHS) {
-            if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof DjBoothBlockEntity dj) || !(dj.isPlaying(A) || dj.isPlaying(B))) continue;
+            if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof DjBoothBlockEntity dj)) continue;
+            boolean anyPlay = false;
+            for (int i = 0; i < DECKS; i++) if (dj.isPlaying(i)) anyPlay = true;
+            if (!anyPlay) continue;
             double d = p.distSqr(pos);
             if (d < bestDist || (d == bestDist && best != null && p.compareTo(best.getBlockPos()) < 0)) {
                 best = dj;
@@ -419,7 +709,12 @@ public class DjBoothBlockEntity extends BlockEntity {
     }
 
     public static Component name(int deck) {
-        return Component.translatable(deck == A ? "createbrewery.dj.deck_a" : "createbrewery.dj.deck_b");
+        return switch (deck) {
+            case B -> Component.translatable("createbrewery.dj.deck_b");
+            case C -> Component.translatable("createbrewery.dj.deck_c");
+            case D -> Component.translatable("createbrewery.dj.deck_d");
+            default -> Component.translatable("createbrewery.dj.deck_a");
+        };
     }
 
     public Component title(ItemStack disc) {
@@ -436,8 +731,8 @@ public class DjBoothBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        String[] keys = {"DeckA", "DeckB"};
-        for (int deck = A; deck <= B; deck++) {
+        String[] keys = {"DeckA", "DeckB", "DeckC", "DeckD"};
+        for (int deck = 0; deck < DECKS; deck++) {
             Deck d = decks[deck];
             if (!d.disc.isEmpty()) tag.put(keys[deck], d.disc.save(registries));
             tag.putBoolean(keys[deck] + "Playing", d.playing);
@@ -449,6 +744,13 @@ public class DjBoothBlockEntity extends BlockEntity {
             tag.putFloat(keys[deck] + "FxAmount", d.fxAmount);
             tag.putInt(keys[deck] + "Loop", d.loopBeats);
             tag.putInt(keys[deck] + "LoopSerial", d.loopSerial);
+            tag.putFloat(keys[deck] + "Fader", d.fader);
+            tag.putInt(keys[deck] + "XfAssign", d.xfAssign);
+            tag.putFloat(keys[deck] + "Trim", d.trim);
+            tag.putInt(keys[deck] + "PadMode", d.padMode);
+            tag.putBoolean(keys[deck] + "Vinyl", d.vinylMode);
+            tag.putBoolean(keys[deck] + "Slip", d.slipMode);
+            tag.putBoolean(keys[deck] + "Reverse", d.reverse);
         }
         tag.putFloat("XfFrom", xfFrom);
         tag.putFloat("XfTo", xfTo);
@@ -457,13 +759,20 @@ public class DjBoothBlockEntity extends BlockEntity {
         tag.putBoolean("Automix", automix);
         tag.putBoolean("AutoDrop", autoDrop);
         tag.putInt("CrateSlot", crateSlot);
+        tag.putInt("ActiveColorFx", activeColorFx);
+        tag.putFloat("ColorFxParam", colorFxParam);
+        tag.putInt("BeatFxType", beatFxType);
+        tag.putFloat("BeatFxBeats", beatFxBeats);
+        tag.putInt("BeatFxChannel", beatFxChannel);
+        tag.putBoolean("BeatFxOn", beatFxOn);
+        tag.putFloat("BeatFxDepth", beatFxDepth);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        String[] keys = {"DeckA", "DeckB"};
-        for (int deck = A; deck <= B; deck++) {
+        String[] keys = {"DeckA", "DeckB", "DeckC", "DeckD"};
+        for (int deck = 0; deck < DECKS; deck++) {
             Deck d = decks[deck];
             d.disc = tag.contains(keys[deck]) ? ItemStack.parse(registries, tag.getCompound(keys[deck])).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
             d.playing = tag.getBoolean(keys[deck] + "Playing");
@@ -476,6 +785,13 @@ public class DjBoothBlockEntity extends BlockEntity {
             d.fxAmount = Mth.clamp(tag.getFloat(keys[deck] + "FxAmount"), 0f, 1f);
             d.loopBeats = tag.getInt(keys[deck] + "Loop");
             d.loopSerial = tag.getInt(keys[deck] + "LoopSerial");
+            d.fader = tag.contains(keys[deck] + "Fader") ? tag.getFloat(keys[deck] + "Fader") : 1f;
+            d.xfAssign = tag.contains(keys[deck] + "XfAssign") ? tag.getInt(keys[deck] + "XfAssign") : (deck % 2);
+            d.trim = tag.contains(keys[deck] + "Trim") ? tag.getFloat(keys[deck] + "Trim") : 0.5f;
+            d.padMode = tag.contains(keys[deck] + "PadMode") ? tag.getInt(keys[deck] + "PadMode") : PAD_BEAT_LOOP;
+            d.vinylMode = !tag.contains(keys[deck] + "Vinyl") || tag.getBoolean(keys[deck] + "Vinyl");
+            d.slipMode = tag.getBoolean(keys[deck] + "Slip");
+            d.reverse = tag.getBoolean(keys[deck] + "Reverse");
         }
         xfFrom = tag.getFloat("XfFrom");
         xfTo = tag.getFloat("XfTo");
@@ -484,6 +800,13 @@ public class DjBoothBlockEntity extends BlockEntity {
         automix = !tag.contains("Automix") || tag.getBoolean("Automix");
         autoDrop = !tag.contains("AutoDrop") || tag.getBoolean("AutoDrop");
         crateSlot = tag.contains("CrateSlot") ? tag.getInt("CrateSlot") : -1;
+        if (tag.contains("ActiveColorFx")) activeColorFx = Math.floorMod(tag.getInt("ActiveColorFx"), COLOR_FX_COUNT);
+        if (tag.contains("ColorFxParam")) colorFxParam = tag.getFloat("ColorFxParam");
+        if (tag.contains("BeatFxType")) beatFxType = Math.floorMod(tag.getInt("BeatFxType"), BFX_COUNT);
+        if (tag.contains("BeatFxBeats")) beatFxBeats = tag.getFloat("BeatFxBeats");
+        if (tag.contains("BeatFxChannel")) beatFxChannel = tag.getInt("BeatFxChannel");
+        if (tag.contains("BeatFxOn")) beatFxOn = tag.getBoolean("BeatFxOn");
+        if (tag.contains("BeatFxDepth")) beatFxDepth = tag.getFloat("BeatFxDepth");
     }
 
     @Override

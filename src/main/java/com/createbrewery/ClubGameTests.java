@@ -106,6 +106,48 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void alphaThetaXdjAzFullSystemWorks(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+
+        // 1. 4-Deck architecture verification
+        helper.assertTrue(DjBoothBlockEntity.DECKS == 4, "XDJ-AZ does not have 4 decks");
+        helper.assertTrue(dj.deckPos(DjBoothBlockEntity.A).equals(helper.absolutePos(POS)), "Deck 1 not at booth");
+        helper.assertTrue(dj.deckPos(DjBoothBlockEntity.B).equals(helper.absolutePos(POS).above()), "Deck 2 not at booth above");
+        helper.assertTrue(dj.deckPos(DjBoothBlockEntity.C).equals(helper.absolutePos(POS).above(2)), "Deck 3 not at booth above(2)");
+        helper.assertTrue(dj.deckPos(DjBoothBlockEntity.D).equals(helper.absolutePos(POS).above(3)), "Deck 4 not at booth above(3)");
+
+        // 2. Sound Color FX (6 modes + Parameter)
+        dj.setActiveColorFx(DjBoothBlockEntity.COLOR_NOISE);
+        helper.assertTrue(dj.getActiveColorFx() == DjBoothBlockEntity.COLOR_NOISE, "Color FX did not select NOISE");
+        dj.setColorFxParam(0.85f);
+        helper.assertTrue(Math.abs(dj.getColorFxParam() - 0.85f) < 1e-4, "Color FX param not set");
+
+        // 3. Beat FX Unit
+        dj.setBeatFxType(DjBoothBlockEntity.BFX_FLANGER);
+        helper.assertTrue(dj.getBeatFxType() == DjBoothBlockEntity.BFX_FLANGER, "Beat FX did not select FLANGER");
+        dj.setBeatFxBeats(2.0f);
+        helper.assertTrue(Math.abs(dj.getBeatFxBeats() - 2.0f) < 1e-4, "Beat FX beats fraction not set");
+        dj.setBeatFxOn(true);
+        helper.assertTrue(dj.isBeatFxOn(), "Beat FX not engaged");
+
+        // 4. 4-Channel Mixer Faders & Crossfader Routing
+        dj.setChannelFader(DjBoothBlockEntity.C, 0.75f);
+        helper.assertTrue(Math.abs(dj.getChannelFader(DjBoothBlockEntity.C) - 0.75f) < 1e-4, "Ch 3 fader not set");
+        dj.setCrossfaderAssign(DjBoothBlockEntity.C, 2); // THRU
+        helper.assertTrue(dj.getCrossfaderAssign(DjBoothBlockEntity.C) == 2, "Crossfader assign not set to THRU");
+        // Gain on THRU channel equals fader
+        helper.assertTrue(Math.abs(dj.deckGain(DjBoothBlockEntity.C, 0) - 0.75f) < 1e-4, "THRU gain does not match fader");
+
+        // 5. Performance Pads: Mode switching & Hot Cue / Loops
+        dj.setPadMode(DjBoothBlockEntity.A, DjBoothBlockEntity.PAD_BEAT_LOOP);
+        dj.handlePad(DjBoothBlockEntity.A, 3, null); // pad 3 in loops is 8 beats
+        helper.assertTrue(dj.getLoopBeats(DjBoothBlockEntity.A) == 8, "Pad did not trigger 8 beat loop");
+
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void speakersPlayOnlyTheBoothTheyAreLinkedTo(GameTestHelper helper) {
         BlockPos booth = helper.absolutePos(POS);
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
