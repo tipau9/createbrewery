@@ -110,6 +110,8 @@ final class DmxProgram {
                         if (!shutterOpen) lv = 0f;
                         else if (tension >= 0.15f) lv = Math.max(lv, fader * tension);
                     }
+                    // The DJ takes the lows or closes the filter: the room darkens with it (a drop below still hits full).
+                    lv *= 1f - 0.6f * Math.max(c.bassCut, c.filterClosed);
                     if (c.dropLevel > 0.02f) {
                         lv = Math.max(lv, fader * c.dropLevel);
                         col = mix(col, 0xFFFFFF, c.dropLevel);
