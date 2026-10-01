@@ -11,6 +11,9 @@ public class Config {
     public static final ModConfigSpec.DoubleValue SCREEN_EFFECTS;
     public static final ModConfigSpec.BooleanValue RECORD_MUSIC;
     public static final ModConfigSpec.BooleanValue ENABLE_VEIL_LIGHTS;
+    public static final ModConfigSpec.IntValue MAX_SPEAKERS;
+    public static final ModConfigSpec.BooleanValue CLUB_REVERB;
+    public static final ModConfigSpec.DoubleValue REVERB_AMOUNT;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -40,6 +43,15 @@ public class Config {
                 "Disabled by default because Veil's VoxelShadowGrid crashes Nvidia OpenGL drivers (nvoglv64.dll glTexImage3D).",
                 "Leave false unless your GPU driver and Veil version support voxel shadow textures.")
             .define("enableVeilLights", false);
+        MAX_SPEAKERS = client
+            .comment("Most speakers one song plays out of at once: the nearest, subwoofers first. Fewer is lighter on the sound thread.")
+            .defineInRange("maxSpeakers", 12, 4, 32);
+        CLUB_REVERB = client
+            .comment("Room reverb on the club's speakers, from the size of the room around you. Needs OpenAL EFX (on by default).")
+            .define("clubReverb", true);
+        REVERB_AMOUNT = client
+            .comment("How much of that reverb you hear, 0 to 1.")
+            .defineInRange("reverbAmount", 0.7, 0.0, 1.0);
         CLIENT_SPEC = client.build();
     }
 }
