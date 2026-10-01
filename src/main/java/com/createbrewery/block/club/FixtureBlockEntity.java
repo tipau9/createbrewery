@@ -39,6 +39,7 @@ public class FixtureBlockEntity extends BlockEntity {
     private DmxProgram own;
     private DmxProgram.Settings ownSettings;
     private float lit, prevLit;
+    private final FixtureResponse response = new FixtureResponse();
     private int color = 0xFFFFFF;
     private final float[] pixels = new float[8];
     private float pan, tilt, prevPan, prevTilt;
@@ -53,6 +54,15 @@ public class FixtureBlockEntity extends BlockEntity {
 
     public FixtureBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    private static FixtureResponse.Lamp lampOf(FixtureBlock.Kind kind) {
+        return switch (kind) {
+            case LED_BAR -> FixtureResponse.Lamp.LED;
+            case PAR -> FixtureResponse.Lamp.PAR;
+            case MOVING_HEAD -> FixtureResponse.Lamp.HEAD;
+            case BLINDER -> FixtureResponse.Lamp.TUNGSTEN;
+        };
     }
 
     FixtureBlock.Kind kind() {
@@ -104,18 +114,20 @@ public class FixtureBlockEntity extends BlockEntity {
         }
         FixtureBlock.Kind kind = kind();
         prevLit = lit;
-        lit = program.level[group];
-        color = kind == FixtureBlock.Kind.BLINDER ? TUNGSTEN : program.color[group];
+        lit = response.dimmer(lampOf(kind), program.level[group]);
+        int targetColor = kind == FixtureBlock.Kind.BLINDER ? TUNGSTEN : program.color[group];
+        color = response.color(targetColor, kind == FixtureBlock.Kind.BLINDER ? 0f : kind == FixtureBlock.Kind.MOVING_HEAD ? 5f : 2f);
         for (int i = 0; i < pixels.length; i++) pixels[i] = program.pixel(settings, i, pixels.length);
 
         Direction facing = getBlockState().getValue(FixtureBlock.FACING);
         prevPan = pan;
         prevTilt = tilt;
         if (kind == FixtureBlock.Kind.MOVING_HEAD) {
-            // Motors take a few ticks to get there, like a real head.
+            // Motors with a top speed and a limit on how hard they speed up and brake, like a real head.
             float[] aim = program.aim(settings, group);
-            pan += (aim[0] - pan) * 0.3f;
-            tilt += (aim[1] - tilt) * 0.3f;
+            response.motor(aim[0], aim[1]);
+            pan = response.pan;
+            tilt = response.tilt;
         }
         if (lit > 0.02f) castBeam(facing);
 
