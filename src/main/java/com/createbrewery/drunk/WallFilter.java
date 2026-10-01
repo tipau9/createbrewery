@@ -27,19 +27,9 @@ final class WallFilter {
         return Math.exp(Math.log(20000) + (Math.log(walledOff) - Math.log(20000)) * clamp01(muffle));
     }
 
-    /**
-     * How walled off a speaker is, 0..1, from the solid blocks on the straight line ({@code middle})
-     * and how many of the four rays ({@code blocked}, the straight one included) hit something. A wall
-     * on the straight line muffles at once, as in front of a real club's door-less facade; a gap beside
-     * it only lets some sound round the corner. A clear line with a corner in the way stays mostly open.
-     */
-    static float muffleFor(int middle, int blocked) {
-        return middle > 0 ? 0.6f + 0.4f * (Math.max(1, blocked) - 1) / 3f : blocked / 4f;
-    }
-
-    /** The broadband loss: about 14 dB for the first wall, 6 more for each one after (a club is loud inside, a thump outside). */
+    /** The broadband loss: about 7 dB for the first wall, 5 more for each one after. */
     static double loss(double muffle, double walls) {
-        double db = walls <= 0 ? 0 : 14 + 6 * (Math.min(walls, 5) - 1);
+        double db = walls <= 0 ? 0 : 7 + 5 * (Math.min(walls, 5) - 1);
         return Math.pow(10, -db * clamp01(muffle) / 20);
     }
 
