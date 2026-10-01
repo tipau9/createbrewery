@@ -40,7 +40,6 @@ Outputs (read by anyone):
 - `buildUp` 0..1 (from `tension`, raised while the filter is swept closed or the bass is killed).
 - `breakdown`: music playing but no kick for a few beats (same rule as `DmxProgram` today).
 - `bassCut` 0..1: low EQ down or high-pass swept up. `filterClosed` 0..1: low-pass swept down.
-- `energy` 0..1: smoothed overall level, the "how hard is the club going" number.
 - `strobeGate` from `noFlashing`: one answer to "may this flash".
 
 Beat detection keeps the current hysteresis (on above 0.38, off below 0.20) but lives in this one class. `DmxProgram` stops detecting beats and reads `beat`/`drop`/`breakdown` from the state.
@@ -71,7 +70,7 @@ Unlinked effects work as today, and take beats and drops from `ClubStates` when 
 | `beat` | auto program as today | flash (BEAT mode) | new pattern step | none | none |
 | `buildUp` rising | dim and shift cold, strobe faster (existing tension curve) | rate follows build-up | speed rises | steady | none |
 | `bassCut` / `filterClosed` | level drops with the cut (room goes dark) | holds | holds | holds | holds |
-| `drop` edge | full flash and white (as today) | one full frame | full burst | thicker blast | one burst, same tick |
+| `drop` edge | full flash and white (as today) | one full frame | full burst | thicker blast | one burst, same tick (a CO2 jet only when linked to a console; unlinked it stays redstone-only) |
 | `breakdown` | almost dark (as today) | off | slow, ambient | steady | none |
 
 The numbers (thresholds, rates) are the ones that already exist in the code. This spec moves them to one place and adds the `bassCut` / `filterClosed` coupling; it does not retune the look (that is sub-project 2).
@@ -120,3 +119,7 @@ Behind unchanged defaults: unlinked blocks behave as before, so nothing breaks i
 
 - Link range for effects: the same `MAX_LINK` as fixtures.
 - Group for an unlinked-then-linked effect: group 1.
+
+## Amendments from planning
+
+See the plan (`docs/superpowers/plans/2026-10-01-club-symbiosis.md`): `energy` dropped (no consumer), CO2 jet bursts only when linked, hazer untouched, group changed by re-using the link item on the effect, mixer only sharpens an existing build-up.
