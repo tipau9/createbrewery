@@ -66,6 +66,8 @@ public class DjBoothBlockEntity extends BlockEntity {
     private long xfStart;
     private int xfTicks;
     private boolean automix = true;
+    private boolean autoDrop = true;
+    private long lastDropTick = -100;
     /** The record crate's slot the last record was taken from: the next one is looked for after it. */
     private int crateSlot = -1;
     private int dropTicks = 0;
@@ -344,7 +346,19 @@ public class DjBoothBlockEntity extends BlockEntity {
         sync();
     }
 
-    public void triggerDrop(Player player) {
+    public boolean isAutoDrop() {
+        return autoDrop;
+    }
+
+    public void setAutoDrop(boolean on) {
+        autoDrop = on;
+        sync();
+    }
+
+    public void triggerDrop(@Nullable Player player) {
+        long now = level != null ? level.getGameTime() : 0;
+        if (now - lastDropTick < 40) return; // Debounce so multiple clients or echoes don't re-trigger
+        lastDropTick = now;
         dropTicks = 25;
         if (level != null && !level.isClientSide) {
             BlockState state = getBlockState();
@@ -441,6 +455,7 @@ public class DjBoothBlockEntity extends BlockEntity {
         tag.putLong("XfStart", xfStart);
         tag.putInt("XfTicks", xfTicks);
         tag.putBoolean("Automix", automix);
+        tag.putBoolean("AutoDrop", autoDrop);
         tag.putInt("CrateSlot", crateSlot);
     }
 
@@ -467,6 +482,7 @@ public class DjBoothBlockEntity extends BlockEntity {
         xfStart = tag.getLong("XfStart");
         xfTicks = tag.getInt("XfTicks");
         automix = !tag.contains("Automix") || tag.getBoolean("Automix");
+        autoDrop = !tag.contains("AutoDrop") || tag.getBoolean("AutoDrop");
         crateSlot = tag.contains("CrateSlot") ? tag.getInt("CrateSlot") : -1;
     }
 

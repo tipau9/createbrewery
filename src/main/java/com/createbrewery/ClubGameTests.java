@@ -93,6 +93,19 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void autoDropTriggersRedstonePulse(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+        helper.assertTrue(dj.isAutoDrop(), "auto-drop is not enabled by default");
+
+        // Trigger drop
+        dj.triggerDrop(null);
+        helper.assertTrue(helper.getBlockState(POS).getValue(DjBoothBlock.POWERED), "drop did not power the booth");
+        helper.assertTrue(helper.getLevel().getDirectSignalTo(helper.absolutePos(POS).above()) == 15, "the booth does not emit strong redstone power");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void speakersPlayOnlyTheBoothTheyAreLinkedTo(GameTestHelper helper) {
         BlockPos booth = helper.absolutePos(POS);
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());

@@ -20,6 +20,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     public static final byte TOGGLE_A = 0, TOGGLE_B = 1, CROSSFADER = 2, PITCH_A = 3, PITCH_B = 4, DROP = 5, EJECT = 6, AUTOMIX = 7;
     /** Per deck (see {@code deck}): EQ bands, filter, effect, effect amount, loop length in beats. */
     public static final byte EQ_HIGH = 8, EQ_MID = 9, EQ_LOW = 10, FILTER = 11, FX = 12, FX_AMOUNT = 13, LOOP = 14;
+    public static final byte AUTO_DROP = 15, DROP_DETECTED = 16;
 
     public static final Type<DjControl> TYPE = new Type<>(CreateBrewery.ID("dj_control"));
     public static final StreamCodec<ByteBuf, DjControl> CODEC = StreamCodec.composite(
@@ -30,8 +31,8 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
         DjControl::new);
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        // "2": the deck byte was added.
-        event.registrar("2").optional().playToServer(TYPE, CODEC, DjControl::handle);
+        // "3": auto-drop added.
+        event.registrar("3").optional().playToServer(TYPE, CODEC, DjControl::handle);
     }
 
     /** Client side. */
@@ -44,12 +45,23 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     }
 
     private static void handle(DjControl control, IPayloadContext context) {
-        // Only a player standing at the booth mixes on it; the values are clamped by the booth itself.
         if (!(context.player() instanceof ServerPlayer player) || !Float.isFinite(control.value)) return;
-        if (!player.level().isLoaded(control.pos) || !player.canInteractWithBlock(control.pos, 1.0)) return;
+        if (!player.level().isLoaded(control.pos)) return;
+
+        // Auto-drop from listeners in the club within reach of the music
+        if (control.action == DROP_DETECTED) {
+            if (player.distanceToSqr(control.pos.getX() + 0.5, control.pos.getY() + 0.5, control.pos.getZ() + 0.5) <= 36.0 * 36.0
+                && player.level().getBlockEntity(control.pos) instanceof DjBoothBlockEntity dj && dj.isAutoDrop()) {
+                dj.triggerDrop(player);
+            }
+            return;
+        }
+
+        // Only a player standing at the booth mixes on it; the values are clamped by the booth itself.
+        if (!player.canInteractWithBlock(control.pos, 1.0)) return;
         if (!(player.level().getBlockEntity(control.pos) instanceof DjBoothBlockEntity dj)) return;
         int deck = control.deck;
-        if (control.action >= EQ_HIGH && deck != DjBoothBlockEntity.A && deck != DjBoothBlockEntity.B) return;
+        if (control.action >= EQ_HIGH && control.action <= LOOP && deck != DjBoothBlockEntity.A && deck != DjBoothBlockEntity.B) return;
 
         switch (control.action) {
             case TOGGLE_A -> dj.toggleDeck(DjBoothBlockEntity.A, player);
@@ -60,6 +72,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case DROP -> dj.triggerDrop(player);
             case EJECT -> dj.ejectDiscs(player);
             case AUTOMIX -> dj.setAutomix(control.value > 0.5f);
+            case AUTO_DROP -> dj.setAutoDrop(control.value > 0.5f);
             case EQ_HIGH -> dj.setEq(deck, DjBoothBlockEntity.HIGH, control.value);
             case EQ_MID -> dj.setEq(deck, DjBoothBlockEntity.MID, control.value);
             case EQ_LOW -> dj.setEq(deck, DjBoothBlockEntity.LOW, control.value);

@@ -1,7 +1,10 @@
 package com.createbrewery.block.club;
 
+import com.createbrewery.drunk.MusicPulse;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -10,12 +13,19 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
+/**
+ * Renders the AlphaTheta XDJ-AZ console:
+ * - Spinning vinyl / jogwheels on Deck 1 and Deck 2 with glowing cue position markers
+ * - Illuminated tilted 10.1" central screen with live glowing waveforms, BPM readouts, and model branding
+ */
 public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> {
 
     private final ItemRenderer itemRenderer;
+    private final Font font;
 
     public DjBoothRenderer(BlockEntityRendererProvider.Context context) {
         this.itemRenderer = context.getItemRenderer();
+        this.font = context.getFont();
     }
 
     @Override
@@ -35,19 +45,17 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
         };
         pose.mulPose(Axis.YP.rotationDegrees(yRot));
 
-        // Render Deck A (left turntable platter)
+        float gameTime = be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f;
+
+        // ---------------------------------------------------- DECK A (Left Turntable Platter)
         ItemStack deckA = be.getDisc(DjBoothBlockEntity.A);
         if (!deckA.isEmpty()) {
             pose.pushPose();
-            // Deck A platter center in model space: X=4.0/16 (offset -0.25 from center), Y=14.2/16 (offset +0.388), Z=8.0/16 (0.0)
             pose.translate(-0.25, 0.395, 0.0);
-            // Lie disc flat on the platter surface
             pose.mulPose(Axis.XP.rotationDegrees(90f));
 
-            // Spin vinyl if Deck A is actively playing
             if (be.isPlaying(DjBoothBlockEntity.A)) {
-                // Faster on a pitched-up deck, like a real platter.
-                float spin = (be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f) * 14.0f * be.getPitch(DjBoothBlockEntity.A);
+                float spin = gameTime * 14.0f * be.getPitch(DjBoothBlockEntity.A);
                 pose.mulPose(Axis.ZP.rotationDegrees(spin));
             }
 
@@ -56,25 +64,78 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
             pose.popPose();
         }
 
-        // Render Deck B (right turntable platter)
+        // ---------------------------------------------------- DECK B (Right Turntable Platter)
         ItemStack deckB = be.getDisc(DjBoothBlockEntity.B);
         if (!deckB.isEmpty()) {
             pose.pushPose();
-            // Deck B platter center in model space: X=12.0/16 (offset +0.25 from center), Y=14.2/16 (offset +0.388), Z=8.0/16 (0.0)
             pose.translate(0.25, 0.395, 0.0);
-            // Lie disc flat on the platter surface
             pose.mulPose(Axis.XP.rotationDegrees(90f));
 
-            // Spin vinyl if Deck B is actively playing
             if (be.isPlaying(DjBoothBlockEntity.B)) {
-                // Faster on a pitched-up deck, like a real platter.
-                float spin = (be.getLevel() != null ? be.getLevel().getGameTime() + partialTick : 0f) * 14.0f * be.getPitch(DjBoothBlockEntity.B);
+                float spin = gameTime * 14.0f * be.getPitch(DjBoothBlockEntity.B);
                 pose.mulPose(Axis.ZP.rotationDegrees(spin));
             }
 
             pose.scale(0.42f, 0.42f, 0.42f);
             itemRenderer.renderStatic(deckB, ItemDisplayContext.FIXED, light, overlay, pose, buffers, be.getLevel(), 0);
             pose.popPose();
+        }
+
+        // ---------------------------------------------------- XDJ-AZ TILTED 10.1" DISPLAY SCREEN
+        renderTiltedScreen(be, pose, buffers, gameTime);
+
+        pose.popPose();
+    }
+
+    private void renderTiltedScreen(DjBoothBlockEntity be, PoseStack pose, MultiBufferSource buffers, float gameTime) {
+        pose.pushPose();
+
+        // Origin matches screen_display rotation pivot in dj_booth.json: [8.0, 14.8, 2.0]
+        pose.translate(0.0, 0.425, -0.375);
+        pose.mulPose(Axis.XP.rotationDegrees(-22.5f));
+
+        // Move to front face of the tilted monitor
+        pose.translate(0.0, 0.14, 0.056);
+        pose.scale(0.0055f, -0.0055f, 0.0055f);
+
+        int fullBright = 0x00F000F0;
+
+        // Top Model Badge
+        String brand = "AlphaTheta XDJ-AZ";
+        font.drawInBatch(brand, -font.width(brand) / 2f, -20, 0xFF88AAFF, false,
+            pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+
+        // Deck 1 Status (Cyan)
+        boolean playA = be.isPlaying(DjBoothBlockEntity.A);
+        double periodA = MusicPulse.beatPeriodAt(be.deckPos(DjBoothBlockEntity.A));
+        String bpmA = playA && periodA > 0 ? String.format("%.1f", 60.0 / periodA) : "--";
+        String statusA = "1: " + bpmA + " BPM";
+        font.drawInBatch(statusA, -32, -9, playA ? 0xFF00E5FF : 0xFF558899, false,
+            pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+
+        // Deck 2 Status (Orange)
+        boolean playB = be.isPlaying(DjBoothBlockEntity.B);
+        double periodB = MusicPulse.beatPeriodAt(be.deckPos(DjBoothBlockEntity.B));
+        String bpmB = playB && periodB > 0 ? String.format("%.1f", 60.0 / periodB) : "--";
+        String statusB = "2: " + bpmB + " BPM";
+        font.drawInBatch(statusB, 2, -9, playB ? 0xFFFF9900 : 0xFF996644, false,
+            pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+
+        // Animated Mini-Waveforms on screen
+        float pulse = MusicPulse.kickNear(be.getBlockPos());
+        int bars = 16;
+        for (int i = 0; i < bars; i++) {
+            float x = -30f + i * 3.8f;
+
+            // Deck 1 Waveform (Cyan)
+            float waveA = playA ? (float) (Math.sin(i * 0.7 + gameTime * 0.3) * 2.0 + 3.0 + pulse * 2.5) : 1f;
+            int colA = playA ? 0xFF00E5FF : 0xFF1B3245;
+            font.drawInBatch("·", x, 1 - waveA / 2f, colA, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+
+            // Deck 2 Waveform (Orange)
+            float waveB = playB ? (float) (Math.sin(i * 0.7 + gameTime * 0.3 + 1.5) * 2.0 + 3.0 + pulse * 2.5) : 1f;
+            int colB = playB ? 0xFFFF8800 : 0xFF452815;
+            font.drawInBatch("·", x, 11 - waveB / 2f, colB, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
         }
 
         pose.popPose();

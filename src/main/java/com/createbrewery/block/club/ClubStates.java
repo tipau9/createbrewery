@@ -52,6 +52,9 @@ final class ClubStates {
                 MusicPulse.playingNear(at), MusicPulse.periodNear(at),
                 dj != null ? dj.mixer(level.getGameTime()) : ClubState.Mixer.NONE,
                 Minecraft.getInstance().options.hideLightningFlash().get());
+            if (dj != null && dj.isAutoDrop() && e.state.dropEdge) {
+                DjControl.send(dj.getBlockPos(), DjControl.DROP_DETECTED, 0f);
+            }
             if (map.size() > 64 && now != lastPrune) {
                 lastPrune = now;
                 map.values().removeIf(old -> old.tick < now - KEEP);
