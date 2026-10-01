@@ -51,8 +51,13 @@ final class DmxProgram {
     /** 0..1 through the current beat, and the moving heads' clock (radians). */
     float beatPhase, movePhase;
     private boolean playing;
-    private double sinceStep, time;
+    private double sinceStep, time, clock;
     private int beats;
+    private boolean noFlashing;
+    private final List<Scene> stored = new ArrayList<>();
+    // What the last update saw, for levelFor / colorFor of fanned fixtures.
+    private float snapEnv, snapTension, snapDrop, snapBass;
+    private boolean snapBreakdown, snapShutter;
     private final ClubState own = new ClubState();
 
     /**
@@ -72,64 +77,125 @@ final class DmxProgram {
     void update(Settings s, long tick, float dt, ClubState c) {
         time += dt;
         sinceStep += dt;
+        clock += dt / c.period;
         playing = c.playing;
-        boolean noFlashing = c.noFlashing;
+        noFlashing = c.noFlashing;
         float tension = c.buildUp;
         if (c.beat && ++beats % RATES[Math.floorMod(s.rate, RATES.length)] == 0) nextStep();
         if (!playing && sinceStep >= 1.0) nextStep();
         beatPhase = c.beatPhase;
         // One turn of a pattern every four beats; slow and steady with no music.
         movePhase += (float) (playing ? dt * Math.PI / (2 * c.period) : dt * 0.5);
-        float env = c.env;
-        boolean breakdown = c.breakdown;
+
+        snapEnv = c.env;
+        snapTension = tension;
+        snapDrop = c.dropLevel;
+        snapBass = Math.max(c.bassCut, c.filterClosed);
+        snapBreakdown = c.breakdown;
         // Build-ups strobe faster and faster: a flash every 5 ticks (4 a second) up to every other tick (10).
         // Counted in ticks, like the strobe: a sine at those rates, sampled once a tick, aliases to nothing.
-        boolean shutterOpen = noFlashing || tension < 0.15f || tick % Math.round(5 - 3 * tension) == 0;
+        snapShutter = noFlashing || tension < 0.15f || tick % Math.round(5 - 3 * tension) == 0;
 
-        List<Scene> stored = new ArrayList<>();
+        stored.clear();
         for (Scene sc : s.scenes) if (sc != null) stored.add(sc);
 
         for (int g = 0; g < GROUPS; g++) {
-            float fader = s.faders[g], lv;
-            int col = PALETTE[Math.floorMod(s.colors[g], PALETTE.length)];
-            switch (s.program) {
-                case CHASE -> {
-                    if (stored.isEmpty()) {
-                        // No scenes: a running light through the groups.
-                        lv = Math.floorMod(step, GROUPS) == g ? fader : 0f;
-                    } else {
-                        Scene sc = stored.get(Math.floorMod(step, stored.size()));
-                        lv = sc.levels()[g];
-                        col = PALETTE[Math.floorMod(sc.colors()[g], PALETTE.length)];
-                    }
-                }
-                case AUTO -> {
-                    if (!playing) {
-                        lv = fader * (0.15f + 0.1f * (float) Math.sin(time * 1.2 + g * 0.8));
-                    } else if (breakdown) {
-                        lv = fader * 0.08f;
-                    } else {
-                        // Odd and even groups trade the beat: a punch that dies before the next kick.
-                        boolean on = (g + step) % 2 == 0;
-                        lv = fader * (on ? 0.15f + 0.85f * env : 0.1f);
-                        if (!shutterOpen) lv = 0f;
-                        else if (tension >= 0.15f) lv = Math.max(lv, fader * tension);
-                    }
-                    // The DJ takes the lows or closes the filter: the room darkens with it (a drop below still hits full).
-                    lv *= 1f - 0.6f * Math.max(c.bassCut, c.filterClosed);
-                    if (c.dropLevel > 0.02f) {
-                        lv = Math.max(lv, fader * c.dropLevel);
-                        col = mix(col, 0xFFFFFF, c.dropLevel);
-                    }
-                }
-                default -> lv = fader;
-            }
-            if ((s.flash >> g & 1) != 0) lv = 1f;
-            float target = s.blackout ? 0f : clamp(lv * s.master);
+            float target = target(s, g, 0);
             // Photosensitivity: at most a tenth of full range a tick, half a second from dark to full.
             level[g] = noFlashing ? level[g] + Math.max(-GLIDE, Math.min(GLIDE, target - level[g])) : target;
-            color[g] = col;
+            color[g] = colorFor(s, g, 0);
         }
+    }
+
+    boolean noFlashing() {
+        return noFlashing;
+    }
+
+    /** The level group {@code group} would show for a fixture {@code fan} steps along (no glide, see {@link #update}). */
+    float levelFor(Settings s, int group, int fan) {
+        return target(s, Math.floorMod(group, GROUPS), fan);
+    }
+
+    private float target(Settings s, int g, int fan) {
+        float fader = s.faders[g], lv;
+        int stp = step + fan;
+        switch (s.program) {
+            case CHASE -> {
+                if (stored.isEmpty()) {
+                    // No scenes: a running light through the groups.
+                    lv = Math.floorMod(stp, GROUPS) == g ? fader : 0f;
+                } else {
+                    lv = stored.get(Math.floorMod(stp, stored.size())).levels()[g];
+                }
+            }
+            case AUTO -> {
+                if (!playing) {
+                    lv = fader * (0.15f + 0.1f * (float) Math.sin(time * 1.2 + g * 0.8 + fan * 0.4));
+                } else if (snapBreakdown) {
+                    lv = fader * 0.08f;
+                } else {
+                    // Odd and even groups trade the beat: a punch that dies before the next kick.
+                    boolean on = Math.floorMod(g + stp, 2) == 0;
+                    lv = fader * (on ? 0.15f + 0.85f * snapEnv : 0.1f);
+                    if (!snapShutter) lv = 0f;
+                    else if (snapTension >= 0.15f) lv = Math.max(lv, fader * snapTension);
+                }
+                // The DJ takes the lows or closes the filter: the room darkens with it (a drop below still hits full).
+                lv *= 1f - 0.6f * snapBass;
+                if (snapDrop > 0.02f) lv = Math.max(lv, fader * snapDrop);
+            }
+            default -> lv = fader;
+        }
+        if ((s.flash >> g & 1) != 0) lv = 1f;
+        return s.blackout ? 0f : clamp(lv * s.master);
+    }
+
+    /** The colour of group {@code group} for a fixture {@code fan} steps along: palette, colour program, scene or drop white. */
+    int colorFor(Settings s, int group, int fan) {
+        return colorFor(s, Math.floorMod(group, GROUPS), fan, 0.0);
+    }
+
+    /** The colour of pixel {@code i} of {@code pixels} on an LED bar: a colour program spreads along the bar. */
+    int pixelColor(Settings s, int i, int pixels, int group, int fan) {
+        return colorFor(s, Math.floorMod(group, GROUPS), fan, i / (double) Math.max(1, pixels));
+    }
+
+    private int colorFor(Settings s, int g, int fan, double spread) {
+        int stp = step + fan;
+        if (s.program == CHASE && !stored.isEmpty()) {
+            return PALETTE[Math.floorMod(stored.get(Math.floorMod(stp, stored.size())).colors()[g], PALETTE.length)];
+        }
+        int idx = Math.floorMod(s.colors[g], PALETTE.length), base = PALETTE[idx];
+        int col = switch (s.colorFx) {
+            case FADE -> {
+                // One palette colour every 8 beats, each fixture a step along the palette per fan.
+                double p = clock / 8.0 + idx + fan / 8.0 + spread * 2;
+                int k = (int) Math.floor(p);
+                yield mix(PALETTE[Math.floorMod(k, PALETTE.length)], PALETTE[Math.floorMod(k + 1, PALETTE.length)], (float) (p - k));
+            }
+            case RAINBOW -> hsv((float) (((clock / 16.0 + g / 8.0 + fan / 8.0 + spread * 0.5) % 1.0 + 1.0) % 1.0));
+            case COMPLEMENT -> Math.floorMod(stp + (spread >= 0.5 ? 1 : 0), 2) == 0 ? base : base ^ 0xFFFFFF;
+            default -> base;
+        };
+        if (s.program == AUTO && snapDrop > 0.02f) col = mix(col, 0xFFFFFF, snapDrop);
+        return col;
+    }
+
+    /** A fully saturated colour of the given hue, 0..1. */
+    static int hsv(float h) {
+        float x = h * 6f;
+        int i = (int) Math.floor(x);
+        float f = x - i, q = 1f - f;
+        float r, g, b;
+        switch (Math.floorMod(i, 6)) {
+            case 0 -> { r = 1; g = f; b = 0; }
+            case 1 -> { r = q; g = 1; b = 0; }
+            case 2 -> { r = 0; g = 1; b = f; }
+            case 3 -> { r = 0; g = q; b = 1; }
+            case 4 -> { r = f; g = 0; b = 1; }
+            default -> { r = 1; g = 0; b = q; }
+        }
+        return Math.round(r * 255f) << 16 | Math.round(g * 255f) << 8 | Math.round(b * 255f);
     }
 
     /** How much of its brightness an effect in {@code group} may show: the console's blackout, master and the group's fader (or its held flash). */
@@ -146,16 +212,28 @@ final class DmxProgram {
 
     /** Where a moving head of group {@code g} points: {pan, tilt} in degrees off its facing. */
     float[] aim(Settings s, int g) {
-        double t = movePhase + g * Math.PI / 4;
+        return aim(s, g, 0);
+    }
+
+    float[] aim(Settings s, int g, int fan) {
+        double t = movePhase + g * Math.PI / 4 + fan * Math.PI / 8;
         return switch (s.move) {
             case FIGURE8 -> new float[] {(float) (35 * Math.sin(t)), (float) (20 * Math.sin(2 * t))};
             // All heads side by side, fanning out and back.
-            case SWEEP -> new float[] {(float) ((g - 3.5) * 8 * Math.sin(movePhase)), 15f};
+            case SWEEP -> new float[] {(float) ((g - 3.5) * 8 * Math.sin(movePhase + fan * Math.PI / 8)), 15f};
             // Snapping to a new spot on every chase step.
             case BALLYHOO -> {
-                int k = step * 31 + g * 17;
+                int k = (step + fan) * 31 + g * 17;
                 yield new float[] {(float) (Math.floorMod(k * 7919, 100) - 50), (float) (Math.floorMod(k * 104729, 60) - 20)};
             }
+            // Heads converge on the floor in front of them and sway slowly.
+            case CROWD -> new float[] {(float) ((g - 3.5) * 3 + 6 * Math.sin(movePhase * 0.5 + fan * Math.PI / 8)), (float) (20 + 8 * Math.sin(movePhase * 0.25))};
+            // Straight along the facing: a floor-mounted head points at the ceiling, a hung one at the floor.
+            case STRAIGHT -> new float[] {0f, 0f};
+            // A fixed spread across the room, a little wider for each fan step.
+            case FAN -> new float[] {(float) ((g - 3.5) * 10 + fan * 2), 15f};
+            // The left half of the groups mirrors the right.
+            case MIRROR -> new float[] {(float) ((g < GROUPS / 2 ? -1 : 1) * 30 * Math.cos(t)), (float) (30 * Math.sin(t))};
             default -> new float[] {(float) (30 * Math.cos(t)), (float) (30 * Math.sin(t))};
         };
     }
