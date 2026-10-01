@@ -50,6 +50,21 @@ final class StrobeRoomLight {
         return light;
     }
 
+    /** A light at {@code at} (a moving head's spot), in any colour; the handle is kept the way {@link #update} keeps it. */
+    @SuppressWarnings("unchecked")
+    static Object updateAt(Object handle, net.minecraft.world.phys.Vec3 at, float brightness, int color) {
+        LightRenderHandle<PointLightData> light = (LightRenderHandle<PointLightData>) handle;
+        if (light == null || !light.isValid()) {
+            if (brightness <= 0f) return null;
+            light = VeilRenderSystem.renderer().getLightRenderer().addLight(new PointLightData());
+            light.getLightData().setRadius(12f);
+            ALL.add(light);
+        }
+        light.getLightData().setPosition(at.x, at.y, at.z).setColor(color).setBrightness(brightness * 2.5f);
+        light.markDirty();
+        return light;
+    }
+
     static void free(Object handle) {
         if (handle instanceof LightRenderHandle<?> light) {
             // Already gone if clearAll ran first.

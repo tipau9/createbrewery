@@ -58,6 +58,11 @@ public class FixtureBlockEntity extends BlockEntity {
     }
     /** The Veil room light (a {@code LightRenderHandle}), typed Object so Veil stays optional. */
     private Object roomLight;
+    /** Which moving heads may cast a room light: the six nearest to the camera. */
+    private static final LightBudget<FixtureBlockEntity> HEAD_LIGHTS = new LightBudget<>(6);
+    private static long headLightsTick = Long.MIN_VALUE;
+    /** A moving head's Veil light where its beam lands (same typing as {@code roomLight}). */
+    private Object headLight;
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean veil = ModList.get().isLoaded("veil");
@@ -181,6 +186,31 @@ public class FixtureBlockEntity extends BlockEntity {
                 LOGGER.warn("Veil fixture light unavailable", e);
             }
         }
+        if (veil && kind == FixtureBlock.Kind.MOVING_HEAD) {
+            try {
+                long now = net.minecraft.client.Minecraft.getInstance().gui.getGuiTicks();
+                if (now != headLightsTick) {
+                    headLightsTick = now;
+                    HEAD_LIGHTS.endTick();
+                }
+                BlockHitResult spot = beamHit(0);
+                boolean wantsLight = lit > 0.2f && spot != null;
+                if (wantsLight) {
+                    HEAD_LIGHTS.offer(this, net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(Vec3.atCenterOf(worldPosition)));
+                }
+                // Never allocated while dark or over the budget; freed the moment it loses its slot.
+                if (wantsLight && HEAD_LIGHTS.allowed(this)) {
+                    Vec3 at = spot.getLocation().add(Vec3.atLowerCornerOf(spot.getDirection().getNormal()).scale(0.5));
+                    headLight = StrobeRoomLight.updateAt(headLight, at, lit, color);
+                } else if (headLight != null) {
+                    StrobeRoomLight.free(headLight);
+                    headLight = null;
+                }
+            } catch (RuntimeException | LinkageError e) {
+                veil = false;
+                LOGGER.warn("Veil head light unavailable", e);
+            }
+        }
     }
 
     private void castBeams(Direction facing) {
@@ -275,6 +305,10 @@ public class FixtureBlockEntity extends BlockEntity {
         if (roomLight != null) {
             StrobeRoomLight.free(roomLight);
             roomLight = null;
+        }
+        if (headLight != null) {
+            StrobeRoomLight.free(headLight);
+            headLight = null;
         }
     }
 
