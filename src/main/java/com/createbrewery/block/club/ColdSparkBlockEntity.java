@@ -13,7 +13,38 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /** The spark fountain's show, client only: see {@link ColdSparkBlock}. */
-public class ColdSparkBlockEntity extends BlockEntity {
+public class ColdSparkBlockEntity extends BlockEntity implements ConsoleLinked {
+
+    private final ConsoleLinkData link = new ConsoleLinkData();
+
+    @Override
+    public ConsoleLinkData consoleLink() {
+        return link;
+    }
+
+    @Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        link.save(tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        link.load(tag);
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = super.getUpdateTag(registries);
+        link.save(tag);
+        return tag;
+    }
     /** A drop sets it off for this long: about four seconds, like a programmed burst. */
     private static final int BURST = 80;
     /** Sparks per tick at full flow. */
@@ -30,9 +61,9 @@ public class ColdSparkBlockEntity extends BlockEntity {
     }
 
     void clientTick(Level level, BlockPos pos, BlockState state) {
-        if (state.getValue(ColdSparkBlock.AUTO) && ClubStates.at(level, pos, null).dropEdge) burst = BURST;
+        if (state.getValue(ColdSparkBlock.AUTO) && ClubStates.at(level, pos, link.booth(level)).dropEdge) burst = BURST;
         if (burst > 0) burst--;
-        boolean on = state.getValue(Co2JetBlock.POWERED) || burst > 0;
+        boolean on = (state.getValue(Co2JetBlock.POWERED) || burst > 0) && link.gate(level) >= 0.05f;
         float before = flow;
         flow += ((on ? 1f : 0f) - flow) * 0.25f;
         if (flow < 0.03f) flow = 0f;

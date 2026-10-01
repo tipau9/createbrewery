@@ -220,6 +220,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.dmx.console", "DMX Console");
         REGISTRATE.addRawLang("createbrewery.dmx.linked", "Fixtures linked to this console - place them around your club");
         REGISTRATE.addRawLang("createbrewery.dmx.relinked", "Fixture linked to the console");
+        REGISTRATE.addRawLang("createbrewery.dmx.effect_linked", "Linked to the console, group %s");
         REGISTRATE.addRawLang("createbrewery.dmx.too_far", "No DMX console there, or more than %s blocks away");
         REGISTRATE.addRawLang("createbrewery.dmx.lore", "Linked to DMX console at %s, %s, %s");
         REGISTRATE.addRawLang("createbrewery.dmx.fixture_status", "Group %s on the console at %s, %s, %s");

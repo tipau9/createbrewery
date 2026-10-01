@@ -125,6 +125,13 @@ final class DmxProgram {
         }
     }
 
+    /** How much of its brightness an effect in {@code group} may show: the console's blackout, master and the group's fader (or its held flash). */
+    static float gate(Settings s, int group) {
+        if (s.blackout) return 0f;
+        int g = Math.floorMod(group, GROUPS);
+        return clamp(s.master * ((s.flash >> g & 1) != 0 ? 1f : s.faders[g]));
+    }
+
     private void nextStep() {
         step++;
         sinceStep = 0;

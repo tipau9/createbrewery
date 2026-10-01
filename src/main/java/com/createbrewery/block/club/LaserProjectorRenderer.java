@@ -31,7 +31,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         if (!be.getBlockState().getValue(LaserProjectorBlock.ACTIVE)) return;
 
         Level level = be.getLevel();
-        if (level == null) return;
+        if (level == null || be.getGate() < 0.05f) return;
+        gateFade = be.getGate();
 
         Direction facing = be.getBlockState().getValue(LaserProjectorBlock.FACING);
         BlockPos pos = be.getBlockPos();
@@ -155,6 +156,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
     /** 1 in clear air, up to 1.8 in a full haze; set per projector before its beams (render thread). */
     private static float haze = 1f;
+    /** What the linked console lets through, set per projector before its beams. */
+    private static float gateFade = 1f;
 
     private static void renderBeam(VertexConsumer v, Matrix4f m, Vec3 start, Vec3 end,
                                    float r, float g, float b, float boost) {
@@ -169,12 +172,12 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
         float coreW = 0.016f + boost * 0.010f;
         float glowW = 0.055f + boost * 0.050f;
-        float glowAlpha = Math.min(1f, (0.55f + boost * 0.35f) * haze);
+        float glowAlpha = Math.min(1f, (0.55f + boost * 0.35f) * haze) * gateFade;
         glowW *= haze;
 
         // Hot white core inside a coloured sheath
-        beamPlane(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f);
-        beamPlane(v, m, start, end, up.scale(coreW), 1f, 1f, 1f, 0.95f);
+        beamPlane(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f * gateFade);
+        beamPlane(v, m, start, end, up.scale(coreW), 1f, 1f, 1f, 0.95f * gateFade);
         beamPlane(v, m, start, end, right.scale(glowW), r, g, b, glowAlpha);
         beamPlane(v, m, start, end, up.scale(glowW), r, g, b, glowAlpha);
     }

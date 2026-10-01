@@ -21,7 +21,25 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import java.util.List;
 
-public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGoggleInformation {
+public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGoggleInformation, ConsoleLinked {
+    private final ConsoleLinkData link = new ConsoleLinkData();
+
+    @Override
+    public ConsoleLinkData consoleLink() {
+        return link;
+    }
+
+    @Override
+    protected void write(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries, boolean clientPacket) {
+        super.write(tag, registries, clientPacket);
+        link.save(tag);
+    }
+
+    @Override
+    protected void read(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries, boolean clientPacket) {
+        super.read(tag, registries, clientPacket);
+        link.load(tag);
+    }
 
     public static final int TANK_CAPACITY = 3000;
     protected SmartFluidTankBehaviour tank;
@@ -73,7 +91,8 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
         // Client particle spawning
         if (level != null && level.isClientSide) {
             // A steady jet, with a thicker blast when the music drops.
-            int puffs = 2 + (ClubStates.at(level, worldPosition, null).dropLevel > 0.3f ? 2 : 0);
+            float gate = link.gate(level);
+            int puffs = Math.round((2 + (ClubStates.at(level, worldPosition, link.booth(level)).dropLevel > 0.3f ? 2 : 0)) * gate);
             for (int i = 0; i < puffs; i++) {
                 // Just past the brass nozzle; the particle draws its puff a little above this point (see FogParticle).
                 double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.85;

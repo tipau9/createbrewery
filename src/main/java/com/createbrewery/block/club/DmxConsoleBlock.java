@@ -63,7 +63,7 @@ public class DmxConsoleBlock extends Block implements EntityBlock {
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!(stack.getItem() instanceof BlockItem item && item.getBlock() instanceof FixtureBlock)) {
+        if (!(stack.getItem() instanceof BlockItem item && ConsoleLink.linkable(item.getBlock()))) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide) {

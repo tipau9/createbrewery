@@ -167,6 +167,7 @@
   "createbrewery.dmx.color": "Colour",
   "createbrewery.dmx.console": "DMX Console",
   "createbrewery.dmx.cues": "%s cues",
+  "createbrewery.dmx.effect_linked": "Linked to the console, group %s",
   "createbrewery.dmx.fixture_standalone": "Group %s - no console: sound-active",
   "createbrewery.dmx.fixture_status": "Group %s on the console at %s, %s, %s",
   "createbrewery.dmx.flash": "Flash",

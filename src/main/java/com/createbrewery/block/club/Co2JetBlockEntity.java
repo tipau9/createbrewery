@@ -18,7 +18,38 @@ import net.minecraft.world.phys.Vec3;
  * pours out a tight, fast column of cold vapour that flares into a cone, and the roar follows the
  * pressure. No saved state: the valve is just the block's POWERED.
  */
-public class Co2JetBlockEntity extends BlockEntity {
+public class Co2JetBlockEntity extends BlockEntity implements ConsoleLinked {
+
+    private final ConsoleLinkData link = new ConsoleLinkData();
+
+    @Override
+    public ConsoleLinkData consoleLink() {
+        return link;
+    }
+
+    @Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        link.save(tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        link.load(tag);
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = super.getUpdateTag(registries);
+        link.save(tag);
+        return tag;
+    }
 
     /** Particles per tick at full pressure: enough for an unbroken column. */
     private static final int FLOW = 7;
@@ -32,6 +63,8 @@ public class Co2JetBlockEntity extends BlockEntity {
         super(type, pos, state);
     }
 
+    private int burst;
+
     public void tick(Level level, BlockPos pos, BlockState state) {
         boolean on = state.getValue(Co2JetBlock.POWERED);
         Direction facing = state.getValue(Co2JetBlock.FACING);
@@ -39,6 +72,13 @@ public class Co2JetBlockEntity extends BlockEntity {
             // Keeps cooling whoever steps into a jet that is already running.
             if (on && level.getGameTime() % 10 == 0) Co2JetBlock.chill(level, pos, facing);
             return;
+        }
+
+        // Under a console, a drop opens the valve for a burst; the console's blackout closes it.
+        if (link.console != null) {
+            if (ClubStates.at(level, pos, link.booth(level)).dropEdge) burst = 20;
+            if (burst > 0) burst--;
+            on = (on || burst > 0) && link.gate(level) >= 0.05f;
         }
 
         boolean wasOn = open > 0;

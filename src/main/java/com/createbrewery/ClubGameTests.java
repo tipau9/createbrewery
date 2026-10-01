@@ -262,6 +262,86 @@ public class ClubGameTests {
         helper.succeed();
     }
 
+    private static final BlockPos CONSOLE = new BlockPos(2, 1, 4);
+
+    @GameTest(template = TEMPLATE)
+    public static void effectsLinkToTheConsoleAndCycleGroups(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.STROBE_LIGHT.get());
+        ItemStack link = new ItemStack(ModBlocks.STROBE_LIGHT.get());
+        ClubTestAccess.linkFixture(link, helper.absolutePos(CONSOLE));
+
+        helper.assertTrue(ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link), "the strobe did not link");
+        helper.assertTrue(ClubTestAccess.effectGroup(helper.getLevel(), helper.absolutePos(POS)) == 0, "a new link starts at group 1");
+        ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link);
+        helper.assertTrue(ClubTestAccess.effectGroup(helper.getLevel(), helper.absolutePos(POS)) == 1, "linking again did not move to the next group");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void effectGateFollowsBlackoutAndMaster(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.LASER_PROJECTOR.get());
+        ItemStack link = new ItemStack(ModBlocks.LASER_PROJECTOR.get());
+        ClubTestAccess.linkFixture(link, helper.absolutePos(CONSOLE));
+        ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link);
+        DmxConsoleBlockEntity dmx = helper.getBlockEntity(CONSOLE);
+
+        helper.assertTrue(ClubTestAccess.effectGate(helper.getLevel(), helper.absolutePos(POS)) > 0.5f, "a linked effect is dark at default faders");
+        ClubTestAccess.setBlackout(dmx, true);
+        helper.assertTrue(ClubTestAccess.effectGate(helper.getLevel(), helper.absolutePos(POS)) == 0f, "blackout left the laser on");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void effectLinkRefusesAFarConsole(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.FOG_MACHINE.get());
+        ItemStack link = new ItemStack(ModBlocks.FOG_MACHINE.get());
+        ClubTestAccess.linkFixture(link, helper.absolutePos(POS).offset(500, 0, 0));
+        helper.assertFalse(ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link), "linked to a console 500 blocks away");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void effectWithNoLinkAndAnOldSaveStaysOn(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.STROBE_LIGHT.get());
+        helper.assertTrue(ClubTestAccess.effectGate(helper.getLevel(), helper.absolutePos(POS)) == 1f, "an unlinked effect is gated");
+        // A block entity saved before this change has no Console tag: it must load unlinked.
+        ClubTestAccess.loadEffect(helper.getLevel(), helper.absolutePos(POS), new net.minecraft.nbt.CompoundTag());
+        helper.assertTrue(ClubTestAccess.effectGate(helper.getLevel(), helper.absolutePos(POS)) == 1f, "an old save came up gated");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void brokenConsoleDoesNotLeaveAnEffectDark(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.STROBE_LIGHT.get());
+        ItemStack link = new ItemStack(ModBlocks.STROBE_LIGHT.get());
+        ClubTestAccess.linkFixture(link, helper.absolutePos(CONSOLE));
+        ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link);
+        ClubTestAccess.setBlackout(helper.getBlockEntity(CONSOLE), true);
+        helper.setBlock(CONSOLE, net.minecraft.world.level.block.Blocks.AIR);
+        helper.assertTrue(ClubTestAccess.effectGate(helper.getLevel(), helper.absolutePos(POS)) == 1f, "a destroyed console left the effect dark");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void effectLinkSurvivesSaveAndLoad(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.CO2_JET.get());
+        ItemStack link = new ItemStack(ModBlocks.CO2_JET.get());
+        ClubTestAccess.linkFixture(link, helper.absolutePos(CONSOLE));
+        ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link);
+        ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link); // group 2
+        net.minecraft.world.level.block.entity.BlockEntity be = helper.getBlockEntity(POS);
+        net.minecraft.nbt.CompoundTag tag = be.saveWithoutMetadata(helper.getLevel().registryAccess());
+        ClubTestAccess.loadEffect(helper.getLevel(), helper.absolutePos(POS), new net.minecraft.nbt.CompoundTag());
+        helper.assertTrue(ClubTestAccess.effectGroup(helper.getLevel(), helper.absolutePos(POS)) == 0, "load of an empty tag did not unlink");
+        ClubTestAccess.loadEffect(helper.getLevel(), helper.absolutePos(POS), tag);
+        helper.assertTrue(ClubTestAccess.effectGroup(helper.getLevel(), helper.absolutePos(POS)) == 1, "the group was not saved");
+        helper.succeed();
+    }
+
     @GameTest(template = TEMPLATE)
     public static void consoleFindsItsBoothWithoutRec(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());

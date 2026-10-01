@@ -33,6 +33,12 @@ import org.jetbrains.annotations.Nullable;
 
 public class FogMachineBlock extends Block implements EntityBlock {
 
+    @Override
+    public void setPlacedBy(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state, @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        ConsoleLink.onPlaced(level, pos, placer, stack);
+    }
+
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     public static final BooleanProperty EMITTING = BooleanProperty.create("emitting");
@@ -80,6 +86,7 @@ public class FogMachineBlock extends Block implements EntityBlock {
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (ConsoleLink.holdsLink(stack)) return ConsoleLink.use(level, pos, player, stack);
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof FogMachineBlockEntity fogMachine)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

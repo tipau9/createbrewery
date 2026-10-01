@@ -24,6 +24,26 @@ public final class ClubTestAccess {
         dmx.serverTick();
     }
 
+    public static void setBlackout(DmxConsoleBlockEntity dmx, boolean on) {
+        dmx.setBlackout(on);
+    }
+
+    public static boolean applyEffectLink(Level level, BlockPos pos, ItemStack stack) {
+        return ConsoleLink.applyLink(level, pos, stack);
+    }
+
+    public static int effectGroup(Level level, BlockPos pos) {
+        return ((ConsoleLinked) level.getBlockEntity(pos)).consoleLink().group;
+    }
+
+    public static float effectGate(Level level, BlockPos pos) {
+        return ((ConsoleLinked) level.getBlockEntity(pos)).consoleLink().gate(level);
+    }
+
+    public static void loadEffect(Level level, BlockPos pos, net.minecraft.nbt.CompoundTag tag) {
+        level.getBlockEntity(pos).loadCustomOnly(tag, level.registryAccess());
+    }
+
     /** Swaps deck {@code deck}'s record for the next one from the crate beside the booth. */
     public static boolean restock(DjBoothBlockEntity dj, int deck) {
         return dj.restock(deck);

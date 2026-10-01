@@ -9,7 +9,13 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class LaserProjectorBlockEntity extends BlockEntity {
+public class LaserProjectorBlockEntity extends BlockEntity implements ConsoleLinked {
+    private final ConsoleLinkData link = new ConsoleLinkData();
+
+    @Override
+    public ConsoleLinkData consoleLink() {
+        return link;
+    }
 
     private int color = 0x00FF66; // Neon green default
     private LaserPattern pattern = LaserPattern.BEAM;
@@ -19,7 +25,7 @@ public class LaserProjectorBlockEntity extends BlockEntity {
     static final int MAX_BEAMS = 12;
     private float phase, prevPhase;
     private float beat;
-    private float kick, drop;
+    private float kick, drop, gate = 1f;
     private final float[] chase = new float[MAX_BEAMS * 2];
     private final float[] prevChase = new float[MAX_BEAMS * 2];
     private final float[] chaseTarget = new float[MAX_BEAMS * 2];
@@ -31,7 +37,8 @@ public class LaserProjectorBlockEntity extends BlockEntity {
     /** Client only (see the block's ticker). */
     public void tick() {
         ticks++;
-        ClubState club = ClubStates.at(level, worldPosition, null);
+        ClubState club = ClubStates.at(level, worldPosition, link.booth(level));
+        gate = link.gate(level);
         // The old raw pulse was a smooth 0..1 that peaks on the kick; the state's punch envelope has the same shape.
         kick = club.env;
         drop = club.dropLevel;
@@ -57,6 +64,9 @@ public class LaserProjectorBlockEntity extends BlockEntity {
 
     /** 1 on a beat, dying away within a few ticks (the renderer's brightness). */
     public float getKick() { return kick; }
+
+    /** What the linked console lets through: 0 in blackout, 1 when unlinked. */
+    public float getGate() { return gate; }
 
     /** The shared drop level, 1 decaying. */
     public float getDrop() { return drop; }
@@ -108,11 +118,13 @@ public class LaserProjectorBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.putInt("Color", color);
         tag.putString("Pattern", pattern.getSerializedName());
+        link.save(tag);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        link.load(tag);
         if (tag.contains("Color")) {
             color = tag.getInt("Color");
         }

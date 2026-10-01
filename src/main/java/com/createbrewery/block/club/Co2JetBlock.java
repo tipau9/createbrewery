@@ -32,6 +32,18 @@ import org.jetbrains.annotations.Nullable;
  */
 public class Co2JetBlock extends Block implements EntityBlock {
 
+    @Override
+    public void setPlacedBy(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state, @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        ConsoleLink.onPlaced(level, pos, placer, stack);
+    }
+
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.BlockHitResult hit) {
+        if (ConsoleLink.holdsLink(stack)) return ConsoleLink.use(level, pos, player, stack);
+        return super.useItemOn(stack, state, level, pos, player, hand, hit);
+    }
+
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 

@@ -9,7 +9,38 @@ import net.neoforged.fml.ModList;
 import org.slf4j.Logger;
 
 /** Client-side flash state only; the mode lives in the block state. */
-public class StrobeLightBlockEntity extends BlockEntity {
+public class StrobeLightBlockEntity extends BlockEntity implements ConsoleLinked {
+
+    private final ConsoleLinkData link = new ConsoleLinkData();
+
+    @Override
+    public ConsoleLinkData consoleLink() {
+        return link;
+    }
+
+    @Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        link.save(tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        link.load(tag);
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = super.getUpdateTag(registries);
+        link.save(tag);
+        return tag;
+    }
 
     /** STROBE mode fires every this many ticks: 20 / 3 = ~6.7 flashes a second. */
     static final int STROBE_PERIOD = 3;
@@ -37,7 +68,7 @@ public class StrobeLightBlockEntity extends BlockEntity {
 
         switch (state.getValue(StrobeLightBlock.MODE)) {
             case BEAT -> {
-                if (level != null && ClubStates.at(level, worldPosition, null).beat) flashIntensity = 1f;
+                if (level != null && ClubStates.at(level, worldPosition, link.booth(level)).beat) flashIntensity = 1f;
             }
             case STROBE -> {
                 // "Blinding" fires every other tick: 10 flashes a second.
@@ -47,12 +78,13 @@ public class StrobeLightBlockEntity extends BlockEntity {
         }
 
         boolean steady = state.getValue(StrobeLightBlock.MODE) == StrobeMode.REDSTONE;
-        if (level != null) StrobeFlash.offer(level, worldPosition, state.getValue(StrobeLightBlock.FACING), flashIntensity, power, steady);
+        float gate = level != null ? link.gate(level) : 1f;
+        if (level != null) StrobeFlash.offer(level, worldPosition, state.getValue(StrobeLightBlock.FACING), flashIntensity * gate, power, steady);
 
         if (veil) {
             try {
                 roomLight = StrobeRoomLight.update(roomLight, worldPosition, state.getValue(StrobeLightBlock.FACING),
-                    flashIntensity * (0.4f + 0.3f * power), steady);
+                    flashIntensity * gate * (0.4f + 0.3f * power), steady);
             } catch (RuntimeException | LinkageError e) {
                 veil = false;
                 LOGGER.warn("Veil strobe light unavailable", e);
