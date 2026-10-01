@@ -139,6 +139,7 @@ final class Emitter {
         if (fx != null) {
             fx.set(t.eq[2], t.eq[1], t.eq[0], t.filter, t.fx, t.fxAmount, t.song.period() * pitch, t.beatFxBeats);
             fx.setColorFx(t.colorType, t.filter, t.colorParam);
+            fx.setMasterTempo(t.masterTempo, pitch);
         }
         // A rack placed or removed, the last sub switched off, the corner moved: taken up at once.
         if (band == FULL) split = null;

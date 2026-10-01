@@ -25,6 +25,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     public static final byte BEAT_FX_TYPE = 21, BEAT_FX_BEATS = 22, BEAT_FX_CHANNEL = 23, BEAT_FX_ON = 24, BEAT_FX_DEPTH = 25;
     public static final byte PAD_TRIGGER = 26, LOAD_TRACK = 27, VINYL_MODE = 28, SLIP_MODE = 29, REVERSE = 30, CROSSFADER_ASSIGN = 31, TRIM = 32, PAD_MODE = 33;
     public static final byte JOG_SCRUB = 34, PITCH = 35, JOG_TOUCH = 36, SET_MAIN_CUE = 37, SET_HOT_CUE = 38;
+    public static final byte MASTER_TEMPO = 39, JUMP_PLAYHEAD = 40;
 
     public static final Type<DjControl> TYPE = new Type<>(CreateBrewery.ID("dj_control"));
     public static final StreamCodec<ByteBuf, DjControl> CODEC = StreamCodec.composite(
@@ -110,6 +111,8 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
                 int pad = (control.deck >> 2) & 7;
                 dj.setHotCue(d, pad, (long) control.value);
             }
+            case MASTER_TEMPO -> dj.setMasterTempo(deck, control.value > 0.5f);
+            case JUMP_PLAYHEAD -> dj.jumpPlayhead(deck, (long) control.value);
             default -> {}
         }
     }

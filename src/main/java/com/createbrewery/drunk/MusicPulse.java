@@ -113,7 +113,8 @@ public final class MusicPulse {
         float colorParam = 0.5f;
         float beatFxBeats = 1.0f;
         /** The song frame of the last beat heard, and the loop playing (slip mode), in song frames; 0 long while not looping. */
-        long lastBeat = -1, loopStart, loopLen;
+        long lastBeat = -1;
+        public volatile long loopStart, loopLen;
         int loopSerial = Integer.MIN_VALUE;
         /** Played from a DJ booth deck (render thread): only then does it get the mixer channel. */
         public volatile boolean deck;
@@ -131,6 +132,19 @@ public final class MusicPulse {
         public volatile boolean auditioning = false;
         public final long[] hotCues = {-1, -1, -1, -1, -1, -1, -1, -1};
         public volatile long manualLoopIn = -1, manualLoopOut = -1;
+        public volatile boolean masterTempo = true;
+        public volatile int lastSeekSerial = 0;
+
+        public long getEffectiveFrame() {
+            long len = loopLen;
+            long start = loopStart;
+            long cur = deckFrame;
+            if (len > 0 && cur >= start) {
+                return start + ((cur - start) % len);
+            }
+            return Math.max(0, cur);
+        }
+
         public long getLoopStart() { return loopStart; }
         public long getLoopLen() { return loopLen; }
         volatile boolean deckFrameInitialized;
@@ -707,23 +721,47 @@ public final class MusicPulse {
         }
         t.colorType = dj.getActiveColorFx();
         t.colorParam = dj.getColorFxParam();
-        int serial = dj.getLoopSerial(deck), beats = dj.getLoopBeats(deck);
-        if (t.manualLoopIn >= 0 && t.manualLoopOut > t.manualLoopIn && beats > 0) {
-            t.loopStart = t.manualLoopIn;
-            t.loopLen = t.manualLoopOut - t.manualLoopIn;
-        } else if (serial != t.loopSerial) {
-            boolean first = t.loopSerial == Integer.MIN_VALUE;
-            t.loopSerial = serial;
-            // Joining a loop already running (just walked up) there is no beat to start it on: skip it.
-            if (beats > 0 && !first && t.lastBeat >= 0 && t.song.beats >= 4 && !t.chunks.isEmpty()) {
-                // A beat in song frames: heard seconds, played at the deck's pitch.
-                t.loopLen = Math.max(1, Math.round(beats * t.song.period() * t.rate * t.pitch));
-                t.loopStart = Math.max(t.lastBeat, t.chunks.get(0).start());
-            } else {
-                t.loopLen = 0;
+        t.masterTempo = dj.isMasterTempo(deck);
+
+        int sSerial = dj.getSeekSerial(deck);
+        if (sSerial != t.lastSeekSerial) {
+            t.lastSeekSerial = sSerial;
+            long syncFrame = dj.getPlayheadFrame(deck);
+            if (Math.abs(t.deckFrame - syncFrame) > t.rate * 0.05) {
+                t.deckFrame = syncFrame;
+                t.slipFrame = syncFrame;
             }
         }
-        if (beats == 0) {
+
+        int serial = dj.getLoopSerial(deck), beats = dj.getLoopBeats(deck);
+        if (serial != t.loopSerial) {
+            boolean first = t.loopSerial == Integer.MIN_VALUE;
+            t.loopSerial = serial;
+            if (beats > 0 && !first && !t.chunks.isEmpty()) {
+                if (t.manualLoopIn >= 0 && t.manualLoopOut > t.manualLoopIn) {
+                    t.loopStart = t.manualLoopIn;
+                    t.loopLen = t.manualLoopOut - t.manualLoopIn;
+                } else {
+                    double period = t.song.period();
+                    if (period <= 0) period = 0.5; // fallback to 120 BPM
+                    long beatFrames = Math.max(1, Math.round(period * t.rate));
+                    long cur = t.getEffectiveFrame();
+                    if (beatFrames > 0) cur = Math.round((double) cur / beatFrames) * beatFrames;
+                    t.loopStart = Math.max(0, cur);
+                    t.loopLen = Math.max(1, (long) (beats * beatFrames));
+                }
+                t.deckFrame = t.loopStart;
+            } else if (beats == 0) {
+                if (t.loopLen > 0) {
+                    t.deckFrame = t.getEffectiveFrame();
+                }
+                t.loopLen = 0;
+                t.manualLoopIn = -1;
+                t.manualLoopOut = -1;
+            }
+        }
+        if (beats == 0 && t.loopLen > 0) {
+            t.deckFrame = t.getEffectiveFrame();
             t.loopLen = 0;
             t.manualLoopIn = -1;
             t.manualLoopOut = -1;

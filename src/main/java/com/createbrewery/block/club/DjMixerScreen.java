@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.JukeboxSong;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +78,7 @@ public class DjMixerScreen extends Screen {
     private final Button[] loopInButtons = new Button[2];
     private final Button[] loopOutButtons = new Button[2];
     private final Button[] reloopButtons = new Button[2];
+    private final Button[] mtButtons = new Button[2];
     private boolean quantizeEnabled = true;
     private final long[] manualLoopIn = {-1, -1, -1, -1};
     private final long[] manualLoopOut = {-1, -1, -1, -1};
@@ -281,22 +283,36 @@ public class DjMixerScreen extends Screen {
         deckLayerButtons[d1] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(d1 + 1)), b -> {
             if (isLeft) leftDeck = d1; else rightDeck = d1;
             refresh();
-        }).bounds(px + 4, top + 8, 18, 12).build());
+        }).bounds(px + 3, top + 8, 16, 12).build());
 
         deckLayerButtons[d2] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(d2 + 1)), b -> {
             if (isLeft) leftDeck = d2; else rightDeck = d2;
             refresh();
-        }).bounds(px + 24, top + 8, 18, 12).build());
+        }).bounds(px + 21, top + 8, 16, 12).build());
 
-        // Manual Loop Buttons: IN / 4BEAT, OUT, RELOOP/EXIT
+        // Manual Loop Buttons: IN / 4BEAT, OUT, RELOOP/EXIT, and MASTER TEMPO (MT)
         loopInButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("IN"), b -> handleLoopIn(isLeft))
-            .bounds(px + 44, top + 8, 22, 12).tooltip(Tooltip.create(Component.literal("Loop In / Hold Shift for 4-Beat Auto Loop"))).build());
+            .bounds(px + 39, top + 8, 18, 12).tooltip(Tooltip.create(Component.literal("Loop In / Hold Shift for 4-Beat Auto Loop"))).build());
 
         loopOutButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("OUT"), b -> handleLoopOut(isLeft))
-            .bounds(px + 68, top + 8, 22, 12).tooltip(Tooltip.create(Component.literal("Loop Out"))).build());
+            .bounds(px + 59, top + 8, 19, 12).tooltip(Tooltip.create(Component.literal("Loop Out"))).build());
 
         reloopButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("EXIT"), b -> handleReloop(isLeft))
-            .bounds(px + 92, top + 8, 24, 12).tooltip(Tooltip.create(Component.literal("Reloop / Exit"))).build());
+            .bounds(px + 80, top + 8, 22, 12).tooltip(Tooltip.create(Component.literal("Reloop / Exit"))).build());
+
+        mtButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("MT"), b -> {
+            DjBoothBlockEntity dj = booth();
+            int cd = currentDeck(isLeft);
+            if (dj != null) {
+                boolean next = !dj.isMasterTempo(cd);
+                dj.setMasterTempo(cd, next);
+                DjControl.send(pos, DjControl.MASTER_TEMPO, cd, next ? 1f : 0f);
+                if (minecraft != null && minecraft.player != null) {
+                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.7f, next ? 1.4f : 0.9f);
+                }
+                refresh();
+            }
+        }).bounds(px + 104, top + 8, 17, 12).tooltip(Tooltip.create(Component.literal("Master Tempo (Key Lock): Preserve musical pitch when changing tempo"))).build());
 
         // CDJ Jogwheel (Center at px + 40, top + 56, radius 32)
         jogWheels[playerIdx] = addRenderableWidget(new JogWheelWidget(px + 8, top + 24, 64, 64, isLeft));
@@ -346,12 +362,14 @@ public class DjMixerScreen extends Screen {
                     track.deckFrame = cue;
                     track.slipFrame = cue;
                 }
+                DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) cue);
             } else {
                 // When paused:
                 long cue = dj.getMainCue(cd);
-                boolean atCue = track != null && Math.abs(track.deckFrame - cue) < 200;
+                long curFrame = track != null ? track.getEffectiveFrame() : 0L;
+                boolean atCue = track != null && Math.abs(curFrame - cue) < 200;
                 if (!atCue && track != null) {
-                    long newCue = track.deckFrame;
+                    long newCue = curFrame;
                     if (quantizeEnabled && track.rate > 0) {
                         double period = track.getBeatPeriod();
                         if (period > 0) {
@@ -378,6 +396,7 @@ public class DjMixerScreen extends Screen {
                 long cue = dj != null ? dj.getMainCue(cd) : track.cueFrame;
                 track.deckFrame = cue;
                 track.slipFrame = cue;
+                DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) cue);
             }
         }));
 
@@ -455,6 +474,15 @@ public class DjMixerScreen extends Screen {
 
         if (Screen.hasShiftDown()) {
             // Shift + IN: Instant 4-Beat Auto Loop
+            long cur = track.getEffectiveFrame();
+            double period = track.getBeatPeriod();
+            if (period <= 0) period = 0.5;
+            long beatFrames = Math.max(1, (long) (period * track.rate));
+            if (quantizeEnabled && beatFrames > 0) cur = Math.round((double) cur / beatFrames) * beatFrames;
+            manualLoopIn[cd] = cur;
+            manualLoopOut[cd] = cur + 4 * beatFrames;
+            track.manualLoopIn = manualLoopIn[cd];
+            track.manualLoopOut = manualLoopOut[cd];
             DjControl.send(pos, DjControl.LOOP, cd, 4);
             dj.setLoop(cd, 4);
             if (minecraft != null && minecraft.player != null) {
@@ -463,7 +491,7 @@ public class DjMixerScreen extends Screen {
             return;
         }
 
-        long frame = track.deckFrame;
+        long frame = track.getEffectiveFrame();
         if (quantizeEnabled) {
             double period = track.getBeatPeriod();
             if (period > 0) {
@@ -484,7 +512,7 @@ public class DjMixerScreen extends Screen {
         MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
         if (track == null || track.rate <= 0) return;
 
-        long frame = track.deckFrame;
+        long frame = track.getEffectiveFrame();
         if (quantizeEnabled) {
             double period = track.getBeatPeriod();
             if (period > 0) {
@@ -516,9 +544,13 @@ public class DjMixerScreen extends Screen {
         if (track == null) return;
 
         if (dj.getLoopBeats(cd) > 0 || (track.manualLoopIn >= 0 && track.manualLoopOut > track.manualLoopIn)) {
-            // Exit loop
+            // Exit loop: seamlessly preserve current playhead position!
+            track.deckFrame = track.getEffectiveFrame();
+            track.slipFrame = track.deckFrame;
+            track.loopLen = 0;
             DjControl.send(pos, DjControl.LOOP, cd, 0);
             dj.setLoop(cd, 0);
+            DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) track.deckFrame);
             track.manualLoopIn = -1;
             track.manualLoopOut = -1;
             if (minecraft != null && minecraft.player != null) {
@@ -530,6 +562,7 @@ public class DjMixerScreen extends Screen {
             track.manualLoopOut = manualLoopOut[cd];
             track.deckFrame = manualLoopIn[cd];
             track.slipFrame = manualLoopIn[cd];
+            DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) manualLoopIn[cd]);
             double period = track.getBeatPeriod();
             int beats = (period > 0) ? (int) Math.round((manualLoopOut[cd] - manualLoopIn[cd]) / (period * track.rate)) : 4;
             DjControl.send(pos, DjControl.LOOP, cd, Math.max(1, beats));
@@ -561,7 +594,7 @@ public class DjMixerScreen extends Screen {
                 } else {
                     long cue = dj.getHotCue(cd, padIndex);
                     if (cue < 0) {
-                        long frame = track != null ? track.deckFrame : 0L;
+                        long frame = track != null ? track.getEffectiveFrame() : 0L;
                         if (quantizeEnabled && track != null && track.rate > 0) {
                             double period = track.getBeatPeriod();
                             if (period > 0) {
@@ -580,6 +613,7 @@ public class DjMixerScreen extends Screen {
                             track.deckFrame = cue;
                             track.slipFrame = cue;
                         }
+                        DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) cue);
                         if (!dj.isPlaying(cd)) {
                             DjControl.send(pos, DjControl.TOGGLE_PLAY, cd, 0f);
                         }
@@ -593,6 +627,12 @@ public class DjMixerScreen extends Screen {
                 int beats = DjBoothBlockEntity.LOOPS[padIndex % DjBoothBlockEntity.LOOPS.length];
                 int curLoop = dj.getLoopBeats(cd);
                 int nextLoop = (curLoop == beats) ? 0 : beats;
+                if (nextLoop == 0 && track != null) {
+                    track.deckFrame = track.getEffectiveFrame();
+                    track.slipFrame = track.deckFrame;
+                    track.loopLen = 0;
+                    DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) track.deckFrame);
+                }
                 DjControl.send(pos, DjControl.LOOP, cd, nextLoop);
                 dj.setLoop(cd, nextLoop);
             }
@@ -609,6 +649,7 @@ public class DjMixerScreen extends Screen {
                     if (period > 0) {
                         long deltaFrames = (long) (jumpBeats * period * track.rate);
                         track.scrub(deltaFrames);
+                        DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) track.deckFrame);
                     }
                 }
                 DjControl.send(pos, DjControl.PAD_TRIGGER, cd, padIndex);
@@ -734,6 +775,7 @@ public class DjMixerScreen extends Screen {
             loopOutButtons[p].setMessage(Component.literal("OUT").withStyle(hasOut ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
             boolean inLoop = dj.getLoopBeats(deck) > 0;
             reloopButtons[p].setMessage(Component.literal(inLoop ? "EXIT" : "RELOOP").withStyle(inLoop ? ChatFormatting.GOLD : ChatFormatting.GRAY));
+            mtButtons[p].setMessage(Component.literal("MT").withStyle(dj.isMasterTempo(deck) ? ChatFormatting.GREEN : ChatFormatting.GRAY));
 
             cueHeadphones[p].setMessage(Component.literal("CUE")
                 .withStyle(MusicPulse.isCued(pos, deck) ? ChatFormatting.GOLD : ChatFormatting.GRAY));
@@ -900,10 +942,28 @@ public class DjMixerScreen extends Screen {
         g.drawString(font, font.plainSubstrByWidth(title, 110), px + 6, top + 218, playing ? 0xFFFFFFFF : 0xFFAAAAAA);
 
         // Time remaining / elapsed
-        if (playing && dj.getDisc(deck).isEmpty()) {
-            g.drawString(font, "--:--", px + 6, top + 230, 0xFF667788);
+        if (playing && !disc.isEmpty()) {
+            MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
+            if (track != null && track.rate > 0) {
+                long curF = track.getEffectiveFrame();
+                long el = (long) (curF / track.rate);
+                float tot = 0f;
+                if (minecraft != null && minecraft.level != null) {
+                    tot = JukeboxSong.fromStack(minecraft.level.registryAccess(), disc)
+                        .map(s -> s.value().lengthInSeconds())
+                        .orElse(0f);
+                }
+                if (tot <= 0f) tot = (float) track.getFramesRead() / track.rate;
+                float rem = Math.max(0f, tot - el);
+                boolean blink = rem <= 30f && ((System.currentTimeMillis() / 400) % 2 == 0);
+                int timeCol = blink ? 0xFFFF3333 : 0xFF00FF66;
+                String timeStr = String.format(java.util.Locale.ROOT, "%02d:%02d [-%02d:%02d]", el / 60, el % 60, (long) rem / 60, (long) rem % 60);
+                g.drawString(font, timeStr, px + 6, top + 230, timeCol);
+            } else {
+                g.drawString(font, "PLAYING", px + 6, top + 230, 0xFF00FF66);
+            }
         } else if (playing) {
-            g.drawString(font, "PLAYING", px + 6, top + 230, 0xFF00FF66);
+            g.drawString(font, "--:--", px + 6, top + 230, 0xFF667788);
         } else {
             g.drawString(font, "STOPPED", px + 6, top + 230, 0xFF888888);
         }
@@ -1106,13 +1166,9 @@ public class DjMixerScreen extends Screen {
         boolean playing = dj.isPlaying(deck);
         MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
 
-        // Deck number & BPM text
-        double period = MusicPulse.beatPeriodAt(dj.deckPos(deck));
-        String bpmText = playing && period > 0 ? bpm(period) : "--";
-        g.drawString(font, (deck + 1) + ": " + bpmText, x + 3, y + 2, colorHigh);
-
         ItemStack disc = dj.getDisc(deck);
         if (disc.isEmpty()) {
+            g.drawString(font, String.valueOf(deck + 1), x + 3, y + 2, colorHigh);
             int cx = x + w / 2;
             g.drawString(font, "NO TRACK", cx - 22, y + 5, 0xFF35445A);
             return;
@@ -1123,18 +1179,64 @@ public class DjMixerScreen extends Screen {
         int cy = y + waveH / 2;
 
         if (track == null || track.rate <= 0) {
+            g.drawString(font, String.valueOf(deck + 1), x + 3, y + 2, colorHigh);
             g.fill(x + 2, cy, x + w - 2, cy + 1, 0xFF1E2A3A);
             g.drawCenteredString(font, "LOADED", cx, y + 5, 0xFF455870);
             return;
         }
 
-        long currentFrame = track.deckFrame;
+        long currentFrame = track.getEffectiveFrame();
         float rate = track.rate;
 
-        // Elapsed time MM:SS in top right
+        // Pioneer XDJ-AZ display header:
+        // Left: [Deck] [M] [Live BPM] [% Pitch] [MT]
+        float pitch = dj.getPitch(deck);
+        double period = MusicPulse.beatPeriodAt(dj.deckPos(deck));
+        double baseBpm = period > 0 ? (60.0 / period) : 120.0;
+        double liveBpm = baseBpm * pitch;
+        float pitchPct = (pitch - 1.0f) * 100.0f;
+
+        int curX = x + 3;
+        g.drawString(font, String.valueOf(deck + 1), curX, y + 2, colorHigh);
+        curX += font.width(String.valueOf(deck + 1)) + 3;
+
+        int master = findMasterDeck(dj, -1);
+        if (deck == master && playing) {
+            g.fill(curX - 1, y + 2, curX + 7, y + 9, 0xFFCC2222);
+            g.drawString(font, "M", curX, y + 2, 0xFFFFFFFF);
+            curX += 9;
+        }
+
+        String bpmStr = playing && period > 0 ? String.format(java.util.Locale.ROOT, "%.1f", liveBpm) : "--";
+        g.drawString(font, bpmStr, curX, y + 2, 0xFFFFFFFF);
+        curX += font.width(bpmStr) + 3;
+
+        if (playing) {
+            String pctStr = String.format(java.util.Locale.ROOT, "%+.1f%%", pitchPct);
+            g.drawString(font, pctStr, curX, y + 2, 0xFF88AA99);
+            curX += font.width(pctStr) + 3;
+        }
+
+        if (dj.isMasterTempo(deck)) {
+            g.drawString(font, "MT", curX, y + 2, 0xFF00E5FF);
+        }
+
+        // Right side: Countdown remaining time with blinking warning under 30s
         long elapsedSec = (long) (Math.max(0, currentFrame) / rate);
-        String timeStr = String.format("%02d:%02d", elapsedSec / 60, elapsedSec % 60);
-        g.drawString(font, timeStr, x + w - font.width(timeStr) - 3, y + 2, 0xFFE0E0E0);
+        float totalSec = 0f;
+        if (minecraft != null && minecraft.level != null) {
+            totalSec = JukeboxSong.fromStack(minecraft.level.registryAccess(), disc)
+                .map(s -> s.value().lengthInSeconds())
+                .orElse(0f);
+        }
+        if (totalSec <= 0f) {
+            totalSec = (float) track.getFramesRead() / rate;
+        }
+        float remSec = Math.max(0f, totalSec - elapsedSec);
+        boolean blink = remSec <= 30f && playing && ((System.currentTimeMillis() / 400) % 2 == 0);
+        int timeCol = blink ? 0xFFFF3333 : 0xFFE0E0E0;
+        String remStr = String.format(java.util.Locale.ROOT, "-%02d:%02d", (long) remSec / 60, (long) remSec % 60);
+        g.drawString(font, remStr, x + w - font.width(remStr) - 3, y + 2, timeCol);
 
         // Zoom scale: 3.5 seconds across visible window of width w
         float visibleSeconds = 3.5f;
@@ -1253,7 +1355,7 @@ public class DjMixerScreen extends Screen {
         int overviewW = w - 4;
         g.fill(x + 2, overviewY, x + 2 + overviewW, overviewY + 2, 0xFF0C1018);
 
-        long totalTrackFrames = Math.max(track.getFramesRead(), (long) (120 * rate));
+        long totalTrackFrames = totalSec > 0 ? (long) (totalSec * rate) : Math.max(track.getFramesRead(), (long) (120 * rate));
         if (totalTrackFrames > 0) {
             float progress = Mth.clamp((float) currentFrame / (float) totalTrackFrames, 0f, 1f);
 
@@ -1346,6 +1448,7 @@ public class DjMixerScreen extends Screen {
                         } else {
                             track.slipFrame = track.deckFrame;
                         }
+                        DjControl.send(pos, DjControl.JUMP_PLAYHEAD, deck, (float) track.deckFrame);
                     }
                 }
             }
@@ -1492,6 +1595,7 @@ public class DjMixerScreen extends Screen {
                     if (track != null) {
                         long deltaFrames = (long) (scrollY * 0.25 * track.rate);
                         track.scrub(deltaFrames);
+                        DjControl.send(pos, DjControl.JUMP_PLAYHEAD, deck, (float) track.deckFrame);
                     }
                     if (minecraft != null && minecraft.player != null) {
                         SoundEvent sound = scrollY > 0 ? ModSounds.DJ_SCRATCH_FWD.get() : ModSounds.DJ_SCRATCH_BACK.get();

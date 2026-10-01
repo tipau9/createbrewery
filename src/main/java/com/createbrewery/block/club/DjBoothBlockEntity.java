@@ -84,6 +84,9 @@ public class DjBoothBlockEntity extends BlockEntity {
         boolean reverse = false;
         boolean scratchHeld = false;
         long scratchStartTime = 0;
+        boolean masterTempo = true;
+        long playheadFrame = 0;
+        int seekSerial = 0;
     }
 
     public static final int HIGH = 0, MID = 1, LOW = 2;
@@ -535,9 +538,7 @@ public class DjBoothBlockEntity extends BlockEntity {
     public void setLoop(int deck, int beats) {
         if (deck < 0 || deck >= DECKS) return;
         Deck d = decks[deck];
-        boolean valid = false;
-        for (int l : LOOPS) valid |= l == beats;
-        d.loopBeats = !valid || d.loopBeats == beats ? 0 : beats;
+        d.loopBeats = beats <= 0 || d.loopBeats == beats ? 0 : beats;
         d.loopSerial++;
         sync();
     }
@@ -617,6 +618,33 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     public boolean isReverse(int deck) {
         return deck >= 0 && deck < DECKS && decks[deck].reverse;
+    }
+
+    public void setMasterTempo(int deck, boolean mt) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].masterTempo = mt;
+            sync();
+        }
+    }
+
+    public boolean isMasterTempo(int deck) {
+        return deck >= 0 && deck < DECKS && decks[deck].masterTempo;
+    }
+
+    public void jumpPlayhead(int deck, long frame) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].playheadFrame = Math.max(0, frame);
+            decks[deck].seekSerial++;
+            sync();
+        }
+    }
+
+    public long getPlayheadFrame(int deck) {
+        return deck >= 0 && deck < DECKS ? decks[deck].playheadFrame : 0;
+    }
+
+    public int getSeekSerial(int deck) {
+        return deck >= 0 && deck < DECKS ? decks[deck].seekSerial : 0;
     }
 
     // Sound Color FX Unit
@@ -730,6 +758,8 @@ public class DjBoothBlockEntity extends BlockEntity {
     public void setMainCue(int deck, long cue) {
         if (deck >= 0 && deck < DECKS) {
             decks[deck].mainCue = Math.max(0, cue);
+            decks[deck].playheadFrame = decks[deck].mainCue;
+            decks[deck].seekSerial++;
             sync();
         }
     }
@@ -740,6 +770,10 @@ public class DjBoothBlockEntity extends BlockEntity {
     public void setHotCue(int deck, int pad, long frame) {
         if (deck >= 0 && deck < DECKS && pad >= 0 && pad < 8) {
             decks[deck].hotCues[pad] = frame;
+            if (frame >= 0) {
+                decks[deck].playheadFrame = frame;
+                decks[deck].seekSerial++;
+            }
             sync();
         }
     }
@@ -835,6 +869,9 @@ public class DjBoothBlockEntity extends BlockEntity {
             tag.putBoolean(keys[deck] + "ScratchHeld", d.scratchHeld);
             tag.putLong(keys[deck] + "MainCue", d.mainCue);
             tag.putLongArray(keys[deck] + "HotCues", d.hotCues);
+            tag.putBoolean(keys[deck] + "MasterTempo", d.masterTempo);
+            tag.putLong(keys[deck] + "Playhead", d.playheadFrame);
+            tag.putInt(keys[deck] + "SeekSerial", d.seekSerial);
         }
         tag.putFloat("XfFrom", xfFrom);
         tag.putFloat("XfTo", xfTo);
@@ -880,6 +917,9 @@ public class DjBoothBlockEntity extends BlockEntity {
             d.mainCue = tag.getLong(keys[deck] + "MainCue");
             long[] loadedHot = tag.getLongArray(keys[deck] + "HotCues");
             if (loadedHot.length == 8) System.arraycopy(loadedHot, 0, d.hotCues, 0, 8);
+            d.masterTempo = !tag.contains(keys[deck] + "MasterTempo") || tag.getBoolean(keys[deck] + "MasterTempo");
+            d.playheadFrame = tag.getLong(keys[deck] + "Playhead");
+            d.seekSerial = tag.getInt(keys[deck] + "SeekSerial");
         }
         xfFrom = tag.getFloat("XfFrom");
         xfTo = tag.getFloat("XfTo");

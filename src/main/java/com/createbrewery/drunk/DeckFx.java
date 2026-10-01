@@ -35,6 +35,11 @@ public final class DeckFx {
     private float crushSample = 0f;
     private int crushHold = 0;
 
+    // Master Tempo (Key Lock)
+    private boolean masterTempo = false;
+    private float pitchShift = 1.0f;
+    private final PitchShifter pitchShifter = new PitchShifter(1024);
+
     // Echo & Delay buffers
     private final float[] echo;
     private int echoAt, echoLen;
@@ -170,6 +175,11 @@ public final class DeckFx {
         }
     }
 
+    public void setMasterTempo(boolean on, float pitch) {
+        this.masterTempo = on;
+        this.pitchShift = pitch;
+    }
+
     /** In place, {@code n} samples. Gains glide across the block, so turning a knob never clicks. */
     public void process(float[] buf, int n) {
         float dl = (tLow - gLow) / n, dm = (tMid - gMid) / n, dh = (tHigh - gHigh) / n, ds = (sendTarget - send) / n;
@@ -256,6 +266,10 @@ public final class DeckFx {
         gMid = tMid;
         gHigh = tHigh;
         send = sendTarget;
+
+        if (masterTempo && Math.abs(pitchShift - 1.0f) > 0.003f) {
+            pitchShifter.process(buf, n, pitchShift);
+        }
     }
 
     private double flanger(double x) {
@@ -479,6 +493,62 @@ public final class DeckFx {
             s1 = b1 * x - a1 * y + s2;
             s2 = b2 * x - a2 * y;
             return y;
+        }
+    }
+
+    /**
+     * Real-time zero-latency dual-tap pitch shifter for Master Tempo / Key Lock.
+     * Shifts pitch inversely to tempo changes to preserve musical key.
+     */
+    public static final class PitchShifter {
+        private final float[] buffer;
+        private int writePos;
+        private double phase1, phase2;
+        private final int windowSize;
+
+        public PitchShifter(int windowSize) {
+            this.windowSize = windowSize;
+            this.buffer = new float[windowSize * 2];
+            this.phase1 = 0.0;
+            this.phase2 = 0.5;
+        }
+
+        public void process(float[] buf, int n, float pitchRatio) {
+            if (Math.abs(pitchRatio - 1.0f) < 0.003f) return;
+            double shift = 1.0 / (double) pitchRatio;
+            double delta = (1.0 - shift) / (double) windowSize;
+            int bufLen = buffer.length;
+
+            for (int i = 0; i < n; i++) {
+                buffer[writePos] = buf[i];
+
+                double r1 = writePos - phase1 * windowSize;
+                while (r1 < 0) r1 += bufLen;
+                while (r1 >= bufLen) r1 -= bufLen;
+
+                double r2 = writePos - phase2 * windowSize;
+                while (r2 < 0) r2 += bufLen;
+                while (r2 >= bufLen) r2 -= bufLen;
+
+                double w1 = 0.5 * (1.0 - Math.cos(2.0 * Math.PI * phase1));
+                double w2 = 1.0 - w1;
+
+                int i1 = (int) r1;
+                int i2 = (int) r2;
+                float s1 = buffer[i1 % bufLen];
+                float s2 = buffer[i2 % bufLen];
+
+                buf[i] = (float) (s1 * w1 + s2 * w2);
+
+                phase1 += delta;
+                while (phase1 >= 1.0) phase1 -= 1.0;
+                while (phase1 < 0.0) phase1 += 1.0;
+
+                phase2 = phase1 + 0.5;
+                if (phase2 >= 1.0) phase2 -= 1.0;
+
+                if (++writePos >= bufLen) writePos = 0;
+            }
         }
     }
 }

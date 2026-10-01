@@ -183,7 +183,8 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
             int col = defaultColor;
 
             if (playing && track != null && track.rate > 0) {
-                long sFrame = track.deckFrame + (long) ((i - bars / 2) * (track.rate * 0.08f));
+                long currentFrame = track.getEffectiveFrame();
+                long sFrame = currentFrame + (long) ((i - bars / 2) * (track.rate * 0.08f));
                 float[] slice = track.getWaveformSlice(sFrame);
                 if (slice != null) {
                     float bass = slice[0];
