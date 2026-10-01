@@ -1,6 +1,5 @@
 package com.createbrewery.block.club;
 
-import com.createbrewery.drunk.MusicPulse;
 import com.createbrewery.particle.ModParticles;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,7 +22,6 @@ public class ColdSparkBlockEntity extends BlockEntity {
     private static final double GRAVITY = 0.04;
 
     private int burst;
-    private boolean dropLatched;
     /** The fan spins up and down: the fountain grows and dies over half a second. */
     private float flow;
 
@@ -32,15 +30,7 @@ public class ColdSparkBlockEntity extends BlockEntity {
     }
 
     void clientTick(Level level, BlockPos pos, BlockState state) {
-        if (state.getValue(ColdSparkBlock.AUTO)) {
-            float drop = MusicPulse.dropNear(pos);
-            if (drop > 0.6f && !dropLatched) {
-                dropLatched = true;
-                burst = BURST;
-            } else if (drop < 0.2f) {
-                dropLatched = false;
-            }
-        }
+        if (state.getValue(ColdSparkBlock.AUTO) && ClubStates.at(level, pos, null).dropEdge) burst = BURST;
         if (burst > 0) burst--;
         boolean on = state.getValue(Co2JetBlock.POWERED) || burst > 0;
         float before = flow;

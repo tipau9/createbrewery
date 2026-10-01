@@ -1,7 +1,5 @@
 package com.createbrewery.block.club;
 
-import com.createbrewery.drunk.MusicPulse;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -232,9 +230,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     DmxProgram output() {
         if (level == null || level.getGameTime() == ranAt) return program;
         ranAt = level.getGameTime();
-        program.update(settings, ranAt, 0.05f, MusicPulse.kickNear(worldPosition), MusicPulse.dropNear(worldPosition),
-            MusicPulse.tensionNear(worldPosition), MusicPulse.playingNear(worldPosition), MusicPulse.periodNear(worldPosition),
-            Minecraft.getInstance().options.hideLightningFlash().get());
+        program.update(settings, ranAt, 0.05f, ClubStates.at(level, worldPosition, booth));
         return program;
     }
 

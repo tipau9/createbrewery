@@ -73,7 +73,7 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
         // Client particle spawning
         if (level != null && level.isClientSide) {
             // A steady jet, with a thicker blast when the music drops.
-            int puffs = 2 + (com.createbrewery.drunk.MusicPulse.dropNear(worldPosition) > 0.3f ? 2 : 0);
+            int puffs = 2 + (ClubStates.at(level, worldPosition, null).dropLevel > 0.3f ? 2 : 0);
             for (int i = 0; i < puffs; i++) {
                 // Just past the brass nozzle; the particle draws its puff a little above this point (see FogParticle).
                 double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.85;

@@ -1,6 +1,5 @@
 package com.createbrewery.block.club;
 
-import com.createbrewery.drunk.MusicPulse;
 import com.createbrewery.particle.ModParticles;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -38,9 +37,9 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         BlockPos pos = be.getBlockPos();
 
         // Music reactivity
-        float drop = MusicPulse.dropNear(pos);
+        float drop = be.getDrop();
         float beat = be.getBeat();
-        float kickBoost = Math.max(Math.max(MusicPulse.kickNear(pos) * 0.8f, drop * 1.2f), beat);
+        float kickBoost = Math.max(Math.max(be.getKick() * 0.8f, drop * 1.2f), beat);
 
         Vec3 center = Vec3.atCenterOf(pos);
         Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.46));

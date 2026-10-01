@@ -1,6 +1,5 @@
 package com.createbrewery.block.club;
 
-import com.createbrewery.drunk.MusicPulse;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -17,7 +16,6 @@ public class StrobeLightBlockEntity extends BlockEntity {
 
     private float flashIntensity = 0f;
     private float prevFlashIntensity = 0f;
-    private boolean kickLatched = false;
     private int strobeCounter = 0;
     /** The Veil room light (a {@code LightRenderHandle}), typed Object so Veil stays optional. */
     private Object roomLight;
@@ -39,13 +37,7 @@ public class StrobeLightBlockEntity extends BlockEntity {
 
         switch (state.getValue(StrobeLightBlock.MODE)) {
             case BEAT -> {
-                float kick = MusicPulse.kickNear(worldPosition);
-                if (kick > 0.38f && !kickLatched) {
-                    flashIntensity = 1f;
-                    kickLatched = true;
-                } else if (kick < 0.20f) {
-                    kickLatched = false;
-                }
+                if (level != null && ClubStates.at(level, worldPosition, null).beat) flashIntensity = 1f;
             }
             case STROBE -> {
                 // "Blinding" fires every other tick: 10 flashes a second.

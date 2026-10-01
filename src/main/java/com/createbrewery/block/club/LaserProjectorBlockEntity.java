@@ -1,6 +1,5 @@
 package com.createbrewery.block.club;
 
-import com.createbrewery.drunk.MusicPulse;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -20,7 +19,7 @@ public class LaserProjectorBlockEntity extends BlockEntity {
     static final int MAX_BEAMS = 12;
     private float phase, prevPhase;
     private float beat;
-    private boolean kickLatched;
+    private float kick, drop;
     private final float[] chase = new float[MAX_BEAMS * 2];
     private final float[] prevChase = new float[MAX_BEAMS * 2];
     private final float[] chaseTarget = new float[MAX_BEAMS * 2];
@@ -32,17 +31,18 @@ public class LaserProjectorBlockEntity extends BlockEntity {
     /** Client only (see the block's ticker). */
     public void tick() {
         ticks++;
-        float kick = MusicPulse.kickNear(worldPosition);
+        ClubState club = ClubStates.at(level, worldPosition, null);
+        // The old raw pulse was a smooth 0..1 that peaks on the kick; the state's punch envelope has the same shape.
+        kick = club.env;
+        drop = club.dropLevel;
         prevPhase = phase;
-        phase += 0.04f + kick * 0.12f + MusicPulse.dropNear(worldPosition) * 0.08f;
+        phase += 0.04f + kick * 0.12f + drop * 0.08f;
 
-        boolean hit = kick > 0.38f && !kickLatched;
-        if (hit) kickLatched = true;
-        else if (kick < 0.20f) kickLatched = false;
+        boolean hit = club.beat;
         beat = hit ? 1f : beat * 0.8f;
 
         // Chase: new spots on every beat, or every second while nothing plays.
-        if (hit || (!MusicPulse.playingNear(worldPosition) && ticks % 20 == 0)) {
+        if (hit || (!club.playing && ticks % 20 == 0)) {
             for (int i = 0; i < chaseTarget.length; i++) {
                 chaseTarget[i] = (level.random.nextFloat() - 0.5f) * (i % 2 == 0 ? 80f : 50f);
             }
@@ -54,6 +54,12 @@ public class LaserProjectorBlockEntity extends BlockEntity {
     public float getPhase(float partialTick) {
         return prevPhase + (phase - prevPhase) * partialTick;
     }
+
+    /** 1 on a beat, dying away within a few ticks (the renderer's brightness). */
+    public float getKick() { return kick; }
+
+    /** The shared drop level, 1 decaying. */
+    public float getDrop() { return drop; }
 
     /** 1 on a beat, fading out over a few ticks. */
     public float getBeat() {
