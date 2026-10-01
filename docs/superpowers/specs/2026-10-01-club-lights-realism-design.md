@@ -90,3 +90,7 @@ Each stage ends with green `./gradlew test runGameTestServer`:
 
 - Gobo spots are drawn as polygons, not as shader textures (robust with Iris, a little angular).
 - Dimmer exponent 1.6, motor limits 180 / 120 deg/s: tuning values, kept as named constants.
+
+## Amendments from planning
+
+See the plan (`docs/superpowers/plans/2026-10-01-club-lights-realism.md`): position presets are relative to the fixture facing (`ceiling` is `straight`), a 100-degree motor move takes about 17 ticks (ramps included), a fanned fixture applies the no-flashing glide itself, gobo 0 keeps today's round spot.
