@@ -390,7 +390,18 @@ public final class DeckFx {
      */
     public static final class Limiter {
         public static final float CEILING = 0.97f;
+        /** Below this the signal passes untouched; above it a tanh curve approaches {@link #CEILING}. */
+        public static final float KNEE = 0.8f;
         private final float release;
+
+        /** A soft clip: linear up to the knee, then rounded towards the ceiling, never over it. */
+        public static float soften(float x) {
+            float a = Math.abs(x);
+            if (a <= KNEE) return x;
+            // The min keeps float rounding from putting the saturated end a hair over the ceiling.
+            float y = Math.min(CEILING, KNEE + (CEILING - KNEE) * (float) Math.tanh((a - KNEE) / (CEILING - KNEE)));
+            return x < 0 ? -y : y;
+        }
         private float gain = 1f, reduction = 1f;
 
         public Limiter(double rate) {
@@ -402,7 +413,7 @@ public final class DeckFx {
                 float peak = Math.abs(buf[i]);
                 float want = peak > CEILING ? CEILING / peak : 1f;
                 gain = Math.min(want, gain + (1f - gain) * release);
-                buf[i] *= gain;
+                buf[i] = soften(buf[i] * gain);
                 reduction = Math.min(reduction, gain);
             }
         }
