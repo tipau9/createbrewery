@@ -41,20 +41,37 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
             case PAR -> {
                 cone(v, pose, lens, dir, len, 0.22f, 0.22f + len * 0.2f, r, g, b, 0.22f * lv);
                 lensGlow(v, pose, lens, 0.35f, r, g, b, lv);
-            }
-            case MOVING_HEAD -> {
-                // A tight beam with a hot core, and its spot on whatever it hits.
-                cone(v, pose, lens, dir, len, 0.07f, 0.07f + len * 0.035f, r, g, b, 0.35f * lv);
-                cone(v, pose, lens, dir, len, 0.03f, 0.03f + len * 0.01f, 1f, 1f, 1f, 0.3f * lv);
-                lensGlow(v, pose, lens, 0.25f, r, g, b, lv);
-                BlockHitResult hit = be.hit();
-                if (hit != null) {
+                BlockHitResult wash = be.hit();
+                if (wash != null) {
                     pose.pushPose();
-                    Matrix4f m = pose.last().pose();
-                    Vec3 at = hit.getLocation().subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
-                    LaserProjectorRenderer.renderImpactDot(v, m, at, hit.getDirection(), r, g, b, lv * 6f);
+                    Vec3 at = wash.getLocation().subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
+                    softSpot(v, pose.last().pose(), at, wash.getDirection(), r, g, b, 0.25f * lv, 0.22f + len * 0.2f);
                     pose.popPose();
                 }
+            }
+            case MOVING_HEAD -> {
+                // Zoom: 0 narrow, 1 normal (as before), 2 wide.
+                float zoomK = be.zoom() == 0 ? 0.6f : be.zoom() == 2 ? 1.8f : 1f;
+                for (int bm = 0; bm < be.beamCount(); bm++) {
+                    Vec3 bdir = be.beamDirection(bm, partialTick);
+                    float blen = be.beamLength(bm);
+                    // A tight beam with a hot core, and its spot on whatever it hits.
+                    cone(v, pose, lens, bdir, blen, 0.07f, 0.07f + blen * 0.035f * zoomK, r, g, b, 0.35f * lv);
+                    cone(v, pose, lens, bdir, blen, 0.03f, 0.03f + blen * 0.01f * zoomK, 1f, 1f, 1f, 0.3f * lv);
+                    BlockHitResult hit = be.beamHit(bm);
+                    if (hit != null) {
+                        pose.pushPose();
+                        Matrix4f m = pose.last().pose();
+                        Vec3 at = hit.getLocation().subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
+                        if (be.gobo() == 0) {
+                            LaserProjectorRenderer.renderImpactDot(v, m, at, hit.getDirection(), r, g, b, lv * 6f);
+                        } else {
+                            goboSpot(v, m, at, hit.getDirection(), r, g, b, lv, be.gobo(), be.goboRotation(), 0.18f + 0.1f * zoomK);
+                        }
+                        pose.popPose();
+                    }
+                }
+                lensGlow(v, pose, lens, 0.25f, r, g, b, lv);
             }
             case BLINDER -> {
                 // Two lamps side by side; they light the crowd rather than draw beams.
@@ -68,9 +85,18 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
                 for (int i = 0; i < 8; i++) {
                     float p = lv * be.pixel(i);
                     if (p < 0.02f) continue;
+                    int pc = be.pixelColor(i);
+                    float pr = (pc >> 16 & 255) / 255f, pg = (pc >> 8 & 255) / 255f, pb = (pc & 255) / 255f;
                     Vec3 at = lens.add(side.scale((i - 3.5) / 8.0 * 0.9));
-                    cone(v, pose, at, dir, Math.min(len, 8f), 0.05f, 0.05f + Math.min(len, 8f) * 0.08f, r, g, b, 0.18f * p);
-                    lensGlow(v, pose, at, 0.12f, r, g, b, p);
+                    cone(v, pose, at, dir, Math.min(len, 8f), 0.05f, 0.05f + Math.min(len, 8f) * 0.08f, pr, pg, pb, 0.18f * p);
+                    lensGlow(v, pose, at, 0.12f, pr, pg, pb, p);
+                }
+                BlockHitResult bar = be.hit();
+                if (bar != null) {
+                    pose.pushPose();
+                    Vec3 at = bar.getLocation().subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
+                    softSpot(v, pose.last().pose(), at, bar.getDirection(), r, g, b, 0.2f * lv, 0.6f);
+                    pose.popPose();
                 }
             }
         }
@@ -89,12 +115,65 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         pose.mulPose(new Quaternionf().rotationTo(0f, 1f, 0f, (float) dir.x, (float) dir.y, (float) dir.z));
         Matrix4f m = pose.last().pose();
         int n = 10;
-        for (int i = 0; i < n; i++) {
-            float a0 = Mth.TWO_PI * i / n, a1 = Mth.TWO_PI * (i + 1) / n;
-            float c0 = Mth.cos(a0), s0 = Mth.sin(a0), c1 = Mth.cos(a1), s1 = Mth.sin(a1);
-            quad(v, m, c0 * r0, 0, s0 * r0, c1 * r0, 0, s1 * r0, c1 * r1, len, s1 * r1, c0 * r1, len, s0 * r1, r, g, b, a, 0f);
+        // Three nested cones: a bright core inside a fading skirt, so the edge of the beam is soft.
+        float[] scale = {1f, 0.6f, 0.3f}, share = {0.4f, 0.35f, 0.25f};
+        for (int layer = 0; layer < 3; layer++) {
+            float q0 = r0 * scale[layer], q1 = r1 * scale[layer], al = a * share[layer];
+            for (int i = 0; i < n; i++) {
+                float a0 = Mth.TWO_PI * i / n, a1 = Mth.TWO_PI * (i + 1) / n;
+                float c0 = Mth.cos(a0), s0 = Mth.sin(a0), c1 = Mth.cos(a1), s1 = Mth.sin(a1);
+                quad(v, m, c0 * q0, 0, s0 * q0, c1 * q0, 0, s1 * q0, c1 * q1, len, s1 * q1, c0 * q1, len, s0 * q1, r, g, b, al, 0f);
+            }
         }
         pose.popPose();
+    }
+
+    /** A gobo's shape on the surface that was hit, filled, bright in the middle. */
+    private static void goboSpot(VertexConsumer v, Matrix4f m, Vec3 hit, Direction face, float r, float g, float b, float lv,
+                                 int gobo, float rotation, float radius) {
+        Vec3 n = Vec3.atLowerCornerOf(face.getNormal());
+        Vec3 u = face.getAxis() == Direction.Axis.Y ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+        Vec3 w = n.cross(u);
+        Vec3 c = hit.add(n.scale(0.01));
+        for (float[] poly : GoboShape.shapes(gobo, rotation, radius)) {
+            fan(v, m, c, u, w, poly, 1f, 1f, 1f, 0.7f * lv, 0.2f * lv);
+            fan(v, m, c.add(n.scale(0.002)), u, w, poly, r, g, b, 0.9f * lv, 0.4f * lv);
+        }
+    }
+
+    /** The polygon as a triangle fan around its middle, alpha {@code aMid} there and {@code aEdge} at the rim. */
+    private static void fan(VertexConsumer v, Matrix4f m, Vec3 c, Vec3 u, Vec3 w, float[] poly, float r, float g, float b, float aMid, float aEdge) {
+        int count = poly.length / 2;
+        float mx = 0, my = 0;
+        for (int i = 0; i < count; i++) {
+            mx += poly[i * 2] / count;
+            my += poly[i * 2 + 1] / count;
+        }
+        Vec3 mid = c.add(u.scale(mx)).add(w.scale(my));
+        for (int i = 0; i < count; i++) {
+            int j = (i + 1) % count;
+            Vec3 p0 = c.add(u.scale(poly[i * 2])).add(w.scale(poly[i * 2 + 1]));
+            Vec3 p1 = c.add(u.scale(poly[j * 2])).add(w.scale(poly[j * 2 + 1]));
+            quad(v, m, (float) mid.x, (float) mid.y, (float) mid.z, (float) mid.x, (float) mid.y, (float) mid.z,
+                (float) p1.x, (float) p1.y, (float) p1.z, (float) p0.x, (float) p0.y, (float) p0.z, r, g, b, aMid, aEdge);
+        }
+    }
+
+    /** A soft round patch of light on the surface a wash hit; {@code alpha} in the middle, none at the rim. */
+    private static void softSpot(VertexConsumer v, Matrix4f m, Vec3 hit, Direction face, float r, float g, float b, float alpha, float radius) {
+        if (alpha < 0.01f) return;
+        Vec3 n = Vec3.atLowerCornerOf(face.getNormal());
+        Vec3 u = face.getAxis() == Direction.Axis.Y ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+        Vec3 w = n.cross(u);
+        Vec3 c = hit.add(n.scale(0.012));
+        int seg = 16;
+        for (int i = 0; i < seg; i++) {
+            double a0 = Mth.TWO_PI * i / seg, a1 = Mth.TWO_PI * (i + 1) / seg;
+            Vec3 p0 = c.add(u.scale(Math.cos(a0) * radius)).add(w.scale(Math.sin(a0) * radius));
+            Vec3 p1 = c.add(u.scale(Math.cos(a1) * radius)).add(w.scale(Math.sin(a1) * radius));
+            quad(v, m, (float) c.x, (float) c.y, (float) c.z, (float) c.x, (float) c.y, (float) c.z,
+                (float) p1.x, (float) p1.y, (float) p1.z, (float) p0.x, (float) p0.y, (float) p0.z, r, g, b, alpha, 0f);
+        }
     }
 
     /** A glowing disc on the lens, turned to the camera. */
