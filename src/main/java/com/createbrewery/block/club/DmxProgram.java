@@ -45,39 +45,38 @@ final class DmxProgram {
     int step;
     /** 0..1 through the current beat, and the moving heads' clock (radians). */
     float beatPhase, movePhase;
-    private boolean kickLatched, playing;
-    private double sinceKick = 99, sinceStep, time;
+    private boolean playing;
+    private double sinceStep, time;
     private int beats;
-    private float drop, env;
+    private final ClubState own = new ClubState();
 
     /**
-     * Once a tick (client). The music heard at the console: {@code kick} and {@code drop} 0..1 as
-     * {@code MusicPulse} gives them, {@code tension} how far into a build-up, {@code period} seconds a
-     * beat. {@code tick} is the game time, so every rig strobes in phase. {@code noFlashing}: the
-     * player asked for no flashing lights - no strobing, and every level glides instead of jumping.
+     * Raw-number entry (a fixture linked to no booth, and the tests): the numbers go through a
+     * private {@link ClubState}. The rig itself uses {@link #update(Settings, long, float, ClubState)}.
      */
     void update(Settings s, long tick, float dt, float kick, float drop, float tension, boolean playing, double period, boolean noFlashing) {
+        own.update(dt, kick, drop, tension, playing, period, ClubState.Mixer.NONE, noFlashing);
+        update(s, tick, dt, own);
+    }
+
+    /**
+     * Once a tick (client): what the club is doing, as {@link ClubState} works it out. {@code tick}
+     * is the game time, so every rig strobes in phase. With {@code c.noFlashing}: no strobing, and
+     * every level glides instead of jumping.
+     */
+    void update(Settings s, long tick, float dt, ClubState c) {
         time += dt;
         sinceStep += dt;
-        this.playing = playing;
-        boolean beat = kick > 0.38f && !kickLatched;
-        if (beat) kickLatched = true;
-        else if (kick < 0.2f) kickLatched = false;
-        if (beat) {
-            sinceKick = 0;
-            if (++beats % RATES[Math.floorMod(s.rate, RATES.length)] == 0) nextStep();
-        } else {
-            sinceKick += dt;
-        }
+        playing = c.playing;
+        boolean noFlashing = c.noFlashing;
+        float tension = c.buildUp;
+        if (c.beat && ++beats % RATES[Math.floorMod(s.rate, RATES.length)] == 0) nextStep();
         if (!playing && sinceStep >= 1.0) nextStep();
-        period = Math.max(0.2, period);
-        beatPhase = (float) Math.min(1.0, sinceKick / period);
+        beatPhase = c.beatPhase;
         // One turn of a pattern every four beats; slow and steady with no music.
-        movePhase += (float) (playing ? dt * Math.PI / (2 * period) : dt * 0.5);
-        this.drop = Math.max(drop, this.drop * (float) Math.exp(-dt * 1.5));
-        env = (float) Math.exp(-sinceKick * 7);
-        // A breakdown: music, but no kick for a few beats. Minimal: the rig goes almost dark.
-        boolean breakdown = playing && sinceKick > Math.max(2.0, 4 * period);
+        movePhase += (float) (playing ? dt * Math.PI / (2 * c.period) : dt * 0.5);
+        float env = c.env;
+        boolean breakdown = c.breakdown;
         // Build-ups strobe faster and faster: a flash every 5 ticks (4 a second) up to every other tick (10).
         // Counted in ticks, like the strobe: a sine at those rates, sampled once a tick, aliases to nothing.
         boolean shutterOpen = noFlashing || tension < 0.15f || tick % Math.round(5 - 3 * tension) == 0;
@@ -111,9 +110,9 @@ final class DmxProgram {
                         if (!shutterOpen) lv = 0f;
                         else if (tension >= 0.15f) lv = Math.max(lv, fader * tension);
                     }
-                    if (this.drop > 0.02f) {
-                        lv = Math.max(lv, fader * this.drop);
-                        col = mix(col, 0xFFFFFF, this.drop);
+                    if (c.dropLevel > 0.02f) {
+                        lv = Math.max(lv, fader * c.dropLevel);
+                        col = mix(col, 0xFFFFFF, c.dropLevel);
                     }
                 }
                 default -> lv = fader;
