@@ -26,9 +26,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -611,7 +613,9 @@ public final class MusicPulse {
         for (Map.Entry<Vec3, Want> w : wanted.entrySet()) {
             offers.add(new EmitterBudget.Offer<>(w.getKey(), w.getKey().distanceToSqr(ear), w.getValue().band() == Emitter.LOW));
         }
-        wanted.keySet().retainAll(EmitterBudget.choose(offers, maxSpeakers(), t.emitters.keySet()));
+        Set<Vec3> running = new HashSet<>();
+        for (Map.Entry<Vec3, Emitter> e : t.emitters.entrySet()) if (!e.getValue().leaving) running.add(e.getKey());
+        wanted.keySet().retainAll(EmitterBudget.choose(offers, maxSpeakers(), running));
         // A stack adds up: each speaker of a band near you backs off by the square root of how many there are.
         int[] near = new int[3];
         double radiusSq = PaLevel.STACK_RADIUS * PaLevel.STACK_RADIUS;
@@ -622,8 +626,15 @@ public final class MusicPulse {
         for (Iterator<Map.Entry<Vec3, Emitter>> it = t.emitters.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Vec3, Emitter> e = it.next();
             if (!wanted.containsKey(e.getKey())) {
-                e.getValue().delete();
-                it.remove();
+                // Out of the nearest few: fades out, still in step with the song, then goes.
+                Emitter gone = e.getValue();
+                gone.leaving = true;
+                if (gone.silent()) {
+                    gone.delete();
+                    it.remove();
+                } else {
+                    gone.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt, false);
+                }
             }
         }
         // The ones that went longest without a ray get this frame's rays.
@@ -634,6 +645,7 @@ public final class MusicPulse {
         }));
         for (Map.Entry<Vec3, Want> w : order) {
             Emitter e = t.emitters.computeIfAbsent(w.getKey(), pos -> new Emitter(pos, w.getValue().level(), t.rate));
+            e.leaving = false;
             e.level = w.getValue().level();
             e.band = w.getValue().band();
             e.drive = w.getValue().drive();

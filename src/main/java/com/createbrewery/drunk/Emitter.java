@@ -79,6 +79,14 @@ final class Emitter {
     float spread = 3f;
     private float radius = -1f;
     private float stackNow = 1f;
+    /** 0..1 fade for a speaker entering or leaving the nearest few; {@code leaving} is set by the caller, which deletes it once {@link #silent}. */
+    private float fade;
+    boolean leaving;
+    private static final float FADE_IN = 0.4f, FADE_OUT = 0.3f;
+
+    boolean silent() {
+        return leaving && fade <= 0f;
+    }
     private float baseRef;
     private int reachBand = -1;
     /** Its send to the room reverb: the low-pass filter, the gain last set on it, and whether the send is connected. */
@@ -182,8 +190,10 @@ final class Emitter {
             split.set(band == LOW, crossover);
         }
         feed(t, target + (long) (LEAD * rate * pitch));
-        float wantRadius = phones ? 0f : spread * (band == LOW ? 1.7f : 1f);
-        if (radius != wantRadius) {
+        // Further away a speaker is less a point and more the room: the spread grows with the distance, so passing one does not flip the sound from ear to ear.
+        double dist = listener == null ? 0 : listener.getEyePosition().distanceTo(pos);
+        float wantRadius = phones || spread <= 0f ? 0f : (float) Math.max(spread * (band == LOW ? 1.7f : 1f), 0.5 * dist);
+        if (Math.abs(radius - wantRadius) > 0.15f) {
             radius = wantRadius;
             try {
                 AL10.alSourcef(source, org.lwjgl.openal.EXTSourceRadius.AL_SOURCE_RADIUS, wantRadius);
@@ -195,7 +205,9 @@ final class Emitter {
             reachBand = band;
             AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, baseRef * (band == LOW ? SUB_REACH : 1f));
         }
-        AL10.alSourcef(source, AL10.AL_GAIN, gain * level * stackNow);
+        // A speaker the budget picks up or drops fades over a third of a second instead of cutting in.
+        fade = leaving ? Math.max(0f, fade - dt / FADE_OUT) : Math.min(1f, fade + dt / FADE_IN);
+        AL10.alSourcef(source, AL10.AL_GAIN, gain * level * stackNow * fade);
         AL10.alSourcef(source, AL10.AL_PITCH, pitch * servo);
         if (!phones) wet();
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING && !queued.isEmpty()) AL10.alSourcePlay(source);
