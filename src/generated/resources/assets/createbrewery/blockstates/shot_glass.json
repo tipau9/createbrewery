@@ -1,0 +1,169 @@
+{
+  "variants": {
+    "content=beer,facing=east": {
+      "model": "createbrewery:block/shot_glass_beer",
+      "y": 270
+    },
+    "content=beer,facing=north": {
+      "model": "createbrewery:block/shot_glass_beer",
+      "y": 180
+    },
+    "content=beer,facing=south": {
+      "model": "createbrewery:block/shot_glass_beer"
+    },
+    "content=beer,facing=west": {
+      "model": "createbrewery:block/shot_glass_beer",
+      "y": 90
+    },
+    "content=cocktail,facing=east": {
+      "model": "createbrewery:block/shot_glass_cocktail",
+      "y": 270
+    },
+    "content=cocktail,facing=north": {
+      "model": "createbrewery:block/shot_glass_cocktail",
+      "y": 180
+    },
+    "content=cocktail,facing=south": {
+      "model": "createbrewery:block/shot_glass_cocktail"
+    },
+    "content=cocktail,facing=west": {
+      "model": "createbrewery:block/shot_glass_cocktail",
+      "y": 90
+    },
+    "content=cognac,facing=east": {
+      "model": "createbrewery:block/shot_glass_cognac",
+      "y": 270
+    },
+    "content=cognac,facing=north": {
+      "model": "createbrewery:block/shot_glass_cognac",
+      "y": 180
+    },
+    "content=cognac,facing=south": {
+      "model": "createbrewery:block/shot_glass_cognac"
+    },
+    "content=cognac,facing=west": {
+      "model": "createbrewery:block/shot_glass_cognac",
+      "y": 90
+    },
+    "content=doppelkorn,facing=east": {
+      "model": "createbrewery:block/shot_glass_doppelkorn",
+      "y": 270
+    },
+    "content=doppelkorn,facing=north": {
+      "model": "createbrewery:block/shot_glass_doppelkorn",
+      "y": 180
+    },
+    "content=doppelkorn,facing=south": {
+      "model": "createbrewery:block/shot_glass_doppelkorn"
+    },
+    "content=doppelkorn,facing=west": {
+      "model": "createbrewery:block/shot_glass_doppelkorn",
+      "y": 90
+    },
+    "content=empty,facing=east": {
+      "model": "createbrewery:block/shot_glass_empty",
+      "y": 270
+    },
+    "content=empty,facing=north": {
+      "model": "createbrewery:block/shot_glass_empty",
+      "y": 180
+    },
+    "content=empty,facing=south": {
+      "model": "createbrewery:block/shot_glass_empty"
+    },
+    "content=empty,facing=west": {
+      "model": "createbrewery:block/shot_glass_empty",
+      "y": 90
+    },
+    "content=gin,facing=east": {
+      "model": "createbrewery:block/shot_glass_gin",
+      "y": 270
+    },
+    "content=gin,facing=north": {
+      "model": "createbrewery:block/shot_glass_gin",
+      "y": 180
+    },
+    "content=gin,facing=south": {
+      "model": "createbrewery:block/shot_glass_gin"
+    },
+    "content=gin,facing=west": {
+      "model": "createbrewery:block/shot_glass_gin",
+      "y": 90
+    },
+    "content=rum,facing=east": {
+      "model": "createbrewery:block/shot_glass_rum",
+      "y": 270
+    },
+    "content=rum,facing=north": {
+      "model": "createbrewery:block/shot_glass_rum",
+      "y": 180
+    },
+    "content=rum,facing=south": {
+      "model": "createbrewery:block/shot_glass_rum"
+    },
+    "content=rum,facing=west": {
+      "model": "createbrewery:block/shot_glass_rum",
+      "y": 90
+    },
+    "content=tequila,facing=east": {
+      "model": "createbrewery:block/shot_glass_tequila",
+      "y": 270
+    },
+    "content=tequila,facing=north": {
+      "model": "createbrewery:block/shot_glass_tequila",
+      "y": 180
+    },
+    "content=tequila,facing=south": {
+      "model": "createbrewery:block/shot_glass_tequila"
+    },
+    "content=tequila,facing=west": {
+      "model": "createbrewery:block/shot_glass_tequila",
+      "y": 90
+    },
+    "content=vodka,facing=east": {
+      "model": "createbrewery:block/shot_glass_vodka",
+      "y": 270
+    },
+    "content=vodka,facing=north": {
+      "model": "createbrewery:block/shot_glass_vodka",
+      "y": 180
+    },
+    "content=vodka,facing=south": {
+      "model": "createbrewery:block/shot_glass_vodka"
+    },
+    "content=vodka,facing=west": {
+      "model": "createbrewery:block/shot_glass_vodka",
+      "y": 90
+    },
+    "content=whiskey,facing=east": {
+      "model": "createbrewery:block/shot_glass_whiskey",
+      "y": 270
+    },
+    "content=whiskey,facing=north": {
+      "model": "createbrewery:block/shot_glass_whiskey",
+      "y": 180
+    },
+    "content=whiskey,facing=south": {
+      "model": "createbrewery:block/shot_glass_whiskey"
+    },
+    "content=whiskey,facing=west": {
+      "model": "createbrewery:block/shot_glass_whiskey",
+      "y": 90
+    },
+    "content=wine,facing=east": {
+      "model": "createbrewery:block/shot_glass_wine",
+      "y": 270
+    },
+    "content=wine,facing=north": {
+      "model": "createbrewery:block/shot_glass_wine",
+      "y": 180
+    },
+    "content=wine,facing=south": {
+      "model": "createbrewery:block/shot_glass_wine"
+    },
+    "content=wine,facing=west": {
+      "model": "createbrewery:block/shot_glass_wine",
+      "y": 90
+    }
+  }
+}

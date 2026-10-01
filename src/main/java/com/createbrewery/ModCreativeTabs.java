@@ -21,7 +21,11 @@ public final class ModCreativeTabs {
             .displayItems((parameters, output) -> {
                 // Brauerei-Maschinen & Landwirtschaft
                 output.accept(ModBlocks.FERMENTER.get());
+                output.accept(ModBlocks.BEER_KEG.get());
                 output.accept(ModBlocks.BEER_TAP.get());
+                output.accept(ModBlocks.BEER_MUG.get());
+                output.accept(ModBlocks.SHOT_GLASS.get());
+                output.accept(ModBlocks.COCKTAIL_GLASS.get());
                 output.accept(ModItems.BARLEY_SEEDS.get());
                 output.accept(ModItems.BARLEY.get());
                 output.accept(ModItems.GREEN_MALT.get());

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "P": {
+      "item": "minecraft:glass_pane"
+    }
+  },
+  "pattern": [
+    "G G",
+    "GPG",
+    "GGG"
+  ],
+  "result": {
+    "count": 4,
+    "id": "createbrewery:beer_mug"
+  }
+}

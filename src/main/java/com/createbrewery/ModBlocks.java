@@ -361,6 +361,73 @@ public class ModBlocks {
         .simpleItem()
         .register();
 
+    public static final BlockEntry<com.createbrewery.block.KegBlock> BEER_KEG = REGISTRATE
+        .block("beer_keg", com.createbrewery.block.KegBlock::new)
+        .initialProperties(() -> Blocks.IRON_BLOCK)
+        .properties(BlockBehaviour.Properties::noOcclusion)
+        .lang("Edelstahl-Bierfass")
+        .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.getEntry(),
+            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+        .item((b, p) -> new com.createbrewery.item.KegBlockItem(b, p))
+            .model((c, p) -> {})
+            .build()
+        .loot((p, b) -> p.add(b, net.minecraft.world.level.storage.loot.LootTable.lootTable()
+            .withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                .setRolls(net.minecraft.world.level.storage.loot.providers.number.ConstantValue.exactly(1.0f))
+                .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(b)
+                    .apply(net.minecraft.world.level.storage.loot.functions.CopyComponentsFunction.copyComponents(
+                        net.minecraft.world.level.storage.loot.functions.CopyComponentsFunction.Source.BLOCK_ENTITY)
+                        .include(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA))))))
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.DrinkGlassBlock> BEER_MUG = REGISTRATE
+        .block("beer_mug", p -> new com.createbrewery.block.DrinkGlassBlock(p, com.createbrewery.block.GlassType.BEER_MUG))
+        .initialProperties(() -> Blocks.GLASS)
+        .properties(p -> p.noOcclusion().sound(net.minecraft.world.level.block.SoundType.GLASS))
+        .lang("Bierkrug")
+        .blockstate(ModBlocks::glassBlockstate)
+        .item((b, p) -> new com.createbrewery.item.DrinkGlassItem(b, p, com.createbrewery.block.GlassType.BEER_MUG))
+            .model((c, p) -> {})
+            .build()
+        .loot((p, b) -> p.dropOther(b, net.minecraft.world.item.Items.AIR))
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.DrinkGlassBlock> SHOT_GLASS = REGISTRATE
+        .block("shot_glass", p -> new com.createbrewery.block.DrinkGlassBlock(p, com.createbrewery.block.GlassType.SHOT_GLASS))
+        .initialProperties(() -> Blocks.GLASS)
+        .properties(p -> p.noOcclusion().sound(net.minecraft.world.level.block.SoundType.GLASS))
+        .lang("Shotglas")
+        .blockstate(ModBlocks::glassBlockstate)
+        .item((b, p) -> new com.createbrewery.item.DrinkGlassItem(b, p, com.createbrewery.block.GlassType.SHOT_GLASS))
+            .model((c, p) -> {})
+            .build()
+        .loot((p, b) -> p.dropOther(b, net.minecraft.world.item.Items.AIR))
+        .register();
+
+    public static final BlockEntry<com.createbrewery.block.DrinkGlassBlock> COCKTAIL_GLASS = REGISTRATE
+        .block("cocktail_glass", p -> new com.createbrewery.block.DrinkGlassBlock(p, com.createbrewery.block.GlassType.COCKTAIL_GLASS))
+        .initialProperties(() -> Blocks.GLASS)
+        .properties(p -> p.noOcclusion().sound(net.minecraft.world.level.block.SoundType.GLASS))
+        .lang("Cocktailglas")
+        .blockstate(ModBlocks::glassBlockstate)
+        .item((b, p) -> new com.createbrewery.item.DrinkGlassItem(b, p, com.createbrewery.block.GlassType.COCKTAIL_GLASS))
+            .model((c, p) -> {})
+            .build()
+        .loot((p, b) -> p.dropOther(b, net.minecraft.world.item.Items.AIR))
+        .register();
+
+    private static void glassBlockstate(DataGenContext<Block, com.createbrewery.block.DrinkGlassBlock> ctx, RegistrateBlockstateProvider prov) {
+        prov.getVariantBuilder(ctx.getEntry()).forAllStates(state -> {
+            net.minecraft.core.Direction dir = state.getValue(com.createbrewery.block.DrinkGlassBlock.FACING);
+            com.createbrewery.block.DrinkContent content = state.getValue(com.createbrewery.block.DrinkGlassBlock.CONTENT);
+            int yRot = (int) dir.toYRot();
+            String modelName = ctx.getName() + "_" + content.getSerializedName();
+            return new ConfiguredModel[] {
+                new ConfiguredModel(prov.models().getExistingFile(prov.modLoc("block/" + modelName)), 0, yRot, false)
+            };
+        });
+    }
+
     /**
      * Real 8-stage (age 0-7) crop blockstate/models, replacing Registrate's placeholder
      * single-variant cube default (Registrate's {@code BlockBuilder.defaultBlockstate()} has no

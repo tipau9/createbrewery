@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "createbrewery:block/beer_keg",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "createbrewery:block/beer_keg"
+    },
+    "facing=south": {
+      "model": "createbrewery:block/beer_keg",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "createbrewery:block/beer_keg",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "P": {
+      "item": "minecraft:glass_pane"
+    }
+  },
+  "pattern": [
+    "G G",
+    " P ",
+    " P "
+  ],
+  "result": {
+    "count": 3,
+    "id": "createbrewery:cocktail_glass"
+  }
+}

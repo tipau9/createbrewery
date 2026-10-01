@@ -1,0 +1,92 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "side": "createbrewery:block/keg_side",
+    "top": "createbrewery:block/keg_top",
+    "ring": "createbrewery:block/keg_ring",
+    "particle": "createbrewery:block/keg_side"
+  },
+  "elements": [
+    {
+      "name": "bottom_rim",
+      "from": [2.5, 0, 2.5],
+      "to": [13.5, 2, 13.5],
+      "faces": {
+        "north": { "texture": "#ring", "uv": [2.5, 14, 13.5, 16] },
+        "south": { "texture": "#ring", "uv": [2.5, 14, 13.5, 16] },
+        "east": { "texture": "#ring", "uv": [2.5, 14, 13.5, 16] },
+        "west": { "texture": "#ring", "uv": [2.5, 14, 13.5, 16] },
+        "down": { "texture": "#ring", "uv": [2.5, 2.5, 13.5, 13.5], "cullface": "down" }
+      }
+    },
+    {
+      "name": "keg_body",
+      "from": [2, 2, 2],
+      "to": [14, 14, 14],
+      "faces": {
+        "north": { "texture": "#side", "uv": [2, 2, 14, 14] },
+        "south": { "texture": "#side", "uv": [2, 2, 14, 14] },
+        "east": { "texture": "#side", "uv": [2, 2, 14, 14] },
+        "west": { "texture": "#side", "uv": [2, 2, 14, 14] }
+      }
+    },
+    {
+      "name": "lower_rolling_ring",
+      "from": [1.75, 5, 1.75],
+      "to": [14.25, 6.5, 14.25],
+      "faces": {
+        "north": { "texture": "#ring", "uv": [1.75, 5, 14.25, 6.5] },
+        "south": { "texture": "#ring", "uv": [1.75, 5, 14.25, 6.5] },
+        "east": { "texture": "#ring", "uv": [1.75, 5, 14.25, 6.5] },
+        "west": { "texture": "#ring", "uv": [1.75, 5, 14.25, 6.5] },
+        "up": { "texture": "#ring", "uv": [1.75, 1.75, 14.25, 14.25] },
+        "down": { "texture": "#ring", "uv": [1.75, 1.75, 14.25, 14.25] }
+      }
+    },
+    {
+      "name": "upper_rolling_ring",
+      "from": [1.75, 9.5, 1.75],
+      "to": [14.25, 11, 14.25],
+      "faces": {
+        "north": { "texture": "#ring", "uv": [1.75, 9.5, 14.25, 11] },
+        "south": { "texture": "#ring", "uv": [1.75, 9.5, 14.25, 11] },
+        "east": { "texture": "#ring", "uv": [1.75, 9.5, 14.25, 11] },
+        "west": { "texture": "#ring", "uv": [1.75, 9.5, 14.25, 11] },
+        "up": { "texture": "#ring", "uv": [1.75, 1.75, 14.25, 14.25] },
+        "down": { "texture": "#ring", "uv": [1.75, 1.75, 14.25, 14.25] }
+      }
+    },
+    {
+      "name": "top_rim",
+      "from": [2.5, 14, 2.5],
+      "to": [13.5, 16, 13.5],
+      "faces": {
+        "north": { "texture": "#ring", "uv": [2.5, 0, 13.5, 2] },
+        "south": { "texture": "#ring", "uv": [2.5, 0, 13.5, 2] },
+        "east": { "texture": "#ring", "uv": [2.5, 0, 13.5, 2] },
+        "west": { "texture": "#ring", "uv": [2.5, 0, 13.5, 2] },
+        "up": { "texture": "#ring", "uv": [2.5, 2.5, 13.5, 13.5] }
+      }
+    },
+    {
+      "name": "top_lid",
+      "from": [3, 13.8, 3],
+      "to": [13, 14, 13],
+      "faces": {
+        "up": { "texture": "#top", "uv": [3, 3, 13, 13] }
+      }
+    },
+    {
+      "name": "extractor_spear_valve",
+      "from": [7, 14, 7],
+      "to": [9, 15.2, 9],
+      "faces": {
+        "north": { "texture": "#ring", "uv": [7, 0, 9, 1.2] },
+        "south": { "texture": "#ring", "uv": [7, 0, 9, 1.2] },
+        "east": { "texture": "#ring", "uv": [7, 0, 9, 1.2] },
+        "west": { "texture": "#ring", "uv": [7, 0, 9, 1.2] },
+        "up": { "texture": "#top", "uv": [7, 7, 9, 9] }
+      }
+    }
+  ]
+}

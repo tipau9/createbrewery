@@ -104,5 +104,14 @@ public class ModBlockEntities {
         })
         .register();
 
+    public static final BlockEntityEntry<com.createbrewery.block.KegBlockEntity> BEER_KEG = REGISTRATE
+        .blockEntity("beer_keg", com.createbrewery.block.KegBlockEntity::new)
+        .validBlocks(ModBlocks.BEER_KEG)
+        .registerCapability(event -> {
+            event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.BEER_KEG.get(),
+                (be, side) -> be.getTank().getCapability());
+        })
+        .register();
+
     public static void register() {}
 }

@@ -116,6 +116,33 @@ public class BeerTapBlock extends Block implements EntityBlock {
             }
         }
 
+        // Draft into Drink Glass -> Filled Drink Glass (Beer)
+        if (stack.getItem() instanceof com.createbrewery.item.DrinkGlassItem glassItem
+            && com.createbrewery.item.DrinkGlassItem.getContent(stack) == com.createbrewery.block.DrinkContent.EMPTY) {
+            if (tap.dispenseBeer(250)) {
+                if (!level.isClientSide) {
+                    ItemStack filled = glassItem.withContent(com.createbrewery.block.DrinkContent.BEER);
+                    if (!player.getAbilities().instabuild) {
+                        stack.shrink(1);
+                        if (!player.addItem(filled)) {
+                            player.drop(filled, false);
+                        }
+                    } else if (!player.getInventory().contains(filled)) {
+                        player.addItem(filled);
+                    }
+                }
+                tap.spawnFoamParticles(level, pos, state.getValue(FACING));
+                level.playSound(player, pos, ModSounds.BEER_OPEN.get(), SoundSource.BLOCKS, 0.8f, 1.0f);
+                if (level.isClientSide) {
+                    player.displayClientMessage(Component.translatable("createbrewery.beer_tap.poured"), true);
+                }
+                return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            } else if (level.isClientSide) {
+                player.displayClientMessage(Component.translatable("createbrewery.beer_tap.empty"), true);
+                return ItemInteractionResult.sidedSuccess(true);
+            }
+        }
+
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
@@ -146,5 +173,15 @@ public class BeerTapBlock extends Block implements EntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new BeerTapBlockEntity(ModBlockEntities.BEER_TAP.get(), pos, state);
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> blockEntityType) {
+        return (lvl, p, st, be) -> {
+            if (be instanceof BeerTapBlockEntity tap) {
+                tap.tick();
+            }
+        };
     }
 }

@@ -718,6 +718,43 @@ public class ModRecipeProvider {
                 .requires(Items.LAPIS_LAZULI)
                 .unlockedBy("has_glass_bottle", has(Items.GLASS_BOTTLE))
                 .save(output, CreateBrewery.ID("drug_test_kit"));
+
+            // Bar & Tavern recipes
+            ShapedRecipeBuilder.shaped(RecipeCategory.DECORATIONS, ModBlocks.BEER_KEG.get())
+                .pattern("IPI")
+                .pattern("IBI")
+                .pattern("III")
+                .define('I', AllItems.IRON_SHEET.get())
+                .define('P', AllBlocks.FLUID_PIPE.get())
+                .define('B', Items.BARREL)
+                .unlockedBy("has_iron_sheet", has(AllItems.IRON_SHEET.get()))
+                .save(output, CreateBrewery.ID("beer_keg"));
+
+            ShapedRecipeBuilder.shaped(RecipeCategory.DECORATIONS, ModBlocks.BEER_MUG.get(), 4)
+                .pattern("G G")
+                .pattern("GPG")
+                .pattern("GGG")
+                .define('G', Items.GLASS)
+                .define('P', Items.GLASS_PANE)
+                .unlockedBy("has_glass", has(Items.GLASS))
+                .save(output, CreateBrewery.ID("beer_mug"));
+
+            ShapedRecipeBuilder.shaped(RecipeCategory.DECORATIONS, ModBlocks.SHOT_GLASS.get(), 4)
+                .pattern("P P")
+                .pattern(" G ")
+                .define('G', Items.GLASS)
+                .define('P', Items.GLASS_PANE)
+                .unlockedBy("has_glass", has(Items.GLASS))
+                .save(output, CreateBrewery.ID("shot_glass"));
+
+            ShapedRecipeBuilder.shaped(RecipeCategory.DECORATIONS, ModBlocks.COCKTAIL_GLASS.get(), 3)
+                .pattern("G G")
+                .pattern(" P ")
+                .pattern(" P ")
+                .define('G', Items.GLASS)
+                .define('P', Items.GLASS_PANE)
+                .unlockedBy("has_glass", has(Items.GLASS))
+                .save(output, CreateBrewery.ID("cocktail_glass"));
         }
     }
 }

@@ -1,0 +1,433 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "glass": "createbrewery:block/drink_glass",
+    "particle": "createbrewery:block/drink_glass",
+    "liquid": "createbrewery:block/drink_liquid_beer",
+    "garnish": "createbrewery:block/drink_garnish"
+  },
+  "elements": [
+    {
+      "name": "cocktail_foot",
+      "from": [
+        5.5,
+        0,
+        5.5
+      ],
+      "to": [
+        10.5,
+        0.75,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            5.5,
+            15,
+            10.5,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            5.5,
+            15,
+            10.5,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            5.5,
+            15,
+            10.5,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            5.5,
+            15,
+            10.5,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#glass",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ]
+        },
+        "down": {
+          "texture": "#glass",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ],
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "cocktail_stem",
+      "from": [
+        7.5,
+        0.75,
+        7.5
+      ],
+      "to": [
+        8.5,
+        5.5,
+        8.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            7.5,
+            10,
+            8.5,
+            15
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            7.5,
+            10,
+            8.5,
+            15
+          ]
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            7.5,
+            10,
+            8.5,
+            15
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            7.5,
+            10,
+            8.5,
+            15
+          ]
+        }
+      }
+    },
+    {
+      "name": "bowl_lower",
+      "from": [
+        7,
+        5.5,
+        7
+      ],
+      "to": [
+        9,
+        6.75,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            7,
+            9,
+            9,
+            10.5
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            7,
+            9,
+            9,
+            10.5
+          ]
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            7,
+            9,
+            9,
+            10.5
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            7,
+            9,
+            9,
+            10.5
+          ]
+        },
+        "down": {
+          "texture": "#glass",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
+        }
+      }
+    },
+    {
+      "name": "bowl_mid",
+      "from": [
+        6,
+        6.75,
+        6
+      ],
+      "to": [
+        10,
+        8.5,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            6,
+            7.5,
+            10,
+            9
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            6,
+            7.5,
+            10,
+            9
+          ]
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            6,
+            7.5,
+            10,
+            9
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            6,
+            7.5,
+            10,
+            9
+          ]
+        }
+      }
+    },
+    {
+      "name": "bowl_rim",
+      "from": [
+        5,
+        8.5,
+        5
+      ],
+      "to": [
+        11,
+        10.5,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            5,
+            5.5,
+            11,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            5,
+            5.5,
+            11,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            5,
+            5.5,
+            11,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            5,
+            5.5,
+            11,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#glass",
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ]
+        }
+      }
+    },
+    {
+      "name": "liquid_content",
+      "from": [
+        5.5,
+        6.75,
+        5.5
+      ],
+      "to": [
+        10.5,
+        9.5,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#liquid",
+          "uv": [
+            5.5,
+            6.5,
+            10.5,
+            9.5
+          ]
+        },
+        "south": {
+          "texture": "#liquid",
+          "uv": [
+            5.5,
+            6.5,
+            10.5,
+            9.5
+          ]
+        },
+        "east": {
+          "texture": "#liquid",
+          "uv": [
+            5.5,
+            6.5,
+            10.5,
+            9.5
+          ]
+        },
+        "west": {
+          "texture": "#liquid",
+          "uv": [
+            5.5,
+            6.5,
+            10.5,
+            9.5
+          ]
+        },
+        "up": {
+          "texture": "#liquid",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ]
+        }
+      }
+    },
+    {
+      "name": "olive_garnish",
+      "from": [
+        4.5,
+        8.75,
+        7.25
+      ],
+      "to": [
+        5.75,
+        11.25,
+        8.75
+      ],
+      "faces": {
+        "north": {
+          "texture": "#garnish",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        },
+        "south": {
+          "texture": "#garnish",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        },
+        "east": {
+          "texture": "#garnish",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        },
+        "west": {
+          "texture": "#garnish",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        },
+        "up": {
+          "texture": "#garnish",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        },
+        "down": {
+          "texture": "#garnish",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        }
+      }
+    }
+  ]
+}

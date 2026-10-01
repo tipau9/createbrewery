@@ -38,14 +38,63 @@ public class BeerTapBlockEntity extends SmartBlockEntity implements IHaveGoggleI
         return tank;
     }
 
+    public KegBlockEntity findConnectedKeg() {
+        if (level == null) return null;
+        for (int dy = 1; dy <= 2; dy++) {
+            BlockPos below = worldPosition.below(dy);
+            if (level.getBlockEntity(below) instanceof KegBlockEntity keg) {
+                return keg;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (level != null && !level.isClientSide && tank != null) {
+            int space = TANK_CAPACITY - tank.getPrimaryHandler().getFluidAmount();
+            if (space > 0) {
+                KegBlockEntity keg = findConnectedKeg();
+                if (keg != null) {
+                    var kegHandler = keg.getTank().getPrimaryHandler();
+                    if (kegHandler.getFluidAmount() > 0 && kegHandler.getFluid().getFluid().isSame(com.createbrewery.ModFluids.BEER.getSource())) {
+                        net.neoforged.neoforge.fluids.FluidStack drained = kegHandler.drain(Math.min(space, 100), IFluidHandler.FluidAction.EXECUTE);
+                        if (!drained.isEmpty()) {
+                            tank.getPrimaryHandler().fill(drained, IFluidHandler.FluidAction.EXECUTE);
+                            setChanged();
+                            keg.notifyUpdate();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /** True if {@code amount} is there; only the server actually drains it (the client copy resyncs). */
     public boolean dispenseBeer(int amount) {
-        if (tank == null || tank.getPrimaryHandler().getFluidAmount() < amount) return false;
-        if (level != null && !level.isClientSide) {
-            tank.getPrimaryHandler().drain(amount, IFluidHandler.FluidAction.EXECUTE);
-            setChanged();
+        if (tank != null && tank.getPrimaryHandler().getFluidAmount() >= amount) {
+            if (level != null && !level.isClientSide) {
+                tank.getPrimaryHandler().drain(amount, IFluidHandler.FluidAction.EXECUTE);
+                setChanged();
+            }
+            return true;
         }
-        return true;
+
+        // Direct draw fallback from connected Keg underneath
+        KegBlockEntity keg = findConnectedKeg();
+        if (keg != null) {
+            var kegHandler = keg.getTank().getPrimaryHandler();
+            if (kegHandler.getFluidAmount() >= amount && kegHandler.getFluid().getFluid().isSame(com.createbrewery.ModFluids.BEER.getSource())) {
+                if (level != null && !level.isClientSide) {
+                    kegHandler.drain(amount, IFluidHandler.FluidAction.EXECUTE);
+                    keg.notifyUpdate();
+                }
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void spawnFoamParticles(Level level, BlockPos pos, Direction facing) {
@@ -65,6 +114,13 @@ public class BeerTapBlockEntity extends SmartBlockEntity implements IHaveGoggleI
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         tooltip.add(Component.translatable("createbrewery.goggles.beer_tap.header"));
         containedFluidTooltip(tooltip, isPlayerSneaking, getTank().getCapability());
+        KegBlockEntity keg = findConnectedKeg();
+        if (keg != null) {
+            var handler = keg.getTank().getPrimaryHandler();
+            tooltip.add(Component.translatable("createbrewery.goggles.beer_tap.connected_keg",
+                handler.getFluidAmount(), KegBlockEntity.TANK_CAPACITY).withStyle(net.minecraft.ChatFormatting.AQUA));
+        }
         return true;
     }
 }
+

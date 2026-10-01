@@ -214,4 +214,50 @@ public class ClubGameTests {
         helper.assertTrue(tank.fill(new FluidStack((net.minecraft.world.level.material.Fluid) ModFluids.BEER.getSource(), 1000), IFluidHandler.FluidAction.EXECUTE) == 1000, "the tap refused beer");
         helper.succeed();
     }
+
+    @GameTest(template = TEMPLATE)
+    public static void kegStoresBeerAndTapDrawsDirectlyFromIt(GameTestHelper helper) {
+        BlockPos kegPos = new BlockPos(2, 1, 2);
+        BlockPos tapPos = new BlockPos(2, 2, 2);
+        helper.setBlock(kegPos, ModBlocks.BEER_KEG.get());
+        helper.setBlock(tapPos, ModBlocks.BEER_TAP.get());
+
+        com.createbrewery.block.KegBlockEntity keg = helper.getBlockEntity(kegPos);
+        helper.assertTrue(keg != null, "keg block entity missing");
+        var kegTank = keg.getTank().getPrimaryHandler();
+        kegTank.fill(new FluidStack((net.minecraft.world.level.material.Fluid) ModFluids.BEER.getSource(), 2000), IFluidHandler.FluidAction.EXECUTE);
+        helper.assertTrue(kegTank.getFluidAmount() == 2000, "keg did not accept beer");
+
+        com.createbrewery.block.BeerTapBlockEntity tap = helper.getBlockEntity(tapPos);
+        helper.assertTrue(tap != null, "tap block entity missing");
+        helper.assertTrue(tap.findConnectedKeg() == keg, "tap did not detect connected keg below");
+
+        // Tap dispenses 250 mB of beer drawing directly from the keg!
+        helper.assertTrue(tap.dispenseBeer(250), "tap could not dispense from connected keg");
+        helper.assertTrue(kegTank.getFluidAmount() == 1750, "keg did not drain: " + kegTank.getFluidAmount());
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void placedBeerMugFillsFromBottleAndDrinksOffCounter(GameTestHelper helper) {
+        BlockPos mugPos = new BlockPos(2, 1, 2);
+        helper.setBlock(mugPos, ModBlocks.BEER_MUG.get());
+
+        var state = helper.getBlockState(mugPos);
+        helper.assertTrue(state.getValue(com.createbrewery.block.DrinkGlassBlock.CONTENT) == com.createbrewery.block.DrinkContent.EMPTY,
+            "placed mug is not empty");
+
+        // Fill mug with beer
+        helper.setBlock(mugPos, state.setValue(com.createbrewery.block.DrinkGlassBlock.CONTENT, com.createbrewery.block.DrinkContent.BEER));
+        helper.assertTrue(helper.getBlockState(mugPos).getValue(com.createbrewery.block.DrinkGlassBlock.CONTENT) == com.createbrewery.block.DrinkContent.BEER,
+            "mug did not hold beer");
+
+        // Mock player drinks it
+        var player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        float before = com.createbrewery.drunk.DrunkServer.state(player).total();
+        com.createbrewery.drunk.DrunkServer.drink(player, com.createbrewery.block.DrinkContent.BEER.getPerMille());
+        float after = com.createbrewery.drunk.DrunkServer.state(player).total();
+        helper.assertTrue(after > before, "drinking gave no alcohol");
+        helper.succeed();
+    }
 }
