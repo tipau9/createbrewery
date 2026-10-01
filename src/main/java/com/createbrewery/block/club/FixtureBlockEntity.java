@@ -149,10 +149,12 @@ public class FixtureBlockEntity extends BlockEntity {
         }
         lit = response.dimmer(lampOf(kind), target);
         int targetColor = kind == FixtureBlock.Kind.BLINDER ? TUNGSTEN : fan == 0 ? program.color[group] : program.colorFor(settings, group, fan);
-        color = response.color(targetColor, kind == FixtureBlock.Kind.BLINDER ? 0f : kind == FixtureBlock.Kind.MOVING_HEAD ? 5f : 2f);
+        boolean calm = program.noFlashing();
+        color = response.color(targetColor, FixtureResponse.fade(kind == FixtureBlock.Kind.BLINDER ? 0f : kind == FixtureBlock.Kind.MOVING_HEAD ? 5f : 2f, calm));
         for (int i = 0; i < pixels.length; i++) {
             pixels[i] = program.pixel(settings, i, pixels.length);
-            pixelColors[i] = program.pixelColor(settings, i, pixels.length, group, fan);
+            int px = program.pixelColor(settings, i, pixels.length, group, fan);
+            pixelColors[i] = calm ? FixtureResponse.blend(pixelColors[i], px, FixtureResponse.CALM_FADE) : px;
         }
         zoom = settings.zoom;
         gobo = settings.gobo;
@@ -194,7 +196,9 @@ public class FixtureBlockEntity extends BlockEntity {
                     HEAD_LIGHTS.endTick();
                 }
                 BlockHitResult spot = beamHit(0);
-                boolean wantsLight = lit > 0.2f && spot != null;
+                // Offer while lit, or while it still holds its light: a head dipping between beats keeps the handle
+                // (brightness 0) instead of freeing and re-adding a Veil light, which recompiles shaders.
+                boolean wantsLight = spot != null && (lit > 0.02f || headLight != null);
                 if (wantsLight) {
                     HEAD_LIGHTS.offer(this, net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(Vec3.atCenterOf(worldPosition)));
                 }

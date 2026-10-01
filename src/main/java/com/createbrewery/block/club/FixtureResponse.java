@@ -29,6 +29,26 @@ final class FixtureResponse {
         return (float) Math.pow(l, DIMMER_EXPONENT);
     }
 
+    /** Photosensitivity: every colour fade lasts at least this many ticks, so a chase step cannot flash. */
+    static final float CALM_FADE = 20f;
+
+    static float fade(float fadeTicks, boolean noFlashing) {
+        return noFlashing ? Math.max(fadeTicks, CALM_FADE) : fadeTicks;
+    }
+
+    /** One tick of a colour (0xRRGGBB) toward {@code target}, no state: for the LED bar's pixels. Always moves at least a step. */
+    static int blend(int current, int target, float fadeTicks) {
+        float k = 1f - (float) Math.exp(-1f / Math.max(0.01f, fadeTicks));
+        int out = 0;
+        for (int shift = 16; shift >= 0; shift -= 8) {
+            int c = current >> shift & 255, t = target >> shift & 255;
+            float step = (t - c) * k;
+            if (t != c && Math.abs(step) < 1f) step = Math.signum(t - c);
+            out |= Math.max(0, Math.min(255, Math.round(c + step))) << shift;
+        }
+        return out;
+    }
+
     /** One tick: the lamp's output intensity for the console level {@code level}. */
     float dimmer(Lamp lamp, float level) {
         float target = curve(level);

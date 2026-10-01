@@ -103,4 +103,16 @@ class FixtureResponseTest {
         assertEquals(0.9f, FixtureResponse.glide(1f, 0f), 1e-6);
         assertEquals(0.55f, FixtureResponse.glide(0.5f, 0.55f), 1e-6);
     }
+
+    @Test
+    void noFlashingStretchesEveryColourFade() {
+        assertEquals(FixtureResponse.CALM_FADE, FixtureResponse.fade(2f, true), 1e-6);
+        assertEquals(FixtureResponse.CALM_FADE, FixtureResponse.fade(0f, true), 1e-6);
+        assertEquals(2f, FixtureResponse.fade(2f, false), 1e-6);
+        // A red-to-cyan swap (the COMPLEMENT chase) moves a small step a tick, also for LED bar pixels.
+        int c = FixtureResponse.blend(0xFF0000, 0x00FFFF, FixtureResponse.CALM_FADE);
+        assertTrue((c >> 16 & 255) > 230 && (c >> 8 & 255) < 25, "one tick moved too far: " + Integer.toHexString(c));
+        for (int i = 0; i < 300; i++) c = FixtureResponse.blend(c, 0x00FFFF, FixtureResponse.CALM_FADE);
+        assertEquals(0x00FFFF, c);
+    }
 }

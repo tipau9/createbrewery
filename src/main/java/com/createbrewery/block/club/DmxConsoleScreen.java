@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
  * read back from the console. Client only.
  */
 public class DmxConsoleScreen extends Screen {
-    private static final int BASE_W = 380, EXTRA = 124, W = BASE_W + EXTRA, H = 200, COL = 30, PANEL = 256, PW = BASE_W - PANEL - 8;
+    private static final int BASE_W = 380, EXTRA = 100, W = BASE_W + EXTRA, H = 200, COL = 30, PANEL = 256, PW = BASE_W - PANEL - 8;
     private static final String[] PROGRAMS = {"manual", "auto", "chase"};
     private static final String[] MOVES = {"circle", "figure8", "sweep", "ballyhoo", "crowd", "straight", "fan", "mirror"};
     private static final String[] COLOR_FX = {"static", "fade", "rainbow", "complement"};
@@ -48,7 +48,7 @@ public class DmxConsoleScreen extends Screen {
 
     @Override
     protected void init() {
-        left = (width - W) / 2;
+        left = Math.max(0, (width - W) / 2);
         // At the bottom of the screen, so the lights it runs stay in view above it.
         top = Math.max(0, height - H - 6);
         for (int g = 0; g < DmxProgram.GROUPS; g++) {
@@ -84,7 +84,7 @@ public class DmxConsoleScreen extends Screen {
             }).bounds(px, top + 140, 40, 16)
             .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("createbrewery.dmx.record_hint")))
             .build());
-        int px2 = left + BASE_W + 4, pw2 = EXTRA - 12;
+        int px2 = left + BASE_W + 4, pw2 = EXTRA - 8;
         colorFx = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.COLORFX, s -> s.colorFx)).bounds(px2, top + 18, pw2, 16).build());
         gobo = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.GOBO, s -> s.gobo)).bounds(px2, top + 36, pw2, 16).build());
         prism = addRenderableWidget(Button.builder(Component.empty(), b -> {
