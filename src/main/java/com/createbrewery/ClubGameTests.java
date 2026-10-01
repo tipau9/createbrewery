@@ -1,5 +1,6 @@
 package com.createbrewery;
 
+import com.createbrewery.block.club.ClubTestAccess;
 import com.createbrewery.block.club.DjBoothBlock;
 import com.createbrewery.block.club.DjBoothBlockEntity;
 import com.createbrewery.block.club.DmxConsoleBlockEntity;
@@ -258,6 +259,22 @@ public class ClubGameTests {
         com.createbrewery.drunk.DrunkServer.drink(player, com.createbrewery.block.DrinkContent.BEER.getPerMille());
         float after = com.createbrewery.drunk.DrunkServer.state(player).total();
         helper.assertTrue(after > before, "drinking gave no alcohol");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void consoleFindsItsBoothWithoutRec(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        BlockPos consolePos = POS.offset(3, 0, 0);
+        helper.setBlock(consolePos, ModBlocks.DMX_CONSOLE.get());
+        DmxConsoleBlockEntity dmx = helper.getBlockEntity(consolePos);
+        helper.assertTrue(ClubTestAccess.consoleBooth(dmx) == null, "a fresh console follows a booth already");
+        ClubTestAccess.tickConsole(dmx);
+        helper.assertTrue(helper.absolutePos(POS).equals(ClubTestAccess.consoleBooth(dmx)), "the console did not adopt the booth beside it");
+
+        // And the client gets it with the rest of the console's state.
+        net.minecraft.nbt.CompoundTag tag = dmx.getUpdateTag(helper.getLevel().registryAccess());
+        helper.assertTrue(tag.contains("Booth"), "the booth is not synced to clients");
         helper.succeed();
     }
 }

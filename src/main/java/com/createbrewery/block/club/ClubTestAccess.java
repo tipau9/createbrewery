@@ -16,6 +16,14 @@ public final class ClubTestAccess {
         return FixtureBlock.applyLink(level, pos, stack);
     }
 
+    public static BlockPos consoleBooth(DmxConsoleBlockEntity dmx) {
+        return dmx.boothPos();
+    }
+
+    public static void tickConsole(DmxConsoleBlockEntity dmx) {
+        dmx.serverTick();
+    }
+
     /** Swaps deck {@code deck}'s record for the next one from the crate beside the booth. */
     public static boolean restock(DjBoothBlockEntity dj, int deck) {
         return dj.restock(deck);

@@ -139,6 +139,12 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         sync();
     }
 
+    /** The booth this console follows, whether or not it is loaded; null if none was found yet. */
+    @org.jetbrains.annotations.Nullable
+    BlockPos boothPos() {
+        return booth;
+    }
+
     @org.jetbrains.annotations.Nullable
     private DjBoothBlockEntity booth() {
         return booth != null && level != null && level.isLoaded(booth) && level.getBlockEntity(booth) instanceof DjBoothBlockEntity dj ? dj : null;
@@ -197,8 +203,20 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         lastCue = cue;
     }
 
+    /** Without REC pressed: a console with no live booth looks for the nearest one now and then. */
+    private void adoptBooth() {
+        if (booth() != null || level.getGameTime() - scannedAt < SCAN_COOLDOWN * 5) return;
+        scannedAt = level.getGameTime();
+        BlockPos found = nearestBooth();
+        if (found != null && !found.equals(booth)) {
+            booth = found;
+            sync();
+        }
+    }
+
     void serverTick() {
         if (level == null) return;
+        adoptBooth();
         followSong();
         updateFlash();
     }
@@ -243,7 +261,6 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         writeShown(tag);
-        if (booth != null) tag.put("Booth", net.minecraft.nbt.NbtUtils.writeBlockPos(booth));
         ListTag show = new ListTag();
         for (var e : timecode.songs.entrySet()) {
             CompoundTag s = new CompoundTag();
@@ -269,6 +286,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         write(settings, tag);
         tag.putBoolean("Recording", recording);
         tag.putInt("Cues", cues);
+        if (booth != null) tag.put("Booth", net.minecraft.nbt.NbtUtils.writeBlockPos(booth));
     }
 
     @Override
