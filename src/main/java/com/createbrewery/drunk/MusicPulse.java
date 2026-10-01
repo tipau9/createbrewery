@@ -111,6 +111,7 @@ public final class MusicPulse {
         int fx;
         int colorType = DeckFx.COLOR_FILTER;
         float colorParam = 0.5f;
+        float beatFxBeats = 1.0f;
         /** The song frame of the last beat heard, and the loop playing (slip mode), in song frames; 0 long while not looping. */
         long lastBeat = -1, loopStart, loopLen;
         int loopSerial = Integer.MIN_VALUE;
@@ -520,8 +521,22 @@ public final class MusicPulse {
         t.eq[1] = dj.getEq(deck, DjBoothBlockEntity.MID);
         t.eq[2] = dj.getEq(deck, DjBoothBlockEntity.LOW);
         t.filter = dj.getFilter(deck);
-        t.fx = dj.getFx(deck);
-        t.fxAmount = dj.getFxAmount(deck);
+        if (dj.isBeatFxOn() && (dj.getBeatFxChannel() == -1 || dj.getBeatFxChannel() == deck)) {
+            t.fx = switch (dj.getBeatFxType()) {
+                case DjBoothBlockEntity.BFX_REVERB -> DeckFx.REVERB;
+                case DjBoothBlockEntity.BFX_FLANGER, DjBoothBlockEntity.BFX_HELIX -> DeckFx.FLANGER;
+                case DjBoothBlockEntity.BFX_PHASER -> DeckFx.PHASER;
+                case DjBoothBlockEntity.BFX_ROLL -> DeckFx.ROLL;
+                case DjBoothBlockEntity.BFX_TRANS -> DeckFx.TRANS;
+                default -> DeckFx.ECHO;
+            };
+            t.fxAmount = dj.getBeatFxDepth();
+            t.beatFxBeats = dj.getBeatFxBeats();
+        } else {
+            t.fx = dj.getFx(deck);
+            t.fxAmount = dj.getFxAmount(deck);
+            t.beatFxBeats = 1.0f;
+        }
         t.colorType = dj.getActiveColorFx();
         t.colorParam = dj.getColorFxParam();
         int serial = dj.getLoopSerial(deck), beats = dj.getLoopBeats(deck);

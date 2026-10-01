@@ -136,13 +136,21 @@ public class ClubGameTests {
         helper.assertTrue(Math.abs(dj.getChannelFader(DjBoothBlockEntity.C) - 0.75f) < 1e-4, "Ch 3 fader not set");
         dj.setCrossfaderAssign(DjBoothBlockEntity.C, 2); // THRU
         helper.assertTrue(dj.getCrossfaderAssign(DjBoothBlockEntity.C) == 2, "Crossfader assign not set to THRU");
-        // Gain on THRU channel equals fader
+        // Gain on THRU channel equals fader * (trim * 2) = 0.75 * 1.0 = 0.75
         helper.assertTrue(Math.abs(dj.deckGain(DjBoothBlockEntity.C, 0) - 0.75f) < 1e-4, "THRU gain does not match fader");
+        dj.setTrim(DjBoothBlockEntity.C, 1.0f); // Boost gain to 2x (+6dB)
+        helper.assertTrue(Math.abs(dj.deckGain(DjBoothBlockEntity.C, 0) - 1.50f) < 1e-4, "Boosted trim did not double gain");
+        dj.setTrim(DjBoothBlockEntity.C, 0.5f); // Reset back to unity
 
         // 5. Performance Pads: Mode switching & Hot Cue / Loops
         dj.setPadMode(DjBoothBlockEntity.A, DjBoothBlockEntity.PAD_BEAT_LOOP);
         dj.handlePad(DjBoothBlockEntity.A, 3, null); // pad 3 in loops is 8 beats
         helper.assertTrue(dj.getLoopBeats(DjBoothBlockEntity.A) == 8, "Pad did not trigger 8 beat loop");
+
+        // 6. Pitch & Jog Scrub on 4 Decks
+        dj.setPitch(DjBoothBlockEntity.C, 1.04f);
+        helper.assertTrue(Math.abs(dj.getPitch(DjBoothBlockEntity.C) - 1.04f) < 1e-4, "Pitch on Deck 3 did not set");
+        dj.jogScrub(DjBoothBlockEntity.C, 20f);
 
         helper.succeed();
     }

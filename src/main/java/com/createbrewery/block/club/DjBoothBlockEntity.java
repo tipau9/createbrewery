@@ -427,7 +427,16 @@ public class DjBoothBlockEntity extends BlockEntity {
             case 1 -> Mth.sin(x);
             default -> 1.0f; // THRU
         };
-        return xfGain * decks[deck].fader;
+        return xfGain * decks[deck].fader * (decks[deck].trim * 2.0f);
+    }
+
+    public void jogScrub(int deck, float scrubTicks) {
+        if (deck < 0 || deck >= DECKS) return;
+        Deck d = decks[deck];
+        if (d.playing && d.endsAt > 0 && level != null) {
+            d.endsAt -= (long) scrubTicks;
+            sync();
+        }
     }
 
     public void setPitch(int deck, float pitch) {

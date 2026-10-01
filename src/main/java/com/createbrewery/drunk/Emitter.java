@@ -137,7 +137,7 @@ final class Emitter {
 
         if (t.deck && fx == null) fx = new DeckFx(rate);
         if (fx != null) {
-            fx.set(t.eq[2], t.eq[1], t.eq[0], t.filter, t.fx, t.fxAmount, t.song.period() * pitch);
+            fx.set(t.eq[2], t.eq[1], t.eq[0], t.filter, t.fx, t.fxAmount, t.song.period() * pitch, t.beatFxBeats);
             fx.setColorFx(t.colorType, t.filter, t.colorParam);
         }
         // A rack placed or removed, the last sub switched off, the corner moved: taken up at once.

@@ -79,7 +79,7 @@ public class DjMixerScreen extends Screen {
     private final PadButton[][] performancePads = new PadButton[2][8];
 
     // Center Mixer (4 Channels)
-    private final Knob[][] chKnobs = new Knob[DjBoothBlockEntity.DECKS][4]; // HIGH, MID, LOW, COLOR
+    private final Knob[][] chKnobs = new Knob[DjBoothBlockEntity.DECKS][5]; // TRIM, HIGH, MID, LOW, COLOR
     private final VFader[] chFaders = new VFader[DjBoothBlockEntity.DECKS];
     private final Button[] chCueButtons = new Button[DjBoothBlockEntity.DECKS];
     private final Button[] chXfAssignButtons = new Button[DjBoothBlockEntity.DECKS];
@@ -174,15 +174,19 @@ public class DjMixerScreen extends Screen {
             int d = ch;
             int cx = mx + 36 + ch * 23;
 
-            // HI, MID, LOW, COLOR knobs
-            chKnobs[ch][0] = addRenderableWidget(new Knob(cx, top + 86, DjControl.EQ_HIGH, d, "HI", false));
-            chKnobs[ch][1] = addRenderableWidget(new Knob(cx, top + 104, DjControl.EQ_MID, d, "MID", false));
-            chKnobs[ch][2] = addRenderableWidget(new Knob(cx, top + 122, DjControl.EQ_LOW, d, "LOW", false));
-            chKnobs[ch][3] = addRenderableWidget(new Knob(cx, top + 140, DjControl.FILTER, d, "COLOR", true));
+            // TRIM, HI, MID, LOW, COLOR knobs
+            chKnobs[ch][0] = addRenderableWidget(new Knob(cx, top + 86, DjControl.TRIM, d, "TRIM", false));
+            chKnobs[ch][1] = addRenderableWidget(new Knob(cx, top + 100, DjControl.EQ_HIGH, d, "HI", false));
+            chKnobs[ch][2] = addRenderableWidget(new Knob(cx, top + 114, DjControl.EQ_MID, d, "MID", false));
+            chKnobs[ch][3] = addRenderableWidget(new Knob(cx, top + 128, DjControl.EQ_LOW, d, "LOW", false));
+            chKnobs[ch][4] = addRenderableWidget(new Knob(cx, top + 142, DjControl.FILTER, d, "COLOR", true));
 
             // Channel Volume Fader (Vertical)
-            chFaders[ch] = addRenderableWidget(new VFader(cx + 3, top + 158, 14, 38, d, f ->
-                DjControl.send(pos, DjControl.CHANNEL_FADER, d, f)));
+            chFaders[ch] = addRenderableWidget(new VFader(cx + 3, top + 158, 14, 38, d, f -> {
+                DjControl.send(pos, DjControl.CHANNEL_FADER, d, f);
+                DjBoothBlockEntity dj = booth();
+                if (dj != null) dj.setChannelFader(d, f);
+            }));
 
             // Channel Headphone CUE button
             chCueButtons[ch] = addRenderableWidget(Button.builder(Component.literal("CUE"), b -> MusicPulse.toggleCue(pos, d))
@@ -386,8 +390,8 @@ public class DjMixerScreen extends Screen {
             minecraft.player.displayClientMessage(Component.translatable("createbrewery.dj.out_of_range"), true);
             return;
         }
-        byte action = deck == DjBoothBlockEntity.A ? DjControl.PITCH_A : (deck == DjBoothBlockEntity.B ? DjControl.PITCH_B : DjControl.PITCH_A);
-        DjControl.send(pos, action, (float) best);
+        DjControl.send(pos, DjControl.PITCH, deck, (float) best);
+        dj.setPitch(deck, (float) best);
         minecraft.player.displayClientMessage(Component.translatable("createbrewery.dj.synced", DjBoothBlockEntity.name(deck), bpm(theirs)), true);
     }
 
@@ -445,10 +449,11 @@ public class DjMixerScreen extends Screen {
 
         // 4 Channels Mixer knobs & faders
         for (int ch = 0; ch < DjBoothBlockEntity.DECKS; ch++) {
-            chKnobs[ch][0].show(dj.getEq(ch, DjBoothBlockEntity.HIGH));
-            chKnobs[ch][1].show(dj.getEq(ch, DjBoothBlockEntity.MID));
-            chKnobs[ch][2].show(dj.getEq(ch, DjBoothBlockEntity.LOW));
-            chKnobs[ch][3].show((dj.getFilter(ch) + 1f) / 2f);
+            chKnobs[ch][0].show(dj.getTrim(ch));
+            chKnobs[ch][1].show(dj.getEq(ch, DjBoothBlockEntity.HIGH));
+            chKnobs[ch][2].show(dj.getEq(ch, DjBoothBlockEntity.MID));
+            chKnobs[ch][3].show(dj.getEq(ch, DjBoothBlockEntity.LOW));
+            chKnobs[ch][4].show((dj.getFilter(ch) + 1f) / 2f);
 
             chFaders[ch].show(dj.getChannelFader(ch));
             chCueButtons[ch].setMessage(Component.literal("C").withStyle(MusicPulse.isCued(pos, ch) ? ChatFormatting.GOLD : ChatFormatting.GRAY));
@@ -707,6 +712,27 @@ public class DjMixerScreen extends Screen {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (screenTab == 1) {
+            DjBoothBlockEntity dj = booth();
+            if (dj != null && dj.crate() != null) {
+                int totalDiscs = 0;
+                var crate = dj.crate();
+                for (int i = 0; i < crate.getSlots(); i++) {
+                    if (DjBoothBlock.isMusicDisc(crate.getStackInSlot(i))) totalDiscs++;
+                }
+                int maxOffset = Math.max(0, totalDiscs - 3);
+                int next = Mth.clamp(browseOffset - (int) Math.signum(scrollY), 0, maxOffset);
+                if (next != browseOffset) {
+                    browseOffset = next;
+                    return true;
+                }
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
     private boolean isMouseOver(int x, int y, int w, int h) {
         if (minecraft == null) return false;
         double mx = minecraft.mouseHandler.xpos() * width / minecraft.getWindow().getScreenWidth();
@@ -794,6 +820,9 @@ public class DjMixerScreen extends Screen {
     /** CDJ Jogwheel widget with animated on-jog LCD center display & spinning cue needle. */
     private class JogWheelWidget extends AbstractWidget {
         private final boolean isLeft;
+        private float visualRotation = 0f;
+        private double grabAngle = 0;
+        private boolean innerTouch = false;
 
         JogWheelWidget(int x, int y, int w, int h, boolean isLeft) {
             super(x, y, w, h, Component.literal("Jog"));
@@ -805,6 +834,7 @@ public class DjMixerScreen extends Screen {
             int cx = getX() + width / 2, cy = getY() + height / 2;
             int r = width / 2;
             int deck = currentDeck(isLeft);
+            DjBoothBlockEntity dj = booth();
 
             // Outer textured rim
             g.fill(cx - r, cy - r, cx + r, cy + r, 0xFF282B34);
@@ -816,6 +846,22 @@ public class DjMixerScreen extends Screen {
             g.renderOutline(cx - pr, cy - pr, pr * 2, pr * 2, 0xFF1E2129);
             g.renderOutline(cx - pr + 4, cy - pr + 4, (pr - 4) * 2, (pr - 4) * 2, 0xFF14161C);
 
+            // Spin platter rotation when playing
+            if (dj != null && dj.isPlaying(deck)) {
+                visualRotation += 14.0f * dj.getPitch(deck) * (dj.isReverse(deck) ? -1 : 1);
+            }
+
+            // Radial platter markings
+            double radAngle = Math.toRadians(visualRotation);
+            for (int i = 0; i < 4; i++) {
+                double a = radAngle + i * (Math.PI / 2.0);
+                int x1 = cx + (int) Math.round(Math.cos(a) * 16);
+                int y1 = cy + (int) Math.round(Math.sin(a) * 16);
+                int x2 = cx + (int) Math.round(Math.cos(a) * 25);
+                int y2 = cy + (int) Math.round(Math.sin(a) * 25);
+                g.fill(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2) + 1, Math.max(y1, y2) + 1, 0xFF242730);
+            }
+
             // On-Jog LCD center screen
             int cr = 14;
             g.fill(cx - cr, cy - cr, cx + cr, cy + cr, 0xFF04070D);
@@ -826,26 +872,75 @@ public class DjMixerScreen extends Screen {
             g.drawCenteredString(font, String.valueOf(deck + 1), cx, cy - 4, 0xFFFFFFFF);
 
             // Spinning Cue Needle marker
-            DjBoothBlockEntity dj = booth();
-            if (dj != null && dj.isPlaying(deck) && minecraft != null && minecraft.level != null) {
-                float angle = (minecraft.level.getGameTime() + partialTick) * 14.0f * dj.getPitch(deck);
-                double rad = Math.toRadians(angle);
-                int nx = cx + (int) Math.round(Math.cos(rad) * (cr - 2));
-                int ny = cy + (int) Math.round(Math.sin(rad) * (cr - 2));
-                g.fill(nx - 1, ny - 1, nx + 2, ny + 2, 0xFFFFFFFF);
-            }
+            int nx = cx + (int) Math.round(Math.cos(radAngle) * (cr - 2));
+            int ny = cy + (int) Math.round(Math.sin(radAngle) * (cr - 2));
+            g.fill(nx - 1, ny - 1, nx + 2, ny + 2, 0xFFFFFFFF);
         }
 
         @Override
         public void onClick(double mouseX, double mouseY) {
+            int cx = getX() + width / 2, cy = getY() + height / 2;
+            double dx = mouseX - cx, dy = mouseY - cy;
+            innerTouch = (dx * dx + dy * dy <= 22 * 22);
+            grabAngle = Math.atan2(dy, dx);
+            DjBoothBlockEntity dj = booth();
+            int deck = currentDeck(isLeft);
+            if (dj != null && dj.isPlaying(deck) && innerTouch && dj.isVinylMode(deck)) {
+                if (minecraft != null && minecraft.player != null) {
+                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.35f, 1.8f);
+                }
+            }
+        }
+
+        @Override
+        protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
+            int cx = getX() + width / 2, cy = getY() + height / 2;
+            double curAngle = Math.atan2(mouseY - cy, mouseX - cx);
+            double delta = curAngle - grabAngle;
+            while (delta < -Math.PI) delta += 2 * Math.PI;
+            while (delta > Math.PI) delta -= 2 * Math.PI;
+            grabAngle = curAngle;
+            visualRotation += (float) Math.toDegrees(delta);
+
+            DjBoothBlockEntity dj = booth();
+            int deck = currentDeck(isLeft);
+            if (dj == null || !dj.isPlaying(deck)) return;
+
+            if (innerTouch && dj.isVinylMode(deck)) {
+                float scrubTicks = (float) (delta / (2 * Math.PI) * 40.0);
+                DjControl.send(pos, DjControl.JOG_SCRUB, deck, scrubTicks);
+                if (Math.abs(delta) > 0.08 && minecraft != null && minecraft.player != null) {
+                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.2f, 1.6f + (float) Math.abs(delta) * 2f);
+                }
+            } else {
+                float cur = dj.getPitch(deck);
+                float nudge = Mth.clamp((float) (cur + delta * 0.03), 1f - DjBoothBlockEntity.PITCH_RANGE, 1f + DjBoothBlockEntity.PITCH_RANGE);
+                DjControl.send(pos, DjControl.PITCH, deck, nudge);
+                dj.setPitch(deck, nudge);
+            }
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            if (!isHovered()) return false;
+            visualRotation += (float) (scrollY * 18.0);
             DjBoothBlockEntity dj = booth();
             int deck = currentDeck(isLeft);
             if (dj != null && dj.isPlaying(deck)) {
-                float cur = dj.getPitch(deck);
-                float nudge = mouseX > getX() + width / 2 ? cur + 0.01f : cur - 0.01f;
-                byte action = deck == DjBoothBlockEntity.A ? DjControl.PITCH_A : (deck == DjBoothBlockEntity.B ? DjControl.PITCH_B : DjControl.PITCH_A);
-                DjControl.send(pos, action, nudge);
+                if (dj.isVinylMode(deck)) {
+                    float scrubTicks = (float) (scrollY * 8.0);
+                    DjControl.send(pos, DjControl.JOG_SCRUB, deck, scrubTicks);
+                } else {
+                    float cur = dj.getPitch(deck);
+                    float nudge = Mth.clamp((float) (cur + scrollY * 0.005), 1f - DjBoothBlockEntity.PITCH_RANGE, 1f + DjBoothBlockEntity.PITCH_RANGE);
+                    DjControl.send(pos, DjControl.PITCH, deck, nudge);
+                    dj.setPitch(deck, nudge);
+                }
+                if (minecraft != null && minecraft.player != null) {
+                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.25f, 1.8f);
+                }
             }
+            return true;
         }
 
         @Override
@@ -997,6 +1092,8 @@ public class DjMixerScreen extends Screen {
             this.isLeft = isLeft;
         }
 
+        private long lastClick;
+
         void show(double v) {
             if (!held && !dirty) value = Mth.clamp(v, 0.0, 1.0);
         }
@@ -1006,12 +1103,23 @@ public class DjMixerScreen extends Screen {
             dirty = false;
             float p = (float) (1.0 - DjBoothBlockEntity.PITCH_RANGE + value * 2.0 * DjBoothBlockEntity.PITCH_RANGE);
             int deck = currentDeck(isLeft);
-            byte action = deck == DjBoothBlockEntity.A ? DjControl.PITCH_A : (deck == DjBoothBlockEntity.B ? DjControl.PITCH_B : DjControl.PITCH_A);
-            DjControl.send(pos, action, p);
+            DjControl.send(pos, DjControl.PITCH, deck, p);
+            DjBoothBlockEntity dj = booth();
+            if (dj != null) dj.setPitch(deck, p);
         }
 
         @Override
         public void onClick(double mouseX, double mouseY) {
+            long now = net.minecraft.Util.getMillis();
+            if (now - lastClick < 300) {
+                value = 0.5;
+                dirty = true;
+                held = false;
+                lastClick = 0;
+                flush();
+                return;
+            }
+            lastClick = now;
             held = true;
             updateFromMouse(mouseY);
         }
@@ -1100,6 +1208,14 @@ public class DjMixerScreen extends Screen {
         @Override
         public void onRelease(double mouseX, double mouseY) { held = false; }
 
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            if (!isHovered()) return false;
+            value = Mth.clamp(value + scrollY * 0.04, 0.0, 1.0);
+            dirty = true;
+            return true;
+        }
+
         private void updateFromMouse(double mouseY) {
             double relY = mouseY - (getY() + 3);
             double trackLen = height - 6;
@@ -1154,6 +1270,7 @@ public class DjMixerScreen extends Screen {
             DjBoothBlockEntity dj = booth();
             if (dj == null) return;
             switch (action) {
+                case DjControl.TRIM -> dj.setTrim(deck, v);
                 case DjControl.EQ_HIGH -> dj.setEq(deck, DjBoothBlockEntity.HIGH, v);
                 case DjControl.EQ_MID -> dj.setEq(deck, DjBoothBlockEntity.MID, v);
                 case DjControl.EQ_LOW -> dj.setEq(deck, DjBoothBlockEntity.LOW, v);
@@ -1246,6 +1363,8 @@ public class DjMixerScreen extends Screen {
             if (!dirty) return;
             dirty = false;
             DjControl.send(pos, action, (float) value);
+            DjBoothBlockEntity dj = booth();
+            if (dj != null) dj.setCrossfader((float) value);
         }
 
         @Override
@@ -1266,6 +1385,15 @@ public class DjMixerScreen extends Screen {
         public void onRelease(double mouseX, double mouseY) {
             held = false;
             super.onRelease(mouseX, mouseY);
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            if (!isHovered()) return false;
+            value = Mth.clamp(value + (scrollX != 0 ? scrollX : scrollY) * 0.05, 0.0, 1.0);
+            applyValue();
+            updateMessage();
+            return true;
         }
     }
 }

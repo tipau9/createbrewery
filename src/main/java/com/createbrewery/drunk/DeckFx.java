@@ -108,15 +108,22 @@ public final class DeckFx {
         return knob <= 0.5f ? (knob * 2) * (knob * 2) : 1f + (knob - 0.5f) * 2f;
     }
 
+    private float beatFrac = 1.0f;
+
+    public void set(float low, float mid, float high, float filter, int effect, float amount, double beat) {
+        set(low, mid, high, filter, effect, amount, beat, 1.0f);
+    }
+
     /**
      * The mixer's settings for this deck: EQ knobs 0..1, filter -1 (low-pass closed) .. 0 (off) ..
-     * 1 (high-pass closed), the effect and how much is sent to it, and seconds per beat.
+     * 1 (high-pass closed), the effect and how much is sent to it, seconds per beat, and beat fraction.
      */
-    public void set(float low, float mid, float high, float filter, int effect, float amount, double beat) {
+    public void set(float low, float mid, float high, float filter, int effect, float amount, double beat, float beatFraction) {
         tLow = eqGain(low);
         tMid = eqGain(mid);
         tHigh = eqGain(high);
         beatSec = beat > 0 ? beat : 0.5;
+        beatFrac = beatFraction > 0f ? beatFraction : 1.0f;
         if (Math.abs(filter - filterAt) > 1e-3) {
             filterAt = filter;
             // Exponential sweeps: the low-pass from above hearing down to 80 Hz, the high-pass from 20 Hz up to 8 kHz.
@@ -128,8 +135,8 @@ public final class DeckFx {
             clearTails();
         }
         sendTarget = Math.max(0f, Math.min(1f, amount));
-        echoLen = (int) Math.max(1, Math.min(echo.length - 1, beatSec * 0.5 * rate));
-        rollLen = (int) Math.max(1, Math.min(rollBuf.length - 1, beatSec * 0.25 * rate));
+        echoLen = (int) Math.max(1, Math.min(echo.length - 1, beatSec * beatFrac * 0.5 * rate));
+        rollLen = (int) Math.max(1, Math.min(rollBuf.length - 1, beatSec * beatFrac * 0.25 * rate));
     }
 
     public void setColorFx(int type, float amount, float param) {
@@ -153,7 +160,7 @@ public final class DeckFx {
     public void process(float[] buf, int n) {
         float dl = (tLow - gLow) / n, dm = (tMid - gMid) / n, dh = (tHigh - gHigh) / n, ds = (sendTarget - send) / n;
         boolean filtering = Math.abs(filterAt) > 0.02;
-        double lfoSpeed = 2.0 * Math.PI / Math.max(0.1, beatSec) / rate;
+        double lfoSpeed = 2.0 * Math.PI / Math.max(0.05, beatSec * beatFrac) / rate;
 
         for (int i = 0; i < n; i++) {
             gLow += dl;
