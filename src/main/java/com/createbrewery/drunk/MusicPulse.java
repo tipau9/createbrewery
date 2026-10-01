@@ -62,7 +62,15 @@ public final class MusicPulse {
     private static final float MONITOR = 0.2f;
 
     /** How loud a place plays a song, and which part of it (see {@link Emitter#band}). */
-    private record Want(float level, int band, float drive, double delay) {}
+    private record Want(float level, int band, float drive, double delay, boolean pa) {}
+
+    /** Rays cast per frame across a song's speakers (see {@link Emitter#update}). */
+    private static final int RAYS_PER_FRAME = 4;
+    private static int raysLeft;
+
+    private static int maxSpeakers() {
+        return Config.CLIENT_SPEC.isLoaded() ? Config.MAX_SPEAKERS.get() : 12;
+    }
 
     /** A speaker's delay-tower alignment in seconds, or -1 with the speed of sound off. */
     private static double align(boolean flight, Vec3 speaker, Vec3 booth, double nearest) {
@@ -473,6 +481,7 @@ public final class MusicPulse {
         double now = System.nanoTime() / 1e9;
         float dt = (float) Math.min(0.1, now - lastFrame);
         lastFrame = now;
+        raysLeft = RAYS_PER_FRAME;
         float k = 0f, l = 0f, h = 0f, bass = 0f, loud = 0f, high = 0f;
         boolean heard = false;
         for (Track t : tracks) {
@@ -562,13 +571,27 @@ public final class MusicPulse {
         for (Vec3 p : tops) ref = Math.min(ref, p.distanceTo(boothAt));
         for (Vec3 p : subs) ref = Math.min(ref, p.distanceTo(boothAt));
         Map<Vec3, Want> wanted = new HashMap<>();
-        for (Vec3 top : tops) wanted.put(top, new Want(1f, split ? Emitter.HIGH : Emitter.FULL, topDrive, align(flight, top, boothAt, ref)));
+        for (Vec3 top : tops) wanted.put(top, new Want(1f, split ? Emitter.HIGH : Emitter.FULL, topDrive, align(flight, top, boothAt, ref), true));
         if (split) {
             float subDrive = DeckFx.eqGain(rack.getSubGain());
-            for (Vec3 sub : subs) wanted.put(sub, new Want(1f, Emitter.LOW, subDrive, align(flight, sub, boothAt, ref)));
+            for (Vec3 sub : subs) wanted.put(sub, new Want(1f, Emitter.LOW, subDrive, align(flight, sub, boothAt, ref), true));
         }
-        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, flight ? 0 : -1));
+        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, flight ? 0 : -1, false));
         float crossover = rack == null ? 100f : rack.getCrossover();
+
+        // Only the nearest speakers play (subwoofers first): each is a source with its own DSP.
+        Vec3 ear = player == null ? at : player.getEyePosition();
+        List<EmitterBudget.Offer<Vec3>> offers = new ArrayList<>();
+        for (Map.Entry<Vec3, Want> w : wanted.entrySet()) {
+            offers.add(new EmitterBudget.Offer<>(w.getKey(), w.getKey().distanceToSqr(ear), w.getValue().band() == Emitter.LOW));
+        }
+        wanted.keySet().retainAll(EmitterBudget.choose(offers, maxSpeakers(), t.emitters.keySet()));
+        // A stack adds up: each speaker of a band near you backs off by the square root of how many there are.
+        int[] near = new int[3];
+        double radiusSq = PaLevel.STACK_RADIUS * PaLevel.STACK_RADIUS;
+        for (Map.Entry<Vec3, Want> w : wanted.entrySet()) {
+            if (w.getValue().pa() && w.getKey().distanceToSqr(ear) <= radiusSq) near[w.getValue().band()]++;
+        }
 
         for (Iterator<Map.Entry<Vec3, Emitter>> it = t.emitters.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Vec3, Emitter> e = it.next();
@@ -577,14 +600,21 @@ public final class MusicPulse {
                 it.remove();
             }
         }
-        for (Map.Entry<Vec3, Want> w : wanted.entrySet()) {
+        // The ones that went longest without a ray get this frame's rays.
+        List<Map.Entry<Vec3, Want>> order = new ArrayList<>(wanted.entrySet());
+        order.sort(java.util.Comparator.comparingDouble(w -> {
+            Emitter known = t.emitters.get(w.getKey());
+            return known == null ? -2 : known.lastRay;
+        }));
+        for (Map.Entry<Vec3, Want> w : order) {
             Emitter e = t.emitters.computeIfAbsent(w.getKey(), pos -> new Emitter(pos, w.getValue().level(), t.rate));
             e.level = w.getValue().level();
             e.band = w.getValue().band();
             e.drive = w.getValue().drive();
             e.delay = w.getValue().delay();
             e.crossover = crossover;
-            e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt, false);
+            e.stack = w.getValue().pa() ? PaLevel.stackGain(near[w.getValue().band()]) : 1f;
+            if (e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt, raysLeft > 0)) raysLeft--;
         }
         if (dj != null) {
             // The clip light: falls at once with the gain, lets go over about a second.
