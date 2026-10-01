@@ -458,7 +458,7 @@ public class DjBoothBlockEntity extends BlockEntity {
                 BlockPos at = deckPos(deck);
                 float vol = Math.max(0.3f, deckGain(deck, level.getGameTime()));
                 level.playSound(null, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
-                    ModSounds.DJ_SCRATCH_STOP.get(), SoundSource.RECORDS, vol, 1.0f);
+                    ModSounds.DJ_SCRATCH_STOP.get(), SoundSource.BLOCKS, vol, 1.0f);
             }
         } else {
             if (!d.slipMode && d.playing && d.endsAt > 0 && level != null && d.scratchStartTime > 0) {
@@ -484,7 +484,7 @@ public class DjBoothBlockEntity extends BlockEntity {
         float pitch = Mth.clamp(0.8f + Math.abs(scrubAmount) * 3.0f, 0.6f, 1.8f);
 
         level.playSound(null, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
-            sound.get(), SoundSource.RECORDS, vol, pitch);
+            sound.get(), SoundSource.BLOCKS, vol, pitch);
 
         if (!d.slipMode && d.playing && d.endsAt > 0) {
             long shift = (long) ((scrubAmount / (2.0 * Math.PI)) * 36.0f);
