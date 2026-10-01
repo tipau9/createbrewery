@@ -369,6 +369,41 @@ public class DjBoothBlockEntity extends BlockEntity {
     public int getLoopBeats(int deck) { return decks[deck].loopBeats; }
     public int getLoopSerial(int deck) { return decks[deck].loopSerial; }
 
+    /** Client: every loaded booth, for the lights and effects that follow whichever booth plays near them. */
+    private static final java.util.Set<BlockPos> BOOTHS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide) BOOTHS.remove(worldPosition);
+    }
+
+    /** What the mixer is doing to the music the crowd hears (client). */
+    public ClubState.Mixer mixer(long gameTime) {
+        boolean[] playing = {isPlaying(A), isPlaying(B)};
+        float[] gain = {deckGain(A, gameTime), deckGain(B, gameTime)};
+        float[] low = {getEq(A, LOW), getEq(B, LOW)};
+        float[] filter = {getFilter(A), getFilter(B)};
+        boolean[] loop = {getLoopBeats(A) > 0, getLoopBeats(B) > 0};
+        return ClubState.loudestMixer(playing, gain, low, filter, loop);
+    }
+
+    /** Client: the closest loaded booth within {@code reach} blocks of {@code pos} that is playing; ties go to the lower position so it never flips. */
+    @Nullable
+    public static DjBoothBlockEntity nearestPlaying(Level level, BlockPos pos, double reach) {
+        DjBoothBlockEntity best = null;
+        double bestDist = reach * reach;
+        for (BlockPos p : BOOTHS) {
+            if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof DjBoothBlockEntity dj) || !(dj.isPlaying(A) || dj.isPlaying(B))) continue;
+            double d = p.distSqr(pos);
+            if (d < bestDist || (d == bestDist && best != null && p.compareTo(best.getBlockPos()) < 0)) {
+                best = dj;
+                bestDist = d;
+            }
+        }
+        return best;
+    }
+
     public static Component name(int deck) {
         return Component.translatable(deck == A ? "createbrewery.dj.deck_a" : "createbrewery.dj.deck_b");
     }
@@ -438,6 +473,7 @@ public class DjBoothBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
+        if (level != null && level.isClientSide) BOOTHS.add(worldPosition.immutable());
         // The songs do not survive a reload; a saved "playing" would spin silent platters.
         if (level != null && !level.isClientSide) {
             for (Deck d : decks) {
