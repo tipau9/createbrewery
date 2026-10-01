@@ -127,6 +127,12 @@ public final class MusicPulse {
         volatile boolean preloading;
         public volatile long deckFrame;
         public volatile long slipFrame;
+        public volatile long cueFrame = 0;
+        public volatile boolean auditioning = false;
+        public final long[] hotCues = {-1, -1, -1, -1, -1, -1, -1, -1};
+        public volatile long manualLoopIn = -1, manualLoopOut = -1;
+        public long getLoopStart() { return loopStart; }
+        public long getLoopLen() { return loopLen; }
         volatile boolean deckFrameInitialized;
         private double lastUpdateTime;
 
@@ -657,7 +663,7 @@ public final class MusicPulse {
         t.lastUpdateTime = now;
 
         boolean held = dj.isScratchHeld(deck) && dj.isVinylMode(deck);
-        boolean playing = dj.isPlaying(deck);
+        boolean playing = dj.isPlaying(deck) || t.auditioning;
         float speed = dj.getPitch(deck) * (dj.isReverse(deck) ? -1f : 1f);
 
         if (playing) {
@@ -669,7 +675,7 @@ public final class MusicPulse {
 
         t.pumpAhead(Math.max(t.deckFrame, t.slipFrame) + (long) (10 * t.rate));
 
-        t.mix = dj.deckGain(deck, mc.level.getGameTime());
+        t.mix = playing ? dj.deckGain(deck, mc.level.getGameTime()) : 0f;
         if (held) {
             t.mix = 0f;
         }
@@ -681,11 +687,15 @@ public final class MusicPulse {
         t.filter = dj.getFilter(deck);
         if (dj.isBeatFxOn() && (dj.getBeatFxChannel() == -1 || dj.getBeatFxChannel() == deck)) {
             t.fx = switch (dj.getBeatFxType()) {
+                case DjBoothBlockEntity.BFX_DELAY -> DeckFx.DELAY;
+                case DjBoothBlockEntity.BFX_ECHO -> DeckFx.ECHO;
                 case DjBoothBlockEntity.BFX_REVERB -> DeckFx.REVERB;
-                case DjBoothBlockEntity.BFX_FLANGER, DjBoothBlockEntity.BFX_HELIX -> DeckFx.FLANGER;
+                case DjBoothBlockEntity.BFX_FLANGER -> DeckFx.FLANGER;
                 case DjBoothBlockEntity.BFX_PHASER -> DeckFx.PHASER;
                 case DjBoothBlockEntity.BFX_ROLL -> DeckFx.ROLL;
                 case DjBoothBlockEntity.BFX_TRANS -> DeckFx.TRANS;
+                case DjBoothBlockEntity.BFX_HELIX -> DeckFx.HELIX;
+                case DjBoothBlockEntity.BFX_PINGPONG -> DeckFx.PINGPONG;
                 default -> DeckFx.ECHO;
             };
             t.fxAmount = dj.getBeatFxDepth();
@@ -698,7 +708,10 @@ public final class MusicPulse {
         t.colorType = dj.getActiveColorFx();
         t.colorParam = dj.getColorFxParam();
         int serial = dj.getLoopSerial(deck), beats = dj.getLoopBeats(deck);
-        if (serial != t.loopSerial) {
+        if (t.manualLoopIn >= 0 && t.manualLoopOut > t.manualLoopIn && beats > 0) {
+            t.loopStart = t.manualLoopIn;
+            t.loopLen = t.manualLoopOut - t.manualLoopIn;
+        } else if (serial != t.loopSerial) {
             boolean first = t.loopSerial == Integer.MIN_VALUE;
             t.loopSerial = serial;
             // Joining a loop already running (just walked up) there is no beat to start it on: skip it.
@@ -710,7 +723,11 @@ public final class MusicPulse {
                 t.loopLen = 0;
             }
         }
-        if (beats == 0) t.loopLen = 0;
+        if (beats == 0) {
+            t.loopLen = 0;
+            t.manualLoopIn = -1;
+            t.manualLoopOut = -1;
+        }
     }
 
     /** How far a club light still follows a song, in blocks from where it is heard. */

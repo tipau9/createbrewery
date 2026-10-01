@@ -73,6 +73,13 @@ public class DjMixerScreen extends Screen {
     private final JogWheelWidget[] jogWheels = new JogWheelWidget[2];
     private final VPitchFader[] pitchFaders = new VPitchFader[2];
     private final Button[] syncButtons = new Button[2];
+    private final Button[] quantizeButtons = new Button[2];
+    private final Button[] loopInButtons = new Button[2];
+    private final Button[] loopOutButtons = new Button[2];
+    private final Button[] reloopButtons = new Button[2];
+    private boolean quantizeEnabled = true;
+    private final long[] manualLoopIn = {-1, -1, -1, -1};
+    private final long[] manualLoopOut = {-1, -1, -1, -1};
     private final Button[] cueHeadphones = new Button[2];
     private final Button[] vinylButtons = new Button[2];
     private final Button[] slipButtons = new Button[2];
@@ -274,12 +281,22 @@ public class DjMixerScreen extends Screen {
         deckLayerButtons[d1] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(d1 + 1)), b -> {
             if (isLeft) leftDeck = d1; else rightDeck = d1;
             refresh();
-        }).bounds(px + 4, top + 8, 20, 12).build());
+        }).bounds(px + 4, top + 8, 18, 12).build());
 
         deckLayerButtons[d2] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(d2 + 1)), b -> {
             if (isLeft) leftDeck = d2; else rightDeck = d2;
             refresh();
-        }).bounds(px + 26, top + 8, 20, 12).build());
+        }).bounds(px + 24, top + 8, 18, 12).build());
+
+        // Manual Loop Buttons: IN / 4BEAT, OUT, RELOOP/EXIT
+        loopInButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("IN"), b -> handleLoopIn(isLeft))
+            .bounds(px + 44, top + 8, 22, 12).tooltip(Tooltip.create(Component.literal("Loop In / Hold Shift for 4-Beat Auto Loop"))).build());
+
+        loopOutButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("OUT"), b -> handleLoopOut(isLeft))
+            .bounds(px + 68, top + 8, 22, 12).tooltip(Tooltip.create(Component.literal("Loop Out"))).build());
+
+        reloopButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("EXIT"), b -> handleReloop(isLeft))
+            .bounds(px + 92, top + 8, 24, 12).tooltip(Tooltip.create(Component.literal("Reloop / Exit"))).build());
 
         // CDJ Jogwheel (Center at px + 40, top + 56, radius 32)
         jogWheels[playerIdx] = addRenderableWidget(new JogWheelWidget(px + 8, top + 24, 64, 64, isLeft));
@@ -287,43 +304,97 @@ public class DjMixerScreen extends Screen {
         // Pitch / Tempo Vertical Fader
         pitchFaders[playerIdx] = addRenderableWidget(new VPitchFader(px + 84, top + 24, 18, 64, isLeft));
 
-        // Deck Controls row: SYNC, VINYL, SLIP, REV
-        syncButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SYNC"), b -> syncTempo(currentDeck(isLeft)))
-            .bounds(px + 80, top + 92, 28, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.sync"))).build());
-
-        vinylButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("VINYL"), b -> {
+        // Deck Controls row: VINYL, SLIP, REV, QTZ, SYNC
+        vinylButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("VIN"), b -> {
             DjBoothBlockEntity dj = booth();
             int cd = currentDeck(isLeft);
             if (dj != null) DjControl.send(pos, DjControl.VINYL_MODE, cd, dj.isVinylMode(cd) ? 0f : 1f);
-        }).bounds(px + 4, top + 92, 24, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.vinyl_hint"))).build());
+        }).bounds(px + 4, top + 92, 19, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.vinyl_hint"))).build());
 
-        slipButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SLIP"), b -> {
+        slipButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SLP"), b -> {
             DjBoothBlockEntity dj = booth();
             int cd = currentDeck(isLeft);
             if (dj != null) DjControl.send(pos, DjControl.SLIP_MODE, cd, dj.isSlipMode(cd) ? 0f : 1f);
-        }).bounds(px + 30, top + 92, 22, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.slip_hint"))).build());
+        }).bounds(px + 25, top + 92, 19, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.slip_hint"))).build());
 
         revButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("REV"), b -> {
             DjBoothBlockEntity dj = booth();
             int cd = currentDeck(isLeft);
             if (dj != null) DjControl.send(pos, DjControl.REVERSE, cd, dj.isReverse(cd) ? 0f : 1f);
-        }).bounds(px + 54, top + 92, 22, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reverse_hint"))).build());
+        }).bounds(px + 46, top + 92, 19, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reverse_hint"))).build());
+
+        quantizeButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("QTZ"), b -> {
+            quantizeEnabled = !quantizeEnabled;
+            refresh();
+        }).bounds(px + 67, top + 92, 22, 12).tooltip(Tooltip.create(Component.literal("Quantize Beat Snapping"))).build());
+
+        syncButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SYNC"), b -> syncTempo(currentDeck(isLeft)))
+            .bounds(px + 91, top + 92, 26, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.sync"))).build());
 
         // Transport Buttons: CUE and PLAY/PAUSE
         cueButtons[playerIdx] = addRenderableWidget(new TransportButton(px + 8, top + 108, 26, 26, false, isLeft, b -> {
             int cd = currentDeck(isLeft);
             DjBoothBlockEntity dj = booth();
-            if (dj != null && dj.isPlaying(cd)) {
+            MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+            if (dj == null) return;
+
+            if (dj.isPlaying(cd)) {
+                // When playing: pause and jump to cue
                 DjControl.send(pos, DjControl.TOGGLE_PLAY, cd, 0f);
+                long cue = dj.getMainCue(cd);
+                if (track != null) {
+                    track.deckFrame = cue;
+                    track.slipFrame = cue;
+                }
             } else {
-                MusicPulse.toggleCue(pos, cd);
+                // When paused:
+                long cue = dj.getMainCue(cd);
+                boolean atCue = track != null && Math.abs(track.deckFrame - cue) < 200;
+                if (!atCue && track != null) {
+                    long newCue = track.deckFrame;
+                    if (quantizeEnabled && track.rate > 0) {
+                        double period = track.getBeatPeriod();
+                        if (period > 0) {
+                            long bf = (long) (period * track.rate);
+                            if (bf > 0) newCue = Math.round((double) newCue / bf) * bf;
+                        }
+                    }
+                    dj.setMainCue(cd, newCue);
+                    track.cueFrame = newCue;
+                    DjControl.send(pos, DjControl.SET_MAIN_CUE, cd, (float) newCue);
+                    if (minecraft != null && minecraft.player != null) {
+                        minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.4f);
+                    }
+                } else if (track != null) {
+                    track.auditioning = true;
+                }
+            }
+        }, b -> {
+            int cd = currentDeck(isLeft);
+            MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+            DjBoothBlockEntity dj = booth();
+            if (track != null && track.auditioning) {
+                track.auditioning = false;
+                long cue = dj != null ? dj.getMainCue(cd) : track.cueFrame;
+                track.deckFrame = cue;
+                track.slipFrame = cue;
             }
         }));
 
         playButtons[playerIdx] = addRenderableWidget(new TransportButton(px + 38, top + 108, 26, 26, true, isLeft, b -> {
             int cd = currentDeck(isLeft);
-            DjControl.send(pos, DjControl.TOGGLE_PLAY, cd, 0f);
-        }));
+            MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+            DjBoothBlockEntity dj = booth();
+            if (track != null && track.auditioning) {
+                // Cue-Play latch
+                track.auditioning = false;
+                if (dj != null && !dj.isPlaying(cd)) {
+                    DjControl.send(pos, DjControl.TOGGLE_PLAY, cd, 0f);
+                }
+            } else {
+                DjControl.send(pos, DjControl.TOGGLE_PLAY, cd, 0f);
+            }
+        }, null));
 
         // Headphone CUE monitor button
         cueHeadphones[playerIdx] = addRenderableWidget(Button.builder(Component.literal("CUE"), b -> MusicPulse.toggleCue(pos, currentDeck(isLeft)))
@@ -347,8 +418,9 @@ public class DjMixerScreen extends Screen {
                 int padY = top + 152 + row * 16;
                 int color = PAD_COLORS[padIndex];
                 performancePads[playerIdx][padIndex] = addRenderableWidget(new PadButton(padX, padY, 25, 14, padIndex, color, b -> {
-                    int cd = currentDeck(isLeft);
-                    DjControl.send(pos, DjControl.PAD_TRIGGER, cd, padIndex);
+                    handlePadPress(isLeft, padIndex);
+                }, b -> {
+                    handlePadRelease(isLeft, padIndex);
                 }));
             }
         }
@@ -374,10 +446,215 @@ public class DjMixerScreen extends Screen {
         DjControl.send(pos, DjControl.BEAT_FX_BEATS, fracs[next]);
     }
 
+    private void handleLoopIn(boolean isLeft) {
+        int cd = currentDeck(isLeft);
+        DjBoothBlockEntity dj = booth();
+        if (dj == null) return;
+        MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+        if (track == null || track.rate <= 0) return;
+
+        if (Screen.hasShiftDown()) {
+            // Shift + IN: Instant 4-Beat Auto Loop
+            DjControl.send(pos, DjControl.LOOP, cd, 4);
+            dj.setLoop(cd, 4);
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.4f);
+            }
+            return;
+        }
+
+        long frame = track.deckFrame;
+        if (quantizeEnabled) {
+            double period = track.getBeatPeriod();
+            if (period > 0) {
+                long bf = (long) (period * track.rate);
+                if (bf > 0) frame = Math.round((double) frame / bf) * bf;
+            }
+        }
+        manualLoopIn[cd] = frame;
+        if (minecraft != null && minecraft.player != null) {
+            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.7f, 1.2f);
+        }
+    }
+
+    private void handleLoopOut(boolean isLeft) {
+        int cd = currentDeck(isLeft);
+        DjBoothBlockEntity dj = booth();
+        if (dj == null) return;
+        MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+        if (track == null || track.rate <= 0) return;
+
+        long frame = track.deckFrame;
+        if (quantizeEnabled) {
+            double period = track.getBeatPeriod();
+            if (period > 0) {
+                long bf = (long) (period * track.rate);
+                if (bf > 0) frame = Math.round((double) frame / bf) * bf;
+            }
+        }
+        long in = manualLoopIn[cd] >= 0 ? manualLoopIn[cd] : 0;
+        if (frame > in) {
+            manualLoopOut[cd] = frame;
+            track.manualLoopIn = in;
+            track.manualLoopOut = frame;
+            double period = track.getBeatPeriod();
+            int beats = (period > 0) ? (int) Math.round((frame - in) / (period * track.rate)) : 4;
+            beats = Math.max(1, beats);
+            DjControl.send(pos, DjControl.LOOP, cd, beats);
+            dj.setLoop(cd, beats);
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.4f);
+            }
+        }
+    }
+
+    private void handleReloop(boolean isLeft) {
+        int cd = currentDeck(isLeft);
+        DjBoothBlockEntity dj = booth();
+        if (dj == null) return;
+        MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+        if (track == null) return;
+
+        if (dj.getLoopBeats(cd) > 0 || (track.manualLoopIn >= 0 && track.manualLoopOut > track.manualLoopIn)) {
+            // Exit loop
+            DjControl.send(pos, DjControl.LOOP, cd, 0);
+            dj.setLoop(cd, 0);
+            track.manualLoopIn = -1;
+            track.manualLoopOut = -1;
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.6f, 0.9f);
+            }
+        } else if (manualLoopIn[cd] >= 0 && manualLoopOut[cd] > manualLoopIn[cd]) {
+            // Reloop
+            track.manualLoopIn = manualLoopIn[cd];
+            track.manualLoopOut = manualLoopOut[cd];
+            track.deckFrame = manualLoopIn[cd];
+            track.slipFrame = manualLoopIn[cd];
+            double period = track.getBeatPeriod();
+            int beats = (period > 0) ? (int) Math.round((manualLoopOut[cd] - manualLoopIn[cd]) / (period * track.rate)) : 4;
+            DjControl.send(pos, DjControl.LOOP, cd, Math.max(1, beats));
+            dj.setLoop(cd, Math.max(1, beats));
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.3f);
+            }
+        }
+    }
+
+    private void handlePadPress(boolean isLeft, int padIndex) {
+        int cd = currentDeck(isLeft);
+        DjBoothBlockEntity dj = booth();
+        if (dj == null) return;
+        int mode = dj.getPadMode(cd);
+        MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+
+        switch (mode) {
+            case DjBoothBlockEntity.PAD_HOT_CUE -> {
+                if (Screen.hasShiftDown()) {
+                    if (dj.getHotCue(cd, padIndex) >= 0) {
+                        dj.setHotCue(cd, padIndex, -1L);
+                        if (track != null) track.hotCues[padIndex] = -1L;
+                        DjControl.send(pos, DjControl.SET_HOT_CUE, (cd & 3) | (padIndex << 2), -1f);
+                        if (minecraft != null && minecraft.player != null) {
+                            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.5f, 0.7f);
+                        }
+                    }
+                } else {
+                    long cue = dj.getHotCue(cd, padIndex);
+                    if (cue < 0) {
+                        long frame = track != null ? track.deckFrame : 0L;
+                        if (quantizeEnabled && track != null && track.rate > 0) {
+                            double period = track.getBeatPeriod();
+                            if (period > 0) {
+                                long bf = (long) (period * track.rate);
+                                if (bf > 0) frame = Math.round((double) frame / bf) * bf;
+                            }
+                        }
+                        dj.setHotCue(cd, padIndex, frame);
+                        if (track != null) track.hotCues[padIndex] = frame;
+                        DjControl.send(pos, DjControl.SET_HOT_CUE, (cd & 3) | (padIndex << 2), (float) frame);
+                        if (minecraft != null && minecraft.player != null) {
+                            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.3f);
+                        }
+                    } else {
+                        if (track != null) {
+                            track.deckFrame = cue;
+                            track.slipFrame = cue;
+                        }
+                        if (!dj.isPlaying(cd)) {
+                            DjControl.send(pos, DjControl.TOGGLE_PLAY, cd, 0f);
+                        }
+                        if (minecraft != null && minecraft.player != null) {
+                            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.5f);
+                        }
+                    }
+                }
+            }
+            case DjBoothBlockEntity.PAD_BEAT_LOOP -> {
+                int beats = DjBoothBlockEntity.LOOPS[padIndex % DjBoothBlockEntity.LOOPS.length];
+                int curLoop = dj.getLoopBeats(cd);
+                int nextLoop = (curLoop == beats) ? 0 : beats;
+                DjControl.send(pos, DjControl.LOOP, cd, nextLoop);
+                dj.setLoop(cd, nextLoop);
+            }
+            case DjBoothBlockEntity.PAD_SLIP_LOOP -> {
+                int beats = DjBoothBlockEntity.LOOPS[padIndex % DjBoothBlockEntity.LOOPS.length];
+                DjControl.send(pos, DjControl.LOOP, cd, beats);
+                dj.setLoop(cd, beats);
+            }
+            case DjBoothBlockEntity.PAD_BEAT_JUMP -> {
+                int[] jumps = {-8, -4, -2, -1, 1, 2, 4, 8};
+                int jumpBeats = jumps[padIndex];
+                if (track != null && track.rate > 0) {
+                    double period = track.getBeatPeriod();
+                    if (period > 0) {
+                        long deltaFrames = (long) (jumpBeats * period * track.rate);
+                        track.scrub(deltaFrames);
+                    }
+                }
+                DjControl.send(pos, DjControl.PAD_TRIGGER, cd, padIndex);
+                if (minecraft != null && minecraft.player != null) {
+                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.6f, 1.2f);
+                }
+            }
+        }
+    }
+
+    private void handlePadRelease(boolean isLeft, int padIndex) {
+        int cd = currentDeck(isLeft);
+        DjBoothBlockEntity dj = booth();
+        if (dj == null) return;
+        int mode = dj.getPadMode(cd);
+
+        if (mode == DjBoothBlockEntity.PAD_SLIP_LOOP) {
+            DjControl.send(pos, DjControl.LOOP, cd, 0);
+            dj.setLoop(cd, 0);
+            MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+            if (track != null) {
+                track.deckFrame = track.slipFrame;
+            }
+        }
+    }
+
+    private int findMasterDeck(DjBoothBlockEntity dj, int myDeck) {
+        int best = (myDeck + 1) % DjBoothBlockEntity.DECKS;
+        float maxFader = -1f;
+        for (int d = 0; d < DjBoothBlockEntity.DECKS; d++) {
+            if (d == myDeck) continue;
+            if (dj.isPlaying(d) && !dj.getDisc(d).isEmpty()) {
+                float f = dj.getChannelFader(d);
+                if (f > maxFader) {
+                    maxFader = f;
+                    best = d;
+                }
+            }
+        }
+        return best;
+    }
+
     private void syncTempo(int deck) {
         DjBoothBlockEntity dj = booth();
         if (dj == null || minecraft == null || minecraft.player == null) return;
-        int otherDeck = (deck + 1) % DjBoothBlockEntity.DECKS;
+        int otherDeck = findMasterDeck(dj, deck);
         double mine = MusicPulse.beatPeriodAt(dj.deckPos(deck)), theirs = MusicPulse.beatPeriodAt(dj.deckPos(otherDeck));
         if (mine <= 0 || theirs <= 0) {
             minecraft.player.displayClientMessage(Component.translatable("createbrewery.dj.tempo_unknown"), true);
@@ -394,6 +671,23 @@ public class DjMixerScreen extends Screen {
         }
         DjControl.send(pos, DjControl.PITCH, deck, (float) best);
         dj.setPitch(deck, (float) best);
+
+        // Phase Lock / zero-phase kick sync
+        MusicPulse.Track trackMine = MusicPulse.trackFor(pos, deck);
+        MusicPulse.Track trackOther = MusicPulse.trackFor(pos, otherDeck);
+        if (trackMine != null && trackOther != null && trackMine.rate > 0 && trackOther.rate > 0) {
+            long bfMine = (long) (mine * trackMine.rate);
+            long bfOther = (long) (theirs * trackOther.rate);
+            if (bfMine > 0 && bfOther > 0) {
+                long phaseMine = Math.floorMod(trackMine.deckFrame, bfMine);
+                long phaseOther = Math.floorMod(trackOther.deckFrame, bfOther);
+                long diff = phaseOther - phaseMine;
+                if (diff > bfMine / 2) diff -= bfMine;
+                else if (diff < -bfMine / 2) diff += bfMine;
+                trackMine.scrub(diff);
+            }
+        }
+
         minecraft.player.displayClientMessage(Component.translatable("createbrewery.dj.synced", DjBoothBlockEntity.name(deck), bpm(theirs)), true);
     }
 
@@ -424,6 +718,23 @@ public class DjMixerScreen extends Screen {
             slipButtons[p].setMessage(Component.literal("SLP").withStyle(dj.isSlipMode(deck) ? ChatFormatting.RED : ChatFormatting.GRAY));
             revButtons[p].setMessage(Component.literal("REV").withStyle(dj.isReverse(deck) ? ChatFormatting.GREEN : ChatFormatting.GRAY));
 
+            quantizeButtons[p].setMessage(Component.literal("QTZ").withStyle(quantizeEnabled ? ChatFormatting.AQUA : ChatFormatting.GRAY));
+
+            int master = findMasterDeck(dj, deck);
+            double minePeriod = MusicPulse.beatPeriodAt(dj.deckPos(deck));
+            double masterPeriod = MusicPulse.beatPeriodAt(dj.deckPos(master));
+            double mineBpm = minePeriod > 0 ? 60.0 / (minePeriod / dj.getPitch(deck)) : 0;
+            double masterBpm = masterPeriod > 0 ? 60.0 / (masterPeriod / dj.getPitch(master)) : 0;
+            boolean isSynced = dj.isPlaying(deck) && mineBpm > 0 && Math.abs(mineBpm - masterBpm) < 0.2;
+            syncButtons[p].setMessage(Component.literal("SYNC").withStyle(isSynced ? ChatFormatting.AQUA : ChatFormatting.GRAY));
+
+            boolean hasIn = manualLoopIn[deck] >= 0;
+            loopInButtons[p].setMessage(Component.literal("IN").withStyle(hasIn ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
+            boolean hasOut = manualLoopOut[deck] >= 0;
+            loopOutButtons[p].setMessage(Component.literal("OUT").withStyle(hasOut ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
+            boolean inLoop = dj.getLoopBeats(deck) > 0;
+            reloopButtons[p].setMessage(Component.literal(inLoop ? "EXIT" : "RELOOP").withStyle(inLoop ? ChatFormatting.GOLD : ChatFormatting.GRAY));
+
             cueHeadphones[p].setMessage(Component.literal("CUE")
                 .withStyle(MusicPulse.isCued(pos, deck) ? ChatFormatting.GOLD : ChatFormatting.GRAY));
 
@@ -435,7 +746,9 @@ public class DjMixerScreen extends Screen {
 
             for (int i = 0; i < 8; i++) {
                 boolean active = false;
-                if (curMode == DjBoothBlockEntity.PAD_BEAT_LOOP || curMode == DjBoothBlockEntity.PAD_SLIP_LOOP) {
+                if (curMode == DjBoothBlockEntity.PAD_HOT_CUE) {
+                    active = dj.getHotCue(deck, i) >= 0;
+                } else if (curMode == DjBoothBlockEntity.PAD_BEAT_LOOP || curMode == DjBoothBlockEntity.PAD_SLIP_LOOP) {
                     active = dj.getLoopBeats(deck) == DjBoothBlockEntity.LOOPS[i % DjBoothBlockEntity.LOOPS.length];
                 }
                 performancePads[p][i].setActive(active);
@@ -578,6 +891,11 @@ public class DjMixerScreen extends Screen {
         int col = DECK_COLORS[deck % DECK_COLORS.length];
 
         g.drawString(font, "DECK " + (deck + 1), px + 52, top + 10, col);
+        int master = findMasterDeck(dj, -1);
+        if (deck == master && playing) {
+            g.fill(px + 86, top + 8, px + 116, top + 18, 0xFFCC2222);
+            g.drawCenteredString(font, "MASTER", px + 101, top + 9, 0xFFFFFFFF);
+        }
         String title = disc.isEmpty() ? Component.translatable("createbrewery.dj.empty").getString() : dj.title(disc).getString();
         g.drawString(font, font.plainSubstrByWidth(title, 110), px + 6, top + 218, playing ? 0xFFFFFFFF : 0xFFAAAAAA);
 
@@ -740,6 +1058,17 @@ public class DjMixerScreen extends Screen {
         for (JogWheelWidget jw : jogWheels) {
             if (jw != null) jw.releasePlatter();
         }
+        for (TransportButton cb : cueButtons) {
+            if (cb != null) cb.releaseButton();
+        }
+        for (TransportButton pb : playButtons) {
+            if (pb != null) pb.releaseButton();
+        }
+        for (PadButton[] row : performancePads) {
+            for (PadButton pad : row) {
+                if (pad != null) pad.releaseButton();
+            }
+        }
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -747,6 +1076,17 @@ public class DjMixerScreen extends Screen {
     public void onClose() {
         for (JogWheelWidget jw : jogWheels) {
             if (jw != null) jw.releasePlatter();
+        }
+        for (TransportButton cb : cueButtons) {
+            if (cb != null) cb.releaseButton();
+        }
+        for (TransportButton pb : playButtons) {
+            if (pb != null) pb.releaseButton();
+        }
+        for (PadButton[] row : performancePads) {
+            for (PadButton pad : row) {
+                if (pad != null) pad.releaseButton();
+            }
         }
         super.onClose();
     }
@@ -853,6 +1193,51 @@ public class DjMixerScreen extends Screen {
             // High band (Pioneer Crisp White)
             if (hH > 0) {
                 g.fill(px, cy - hH, px + 1, cy + hH + 1, 0xFFFFFFFF);
+            }
+        }
+
+        // Active Loop Region Highlight & Brackets
+        long loopStart = track.getLoopStart();
+        long loopLen = track.getLoopLen();
+        if (loopLen > 0) {
+            int lsX = cx + (int) ((loopStart - currentFrame) / framesPerPixel);
+            int leX = cx + (int) ((loopStart + loopLen - currentFrame) / framesPerPixel);
+            int drawLs = Math.max(x + 2, Math.min(x + w - 2, lsX));
+            int drawLe = Math.max(x + 2, Math.min(x + w - 2, leX));
+            if (drawLe > drawLs) {
+                g.fill(drawLs, y + 2, drawLe, y + waveH, 0x44FFAA00);
+            }
+            if (lsX >= x + 2 && lsX < x + w - 2) {
+                g.fill(lsX, y + 2, lsX + 1, y + waveH, 0xFFFFAA00);
+            }
+            if (leX >= x + 2 && leX < x + w - 2) {
+                g.fill(leX, y + 2, leX + 1, y + waveH, 0xFFFFAA00);
+            }
+        }
+
+        // Cue Point Marker (Pioneer Orange Flag 'C')
+        long mainCue = dj.getMainCue(deck);
+        if (mainCue >= 0) {
+            int cueX = cx + (int) ((mainCue - currentFrame) / framesPerPixel);
+            if (cueX >= x + 2 && cueX < x + w - 2) {
+                g.fill(cueX, y + 2, cueX + 1, y + waveH, 0xFFFF9900);
+                g.fill(cueX - 2, y + 2, cueX + 5, y + 8, 0xFFFF9900);
+                g.drawString(font, "C", cueX - 1, y + 2, 0xFF000000);
+            }
+        }
+
+        // Hot Cues A-H Markers (Colored flags with pad letter)
+        for (int hIdx = 0; hIdx < 8; hIdx++) {
+            long hc = dj.getHotCue(deck, hIdx);
+            if (hc >= 0) {
+                int hcX = cx + (int) ((hc - currentFrame) / framesPerPixel);
+                if (hcX >= x + 2 && hcX < x + w - 2) {
+                    int hColor = PAD_COLORS[hIdx];
+                    g.fill(hcX, y + 2, hcX + 1, y + waveH, hColor);
+                    g.fill(hcX - 2, y + 2, hcX + 5, y + 8, hColor);
+                    String flagLetter = String.valueOf((char) ('A' + hIdx));
+                    g.drawString(font, flagLetter, hcX - 1, y + 2, 0xFF000000);
+                }
             }
         }
 
@@ -1127,25 +1512,43 @@ public class DjMixerScreen extends Screen {
         protected void updateWidgetNarration(NarrationElementOutput out) {}
     }
 
-    /** Iconic circular illuminated CUE and PLAY/PAUSE transport buttons. */
+    /** Iconic circular illuminated CUE and PLAY/PAUSE transport buttons with authentic Pioneer CDJ behavior. */
     private class TransportButton extends AbstractWidget {
         private final boolean isPlay;
         private final boolean isLeft;
         private final java.util.function.Consumer<TransportButton> onPress;
+        private final java.util.function.Consumer<TransportButton> onRelease;
+        private boolean isHeld = false;
 
-        TransportButton(int x, int y, int w, int h, boolean isPlay, boolean isLeft, java.util.function.Consumer<TransportButton> onPress) {
+        TransportButton(int x, int y, int w, int h, boolean isPlay, boolean isLeft,
+                        java.util.function.Consumer<TransportButton> onPress,
+                        java.util.function.Consumer<TransportButton> onRelease) {
             super(x, y, w, h, Component.literal(isPlay ? "PLAY" : "CUE"));
             this.isPlay = isPlay;
             this.isLeft = isLeft;
             this.onPress = onPress;
+            this.onRelease = onRelease;
+        }
+
+        public void releaseButton() {
+            if (isHeld) {
+                isHeld = false;
+                if (onRelease != null) onRelease.accept(this);
+            }
         }
 
         @Override
         public void onClick(double mouseX, double mouseY) {
+            isHeld = true;
             if (minecraft != null && minecraft.player != null) {
                 minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.7f, isPlay ? 1.2f : 1.0f);
             }
-            onPress.accept(this);
+            if (onPress != null) onPress.accept(this);
+        }
+
+        @Override
+        public void onRelease(double mouseX, double mouseY) {
+            releaseButton();
         }
 
         @Override
@@ -1155,20 +1558,64 @@ public class DjMixerScreen extends Screen {
             int deck = currentDeck(isLeft);
 
             DjBoothBlockEntity dj = booth();
-            boolean active = dj != null && (isPlay ? dj.isPlaying(deck) : MusicPulse.isCued(pos, deck));
+            boolean hasDisc = dj != null && !dj.getDisc(deck).isEmpty();
+            boolean isPlaying = dj != null && dj.isPlaying(deck);
+            MusicPulse.Track track = MusicPulse.trackFor(pos, deck);
+            long cuePos = dj != null ? dj.getMainCue(deck) : 0;
+            boolean atCue = track != null && Math.abs(track.deckFrame - cuePos) < 200;
+            boolean blink = (System.currentTimeMillis() / 400) % 2 == 0;
 
-            int ringColor = isPlay
-                ? (active ? 0xFF00FF66 : (isHoveredOrFocused() ? 0xFF008833 : 0xFF004418))
-                : (active ? 0xFFFF9900 : (isHoveredOrFocused() ? 0xFF995500 : 0xFF442200));
+            int ringColor;
+            int textColor;
+            int innerBg;
+
+            if (isPlay) {
+                if (!hasDisc) {
+                    ringColor = 0xFF003310;
+                    textColor = 0xFF004418;
+                    innerBg = 0xFF060D08;
+                } else if (isPlaying) {
+                    ringColor = 0xFF00FF66;
+                    textColor = 0xFF00FF66;
+                    innerBg = 0xFF061E0E;
+                } else {
+                    // Paused with disc loaded -> blinking green
+                    ringColor = blink ? 0xFF00FF66 : 0xFF004418;
+                    textColor = blink ? 0xFF00FF66 : 0xFF005520;
+                    innerBg = 0xFF06140A;
+                }
+            } else {
+                // CUE button
+                if (!hasDisc) {
+                    ringColor = 0xFF331800;
+                    textColor = 0xFF442200;
+                    innerBg = 0xFF0D0A06;
+                } else if (isPlaying) {
+                    // Playing -> flashing orange to signal return to cue
+                    ringColor = blink ? 0xFFFF9900 : 0xFF442200;
+                    textColor = blink ? 0xFFFF9900 : 0xFF553300;
+                    innerBg = 0xFF140D04;
+                } else if (atCue) {
+                    // Paused at Cue Point -> solid orange
+                    ringColor = 0xFFFF9900;
+                    textColor = 0xFFFF9900;
+                    innerBg = 0xFF1E1406;
+                } else {
+                    // Paused away from Cue Point -> flashing orange to invite setting new cue
+                    ringColor = blink ? 0xFFFF9900 : 0xFF442200;
+                    textColor = blink ? 0xFFFF9900 : 0xFF553300;
+                    innerBg = 0xFF140D04;
+                }
+            }
 
             g.fill(cx - r, cy - r, cx + r, cy + r, 0xFF101216);
             g.renderOutline(cx - r, cy - r, width, height, ringColor);
-            g.fill(cx - r + 3, cy - r + 3, cx + r - 3, cy + r - 3, isPlay ? 0xFF06140A : 0xFF140D04);
+            g.fill(cx - r + 3, cy - r + 3, cx + r - 3, cy + r - 3, innerBg);
 
             if (isPlay) {
-                g.drawString(font, "▶||", cx - 7, cy - 4, active ? 0xFF00FF66 : 0xFF558866);
+                g.drawString(font, "▶||", cx - 7, cy - 4, textColor);
             } else {
-                g.drawCenteredString(font, "CUE", cx, cy - 4, active ? 0xFFFF9900 : 0xFF886644);
+                g.drawCenteredString(font, "CUE", cx, cy - 4, textColor);
             }
         }
 
@@ -1181,22 +1628,40 @@ public class DjMixerScreen extends Screen {
         private final int index;
         private final int baseColor;
         private final java.util.function.Consumer<PadButton> onPress;
+        private final java.util.function.Consumer<PadButton> onRelease;
         private boolean active;
         private int mode = DjBoothBlockEntity.PAD_BEAT_LOOP;
+        private boolean isHeld = false;
 
-        PadButton(int x, int y, int w, int h, int index, int baseColor, java.util.function.Consumer<PadButton> onPress) {
+        PadButton(int x, int y, int w, int h, int index, int baseColor,
+                  java.util.function.Consumer<PadButton> onPress,
+                  java.util.function.Consumer<PadButton> onRelease) {
             super(x, y, w, h, Component.empty());
             this.index = index;
             this.baseColor = baseColor;
             this.onPress = onPress;
+            this.onRelease = onRelease;
         }
 
         void setActive(boolean on) { this.active = on; }
         void setMode(int mode) { this.mode = mode; }
 
+        public void releaseButton() {
+            if (isHeld) {
+                isHeld = false;
+                if (onRelease != null) onRelease.accept(this);
+            }
+        }
+
         @Override
         public void onClick(double mouseX, double mouseY) {
-            onPress.accept(this);
+            isHeld = true;
+            if (onPress != null) onPress.accept(this);
+        }
+
+        @Override
+        public void onRelease(double mouseX, double mouseY) {
+            releaseButton();
         }
 
         @Override

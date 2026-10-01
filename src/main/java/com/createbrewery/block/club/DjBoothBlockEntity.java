@@ -77,6 +77,7 @@ public class DjBoothBlockEntity extends BlockEntity {
         float trim = 0.5f;
         int xfAssign = 0; // 0 = A, 1 = B, 2 = THRU
         int padMode = PAD_BEAT_LOOP;
+        long mainCue = 0;
         final long[] hotCues = {-1, -1, -1, -1, -1, -1, -1, -1};
         boolean vinylMode = true;
         boolean slipMode = false;
@@ -189,6 +190,8 @@ public class DjBoothBlockEntity extends BlockEntity {
             ItemStack disc = decks[deck].disc;
             if (!disc.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, disc);
             decks[deck].disc = ItemStack.EMPTY;
+            decks[deck].mainCue = 0;
+            java.util.Arrays.fill(decks[deck].hotCues, -1L);
         }
         if (hadAny) sync();
         return hadAny;
@@ -341,6 +344,8 @@ public class DjBoothBlockEntity extends BlockEntity {
             }
             crateSlot = slot;
             decks[deck].disc = next;
+            decks[deck].mainCue = 0;
+            java.util.Arrays.fill(decks[deck].hotCues, -1L);
             return true;
         }
         return false;
@@ -366,6 +371,8 @@ public class DjBoothBlockEntity extends BlockEntity {
             }
         }
         decks[deck].disc = next;
+        decks[deck].mainCue = 0;
+        java.util.Arrays.fill(decks[deck].hotCues, -1L);
         sync();
         if (player != null) {
             player.displayClientMessage(Component.translatable("createbrewery.dj.cued", name(deck), title(next)), true);
@@ -719,6 +726,24 @@ public class DjBoothBlockEntity extends BlockEntity {
     public int getLoopBeats(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].loopBeats : 0; }
     public int getLoopSerial(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].loopSerial : 0; }
 
+    public long getMainCue(int deck) { return deck >= 0 && deck < DECKS ? decks[deck].mainCue : 0; }
+    public void setMainCue(int deck, long cue) {
+        if (deck >= 0 && deck < DECKS) {
+            decks[deck].mainCue = Math.max(0, cue);
+            sync();
+        }
+    }
+
+    public long getHotCue(int deck, int pad) {
+        return deck >= 0 && deck < DECKS && pad >= 0 && pad < 8 ? decks[deck].hotCues[pad] : -1;
+    }
+    public void setHotCue(int deck, int pad, long frame) {
+        if (deck >= 0 && deck < DECKS && pad >= 0 && pad < 8) {
+            decks[deck].hotCues[pad] = frame;
+            sync();
+        }
+    }
+
     /** Client: every loaded booth, for the lights and effects that follow whichever booth plays near them. */
     private static final java.util.Set<BlockPos> BOOTHS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -808,6 +833,8 @@ public class DjBoothBlockEntity extends BlockEntity {
             tag.putBoolean(keys[deck] + "Slip", d.slipMode);
             tag.putBoolean(keys[deck] + "Reverse", d.reverse);
             tag.putBoolean(keys[deck] + "ScratchHeld", d.scratchHeld);
+            tag.putLong(keys[deck] + "MainCue", d.mainCue);
+            tag.putLongArray(keys[deck] + "HotCues", d.hotCues);
         }
         tag.putFloat("XfFrom", xfFrom);
         tag.putFloat("XfTo", xfTo);
@@ -850,6 +877,9 @@ public class DjBoothBlockEntity extends BlockEntity {
             d.slipMode = tag.getBoolean(keys[deck] + "Slip");
             d.reverse = tag.getBoolean(keys[deck] + "Reverse");
             d.scratchHeld = tag.getBoolean(keys[deck] + "ScratchHeld");
+            d.mainCue = tag.getLong(keys[deck] + "MainCue");
+            long[] loadedHot = tag.getLongArray(keys[deck] + "HotCues");
+            if (loadedHot.length == 8) System.arraycopy(loadedHot, 0, d.hotCues, 0, 8);
         }
         xfFrom = tag.getFloat("XfFrom");
         xfTo = tag.getFloat("XfTo");

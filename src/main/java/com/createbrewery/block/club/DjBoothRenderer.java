@@ -125,20 +125,9 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
         font.drawInBatch(statusRight, 2, -9, playRight ? colRight : 0xFF996644, false,
             pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
 
-        // Animated Mini-Waveforms on screen
-        float pulse = MusicPulse.kickNear(be.getBlockPos());
-        int bars = 16;
-        for (int i = 0; i < bars; i++) {
-            float x = -30f + i * 3.8f;
-
-            // Left Deck Waveform
-            float waveLeft = playLeft ? (float) (Math.sin(i * 0.7 + gameTime * 0.3) * 2.0 + 3.0 + pulse * 2.5) : 1f;
-            font.drawInBatch("·", x, 1 - waveLeft / 2f, playLeft ? colLeft : 0xFF1B3245, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
-
-            // Right Deck Waveform
-            float waveRight = playRight ? (float) (Math.sin(i * 0.7 + gameTime * 0.3 + 1.5) * 2.0 + 3.0 + pulse * 2.5) : 1f;
-            font.drawInBatch("·", x, 11 - waveRight / 2f, playRight ? colRight : 0xFF452815, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
-        }
+        // Decoded 3-Band Audio Waveforms on screen
+        renderDeckWaveformSlice(pose, buffers, font, fullBright, be, leftDeck, playLeft, 1f, colLeft);
+        renderDeckWaveformSlice(pose, buffers, font, fullBright, be, rightDeck, playRight, 11f, colRight);
 
         pose.popPose();
     }
@@ -177,23 +166,52 @@ public class DjBoothRenderer implements BlockEntityRenderer<DjBoothBlockEntity> 
         font.drawInBatch(statusB, 2, -9, playB ? 0xFFFF9900 : 0xFF996644, false,
             pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
 
-        // Animated Mini-Waveforms on screen
-        float pulse = MusicPulse.kickNear(be.getBlockPos());
+        // Decoded 3-Band Audio Waveforms on screen
+        renderDeckWaveformSlice(pose, buffers, font, fullBright, be, DjBoothBlockEntity.A, playA, 1f, 0xFF00E5FF);
+        renderDeckWaveformSlice(pose, buffers, font, fullBright, be, DjBoothBlockEntity.B, playB, 11f, 0xFFFF8800);
+
+        pose.popPose();
+    }
+
+    private void renderDeckWaveformSlice(PoseStack pose, MultiBufferSource buffers, Font font, int fullBright,
+                                         DjBoothBlockEntity be, int deck, boolean playing, float baseY, int defaultColor) {
+        MusicPulse.Track track = MusicPulse.trackFor(be.getBlockPos(), deck);
         int bars = 16;
         for (int i = 0; i < bars; i++) {
             float x = -30f + i * 3.8f;
+            float wave = 1.0f;
+            int col = defaultColor;
 
-            // Deck 1 Waveform (Cyan)
-            float waveA = playA ? (float) (Math.sin(i * 0.7 + gameTime * 0.3) * 2.0 + 3.0 + pulse * 2.5) : 1f;
-            int colA = playA ? 0xFF00E5FF : 0xFF1B3245;
-            font.drawInBatch("·", x, 1 - waveA / 2f, colA, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+            if (playing && track != null && track.rate > 0) {
+                long sFrame = track.deckFrame + (long) ((i - bars / 2) * (track.rate * 0.08f));
+                float[] slice = track.getWaveformSlice(sFrame);
+                if (slice != null) {
+                    float bass = slice[0];
+                    float loud = slice[1];
+                    float high = slice[2];
+                    float kick = slice[3];
+                    wave = Math.max(1.0f, loud * 5.0f + bass * 3.5f + kick * 2.0f);
+                    // Pioneer 3-band colors
+                    if (bass > 0.35f || kick > 0.4f) {
+                        col = 0xFF00AAFF; // Electric Blue / Kick
+                    } else if (loud > 0.3f) {
+                        col = 0xFFFFAA00; // Amber / Mid
+                    } else {
+                        col = 0xFFFFFFFF; // White / High
+                    }
+                } else {
+                    float pulse = MusicPulse.kickNear(be.getBlockPos());
+                    wave = 2.0f + pulse * 2.0f;
+                }
+            } else if (!playing) {
+                wave = 0.5f;
+                col = 0xFF202835;
+            }
 
-            // Deck 2 Waveform (Orange)
-            float waveB = playB ? (float) (Math.sin(i * 0.7 + gameTime * 0.3 + 1.5) * 2.0 + 3.0 + pulse * 2.5) : 1f;
-            int colB = playB ? 0xFFFF8800 : 0xFF452815;
-            font.drawInBatch("·", x, 11 - waveB / 2f, colB, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+            font.drawInBatch("·", x, baseY - wave / 2f, col, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+            if (wave > 2.2f) {
+                font.drawInBatch("·", x, baseY + wave / 2f - 2f, col, false, pose.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, fullBright);
+            }
         }
-
-        pose.popPose();
     }
 }

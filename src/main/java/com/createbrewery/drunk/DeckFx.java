@@ -11,7 +11,7 @@ package com.createbrewery.drunk;
  * gentle shelf.
  */
 public final class DeckFx {
-    public static final int NONE = 0, ECHO = 1, REVERB = 2, FLANGER = 3, PHASER = 4, ROLL = 5, TRANS = 6, EFFECTS = 7;
+    public static final int NONE = 0, DELAY = 1, ECHO = 2, REVERB = 3, FLANGER = 4, PHASER = 5, ROLL = 6, TRANS = 7, HELIX = 8, PINGPONG = 9, EFFECTS = 10;
     public static final int COLOR_SPACE = 0, COLOR_DUB_ECHO = 1, COLOR_SWEEP = 2, COLOR_NOISE = 3, COLOR_CRUSH = 4, COLOR_FILTER = 5, COLOR_FX_COUNT = 6;
     private static final double LOW_SPLIT = 250, HIGH_SPLIT = 2500;
 
@@ -35,9 +35,13 @@ public final class DeckFx {
     private float crushSample = 0f;
     private int crushHold = 0;
 
-    // Echo: a half-beat delay with feedback, ringing out after the send closes.
+    // Echo & Delay buffers
     private final float[] echo;
     private int echoAt, echoLen;
+    private final float[] delayBuf;
+    private int delayAt, delayLen;
+    private final float[] pingPongBuf;
+    private int pingPongAt, pingPongLen;
     // Flanger: modulated short delay
     private final float[] flangerBuf;
     private int flangerAt;
@@ -45,6 +49,10 @@ public final class DeckFx {
     // Roll: momentary beat loop repeat
     private final float[] rollBuf;
     private int rollAt, rollLen;
+    // Helix: pitch-ramping resonant roll
+    private final float[] helixBuf;
+    private int helixAt, helixLen;
+    private double helixPhase;
     // Reverb: Schroeder - four damped combs in parallel, two all-passes in series.
     private final float[][] combs;
     private final int[] combAt = new int[4];
@@ -61,8 +69,11 @@ public final class DeckFx {
             }
         }
         echo = new float[(int) (rate * 2)];
+        delayBuf = new float[(int) (rate * 4)];
+        pingPongBuf = new float[(int) (rate * 4)];
         flangerBuf = new float[(int) (rate * 0.02)]; // 20ms
         rollBuf = new float[(int) (rate * 2)];
+        helixBuf = new float[(int) (rate * 2)];
         double s = rate / 44100.0;
         combs = new float[][] {new float[(int) (1116 * s)], new float[(int) (1188 * s)], new float[(int) (1277 * s)], new float[(int) (1356 * s)]};
         passes = new float[][] {new float[(int) (556 * s)], new float[(int) (441 * s)]};
@@ -135,8 +146,11 @@ public final class DeckFx {
             clearTails();
         }
         sendTarget = Math.max(0f, Math.min(1f, amount));
+        delayLen = (int) Math.max(1, Math.min(delayBuf.length - 1, beatSec * beatFrac * rate));
         echoLen = (int) Math.max(1, Math.min(echo.length - 1, beatSec * beatFrac * 0.5 * rate));
+        pingPongLen = (int) Math.max(1, Math.min(pingPongBuf.length - 1, beatSec * beatFrac * 0.5 * rate));
         rollLen = (int) Math.max(1, Math.min(rollBuf.length - 1, beatSec * beatFrac * 0.25 * rate));
+        helixLen = (int) Math.max(1, Math.min(helixBuf.length - 1, beatSec * beatFrac * 0.25 * rate));
     }
 
     public void setColorFx(int type, float amount, float param) {
@@ -214,7 +228,9 @@ public final class DeckFx {
             }
 
             // 2. Beat FX processing
-            if (fx == ECHO) {
+            if (fx == DELAY) {
+                y = delay(y);
+            } else if (fx == ECHO) {
                 y = echo(y);
             } else if (fx == REVERB) {
                 y = reverb(y);
@@ -226,6 +242,10 @@ public final class DeckFx {
                 y = roll(y);
             } else if (fx == TRANS) {
                 y = trans(y);
+            } else if (fx == HELIX) {
+                y = helix(y);
+            } else if (fx == PINGPONG) {
+                y = pingPong(y);
             }
 
             lfoPhase += lfoSpeed;
@@ -303,10 +323,47 @@ public final class DeckFx {
         return x + wet * 0.6;
     }
 
+    private double delay(double x) {
+        int read = delayAt - delayLen;
+        if (read < 0) read += delayBuf.length;
+        double delayed = delayBuf[read];
+        delayBuf[delayAt] = (float) (x + delayed * 0.35);
+        if (++delayAt == delayBuf.length) delayAt = 0;
+        return x * (1.0 - send * 0.5) + delayed * send;
+    }
+
+    private double pingPong(double x) {
+        int read = pingPongAt - pingPongLen;
+        if (read < 0) read += pingPongBuf.length;
+        double delayed = pingPongBuf[read];
+        double bounce = (pingPongAt % (pingPongLen * 2) < pingPongLen) ? delayed : -delayed * 0.85;
+        pingPongBuf[pingPongAt] = (float) (x + delayed * 0.52);
+        if (++pingPongAt == pingPongBuf.length) pingPongAt = 0;
+        return x * (1.0 - send * 0.5) + bounce * send;
+    }
+
+    private double helix(double x) {
+        if (send < 0.05f) {
+            helixBuf[helixAt] = (float) x;
+            if (++helixAt >= helixLen) helixAt = 0;
+            helixPhase = 0;
+            return x;
+        }
+        double speed = 1.0 + Math.sin(lfoPhase) * 0.45 * send;
+        helixPhase += speed;
+        while (helixPhase >= helixLen) helixPhase -= helixLen;
+        int idx = (int) helixPhase;
+        double looped = helixBuf[idx % helixBuf.length];
+        return x * (1.0 - send) + looped * send;
+    }
+
     private void clearTails() {
         java.util.Arrays.fill(echo, 0f);
+        java.util.Arrays.fill(delayBuf, 0f);
+        java.util.Arrays.fill(pingPongBuf, 0f);
         java.util.Arrays.fill(flangerBuf, 0f);
         java.util.Arrays.fill(rollBuf, 0f);
+        java.util.Arrays.fill(helixBuf, 0f);
         for (float[] c : combs) java.util.Arrays.fill(c, 0f);
         for (float[] p : passes) java.util.Arrays.fill(p, 0f);
         java.util.Arrays.fill(combLow, 0f);
