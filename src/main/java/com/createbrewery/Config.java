@@ -14,6 +14,7 @@ public class Config {
     public static final ModConfigSpec.IntValue MAX_SPEAKERS;
     public static final ModConfigSpec.BooleanValue CLUB_REVERB;
     public static final ModConfigSpec.DoubleValue REVERB_AMOUNT;
+    public static final ModConfigSpec.DoubleValue SPEAKER_SPREAD;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -52,6 +53,10 @@ public class Config {
         REVERB_AMOUNT = client
             .comment("How much of that reverb you hear, 0 to 1.")
             .defineInRange("reverbAmount", 0.7, 0.0, 1.0);
+        SPEAKER_SPREAD = client
+            .comment("How wide a club speaker sounds, in blocks: inside this radius its sound spreads over both ears instead of coming from one side.",
+                "0 = a point (hard left or right when you stand next to one).")
+            .defineInRange("speakerSpread", 3.0, 0.0, 8.0);
         CLIENT_SPEC = client.build();
     }
 }

@@ -639,6 +639,7 @@ public final class MusicPulse {
             e.drive = w.getValue().drive();
             e.delay = w.getValue().delay();
             e.crossover = crossover;
+            e.spread = Config.CLIENT_SPEC.isLoaded() ? Config.SPEAKER_SPREAD.get().floatValue() : 3f;
             e.stack = w.getValue().pa() ? PaLevel.stackGain(near[w.getValue().band()]) : 1f;
             if (e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt, raysLeft > 0)) raysLeft--;
         }

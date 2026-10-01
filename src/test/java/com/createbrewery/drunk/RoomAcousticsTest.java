@@ -63,6 +63,14 @@ class RoomAcousticsTest {
     }
 
     @Test
+    void aBiggerRoomSendsMoreOfTheSpeakersToTheReverb() {
+        float closet = RoomAcoustics.sendFor(room(2)), hall = RoomAcoustics.sendFor(room(20));
+        assertTrue(closet < hall, "a hall should be wetter than a closet");
+        assertTrue(closet >= 0.8f && hall <= 1.0f, "out of range: " + closet + " .. " + hall);
+        assertEquals(0f, RoomAcoustics.sendFor(RoomAcoustics.estimate(new double[16], new boolean[16])), "open air sends nothing");
+    }
+
+    @Test
     void lerpMovesEveryFieldTowardsTheTarget() {
         RoomAcoustics.Params a = room(3), b = room(15);
         RoomAcoustics.Params half = RoomAcoustics.lerp(a, b, 0.5);

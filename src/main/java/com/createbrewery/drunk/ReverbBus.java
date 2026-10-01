@@ -15,12 +15,12 @@ final class ReverbBus {
 
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
-    /** How much of a speaker goes to the reverb, and the share of that for a subwoofer's band (reverb on bass is mud). */
-    static final float SEND = 0.6f, LOW_FACTOR = 0.3f;
+    /** The share of the send a subwoofer's band keeps (reverb on bass is mud); the rest follows the room's size ({@link RoomAcoustics#sendFor}). */
+    static final float LOW_FACTOR = 0.3f;
 
     private static int slot = -1, effect = -1;
     private static boolean eax, failed;
-    private static float amount;
+    private static float amount, room = 1f;
     private static double lastApply = -1;
 
     /** The slot to send to, or 0 when there is none. */
@@ -59,6 +59,7 @@ final class ReverbBus {
     static void apply(RoomAcoustics.Params p, float wet, double now) {
         if (slot <= 0) return;
         amount = wet;
+        room = RoomAcoustics.sendFor(p);
         if (now - lastApply < 0.1) return;
         lastApply = now;
         try {
@@ -67,6 +68,10 @@ final class ReverbBus {
                 EXTEfx.alEffectf(effect, EXTEfx.AL_EAXREVERB_DENSITY, p.density());
                 EXTEfx.alEffectf(effect, EXTEfx.AL_EAXREVERB_DIFFUSION, p.diffusion());
                 EXTEfx.alEffectf(effect, EXTEfx.AL_EAXREVERB_GAIN, 0.32f);
+                // Smeared, not metallic, and from everywhere: a club's room is all around you.
+                EXTEfx.alEffectf(effect, EXTEfx.AL_EAXREVERB_MODULATION_DEPTH, 0.3f);
+                EXTEfx.alEffectfv(effect, EXTEfx.AL_EAXREVERB_REFLECTIONS_PAN, new float[3]);
+                EXTEfx.alEffectfv(effect, EXTEfx.AL_EAXREVERB_LATE_REVERB_PAN, new float[3]);
                 EXTEfx.alEffectf(effect, EXTEfx.AL_EAXREVERB_LATE_REVERB_GAIN, p.lateGain());
                 EXTEfx.alEffectf(effect, EXTEfx.AL_EAXREVERB_REFLECTIONS_GAIN, p.reflectionsGain());
             } else {
@@ -85,7 +90,7 @@ final class ReverbBus {
 
     /** The send gain for an emitter of {@code band} behind {@code wallLoss} (1 in the open). */
     static float send(int band, float wallLoss) {
-        return Math.min(1f, SEND * amount * wallLoss * (band == Emitter.LOW ? LOW_FACTOR : 1f));
+        return Math.min(1f, room * amount * wallLoss * (band == Emitter.LOW ? LOW_FACTOR : 1f));
     }
 
     static int newFilter() {

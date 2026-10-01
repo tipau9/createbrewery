@@ -75,6 +75,9 @@ final class Emitter {
     static final float SUB_REACH = 1.5f;
     /** Set each frame to the PA's stack gain (see {@link PaLevel}) and eased, so a speaker crossing the radius does not step the level. */
     float stack = 1f;
+    /** The radius (blocks) inside which the source is spread over both ears, set each frame from the config; subwoofers are bigger. */
+    float spread = 3f;
+    private float radius = -1f;
     private float stackNow = 1f;
     private float baseRef;
     private int reachBand = -1;
@@ -179,6 +182,14 @@ final class Emitter {
             split.set(band == LOW, crossover);
         }
         feed(t, target + (long) (LEAD * rate * pitch));
+        float wantRadius = phones ? 0f : spread * (band == LOW ? 1.7f : 1f);
+        if (radius != wantRadius) {
+            radius = wantRadius;
+            try {
+                AL10.alSourcef(source, org.lwjgl.openal.EXTSourceRadius.AL_SOURCE_RADIUS, wantRadius);
+                AL10.alGetError(); // an OpenAL without the extension only flags an error; the game must not log it as its own
+            } catch (Throwable ignored) {}
+        }
         stackNow += (stack - stackNow) * Math.min(1f, dt * 5f);
         if (!phones && reachBand != band) {
             reachBand = band;
@@ -223,6 +234,7 @@ final class Emitter {
             source = AL10.alGenSources();
             sendOn = false;
             sent = -1f;
+            radius = -1f;
             AL10.alSource3f(source, AL10.AL_POSITION, (float) pos.x, (float) pos.y, (float) pos.z);
             AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, phones ? AL10.AL_TRUE : AL10.AL_FALSE);
             if (phones) {

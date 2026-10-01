@@ -30,7 +30,17 @@ final class RoomAcoustics {
         double rt60 = 0.161 * volume / (surface * ABSORPTION);
         double decay = clamp(rt60, 0.2, 3.5) * (1 - 0.7 * open);
         double dry = (1 - open) * (1 - open);
-        return new Params((float) Math.max(0.1, decay), 1f, (float) clamp(1 - d / 60, 0.6, 1), (float) (1.26 * dry), (float) (0.3 * dry));
+        return new Params((float) Math.max(0.1, decay), 1f, (float) clamp(1 - d / 60, 0.8, 1), (float) (1.26 * dry), (float) (0.3 * dry));
+    }
+
+    /**
+     * How much of a speaker goes to the room reverb, 0..1: a bigger room is wetter (0.8 in a closet to
+     * 1 in a hall), and open air sends nothing - in a real club the room is half of what you hear.
+     */
+    static float sendFor(Params p) {
+        double size = clamp((p.decayTime() - 0.2) / 3.3, 0, 1);
+        double dry = clamp(p.lateGain() / 1.26, 0, 1);
+        return (float) ((0.8 + 0.2 * size) * dry);
     }
 
     static Params lerp(Params a, Params b, double k) {
