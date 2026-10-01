@@ -92,7 +92,7 @@ public class FogMachineBlockEntity extends SmartBlockEntity implements IHaveGogg
         if (level != null && level.isClientSide) {
             // A steady jet, with a thicker blast when the music drops.
             float gate = link.gate(level);
-            int puffs = Math.round((2 + (ClubStates.at(level, worldPosition, link.booth(level)).dropLevel > 0.3f ? 2 : 0)) * gate);
+            int puffs = Math.round((2 + (ClubStates.at(level, worldPosition, link.booth(level)).drop > 0.3f ? 2 : 0)) * gate);
             for (int i = 0; i < puffs; i++) {
                 // Just past the brass nozzle; the particle draws its puff a little above this point (see FogParticle).
                 double nozzleX = worldPosition.getX() + 0.5 + facing.getStepX() * 0.85;

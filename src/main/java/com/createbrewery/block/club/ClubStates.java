@@ -27,6 +27,7 @@ final class ClubStates {
 
     private static final Map<BlockPos, Entry> BOOTH = new HashMap<>(), LOOSE = new HashMap<>();
     private static WeakReference<Level> seen = new WeakReference<>(null);
+    private static long lastPrune;
 
     private ClubStates() {}
 
@@ -36,7 +37,8 @@ final class ClubStates {
             LOOSE.clear();
             seen = new WeakReference<>(level);
         }
-        long now = level.getGameTime();
+        // The server resets the client's game time every second or so, so it can repeat; the client's own tick count only rises.
+        long now = Minecraft.getInstance().gui.getGuiTicks();
         DjBoothBlockEntity dj = null;
         if (linkedBooth != null && level.isLoaded(linkedBooth) && level.getBlockEntity(linkedBooth) instanceof DjBoothBlockEntity linked) dj = linked;
         if (dj == null) dj = DjBoothBlockEntity.nearestPlaying(level, pos, REACH);
@@ -48,9 +50,12 @@ final class ClubStates {
             e.tick = now;
             e.state.update(0.05f, MusicPulse.kickNear(at), MusicPulse.dropNear(at), MusicPulse.tensionNear(at),
                 MusicPulse.playingNear(at), MusicPulse.periodNear(at),
-                dj != null ? dj.mixer(now) : ClubState.Mixer.NONE,
+                dj != null ? dj.mixer(level.getGameTime()) : ClubState.Mixer.NONE,
                 Minecraft.getInstance().options.hideLightningFlash().get());
-            if (map.size() > 64) map.values().removeIf(old -> old.tick < now - KEEP);
+            if (map.size() > 64 && now != lastPrune) {
+                lastPrune = now;
+                map.values().removeIf(old -> old.tick < now - KEEP);
+            }
         }
         return e.state;
     }

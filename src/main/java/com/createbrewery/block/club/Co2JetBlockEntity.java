@@ -75,7 +75,7 @@ public class Co2JetBlockEntity extends BlockEntity implements ConsoleLinked {
         }
 
         // Under a console, a drop opens the valve for a burst; the console's blackout closes it.
-        if (link.console != null) {
+        if (link.console(level) != null) {
             if (ClubStates.at(level, pos, link.booth(level)).dropEdge) burst = 20;
             if (burst > 0) burst--;
             on = (on || burst > 0) && link.gate(level) >= 0.05f;

@@ -39,9 +39,8 @@ public class LaserProjectorBlockEntity extends BlockEntity implements ConsoleLin
         ticks++;
         ClubState club = ClubStates.at(level, worldPosition, link.booth(level));
         gate = link.gate(level);
-        // The old raw pulse was a smooth 0..1 that peaks on the kick; the state's punch envelope has the same shape.
-        kick = club.env;
-        drop = club.dropLevel;
+        kick = club.kick;
+        drop = club.drop;
         prevPhase = phase;
         phase += 0.04f + kick * 0.12f + drop * 0.08f;
 

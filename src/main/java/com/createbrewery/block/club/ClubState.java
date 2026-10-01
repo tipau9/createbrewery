@@ -14,6 +14,8 @@ final class ClubState {
         static final Mixer NONE = new Mixer(0.5f, 0f, false);
     }
 
+    /** The raw pulse as heard, 0..1 (smooth, for things that follow it continuously) and the raw drop. */
+    float kick, drop;
     /** True for exactly one tick on a kick; its running count; 0..1 through the beat; the punch that dies before the next kick. */
     boolean beat;
     int beatIndex;
@@ -36,6 +38,8 @@ final class ClubState {
     private double sinceKick = 99;
 
     void update(float dt, float kick, float drop, float tension, boolean playing, double period, Mixer mixer, boolean noFlashing) {
+        this.kick = kick;
+        this.drop = drop;
         this.playing = playing;
         this.noFlashing = noFlashing;
         this.period = Math.max(0.2, period);
@@ -59,7 +63,7 @@ final class ClubState {
 
         breakdown = playing && sinceKick > Math.max(2.0, 4 * this.period);
 
-        bassCut = Math.max(clamp((0.5f - mixer.lowEq()) * 2f), Math.max(0f, mixer.filter()));
+        bassCut = Math.max(clamp((0.47f - mixer.lowEq()) / 0.47f), Math.max(0f, mixer.filter()));
         filterClosed = Math.max(0f, -mixer.filter());
         // The mixer only sharpens a build-up that is already running: a bass kill on its own must not strobe.
         buildUp = tension > 0.05f ? clamp(tension + 0.3f * Math.max(bassCut, filterClosed)) : tension;

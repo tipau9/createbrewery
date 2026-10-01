@@ -92,6 +92,23 @@ class ClubStateTest {
     }
 
     @Test
+    void theRawPulseIsKeptForBlocksThatFollowItContinuously() {
+        ClubState c = new ClubState();
+        tick(c, 0.3f, 0.1f, 0, true);
+        assertEquals(0.3f, c.kick, 1e-6);
+        assertEquals(0.1f, c.drop, 1e-6);
+        assertFalse(c.beat, "0.3 is below the beat threshold, but the raw pulse still moves");
+    }
+
+    @Test
+    void aSlightlyOffEqKnobIsNotABassCut() {
+        ClubState c = new ClubState();
+        tick(c, 0, 0, 0.5f, true, new ClubState.Mixer(0.49f, 0f, false));
+        assertEquals(0f, c.bassCut, 1e-6);
+        assertEquals(0.5f, c.buildUp, 1e-6);
+    }
+
+    @Test
     void flashingFlagIsPassedThrough() {
         ClubState c = new ClubState();
         c.update(0.05f, 0, 0, 0, true, 0.5, ClubState.Mixer.NONE, true);

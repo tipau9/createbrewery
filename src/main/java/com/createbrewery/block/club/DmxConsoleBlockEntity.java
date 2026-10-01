@@ -246,9 +246,11 @@ public class DmxConsoleBlockEntity extends BlockEntity {
      * entities tick in the order they were loaded - works it out, so the whole rig is in step.
      */
     DmxProgram output() {
-        if (level == null || level.getGameTime() == ranAt) return program;
-        ranAt = level.getGameTime();
-        program.update(settings, ranAt, 0.05f, ClubStates.at(level, worldPosition, booth));
+        // Counted in client ticks: the game time can repeat when the server corrects it.
+        long now = net.minecraft.client.Minecraft.getInstance().gui.getGuiTicks();
+        if (level == null || now == ranAt) return program;
+        ranAt = now;
+        program.update(settings, level.getGameTime(), 0.05f, ClubStates.at(level, worldPosition, booth));
         return program;
     }
 
