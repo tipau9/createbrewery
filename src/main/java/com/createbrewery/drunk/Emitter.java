@@ -331,7 +331,7 @@ final class Emitter {
         for (Vec3 around : new Vec3[] {air.add(0, 0.8, 0), air.add(side), air.subtract(side)}) {
             if (wallsBetween(world, eye, around, listener) > 0) blocked++;
         }
-        targetMuffle = blocked / 4f;
+        targetMuffle = WallFilter.muffleFor(middle, blocked);
         targetWalls = middle;
     }
 
