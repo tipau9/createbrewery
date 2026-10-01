@@ -68,6 +68,29 @@ public final class MusicPulse {
     private static final int RAYS_PER_FRAME = 4;
     private static int raysLeft;
 
+    private static final RoomProbe ROOM = new RoomProbe();
+
+    /** Once a frame: keeps the shared reverb on the room around the listener while any club speaker plays, and frees it when none does. */
+    private static void reverb(Minecraft mc, LocalPlayer player, double now, float dt) {
+        boolean any = false;
+        for (Track t : tracks) {
+            if (!t.emitters.isEmpty()) {
+                any = true;
+                break;
+            }
+        }
+        if (!any) {
+            ReverbBus.release();
+            ROOM.reset();
+            return;
+        }
+        if (player == null || mc.level == null || !ReverbBus.ensure()) return;
+        ROOM.update(mc.level, player, now, dt);
+        boolean on = Config.CLIENT_SPEC.isLoaded() && Config.CLUB_REVERB.get();
+        float amount = on ? Config.REVERB_AMOUNT.get().floatValue() : 0f;
+        if (ROOM.params() != null) ReverbBus.apply(ROOM.params(), amount, now);
+    }
+
     private static int maxSpeakers() {
         return Config.CLIENT_SPEC.isLoaded() ? Config.MAX_SPEAKERS.get() : 12;
     }
@@ -520,6 +543,7 @@ public final class MusicPulse {
             loud = Math.max(loud, CURRENT_SLICE[KickDetector.LOUD] * near);
             high = Math.max(high, CURRENT_SLICE[KickDetector.HIGH] * near);
         }
+        reverb(mc, player, now, dt);
         playing = heard;
         song.hear(k, l, h, bass, loud, high, heard, now, dt);
         // At techno tempos each kick dies away faster, so hits stay apart instead of smearing.

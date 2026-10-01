@@ -78,6 +78,10 @@ final class Emitter {
     private float stackNow = 1f;
     private float baseRef;
     private int reachBand = -1;
+    /** Its send to the room reverb: the low-pass filter, the gain last set on it, and whether the send is connected. */
+    private int sendFilter = -1;
+    private float sent = -1f;
+    private boolean sendOn;
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     Emitter(Vec3 pos, float level, double rate) {
@@ -177,13 +181,39 @@ final class Emitter {
         }
         AL10.alSourcef(source, AL10.AL_GAIN, gain * level * stackNow);
         AL10.alSourcef(source, AL10.AL_PITCH, pitch * servo);
+        if (!phones) wet();
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING && !queued.isEmpty()) AL10.alSourcePlay(source);
         return cast;
+    }
+
+    /** Connects the source to the room reverb, or lets go of it when there is none; the filter follows how walled off it is. */
+    private void wet() {
+        int slot = ReverbBus.slot();
+        if (slot == 0) {
+            if (sendOn) {
+                AL11.alSource3i(source, EXTEfx.AL_AUXILIARY_SEND_FILTER, EXTEfx.AL_EFFECTSLOT_NULL, 0, EXTEfx.AL_FILTER_NULL);
+                AL10.alGetError();
+                sendOn = false;
+            }
+            return;
+        }
+        if (sendFilter < 0) sendFilter = ReverbBus.newFilter();
+        if (sendFilter < 0) return;
+        float g = ReverbBus.send(band, (float) WallFilter.loss(muffle, walls));
+        if (sendOn && Math.abs(g - sent) < 0.02f) return;
+        ReverbBus.setFilterGain(sendFilter, g);
+        // A changed filter only counts once it is attached again.
+        AL11.alSource3i(source, EXTEfx.AL_AUXILIARY_SEND_FILTER, slot, 0, sendFilter);
+        AL10.alGetError();
+        sent = g;
+        sendOn = true;
     }
 
     private void create(int original) {
         try {
             source = AL10.alGenSources();
+            sendOn = false;
+            sent = -1f;
             AL10.alSource3f(source, AL10.AL_POSITION, (float) pos.x, (float) pos.y, (float) pos.z);
             AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, phones ? AL10.AL_TRUE : AL10.AL_FALSE);
             if (phones) {
@@ -330,6 +360,8 @@ final class Emitter {
             } catch (Throwable ignored) {}
         }
         source = -1;
+        if (sendFilter >= 0) ReverbBus.deleteFilter(sendFilter);
+        sendFilter = -1;
         try {
             for (int buffer : free) AL10.alDeleteBuffers(buffer);
         } catch (Throwable ignored) {}
