@@ -152,6 +152,7 @@
   "createbrewery.dmx.console": "DMX-Lichtpult",
   "createbrewery.dmx.linked": "Scheinwerfer mit diesem Pult verbunden - häng sie im Club auf",
   "createbrewery.dmx.relinked": "Scheinwerfer mit dem Pult verbunden",
+  "createbrewery.dmx.fixture_fan": "Fächer-Position %s",
   "createbrewery.dmx.effect_linked": "Mit dem Pult verbunden, Gruppe %s",
   "createbrewery.dmx.too_far": "Dort ist kein DMX-Pult, oder es ist mehr als %s Blöcke entfernt",
   "createbrewery.dmx.lore": "Verbunden mit DMX-Pult bei %s, %s, %s",

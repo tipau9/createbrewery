@@ -144,6 +144,13 @@ public class FixtureBlock extends Block implements EntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof FixtureBlockEntity fixture)) return InteractionResult.PASS;
+        if (player.isShiftKeyDown() && !level.isClientSide) {
+            // Sneaking with an empty hand: the fixture's place along the fan.
+            fixture.setFan(fixture.getFan() + 1);
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.6f);
+            player.displayClientMessage(Component.translatable("createbrewery.dmx.fixture_fan", fixture.getFan()), true);
+            return InteractionResult.sidedSuccess(false);
+        }
         if (!player.isShiftKeyDown() && !level.isClientSide) {
             fixture.setGroup(fixture.getGroup() + 1);
             level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.2f);

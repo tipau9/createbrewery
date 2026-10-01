@@ -75,6 +75,14 @@ public final class ClubTestAccess {
         return back.colorFx == 0 && back.gobo == 0 && back.zoom == 1 && !back.prism;
     }
 
+    public static int fixtureFan(Level level, BlockPos pos) {
+        return ((FixtureBlockEntity) level.getBlockEntity(pos)).getFan();
+    }
+
+    public static void setFixtureFan(Level level, BlockPos pos, int fan) {
+        ((FixtureBlockEntity) level.getBlockEntity(pos)).setFan(fan);
+    }
+
     /** Swaps deck {@code deck}'s record for the next one from the crate beside the booth. */
     public static boolean restock(DjBoothBlockEntity dj, int deck) {
         return dj.restock(deck);

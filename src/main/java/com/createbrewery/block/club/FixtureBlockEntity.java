@@ -34,6 +34,7 @@ public class FixtureBlockEntity extends BlockEntity {
     @Nullable
     private BlockPos console;
     private int group;
+    private int fan;
 
     // Client only.
     private DmxProgram own;
@@ -43,9 +44,18 @@ public class FixtureBlockEntity extends BlockEntity {
     private int color = 0xFFFFFF;
     private final float[] pixels = new float[8];
     private float pan, tilt, prevPan, prevTilt;
-    private float beam = (float) RANGE;
-    @Nullable
-    private BlockHitResult hit;
+    private final int[] pixelColors = new int[8];
+    private float glideLevel;
+    private int zoom = 1, gobo;
+    private boolean prism;
+    private float goboRot;
+    private final float[] beamLen = new float[3];
+    private final BlockHitResult[] beamHits = new BlockHitResult[3];
+    private int beams = 1;
+
+    {
+        beamLen[0] = (float) RANGE;
+    }
     /** The Veil room light (a {@code LightRenderHandle}), typed Object so Veil stays optional. */
     private Object roomLight;
 
@@ -76,6 +86,15 @@ public class FixtureBlockEntity extends BlockEntity {
 
     void setConsole(@Nullable BlockPos console) {
         this.console = console == null ? null : console.immutable();
+        sync();
+    }
+
+    public int getFan() {
+        return fan;
+    }
+
+    void setFan(int f) {
+        fan = Math.floorMod(f, 8);
         sync();
     }
 
@@ -114,22 +133,39 @@ public class FixtureBlockEntity extends BlockEntity {
         }
         FixtureBlock.Kind kind = kind();
         prevLit = lit;
-        lit = response.dimmer(lampOf(kind), program.level[group]);
-        int targetColor = kind == FixtureBlock.Kind.BLINDER ? TUNGSTEN : program.color[group];
+        float target;
+        if (fan == 0) {
+            target = program.level[group];
+        } else {
+            target = program.levelFor(settings, group, fan);
+            // The group's own level already glides; a fanned fixture takes the raw target, so it glides here.
+            if (program.noFlashing()) target = FixtureResponse.glide(glideLevel, target);
+            glideLevel = target;
+        }
+        lit = response.dimmer(lampOf(kind), target);
+        int targetColor = kind == FixtureBlock.Kind.BLINDER ? TUNGSTEN : fan == 0 ? program.color[group] : program.colorFor(settings, group, fan);
         color = response.color(targetColor, kind == FixtureBlock.Kind.BLINDER ? 0f : kind == FixtureBlock.Kind.MOVING_HEAD ? 5f : 2f);
-        for (int i = 0; i < pixels.length; i++) pixels[i] = program.pixel(settings, i, pixels.length);
+        for (int i = 0; i < pixels.length; i++) {
+            pixels[i] = program.pixel(settings, i, pixels.length);
+            pixelColors[i] = program.pixelColor(settings, i, pixels.length, group, fan);
+        }
+        zoom = settings.zoom;
+        gobo = settings.gobo;
+        prism = settings.prism && kind == FixtureBlock.Kind.MOVING_HEAD;
+        // Under one turn a second at any tempo.
+        goboRot = program.movePhase * 0.5f;
 
         Direction facing = getBlockState().getValue(FixtureBlock.FACING);
         prevPan = pan;
         prevTilt = tilt;
         if (kind == FixtureBlock.Kind.MOVING_HEAD) {
             // Motors with a top speed and a limit on how hard they speed up and brake, like a real head.
-            float[] aim = program.aim(settings, group);
+            float[] aim = program.aim(settings, group, fan);
             response.motor(aim[0], aim[1]);
             pan = response.pan;
             tilt = response.tilt;
         }
-        if (lit > 0.02f) castBeam(facing);
+        if (lit > 0.02f) castBeams(facing);
 
         if (kind == FixtureBlock.Kind.BLINDER && lit > 0.3f) {
             // A blinder is meant to blind: glare like a strobe, softer while it only holds.
@@ -147,12 +183,57 @@ public class FixtureBlockEntity extends BlockEntity {
         }
     }
 
-    private void castBeam(Direction facing) {
-        Vec3 dir = direction(facing, 1f);
+    private void castBeams(Direction facing) {
+        beams = prism ? 3 : 1;
         Vec3 from = lens(facing);
-        hit = level.clip(new ClipContext(from, from.add(dir.scale(RANGE)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        beam = hit.getType() == HitResult.Type.MISS ? (float) RANGE : (float) hit.getLocation().distanceTo(from);
-        if (hit.getType() == HitResult.Type.MISS) hit = null;
+        for (int b = 0; b < beams; b++) {
+            Vec3 dir = beamDirection(b, 1f);
+            BlockHitResult h = level.clip(new ClipContext(from, from.add(dir.scale(RANGE)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+            beamLen[b] = h.getType() == HitResult.Type.MISS ? (float) RANGE : (float) h.getLocation().distanceTo(from);
+            beamHits[b] = h.getType() == HitResult.Type.MISS ? null : h;
+        }
+    }
+
+    int beamCount() {
+        return beams;
+    }
+
+    /** Beam {@code b}: 0 is the head's own, 1 and 2 the prism's, six degrees either side in pan. */
+    Vec3 beamDirection(int b, float partialTick) {
+        Direction facing = getBlockState().getValue(FixtureBlock.FACING);
+        if (b == 0 || kind() != FixtureBlock.Kind.MOVING_HEAD) return direction(facing, partialTick);
+        double[] d = LaserBeams.direction(facing.getStepX(), facing.getStepY(), facing.getStepZ(),
+            prevPan + (pan - prevPan) * partialTick + (b == 1 ? 6 : -6), prevTilt + (tilt - prevTilt) * partialTick);
+        return new Vec3(d[0], d[1], d[2]);
+    }
+
+    float beamLength(int b) {
+        return beamLen[b];
+    }
+
+    @Nullable
+    BlockHitResult beamHit(int b) {
+        return beamHits[b];
+    }
+
+    int zoom() {
+        return zoom;
+    }
+
+    int gobo() {
+        return gobo;
+    }
+
+    boolean prism() {
+        return prism;
+    }
+
+    float goboRotation() {
+        return goboRot;
+    }
+
+    int pixelColor(int i) {
+        return pixelColors[i];
     }
 
     Vec3 lens(Direction facing) {
@@ -180,12 +261,12 @@ public class FixtureBlockEntity extends BlockEntity {
     }
 
     float beam() {
-        return beam;
+        return beamLen[0];
     }
 
     @Nullable
     BlockHitResult hit() {
-        return hit;
+        return beamHits[0];
     }
 
     @Override
@@ -202,6 +283,7 @@ public class FixtureBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         if (console != null) tag.put("Console", NbtUtils.writeBlockPos(console));
         tag.putInt("Group", group);
+        tag.putInt("Fan", fan);
     }
 
     @Override
@@ -209,6 +291,7 @@ public class FixtureBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         console = NbtUtils.readBlockPos(tag, "Console").orElse(null);
         group = Math.floorMod(tag.getInt("Group"), DmxProgram.GROUPS);
+        fan = Math.floorMod(tag.getInt("Fan"), 8);
     }
 
     @Override

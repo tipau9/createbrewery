@@ -357,6 +357,21 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void fixtureFanCyclesWrapsAndSurvivesSaveAndLoad(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.PAR_CAN.get());
+        helper.assertTrue(ClubTestAccess.fixtureFan(helper.getLevel(), helper.absolutePos(POS)) == 0, "a new fixture has a fan");
+        ClubTestAccess.setFixtureFan(helper.getLevel(), helper.absolutePos(POS), 9);
+        helper.assertTrue(ClubTestAccess.fixtureFan(helper.getLevel(), helper.absolutePos(POS)) == 1, "the fan did not wrap");
+        net.minecraft.world.level.block.entity.BlockEntity be = helper.getBlockEntity(POS);
+        net.minecraft.nbt.CompoundTag tag = be.saveWithoutMetadata(helper.getLevel().registryAccess());
+        ClubTestAccess.loadEffect(helper.getLevel(), helper.absolutePos(POS), new net.minecraft.nbt.CompoundTag());
+        helper.assertTrue(ClubTestAccess.fixtureFan(helper.getLevel(), helper.absolutePos(POS)) == 0, "an old save came up fanned");
+        ClubTestAccess.loadEffect(helper.getLevel(), helper.absolutePos(POS), tag);
+        helper.assertTrue(ClubTestAccess.fixtureFan(helper.getLevel(), helper.absolutePos(POS)) == 1, "the fan was not saved");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void consoleFindsItsBoothWithoutRec(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
         BlockPos consolePos = POS.offset(3, 0, 0);
