@@ -36,7 +36,7 @@ import java.util.List;
  * - Automated Beat-Drop to Redstone Pyrotechnic pulse triggers & Auto-Mix engine.
  */
 public class DjMixerScreen extends Screen {
-    private static final int W = 424, H = 248;
+    private static final int W = 540, H = 276;
 
     private static final int[] DECK_COLORS = {
         0xFF00E5FF, // Deck 1: Cyan / Electric Blue
@@ -151,52 +151,52 @@ public class DjMixerScreen extends Screen {
         // ---------------------------------------------------------------------------------
         // 2. RIGHT PHYSICAL PLAYER (Decks 2 & 4)
         // ---------------------------------------------------------------------------------
-        initDeckPlayer(1, left + 300, false);
+        initDeckPlayer(1, left + 384, false);
 
         // ---------------------------------------------------------------------------------
         // 3. TOP TOUCHSCREEN (10.1" Capacitive Display)
         // ---------------------------------------------------------------------------------
-        int sx = left + 130, sy = top + 6;
+        int sx = left + 166, sy = top + 6;
         tabWaveButton = addRenderableWidget(Button.builder(Component.literal("WAVE"), b -> screenTab = 0)
-            .bounds(sx + 62, sy + 2, 28, 11).build());
+            .bounds(sx + 92, sy + 2, 34, 12).build());
         tabBrowseButton = addRenderableWidget(Button.builder(Component.literal("BROWSE"), b -> screenTab = 1)
-            .bounds(sx + 92, sy + 2, 40, 11).build());
+            .bounds(sx + 128, sy + 2, 46, 12).build());
         tabInfoButton = addRenderableWidget(Button.builder(Component.literal("INFO"), b -> screenTab = 2)
-            .bounds(sx + 134, sy + 2, 26, 11).build());
+            .bounds(sx + 176, sy + 2, 30, 12).build());
 
         // ---------------------------------------------------------------------------------
         // 4. CENTER MIXER - SOUND COLOR FX UNIT (Left side of mixer)
         // ---------------------------------------------------------------------------------
-        int mx = left + 128;
+        int mx = left + 164;
         String[] colorLabels = {"SPC", "DUB", "SWP", "NOI", "CRS", "FLT"};
         for (int i = 0; i < DjBoothBlockEntity.COLOR_FX_COUNT; i++) {
             int fxId = i;
-            int cx = mx + (i / 3) * 18;
-            int cy = top + 88 + (i % 3) * 14;
+            int cx = mx + (i / 3) * 26;
+            int cy = top + 94 + (i % 3) * 16;
             colorFxButtons[i] = addRenderableWidget(Button.builder(Component.literal(colorLabels[i]), b ->
                 DjControl.send(pos, DjControl.COLOR_FX_SELECT, fxId))
-                .bounds(cx, cy, 17, 12)
+                .bounds(cx, cy, 24, 14)
                 .tooltip(Tooltip.create(Component.literal(DjBoothBlockEntity.COLOR_FX_NAMES[i])))
                 .build());
         }
-        colorParamKnob = addRenderableWidget(new Knob(mx + 8, top + 134, DjControl.COLOR_FX_PARAM, 0, "PARAM", false));
+        colorParamKnob = addRenderableWidget(new Knob(mx + 16, top + 148, DjControl.COLOR_FX_PARAM, 0, "PARAM", false));
 
         // ---------------------------------------------------------------------------------
         // 5. CENTER MIXER - 4 CHANNEL STRIPS (Channels 1, 2, 3, 4)
         // ---------------------------------------------------------------------------------
         for (int ch = 0; ch < DjBoothBlockEntity.DECKS; ch++) {
             int d = ch;
-            int cx = mx + 36 + ch * 23;
+            int cx = mx + 54 + ch * 28;
 
             // TRIM, HI, MID, LOW, COLOR knobs
-            chKnobs[ch][0] = addRenderableWidget(new Knob(cx, top + 86, DjControl.TRIM, d, "TRIM", false));
-            chKnobs[ch][1] = addRenderableWidget(new Knob(cx, top + 103, DjControl.EQ_HIGH, d, "HI", false));
-            chKnobs[ch][2] = addRenderableWidget(new Knob(cx, top + 120, DjControl.EQ_MID, d, "MID", false));
-            chKnobs[ch][3] = addRenderableWidget(new Knob(cx, top + 137, DjControl.EQ_LOW, d, "LOW", false));
-            chKnobs[ch][4] = addRenderableWidget(new Knob(cx, top + 154, DjControl.FILTER, d, "CLR", true));
+            chKnobs[ch][0] = addRenderableWidget(new Knob(cx + 5, top + 94, DjControl.TRIM, d, "TRIM", false));
+            chKnobs[ch][1] = addRenderableWidget(new Knob(cx + 5, top + 114, DjControl.EQ_HIGH, d, "HI", false));
+            chKnobs[ch][2] = addRenderableWidget(new Knob(cx + 5, top + 134, DjControl.EQ_MID, d, "MID", false));
+            chKnobs[ch][3] = addRenderableWidget(new Knob(cx + 5, top + 154, DjControl.EQ_LOW, d, "LOW", false));
+            chKnobs[ch][4] = addRenderableWidget(new Knob(cx + 5, top + 174, DjControl.FILTER, d, "CLR", true));
 
             // Channel Volume Fader (Vertical)
-            chFaders[ch] = addRenderableWidget(new VFader(cx + 3, top + 172, 14, 28, d, f -> {
+            chFaders[ch] = addRenderableWidget(new VFader(cx + 7, top + 196, 14, 30, d, f -> {
                 DjControl.send(pos, DjControl.CHANNEL_FADER, d, f);
                 DjBoothBlockEntity dj = booth();
                 if (dj != null) dj.setChannelFader(d, f);
@@ -204,7 +204,7 @@ public class DjMixerScreen extends Screen {
 
             // Channel Headphone CUE button
             chCueButtons[ch] = addRenderableWidget(Button.builder(Component.literal("CUE"), b -> MusicPulse.toggleCue(pos, d))
-                .bounds(cx + 2, top + 202, 18, 10).build());
+                .bounds(cx + 3, top + 228, 22, 10).build());
 
             // Crossfader Assign switch [A | · | B]
             chXfAssignButtons[ch] = addRenderableWidget(Button.builder(Component.empty(), b -> {
@@ -213,26 +213,26 @@ public class DjMixerScreen extends Screen {
                     int next = (dj.getCrossfaderAssign(d) + 1) % 3;
                     DjControl.send(pos, DjControl.CROSSFADER_ASSIGN, d, next);
                 }
-            }).bounds(cx + 2, top + 214, 18, 10).build());
+            }).bounds(cx + 3, top + 240, 22, 10).build());
         }
 
         // ---------------------------------------------------------------------------------
         // 6. CENTER MIXER - BEAT FX UNIT (Right side of mixer)
         // ---------------------------------------------------------------------------------
-        int bfxX = mx + 130;
+        int bfxX = mx + 170;
         bfxTypeButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DjBoothBlockEntity dj = booth();
             if (dj != null) {
                 int next = (dj.getBeatFxType() + 1) % DjBoothBlockEntity.BFX_COUNT;
                 DjControl.send(pos, DjControl.BEAT_FX_TYPE, next);
             }
-        }).bounds(bfxX, top + 86, 34, 12).build());
+        }).bounds(bfxX, top + 94, 38, 12).build());
 
         // Beat Fraction ◀ ▶ buttons
         bfxBeatsDown = addRenderableWidget(Button.builder(Component.literal("◀"), b -> adjustBeatFxBeats(false))
-            .bounds(bfxX, top + 100, 16, 12).build());
+            .bounds(bfxX, top + 108, 18, 12).build());
         bfxBeatsUp = addRenderableWidget(Button.builder(Component.literal("▶"), b -> adjustBeatFxBeats(true))
-            .bounds(bfxX + 18, top + 100, 16, 12).build());
+            .bounds(bfxX + 20, top + 108, 18, 12).build());
 
         // Channel selector
         bfxChButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
@@ -242,38 +242,38 @@ public class DjMixerScreen extends Screen {
                 int next = ch >= 3 ? -1 : ch + 1; // -1 (Master) -> 0 -> 1 -> 2 -> 3 -> -1
                 DjControl.send(pos, DjControl.BEAT_FX_CHANNEL, next);
             }
-        }).bounds(bfxX, top + 114, 34, 12).build());
+        }).bounds(bfxX, top + 122, 38, 12).build());
 
         // Pulsing Beat FX ON/OFF button
-        bfxOnButton = addRenderableWidget(new BeatFxButton(bfxX + 7, top + 128, 20, 20, b -> {
+        bfxOnButton = addRenderableWidget(new BeatFxButton(bfxX + 9, top + 136, 20, 20, b -> {
             DjBoothBlockEntity dj = booth();
             if (dj != null) DjControl.send(pos, DjControl.BEAT_FX_ON, dj.isBeatFxOn() ? 0f : 1f);
         }));
 
-        bfxDepthKnob = addRenderableWidget(new Knob(bfxX + 7, top + 152, DjControl.BEAT_FX_DEPTH, 0, "DEPTH", false));
+        bfxDepthKnob = addRenderableWidget(new Knob(bfxX + 10, top + 160, DjControl.BEAT_FX_DEPTH, 0, "DEPTH", false));
 
         // ---------------------------------------------------------------------------------
         // 7. BOTTOM CONTROLS: Magvel Crossfader & Redstone Automation
         // ---------------------------------------------------------------------------------
-        crossfader = addRenderableWidget(new Fader(left + 168, top + 226, 84, DjControl.CROSSFADER, false));
+        crossfader = addRenderableWidget(new Fader(left + 220, top + 252, 112, DjControl.CROSSFADER, false));
 
-        autoDropButton = addRenderableWidget(Button.builder(Component.literal("A-DR"), b -> {
+        autoDropButton = addRenderableWidget(Button.builder(Component.literal("A-DROP"), b -> {
             DjBoothBlockEntity dj = booth();
             if (dj != null) DjControl.send(pos, DjControl.AUTO_DROP, dj.isAutoDrop() ? 0f : 1f);
-        }).bounds(bfxX, top + 178, 34, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.autodrop_hint"))).build());
+        }).bounds(bfxX, top + 190, 38, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.autodrop_hint"))).build());
 
         manualDropButton = addRenderableWidget(Button.builder(Component.literal("DROP"), b ->
             DjControl.send(pos, DjControl.DROP, 0f))
-            .bounds(bfxX, top + 192, 34, 12).build());
+            .bounds(bfxX, top + 206, 38, 14).build());
 
         automixButton = addRenderableWidget(Button.builder(Component.literal("AUTO"), b -> {
             DjBoothBlockEntity dj = booth();
             if (dj != null) DjControl.send(pos, DjControl.AUTOMIX, dj.isAutomix() ? 0f : 1f);
-        }).bounds(bfxX, top + 206, 34, 12).build());
+        }).bounds(bfxX, top + 222, 38, 14).build());
 
         ejectButton = addRenderableWidget(Button.builder(Component.literal("⏏"), b ->
             DjControl.send(pos, DjControl.EJECT, 0f))
-            .bounds(bfxX, top + 220, 34, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.eject"))).build());
+            .bounds(bfxX, top + 238, 38, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.eject"))).build());
 
         refresh();
     }
@@ -286,22 +286,22 @@ public class DjMixerScreen extends Screen {
         deckLayerButtons[d1] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(d1 + 1)), b -> {
             if (isLeft) leftDeck = d1; else rightDeck = d1;
             refresh();
-        }).bounds(px + 2, top + 8, 14, 12).build());
+        }).bounds(px + 2, top + 8, 18, 14).build());
 
         deckLayerButtons[d2] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(d2 + 1)), b -> {
             if (isLeft) leftDeck = d2; else rightDeck = d2;
             refresh();
-        }).bounds(px + 18, top + 8, 14, 12).build());
+        }).bounds(px + 22, top + 8, 18, 14).build());
 
         // Manual Loop Buttons: IN / 4BEAT, OUT, RELOOP/EXIT, and MASTER TEMPO (MT)
         loopInButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("IN"), b -> handleLoopIn(isLeft))
-            .bounds(px + 34, top + 8, 16, 12).tooltip(Tooltip.create(Component.literal("Loop In / Hold Shift for 4-Beat Auto Loop"))).build());
+            .bounds(px + 43, top + 8, 22, 14).tooltip(Tooltip.create(Component.literal("Loop In / Hold Shift for 4-Beat Auto Loop"))).build());
 
         loopOutButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("OUT"), b -> handleLoopOut(isLeft))
-            .bounds(px + 52, top + 8, 20, 12).tooltip(Tooltip.create(Component.literal("Loop Out"))).build());
+            .bounds(px + 68, top + 8, 26, 14).tooltip(Tooltip.create(Component.literal("Loop Out"))).build());
 
         reloopButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("EXIT"), b -> handleReloop(isLeft))
-            .bounds(px + 74, top + 8, 25, 12).tooltip(Tooltip.create(Component.literal("Reloop / Exit"))).build());
+            .bounds(px + 97, top + 8, 30, 14).tooltip(Tooltip.create(Component.literal("Reloop / Exit"))).build());
 
         mtButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("MT"), b -> {
             DjBoothBlockEntity dj = booth();
@@ -315,43 +315,43 @@ public class DjMixerScreen extends Screen {
                 }
                 refresh();
             }
-        }).bounds(px + 101, top + 8, 14, 12).tooltip(Tooltip.create(Component.literal("Master Tempo (Key Lock): Preserve musical pitch when changing tempo"))).build());
+        }).bounds(px + 130, top + 8, 20, 14).tooltip(Tooltip.create(Component.literal("Master Tempo (Key Lock): Preserve musical pitch when changing tempo"))).build());
 
         // CDJ Jogwheel (Center at px + 40, top + 56, radius 32)
-        jogWheels[playerIdx] = addRenderableWidget(new JogWheelWidget(px + 8, top + 24, 64, 64, isLeft));
+        jogWheels[playerIdx] = addRenderableWidget(new JogWheelWidget(px + 14, top + 28, 64, 64, isLeft));
 
         // Pitch / Tempo Vertical Fader
-        pitchFaders[playerIdx] = addRenderableWidget(new VPitchFader(px + 84, top + 30, 18, 58, isLeft));
+        pitchFaders[playerIdx] = addRenderableWidget(new VPitchFader(px + 118, top + 36, 18, 56, isLeft));
 
         // Deck Controls row: VINYL, SLIP, REV, QTZ, SYNC
         vinylButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("VIN"), b -> {
             DjBoothBlockEntity dj = booth();
             int cd = currentDeck(isLeft);
             if (dj != null) DjControl.send(pos, DjControl.VINYL_MODE, cd, dj.isVinylMode(cd) ? 0f : 1f);
-        }).bounds(px + 4, top + 92, 19, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.vinyl_hint"))).build());
+        }).bounds(px + 4, top + 96, 26, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.vinyl_hint"))).build());
 
         slipButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SLP"), b -> {
             DjBoothBlockEntity dj = booth();
             int cd = currentDeck(isLeft);
             if (dj != null) DjControl.send(pos, DjControl.SLIP_MODE, cd, dj.isSlipMode(cd) ? 0f : 1f);
-        }).bounds(px + 25, top + 92, 19, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.slip_hint"))).build());
+        }).bounds(px + 33, top + 96, 26, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.slip_hint"))).build());
 
         revButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("REV"), b -> {
             DjBoothBlockEntity dj = booth();
             int cd = currentDeck(isLeft);
             if (dj != null) DjControl.send(pos, DjControl.REVERSE, cd, dj.isReverse(cd) ? 0f : 1f);
-        }).bounds(px + 46, top + 92, 19, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reverse_hint"))).build());
+        }).bounds(px + 62, top + 96, 26, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reverse_hint"))).build());
 
         quantizeButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("QTZ"), b -> {
             quantizeEnabled = !quantizeEnabled;
             refresh();
-        }).bounds(px + 67, top + 92, 22, 12).tooltip(Tooltip.create(Component.literal("Quantize Beat Snapping"))).build());
+        }).bounds(px + 91, top + 96, 26, 14).tooltip(Tooltip.create(Component.literal("Quantize Beat Snapping"))).build());
 
         syncButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SYNC"), b -> syncTempo(currentDeck(isLeft)))
-            .bounds(px + 91, top + 92, 26, 12).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.sync"))).build());
+            .bounds(px + 120, top + 96, 30, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.sync"))).build());
 
         // Transport Buttons: CUE and PLAY/PAUSE
-        cueButtons[playerIdx] = addRenderableWidget(new TransportButton(px + 8, top + 108, 26, 26, false, isLeft, b -> {
+        cueButtons[playerIdx] = addRenderableWidget(new TransportButton(px + 14, top + 118, 28, 28, false, isLeft, b -> {
             int cd = currentDeck(isLeft);
             DjBoothBlockEntity dj = booth();
             MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
@@ -403,7 +403,7 @@ public class DjMixerScreen extends Screen {
             }
         }));
 
-        playButtons[playerIdx] = addRenderableWidget(new TransportButton(px + 38, top + 108, 26, 26, true, isLeft, b -> {
+        playButtons[playerIdx] = addRenderableWidget(new TransportButton(px + 48, top + 118, 28, 28, true, isLeft, b -> {
             int cd = currentDeck(isLeft);
             MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
             DjBoothBlockEntity dj = booth();
@@ -420,7 +420,7 @@ public class DjMixerScreen extends Screen {
 
         // Headphone CUE monitor button
         cueHeadphones[playerIdx] = addRenderableWidget(Button.builder(Component.literal("CUE"), b -> MusicPulse.toggleCue(pos, currentDeck(isLeft)))
-            .bounds(px + 68, top + 114, 24, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.cue_hint"))).build());
+            .bounds(px + 86, top + 124, 30, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.cue_hint"))).build());
 
         // Pad Mode Tabs: HOT CUE, LOOP, SLIP, JUMP
         String[] padLabels = {"CUE", "LOOP", "SLIP", "JUMP"};
@@ -429,17 +429,17 @@ public class DjMixerScreen extends Screen {
             padModeTabs[playerIdx][m] = addRenderableWidget(Button.builder(Component.literal(padLabels[m]), b -> {
                 int cd = currentDeck(isLeft);
                 DjControl.send(pos, DjControl.PAD_MODE, cd, modeId);
-            }).bounds(px + 4 + m * 27, top + 138, 25, 11).build());
+            }).bounds(px + 4 + m * 37, top + 152, 35, 13).build());
         }
 
         // 8 Backlit Rubber Performance Pads (2 rows of 4 pads)
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 4; col++) {
                 int padIndex = row * 4 + col;
-                int padX = px + 4 + col * 27;
-                int padY = top + 152 + row * 16;
+                int padX = px + 4 + col * 37;
+                int padY = top + 170 + row * 22;
                 int color = PAD_COLORS[padIndex];
-                performancePads[playerIdx][padIndex] = addRenderableWidget(new PadButton(padX, padY, 25, 14, padIndex, color, b -> {
+                performancePads[playerIdx][padIndex] = addRenderableWidget(new PadButton(padX, padY, 35, 20, padIndex, color, b -> {
                     handlePadPress(isLeft, padIndex);
                 }, b -> {
                     handlePadRelease(isLeft, padIndex);
@@ -843,7 +843,7 @@ public class DjMixerScreen extends Screen {
         // Crossfader & Redstone
         crossfader.show(dj.crossfader(now));
         automixButton.setMessage(Component.literal("AUTO").withStyle(dj.isAutomix() ? ChatFormatting.GREEN : ChatFormatting.GRAY));
-        autoDropButton.setMessage(Component.literal("A-DR").withStyle(dj.isAutoDrop() ? ChatFormatting.RED : ChatFormatting.GRAY));
+        autoDropButton.setMessage(Component.literal("A-DROP").withStyle(dj.isAutoDrop() ? ChatFormatting.RED : ChatFormatting.GRAY));
 
         // Screen Tabs
         tabWaveButton.setMessage(Component.literal("WAVE").withStyle(screenTab == 0 ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
@@ -887,16 +887,16 @@ public class DjMixerScreen extends Screen {
         g.renderOutline(left, top, W, H, 0xFF353944);
 
         // Left Deck Recessed Plate
-        g.fill(left + 4, top + 6, left + 124, top + H - 6, 0xFF171920);
-        g.renderOutline(left + 4, top + 6, 120, H - 12, 0xFF242730);
+        g.fill(left + 4, top + 6, left + 160, top + H - 6, 0xFF171920);
+        g.renderOutline(left + 4, top + 6, 156, H - 12, 0xFF242730);
 
         // Right Deck Recessed Plate
-        g.fill(left + 298, top + 6, left + W - 4, top + H - 6, 0xFF171920);
-        g.renderOutline(left + 298, top + 6, 120, H - 12, 0xFF242730);
+        g.fill(left + 380, top + 6, left + W - 4, top + H - 6, 0xFF171920);
+        g.renderOutline(left + 380, top + 6, 156, H - 12, 0xFF242730);
 
         // Center Mixer Recessed Plate
-        g.fill(left + 126, top + 84, left + 296, top + H - 6, 0xFF14161C);
-        g.renderOutline(left + 126, top + 84, 170, H - 90, 0xFF282B35);
+        g.fill(left + 162, top + 90, left + 378, top + H - 6, 0xFF14161C);
+        g.renderOutline(left + 162, top + 90, 216, H - 96, 0xFF282B35);
     }
 
     @Override
@@ -923,24 +923,24 @@ public class DjMixerScreen extends Screen {
         // ---------------------------------------------------------------------------------
         // 10.1" CENTRAL TOUCHSCREEN DISPLAY
         // ---------------------------------------------------------------------------------
-        renderTouchScreen(g, left + 128, top + 6, 166, 76, dj, time, partialTick);
+        renderTouchScreen(g, left + 164, top + 6, 212, 82, dj, time, partialTick);
 
         // ---------------------------------------------------------------------------------
         // TRACK LABELS & TIME REMAINING
         // ---------------------------------------------------------------------------------
         renderDeckHeader(g, left + 6, leftDeck, dj);
-        renderDeckHeader(g, left + 300, rightDeck, dj);
+        renderDeckHeader(g, left + 384, rightDeck, dj);
 
         // ---------------------------------------------------------------------------------
         // 4 CHANNELS STEREO LED VU-METERS
         // ---------------------------------------------------------------------------------
         for (int ch = 0; ch < DjBoothBlockEntity.DECKS; ch++) {
-            int vx = left + 128 + 36 + ch * 23 + 20;
-            renderVuMeter(g, vx, top + 86, 3, 82, chVU[ch]);
+            int vx = left + 164 + 54 + ch * 28 + 24;
+            renderVuMeter(g, vx, top + 94, 3, 100, chVU[ch]);
         }
 
         // Master Stereo VU-Meters
-        renderMasterVu(g, left + 130, top + 172, 24, 44, vuMaster);
+        renderMasterVu(g, left + 174, top + 190, 30, 56, vuMaster);
     }
 
     private void renderDeckHeader(GuiGraphics g, int px, int deck, DjBoothBlockEntity dj) {
@@ -950,11 +950,11 @@ public class DjMixerScreen extends Screen {
 
         int master = findMasterDeck(dj, -1);
         if (deck == master && playing) {
-            g.fill(px + 92, top + 228, px + 116, top + 238, 0xFFCC2222);
-            g.drawCenteredString(font, "MST", px + 104, top + 229, 0xFFFFFFFF);
+            g.fill(px + 122, top + 248, px + 150, top + 260, 0xFFCC2222);
+            g.drawCenteredString(font, "MST", px + 136, top + 250, 0xFFFFFFFF);
         }
         String title = disc.isEmpty() ? Component.translatable("createbrewery.dj.empty").getString() : dj.title(disc).getString();
-        g.drawString(font, font.plainSubstrByWidth(title, 110), px + 6, top + 218, playing ? 0xFFFFFFFF : 0xFFAAAAAA);
+        g.drawString(font, font.plainSubstrByWidth(title, 140), px + 6, top + 236, playing ? 0xFFFFFFFF : 0xFFAAAAAA);
 
         // Time remaining / elapsed
         if (playing && !disc.isEmpty()) {
@@ -973,14 +973,14 @@ public class DjMixerScreen extends Screen {
                 boolean blink = rem <= 30f && ((System.currentTimeMillis() / 400) % 2 == 0);
                 int timeCol = blink ? 0xFFFF3333 : 0xFF00FF66;
                 String timeStr = String.format(java.util.Locale.ROOT, "%02d:%02d [-%02d:%02d]", el / 60, el % 60, (long) rem / 60, (long) rem % 60);
-                g.drawString(font, timeStr, px + 6, top + 230, timeCol);
+                g.drawString(font, timeStr, px + 6, top + 250, timeCol);
             } else {
-                g.drawString(font, "PLAYING", px + 6, top + 230, 0xFF00FF66);
+                g.drawString(font, "PLAYING", px + 6, top + 250, 0xFF00FF66);
             }
         } else if (playing) {
-            g.drawString(font, "--:--", px + 6, top + 230, 0xFF667788);
+            g.drawString(font, "--:--", px + 6, top + 250, 0xFF667788);
         } else {
-            g.drawString(font, "STOPPED", px + 6, top + 230, 0xFF888888);
+            g.drawString(font, "STOPPED", px + 6, top + 250, 0xFF888888);
         }
     }
 
@@ -1000,12 +1000,12 @@ public class DjMixerScreen extends Screen {
         if (screenTab == 0) {
             // ================= WAVEFORM TAB =================
             // Left Deck Waveform
-            renderWaveform(g, sx + 2, sy + 14, sw - 4, 18, leftDeck, dj, DECK_COLORS[leftDeck], 0xFF0055AA, time, pt);
+            renderWaveform(g, sx + 2, sy + 14, sw - 4, 22, leftDeck, dj, DECK_COLORS[leftDeck], 0xFF0055AA, time, pt);
             // Right Deck Waveform
-            renderWaveform(g, sx + 2, sy + 34, sw - 4, 18, rightDeck, dj, DECK_COLORS[rightDeck], 0xFFAA5500, time, pt);
+            renderWaveform(g, sx + 2, sy + 38, sw - 4, 22, rightDeck, dj, DECK_COLORS[rightDeck], 0xFFAA5500, time, pt);
 
             // Beat Phase Grid (4-beat indicator dots & bar progress)
-            int phaseX = sx + (sw - 40) / 2, phaseY = sy + 56;
+            int phaseX = sx + (sw - 40) / 2, phaseY = sy + 64;
             int beatIndex = (int) ((time / 10) % 4);
             for (int i = 0; i < 4; i++) {
                 boolean active = i == beatIndex && (dj.isPlaying(leftDeck) || dj.isPlaying(rightDeck));
@@ -1085,7 +1085,7 @@ public class DjMixerScreen extends Screen {
                 for (int i = 0; i < crate.getSlots(); i++) {
                     if (DjBoothBlock.isMusicDisc(crate.getStackInSlot(i))) discSlots.add(i);
                 }
-                int sx = left + 130 + 2, sy = top + 6 + 16, sw = 166 - 4;
+                int sx = left + 168, sy = top + 22, sw = 204;
                 for (int row = 0; row < 3; row++) {
                     int idx = browseOffset + row;
                     if (idx >= discSlots.size()) break;
@@ -1415,9 +1415,10 @@ public class DjMixerScreen extends Screen {
         renderVuMeter(g, x + w - barW - 2, y + 2, barW, h - 4, level * 0.96f);
 
         // Center dB scale ticks
-        g.fill(x + 8, y + 6, x + 10, y + 7, 0xFFFF3333);
-        g.fill(x + 8, y + 16, x + 10, y + 17, 0xFFFFCC00);
-        g.fill(x + 8, y + 28, x + 10, y + 29, 0xFF44FF88);
+        int tx = x + w / 2 - 1;
+        g.fill(tx, y + 8, tx + 2, y + 9, 0xFFFF3333);
+        g.fill(tx, y + 22, tx + 2, y + 23, 0xFFFFCC00);
+        g.fill(tx, y + 38, tx + 2, y + 39, 0xFF44FF88);
     }
 
     @Override
@@ -2014,7 +2015,7 @@ public class DjMixerScreen extends Screen {
         private long lastClick;
 
         Knob(int x, int y, byte action, int deck, String label, boolean bipolar) {
-            super(x, y, 18, 16, Component.literal(label));
+            super(x, y, 18, 19, Component.literal(label));
             this.action = action;
             this.deck = deck;
             this.bipolar = bipolar;
@@ -2097,8 +2098,8 @@ public class DjMixerScreen extends Screen {
             }
             var font = Minecraft.getInstance().font;
             g.pose().pushPose();
-            g.pose().translate(cx, getY() + 10, 0);
-            g.pose().scale(0.6f, 0.6f, 1f);
+            g.pose().translate(cx, getY() + 11, 0);
+            g.pose().scale(0.8f, 0.8f, 1f);
             g.drawCenteredString(font, getMessage(), 0, 0, value < 0.02 && !bipolar ? 0xFFFF4444 : 0xFFAAAAAA);
             g.pose().popPose();
         }
