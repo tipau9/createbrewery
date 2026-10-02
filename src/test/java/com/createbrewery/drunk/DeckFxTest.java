@@ -150,4 +150,111 @@ class DeckFxTest {
         assertEquals(1000, DeckFx.loopFrame(1300, 1000, 300));
         assertEquals(1150, DeckFx.loopFrame(1750, 1000, 300));
     }
+
+    /** RMS gain of the last half second of a sine at {@code hz} through {@code f}. */
+    private static double through(java.util.function.BiConsumer<float[], Integer> f, double hz) {
+        int n = (int) RATE, piece = 1024;
+        float[] buf = new float[piece];
+        double in = 0, out = 0;
+        for (int at = 0; at < n; at += piece) {
+            for (int i = 0; i < piece; i++) buf[i] = (float) Math.sin(2 * Math.PI * hz * (at + i) / RATE);
+            double sumIn = 0;
+            for (float v : buf) sumIn += v * v;
+            f.accept(buf, piece);
+            if (at >= n / 2) {
+                in += sumIn;
+                for (float v : buf) out += v * v;
+            }
+        }
+        return Math.sqrt(out / in);
+    }
+
+    @Test
+    void steepCrossoverSplitsHarderAndStillSumsFlat() {
+        for (double hz : new double[] {40, 100, 250, 1000}) {
+            DeckFx.Crossover lp = new DeckFx.Crossover(RATE), hp = new DeckFx.Crossover(RATE);
+            lp.set(true, 100, true);
+            hp.set(false, 100, true);
+            float[] b = new float[1024];
+            double sum = through((a, n) -> {
+                System.arraycopy(a, 0, b, 0, n);
+                lp.process(a, n);
+                hp.process(b, n);
+                for (int i = 0; i < n; i++) a[i] += b[i];
+            }, hz);
+            assertEquals(0, db(sum), 0.5, "LR48 sum at " + hz + " Hz");
+        }
+        DeckFx.Crossover lp = new DeckFx.Crossover(RATE);
+        lp.set(true, 100, true);
+        assertTrue(db(through(lp::process, 1000)) < -60, "LR48 lets mids into the subs");
+    }
+
+    @Test
+    void neutralZoneDspIsBitExact() {
+        DeckFx.ZoneDsp dsp = new DeckFx.ZoneDsp(RATE);
+        dsp.set(0, 0, 0, 0, false);
+        float[] buf = new float[512];
+        for (int i = 0; i < buf.length; i++) buf[i] = (float) Math.sin(i * 0.1);
+        float[] copy = buf.clone();
+        dsp.process(buf, buf.length);
+        assertArrayEquals(copy, buf);
+    }
+
+    @Test
+    void zoneDspPolarityFlips() {
+        DeckFx.ZoneDsp dsp = new DeckFx.ZoneDsp(RATE);
+        dsp.set(0, 0, 0, 0, true);
+        float[] buf = {0.5f, -0.25f, 0.1f};
+        dsp.process(buf, 3);
+        assertArrayEquals(new float[] {-0.5f, 0.25f, -0.1f}, buf);
+    }
+
+    @Test
+    void zoneDspShelvesAndBellDoWhatTheySay() {
+        DeckFx.ZoneDsp low = new DeckFx.ZoneDsp(RATE);
+        low.set(0, 6, 0, 0, false);
+        assertEquals(6, db(through(low::process, 30)), 1.0, "bass shelf at 30 Hz");
+        DeckFx.ZoneDsp low2 = new DeckFx.ZoneDsp(RATE);
+        low2.set(0, 6, 0, 0, false);
+        assertEquals(0, db(through(low2::process, 5000)), 0.5, "bass shelf leaves 5 kHz");
+
+        DeckFx.ZoneDsp high = new DeckFx.ZoneDsp(RATE);
+        high.set(0, 0, 0, -6, false);
+        assertEquals(-6, db(through(high::process, 18000)), 1.0, "treble shelf at 18 kHz");
+        DeckFx.ZoneDsp high2 = new DeckFx.ZoneDsp(RATE);
+        high2.set(0, 0, 0, -6, false);
+        assertEquals(0, db(through(high2::process, 200)), 0.5, "treble shelf leaves 200 Hz");
+
+        DeckFx.ZoneDsp mid = new DeckFx.ZoneDsp(RATE);
+        mid.set(0, 0, 6, 0, false);
+        assertEquals(6, db(through(mid::process, 1000)), 0.5, "mid bell at its centre");
+    }
+
+    @Test
+    void zoneDspHighPassCutsTheRumble() {
+        DeckFx.ZoneDsp hp = new DeckFx.ZoneDsp(RATE);
+        hp.set(100, 0, 0, 0, false);
+        assertTrue(db(through(hp::process, 25)) < -20, "25 Hz under a 100 Hz high-pass");
+        DeckFx.ZoneDsp hp2 = new DeckFx.ZoneDsp(RATE);
+        hp2.set(100, 0, 0, 0, false);
+        assertEquals(0, db(through(hp2::process, 1000)), 0.3);
+    }
+
+    @Test
+    void limiterHoldsItsThresholdAndReportsThePeak() {
+        DeckFx.Limiter lim = new DeckFx.Limiter(RATE);
+        lim.setThreshold(-6f);
+        float[] loud = new float[4800];
+        for (int i = 0; i < loud.length; i++) loud[i] = (float) Math.sin(i * 0.05);
+        lim.process(loud, loud.length);
+        float ceiling = (float) Math.pow(10, -6 / 20.0);
+        for (float v : loud) assertTrue(Math.abs(v) <= ceiling + 1e-6, "over the threshold: " + v);
+        float peak = lim.takePeak();
+        assertTrue(peak > ceiling - 0.01f && peak <= ceiling + 1e-6, "peak " + peak);
+        assertEquals(0f, lim.takePeak(), "the peak starts over once taken");
+        lim.setThreshold(10f);
+        float[] one = {2f};
+        lim.process(one, 1);
+        assertTrue(Math.abs(one[0]) <= DeckFx.Limiter.CEILING + 1e-6, "a threshold above 0 dBFS is the ceiling");
+    }
 }

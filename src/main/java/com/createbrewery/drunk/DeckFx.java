@@ -385,25 +385,31 @@ public final class DeckFx {
 
     /**
      * An amp's peak limiter: no look-ahead (so every speaker of a song keeps the same timing and the
-     * crossover still sums), the gain drops at once to keep a peak under the ceiling and comes back
+     * crossover still sums), the gain drops at once to keep a peak under the threshold and comes back
      * up over about 80 ms.
      */
     public static final class Limiter {
         public static final float CEILING = 0.97f;
         private final float release;
-        private float gain = 1f, reduction = 1f;
+        private float gain = 1f, reduction = 1f, ceiling = CEILING, peak;
 
         public Limiter(double rate) {
             release = (float) (1 - Math.exp(-1 / (0.08 * rate)));
         }
 
+        /** The zone's limit in dBFS; never above the ceiling. */
+        public void setThreshold(float dbfs) {
+            ceiling = Math.min(CEILING, (float) Math.pow(10, dbfs / 20));
+        }
+
         public void process(float[] buf, int n) {
             for (int i = 0; i < n; i++) {
-                float peak = Math.abs(buf[i]);
-                float want = peak > CEILING ? CEILING / peak : 1f;
+                float in = Math.abs(buf[i]);
+                float want = in > ceiling ? ceiling / in : 1f;
                 gain = Math.min(want, gain + (1f - gain) * release);
                 buf[i] *= gain;
                 reduction = Math.min(reduction, gain);
+                peak = Math.max(peak, Math.abs(buf[i]));
             }
         }
 
@@ -413,36 +419,106 @@ public final class DeckFx {
             reduction = 1f;
             return r;
         }
+
+        /** The loudest sample that left since the last call, for the meters; then starts over. */
+        public float takePeak() {
+            float p = peak;
+            peak = 0f;
+            return p;
+        }
     }
 
     /**
      * One side of an amp rack's crossover: a Linkwitz-Riley low-pass for the subs or high-pass for
-     * the tops, at the same corner, so the two add back up flat.
+     * the tops, at the same corner, so the two add back up flat. 24 dB/oct is two Butterworth
+     * biquads; 48 dB/oct (steep) is a fourth-order Butterworth twice over.
      */
     public static final class Crossover {
+        private static final double[] Q24 = {Math.sqrt(0.5), Math.sqrt(0.5)}, Q48 = {0.5412, 1.3066, 0.5412, 1.3066};
         private final double rate;
-        private Biquad[] pair;
-        private boolean lowPass;
+        private Biquad[] chain;
+        private boolean lowPass, steep;
         private double f;
 
         public Crossover(double rate) {
             this.rate = rate;
         }
 
-        /** Retunes only on a change; turned from one side to the other it starts from rest. */
         public void set(boolean lowPass, double f) {
-            if (pair != null && lowPass == this.lowPass && f == this.f) return;
-            if (pair == null || lowPass != this.lowPass) pair = lr4(lowPass, f);
+            set(lowPass, f, false);
+        }
+
+        /** Retunes only on a change; turned to the other side or slope it starts from rest. */
+        public void set(boolean lowPass, double f, boolean steep) {
+            if (chain != null && lowPass == this.lowPass && f == this.f && steep == this.steep) return;
+            double[] q = steep ? Q48 : Q24;
+            if (chain == null || lowPass != this.lowPass || steep != this.steep) {
+                chain = new Biquad[q.length];
+                for (int i = 0; i < q.length; i++) chain[i] = new Biquad();
+            }
             this.lowPass = lowPass;
             this.f = f;
-            for (Biquad b : pair) {
-                if (lowPass) b.lowPass(f, rate, Math.sqrt(0.5));
-                else b.highPass(f, rate, Math.sqrt(0.5));
+            this.steep = steep;
+            for (int i = 0; i < q.length; i++) {
+                if (lowPass) chain[i].lowPass(f, rate, q[i]);
+                else chain[i].highPass(f, rate, q[i]);
             }
         }
 
         public void process(float[] buf, int n) {
-            for (int i = 0; i < n; i++) buf[i] = (float) run(pair, buf[i]);
+            for (int i = 0; i < n; i++) {
+                double y = buf[i];
+                for (Biquad b : chain) y = b.run(y);
+                buf[i] = (float) y;
+            }
+        }
+    }
+
+    /**
+     * A zone's channel on the amp rack: a high-pass, a bass shelf at 120 Hz, a mid bell at 1 kHz, a
+     * treble shelf at 8 kHz and the polarity. A stage at 0 is skipped, so a neutral zone is untouched.
+     */
+    public static final class ZoneDsp {
+        private final double rate;
+        private final Biquad hp = new Biquad(), lowShelf = new Biquad(), bell = new Biquad(), highShelf = new Biquad();
+        private float hpf, low, mid, high;
+        private boolean invert;
+
+        public ZoneDsp(double rate) {
+            this.rate = rate;
+        }
+
+        /** Retunes only what changed. */
+        public void set(float hpfHz, float lowDb, float midDb, float highDb, boolean invert) {
+            if (hpfHz != hpf) {
+                hpf = hpfHz;
+                if (hpf > 0) hp.highPass(hpf, rate, Math.sqrt(0.5));
+            }
+            if (lowDb != low) {
+                low = lowDb;
+                lowShelf.lowShelf(120, rate, low);
+            }
+            if (midDb != mid) {
+                mid = midDb;
+                bell.peak(1000, rate, 0.7, mid);
+            }
+            if (highDb != high) {
+                high = highDb;
+                highShelf.highShelf(8000, rate, high);
+            }
+            this.invert = invert;
+        }
+
+        public void process(float[] buf, int n) {
+            if (hpf <= 0 && low == 0 && mid == 0 && high == 0 && !invert) return;
+            for (int i = 0; i < n; i++) {
+                double y = buf[i];
+                if (hpf > 0) y = hp.run(y);
+                if (low != 0) y = lowShelf.run(y);
+                if (mid != 0) y = bell.run(y);
+                if (high != 0) y = highShelf.run(y);
+                buf[i] = (float) (invert ? -y : y);
+            }
         }
     }
 
@@ -486,6 +562,37 @@ public final class DeckFx {
             b2 = (1 + alpha) / a0;
             a1 = -2 * cos / a0;
             a2 = (1 - alpha) / a0;
+        }
+
+        /** RBJ shelves (slope 1) and bell, gain in dB. */
+        void lowShelf(double f, double rate, double db) {
+            double a = Math.pow(10, db / 40), w = 2 * Math.PI * Math.min(f, rate * 0.45) / rate, cos = Math.cos(w);
+            double k = 2 * Math.sqrt(a) * (Math.sin(w) / 2 * Math.sqrt(2)), a0 = (a + 1) + (a - 1) * cos + k;
+            b0 = a * ((a + 1) - (a - 1) * cos + k) / a0;
+            b1 = 2 * a * ((a - 1) - (a + 1) * cos) / a0;
+            b2 = a * ((a + 1) - (a - 1) * cos - k) / a0;
+            a1 = -2 * ((a - 1) + (a + 1) * cos) / a0;
+            a2 = ((a + 1) + (a - 1) * cos - k) / a0;
+        }
+
+        void highShelf(double f, double rate, double db) {
+            double a = Math.pow(10, db / 40), w = 2 * Math.PI * Math.min(f, rate * 0.45) / rate, cos = Math.cos(w);
+            double k = 2 * Math.sqrt(a) * (Math.sin(w) / 2 * Math.sqrt(2)), a0 = (a + 1) - (a - 1) * cos + k;
+            b0 = a * ((a + 1) + (a - 1) * cos + k) / a0;
+            b1 = -2 * a * ((a - 1) + (a + 1) * cos) / a0;
+            b2 = a * ((a + 1) + (a - 1) * cos - k) / a0;
+            a1 = 2 * ((a - 1) - (a + 1) * cos) / a0;
+            a2 = ((a + 1) - (a - 1) * cos - k) / a0;
+        }
+
+        void peak(double f, double rate, double q, double db) {
+            double a = Math.pow(10, db / 40), w = 2 * Math.PI * Math.min(f, rate * 0.45) / rate, cos = Math.cos(w);
+            double alpha = Math.sin(w) / (2 * q), a0 = 1 + alpha / a;
+            b0 = (1 + alpha * a) / a0;
+            b1 = -2 * cos / a0;
+            b2 = (1 - alpha * a) / a0;
+            a1 = -2 * cos / a0;
+            a2 = (1 - alpha / a) / a0;
         }
 
         double run(double x) {
