@@ -59,19 +59,19 @@ public class ModItems {
 
     public static final ItemEntry<IbuprofenItem> IBUPROFEN = REGISTRATE
         .item("ibuprofen", IbuprofenItem::new)
-        .lang("Ibu 400")
+        .lang("Ibuprofen 400")
         .properties(p -> p.stacksTo(20))
         .register();
 
     public static final ItemEntry<DrugItem> KOKS = REGISTRATE
         .item("koks", p -> new DrugItem(p, DrugServer.Kind.COKE))
-        .lang("Koks")
+        .lang("Cocaine")
         .properties(p -> p.stacksTo(16))
         .register();
 
     public static final ItemEntry<DrugItem> KETA = REGISTRATE
         .item("keta", p -> new DrugItem(p, DrugServer.Kind.KETA))
-        .lang("Keta")
+        .lang("Ketamine")
         .properties(p -> p.stacksTo(16))
         .register();
 
@@ -85,58 +85,58 @@ public class ModItems {
                     .withStyle(net.minecraft.ChatFormatting.GRAY));
             }
         })
-        .lang("Kokasetzling")
+        .lang("Coca Seedling")
         .register();
 
     public static final ItemEntry<Item> COCA_LEAF = REGISTRATE
         .item("coca_leaf", Item::new)
-        .lang("Kokablätter")
+        .lang("Coca Leaves")
         .register();
 
     public static final ItemEntry<Item> DRIED_COCA_LEAF = REGISTRATE
         .item("dried_coca_leaf", Item::new)
-        .lang("Getrocknete Kokablätter")
+        .lang("Dried Coca Leaves")
         .register();
 
     public static final ItemEntry<Item> COCA_MEAL = REGISTRATE
         .item("coca_meal", Item::new)
-        .lang("Kokamehl")
+        .lang("Coca Flour")
         .register();
 
     public static final ItemEntry<Item> COCA_PASTE = REGISTRATE
         .item("coca_paste", Item::new)
-        .lang("Kokapaste")
+        .lang("Coca Paste")
         .register();
 
     public static final ItemEntry<Item> KOKS_BRICK = REGISTRATE
         .item("koks_brick", Item::new)
-        .lang("Koks-Ziegel")
+        .lang("Cocaine Brick")
         .register();
 
     public static final ItemEntry<Item> AMETHYST_GRIT = REGISTRATE
         .item("amethyst_grit", Item::new)
-        .lang("Amethystgrieß")
+        .lang("Amethyst Grit")
         .register();
 
     /** The Keta batch half-way through the precision lab (sequenced assembly). */
     public static final ItemEntry<com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem> KETA_BATCH = REGISTRATE
         .item("keta_batch", com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem::new)
-        .lang("Unfertige Keta-Charge")
+        .lang("Unfinished Ketamine Batch")
         .register();
 
     public static final ItemEntry<Item> RUINED_BATCH = REGISTRATE
         .item("ruined_batch", Item::new)
-        .lang("Verdorbene Charge")
+        .lang("Ruined Batch")
         .register();
 
     public static final ItemEntry<Item> RAW_KETA = REGISTRATE
         .item("raw_keta", Item::new)
-        .lang("Keta-Rohkristalle")
+        .lang("Raw Ketamine Crystals")
         .register();
 
     public static final ItemEntry<Item> KETA_CRYSTALS = REGISTRATE
         .item("keta_crystals", Item::new)
-        .lang("Keta-Kristalle")
+        .lang("Ketamine Crystals")
         .register();
 
     // The grow (see CannabisPlantBlock): seeds, the harvest and the steps to a smokable bud.
@@ -149,42 +149,42 @@ public class ModItems {
                     .withStyle(net.minecraft.ChatFormatting.GRAY));
             }
         })
-        .lang("Hanfsamen")
+        .lang("Hemp Seeds")
         .register();
 
     public static final ItemEntry<Item> WET_BUDS = REGISTRATE
         .item("wet_buds", Item::new)
-        .lang("Frische Blüten")
+        .lang("Fresh Cannabis Buds")
         .register();
 
     public static final ItemEntry<Item> SEEDED_BUDS = REGISTRATE
         .item("seeded_buds", Item::new)
-        .lang("Samige Blüten")
+        .lang("Seeded Cannabis Buds")
         .register();
 
     public static final ItemEntry<Item> TRIMMED_BUDS = REGISTRATE
         .item("trimmed_buds", Item::new)
-        .lang("Getrimmte Blüten")
+        .lang("Trimmed Cannabis Buds")
         .register();
 
     public static final ItemEntry<Item> DRIED_BUDS = REGISTRATE
         .item("dried_buds", Item::new)
-        .lang("Getrocknete Blüten")
+        .lang("Dried Cannabis Buds")
         .register();
 
     public static final ItemEntry<Item> WEED_TRIM = REGISTRATE
         .item("weed_trim", Item::new)
-        .lang("Verschnitt")
+        .lang("Cannabis Trim")
         .register();
 
     public static final ItemEntry<Item> HEMP_FIBER = REGISTRATE
         .item("hemp_fiber", Item::new)
-        .lang("Hanffasern")
+        .lang("Hemp Fibers")
         .register();
 
     public static final ItemEntry<Item> WEED = REGISTRATE
         .item("weed", Item::new)
-        .lang("Cannabis-Blüte")
+        .lang("Cannabis Bud")
         .properties(p -> p.stacksTo(64))
         .register();
 
@@ -196,13 +196,13 @@ public class ModItems {
 
     public static final ItemEntry<DrugItem> LSD = REGISTRATE
         .item("lsd", p -> new DrugItem(p, DrugServer.Kind.LSD))
-        .lang("LSD-Pappe")
+        .lang("LSD Blotter")
         .properties(p -> p.stacksTo(64))
         .register();
 
     public static final ItemEntry<DrugItem> MAGIC_MUSHROOM = REGISTRATE
         .item("magic_mushroom", p -> new DrugItem(p, DrugServer.Kind.SHROOMS))
-        .lang("Zauberpilz")
+        .lang("Magic Mushroom")
         .properties(p -> p.stacksTo(64))
         .register();
 
@@ -214,25 +214,25 @@ public class ModItems {
 
     public static final ItemEntry<DrugItem> DMT = REGISTRATE
         .item("dmt", p -> new DrugItem(p, DrugServer.Kind.DMT))
-        .lang("DMT-Pfeife")
+        .lang("DMT Pipe")
         .properties(p -> p.stacksTo(16))
         .register();
 
     public static final ItemEntry<DrugItem> MDMA = REGISTRATE
         .item("mdma", p -> new DrugItem(p, DrugServer.Kind.MDMA))
-        .lang("Ecstasy-Pille")
+        .lang("Ecstasy Pill")
         .properties(p -> p.stacksTo(64))
         .register();
 
     public static final ItemEntry<DrugItem> METH = REGISTRATE
         .item("meth", p -> new DrugItem(p, DrugServer.Kind.METH))
-        .lang("Crystal")
+        .lang("Crystal Meth")
         .properties(p -> p.stacksTo(64))
         .register();
 
     public static final ItemEntry<DrugItem> HEROIN = REGISTRATE
         .item("heroin", p -> new DrugItem(p, DrugServer.Kind.HEROIN))
-        .lang("Heroin-Spritze")
+        .lang("Heroin Syringe")
         .properties(p -> p.stacksTo(16))
         .register();
 
@@ -245,113 +245,113 @@ public class ModItems {
     // The other drugs' grows and lines (see ModRecipeProvider): made-up lab steps, nothing like a real process.
     public static final ItemEntry<ItemNameBlockItem> MUSHROOM_SPORES = REGISTRATE
         .<ItemNameBlockItem>item("mushroom_spores", p -> planted(ModBlocks.PSILOCYBE.get(), p, "mushroom_spores"))
-        .lang("Pilzsporen")
+        .lang("Mushroom Spores")
         .register();
 
     public static final ItemEntry<Item> FRESH_MUSHROOMS = REGISTRATE
         .item("fresh_mushrooms", Item::new)
-        .lang("Frische Zauberpilze")
+        .lang("Fresh Magic Mushrooms")
         .register();
 
     public static final ItemEntry<ItemNameBlockItem> PEYOTE_PUP = REGISTRATE
         .<ItemNameBlockItem>item("peyote_pup", p -> planted(ModBlocks.PEYOTE_CACTUS.get(), p, "peyote_pup"))
-        .lang("Peyote-Setzling")
+        .lang("Peyote Pup")
         .register();
 
     public static final ItemEntry<Item> PEYOTE_BUTTON = REGISTRATE
         .item("peyote_button", Item::new)
-        .lang("Frischer Peyote-Kopf")
+        .lang("Fresh Peyote Button")
         .register();
 
     public static final ItemEntry<ItemNameBlockItem> OPIUM_POPPY_SEEDS = REGISTRATE
         .<ItemNameBlockItem>item("opium_poppy_seeds", p -> planted(ModBlocks.OPIUM_POPPY.get(), p, "opium_poppy_seeds"))
-        .lang("Schlafmohnsamen")
+        .lang("Opium Poppy Seeds")
         .register();
 
     public static final ItemEntry<Item> POPPY_POD = REGISTRATE
         .item("poppy_pod", Item::new)
-        .lang("Mohnkapsel")
+        .lang("Poppy Pod")
         .register();
 
     public static final ItemEntry<Item> OPIUM_LATEX = REGISTRATE
         .item("opium_latex", Item::new)
-        .lang("Mohnmilch")
+        .lang("Poppy Latex")
         .register();
 
     public static final ItemEntry<Item> RAW_OPIUM = REGISTRATE
         .item("raw_opium", Item::new)
-        .lang("Rohopium")
+        .lang("Raw Opium")
         .register();
 
     public static final ItemEntry<com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem> HEROIN_BATCH = REGISTRATE
         .item("heroin_batch", com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem::new)
-        .lang("Unfertige Heroin-Charge")
+        .lang("Unfinished Heroin Batch")
         .register();
 
     public static final ItemEntry<Item> RAW_HEROIN = REGISTRATE
         .item("raw_heroin", Item::new)
-        .lang("Heroin-Rohmasse")
+        .lang("Raw Heroin")
         .register();
 
     public static final ItemEntry<com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem> METH_BATCH = REGISTRATE
         .item("meth_batch", com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem::new)
-        .lang("Unfertige Crystal-Charge")
+        .lang("Unfinished Meth Batch")
         .register();
 
     public static final ItemEntry<Item> RAW_METH = REGISTRATE
         .item("raw_meth", Item::new)
-        .lang("Crystal-Rohmasse")
+        .lang("Raw Meth")
         .register();
 
     public static final ItemEntry<Item> METH_CRYSTALS = REGISTRATE
         .item("meth_crystals", Item::new)
-        .lang("Crystal-Brocken")
+        .lang("Meth Chunks")
         .register();
 
     public static final ItemEntry<com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem> MDMA_BATCH = REGISTRATE
         .item("mdma_batch", com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem::new)
-        .lang("Unfertige MDMA-Charge")
+        .lang("Unfinished MDMA Batch")
         .register();
 
     public static final ItemEntry<Item> MDMA_CRYSTALS = REGISTRATE
         .item("mdma_crystals", Item::new)
-        .lang("MDMA-Kristalle")
+        .lang("MDMA Crystals")
         .register();
 
     public static final ItemEntry<Item> ERGOT = REGISTRATE
         .item("ergot", Item::new)
-        .lang("Mutterkorn")
+        .lang("Ergot")
         .register();
 
     public static final ItemEntry<com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem> LSD_BATCH = REGISTRATE
         .item("lsd_batch", com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem::new)
-        .lang("Unfertige LSD-Charge")
+        .lang("Unfinished LSD Batch")
         .register();
 
     public static final ItemEntry<Item> LSD_SOLUTION = REGISTRATE
         .item("lsd_solution", Item::new)
-        .lang("LSD-Lösung")
+        .lang("LSD Solution")
         .register();
 
     public static final ItemEntry<Item> BLOTTER_SHEET = REGISTRATE
         .item("blotter_sheet", Item::new)
-        .lang("LSD-Bogen")
+        .lang("LSD Blotter Sheet")
         .register();
 
     public static final ItemEntry<Item> ROOT_BARK = REGISTRATE
         .item("root_bark", Item::new)
-        .lang("Wurzelrinde")
+        .lang("Root Bark")
         .register();
 
     public static final ItemEntry<Item> XANAX_POWDER = REGISTRATE
         .item("xanax_powder", Item::new)
-        .lang("Xanax-Pulver")
+        .lang("Xanax Powder")
         .register();
 
     // Wine and spirits. Each bottle holds sips (durability), see BeerDrinkItem.
     public static final ItemEntry<BeerDrinkItem> WINE_BOTTLE = REGISTRATE
         .item("wine_bottle", p -> new BeerDrinkItem(p, () -> Items.GLASS_BOTTLE, BeerDrinkItem.perSip(0.75f, 0.12f, 5), false))
-        .lang("Flasche Rotwein")
+        .lang("Bottle of Red Wine")
         .properties(p -> p.durability(5).setNoRepair().food(ModFoods.BEER))
         .tag(C_BEVERAGES)
         .register();
@@ -379,7 +379,7 @@ public class ModItems {
 
     public static final ItemEntry<BeerDrinkItem> VODKA_BOTTLE = REGISTRATE
         .item("vodka_bottle", p -> new BeerDrinkItem(p, () -> Items.GLASS_BOTTLE, BeerDrinkItem.perSip(0.7f, 0.4f, 16), false))
-        .lang("Wodka")
+        .lang("Vodka")
         .properties(p -> p.durability(16).setNoRepair().food(ModFoods.BEER))
         .tag(C_BEVERAGES)
         .register();
@@ -407,86 +407,86 @@ public class ModItems {
 
     public static final ItemEntry<ItemNameBlockItem> GRAPE_CUTTING = REGISTRATE
         .<ItemNameBlockItem>item("grape_cutting", p -> planted(ModBlocks.GRAPE_VINE.get(), p, "grape_cutting"))
-        .lang("Rebsetzling")
+        .lang("Grapevine Cutting")
         .register();
 
     public static final ItemEntry<Item> GRAPES = REGISTRATE
         .item("grapes", Item::new)
-        .lang("Weintrauben")
+        .lang("Grapes")
         .properties(p -> p.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(2).saturationModifier(0.2f).build()))
         .register();
 
     public static final ItemEntry<ItemNameBlockItem> AGAVE_PUP = REGISTRATE
         .<ItemNameBlockItem>item("agave_pup", p -> planted(ModBlocks.AGAVE.get(), p, "agave_pup"))
-        .lang("Agaven-Kindel")
+        .lang("Agave Pup")
         .register();
 
     public static final ItemEntry<Item> AGAVE_HEART = REGISTRATE
         .item("agave_heart", Item::new)
-        .lang("Agavenherz")
+        .lang("Agave Piña")
         .register();
 
     public static final ItemEntry<Item> ROASTED_AGAVE = REGISTRATE
         .item("roasted_agave", Item::new)
-        .lang("Gegartes Agavenherz")
+        .lang("Roasted Agave Piña")
         .register();
 
     public static final ItemEntry<Item> AGAVE_PULP = REGISTRATE
         .item("agave_pulp", Item::new)
-        .lang("Agavenfasern")
+        .lang("Agave Fibers")
         .register();
 
     public static final ItemEntry<Item> JUNIPER_BERRIES = REGISTRATE
         .item("juniper_berries", Item::new)
-        .lang("Wacholderbeeren")
+        .lang("Juniper Berries")
         .register();
 
     /** An empty balloon, for a Spout to fill with Lachgas. */
     public static final ItemEntry<Item> BALLOON = REGISTRATE.item("balloon", Item::new)
-        .lang("Luftballon")
+        .lang("Balloon")
         .register();
 
     public static final ItemEntry<DrugItem> LACHGAS_BALLOON = REGISTRATE
         .item("lachgas_balloon", p -> new DrugItem(p, DrugServer.Kind.LACHGAS))
-        .lang("Lachgas-Ballon")
+        .lang("Nitrous Balloon")
         .properties(p -> p.stacksTo(16))
         .register();
 
     public static final ItemEntry<com.createbrewery.drugs.NaloxonItem> NALOXON = REGISTRATE
         .item("naloxon", com.createbrewery.drugs.NaloxonItem::new)
-        .lang("Narcan (Naloxon)")
+        .lang("Narcan (Naloxone)")
         .properties(p -> p.stacksTo(4))
         .register();
 
     public static final ItemEntry<com.createbrewery.drugs.TestKitItem> TEST_KIT = REGISTRATE
         .item("drug_test_kit", com.createbrewery.drugs.TestKitItem::new)
-        .lang("Drogentest-Kit")
+        .lang("Drug Test Kit")
         .properties(p -> p.durability(10))
         .register();
 
     public static final ItemEntry<com.createbrewery.drugs.ElectrolyteItem> ELECTROLYTE = REGISTRATE
         .item("electrolyte_drink", com.createbrewery.drugs.ElectrolyteItem::new)
-        .lang("Elektrolyt-Drink")
+        .lang("Electrolyte Drink")
         .properties(p -> p.stacksTo(16))
         .register();
 
     public static final ItemEntry<com.createbrewery.drugs.EdibleItem> SPACE_BROWNIE = REGISTRATE
         .item("space_brownie", com.createbrewery.drugs.EdibleItem::new)
-        .lang("Space-Brownie")
+        .lang("Space Brownie")
         .properties(p -> p.stacksTo(16).food(new net.minecraft.world.food.FoodProperties.Builder()
             .nutrition(3).saturationModifier(0.3f).alwaysEdible().build()))
         .register();
 
     public static final ItemEntry<com.createbrewery.item.TapedSpyglassItem> TAPED_SPYGLASS = REGISTRATE
         .item("taped_spyglass", com.createbrewery.item.TapedSpyglassItem::new)
-        .lang("Abgeklebtes Fernglas")
+        .lang("Taped Spyglass")
         .properties(p -> p.stacksTo(1))
         .model((c, p) -> {}) // hand-written: models/item/taped_spyglass.json
         .register();
 
     public static final ItemEntry<com.createbrewery.item.ClubStampItem> CLUB_STAMP = REGISTRATE
         .item("club_stamp", com.createbrewery.item.ClubStampItem::new)
-        .lang("Club-Stempel")
+        .lang("Club Stamp")
         .properties(p -> p.stacksTo(1))
         .model((c, p) -> {}) // hand-written: models/item/club_stamp.json
         .register();
@@ -494,7 +494,7 @@ public class ModItems {
     public static final ItemEntry<net.minecraft.world.item.SpawnEggItem> BOUNCER_SPAWN_EGG = REGISTRATE
         .<net.minecraft.world.item.SpawnEggItem>item("bouncer_spawn_egg", p -> new net.minecraft.world.item.SpawnEggItem(
             com.createbrewery.entity.ModEntities.BOUNCER.get(), 0x1A1A1A, 0xC8A030, p))
-        .lang("Türsteher Spawn-Ei")
+        .lang("Bouncer Spawn Egg")
         .model((c, p) -> {}) // hand-written: models/item/bouncer_spawn_egg.json
         .register();
 
