@@ -46,6 +46,8 @@ final class Emitter {
     float drive = 1f;
     /** With the rack's speed of sound on: this speaker's alignment delay in seconds (a delay tower's); -1 off. */
     double delay = -1;
+    int subCut = com.createbrewery.block.club.AmpRackBlockEntity.SUBCUT_OFF;
+    private DeckFx.Biquad subHp;
     private final DeckFx.Limiter limiter;
     private final BlockPos home;
     /** Which way the sound leaves it. */
@@ -142,10 +144,19 @@ final class Emitter {
             fx.setMasterTempo(t.masterTempo, pitch);
         }
         // A rack placed or removed, the last sub switched off, the corner moved: taken up at once.
-        if (band == FULL) split = null;
-        else {
+        if (band == FULL) {
+            split = null;
+            subHp = null;
+        } else {
             if (split == null) split = new DeckFx.Crossover(rate);
             split.set(band == LOW, crossover);
+            if (band == LOW && subCut != com.createbrewery.block.club.AmpRackBlockEntity.SUBCUT_OFF) {
+                if (subHp == null) subHp = new DeckFx.Biquad();
+                double cutFreq = subCut == com.createbrewery.block.club.AmpRackBlockEntity.SUBCUT_40 ? 40.0 : 30.0;
+                subHp.highPass(cutFreq, rate, Math.sqrt(0.5));
+            } else {
+                subHp = null;
+            }
         }
         feed(t, target + (long) (LEAD * rate * pitch));
         AL10.alSourcef(source, AL10.AL_GAIN, gain * level);
@@ -210,6 +221,9 @@ final class Emitter {
             if (n <= 0) return;
             if (fx != null && t.deck) fx.process(in, n);
             if (split != null) split.process(in, n);
+            if (subHp != null) {
+                for (int i = 0; i < n; i++) in[i] = (float) subHp.run(in[i]);
+            }
             if (drive != 1f) for (int i = 0; i < n; i++) in[i] *= drive;
             limiter.process(in, n);
             filter.process(in, 0, n, out);

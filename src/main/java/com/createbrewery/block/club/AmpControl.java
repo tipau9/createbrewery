@@ -17,7 +17,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * @param value the crossover in Hz, or a gain knob 0..1
  */
 public record AmpControl(BlockPos pos, byte action, float value) implements CustomPacketPayload {
-    public static final byte CROSSOVER = 0, SUB_GAIN = 1, TOP_GAIN = 2, PROPAGATION = 3;
+    public static final byte CROSSOVER = 0, SUB_GAIN = 1, TOP_GAIN = 2, PROPAGATION = 3,
+        MUTE_TOPS = 4, MUTE_SUBS = 5, BASS_CONTOUR = 6, SUB_CUT = 7, DELAY_MS = 8;
 
     public static final Type<AmpControl> TYPE = new Type<>(CreateBrewery.ID("amp_control"));
     public static final StreamCodec<ByteBuf, AmpControl> CODEC = StreamCodec.composite(
@@ -27,7 +28,7 @@ public record AmpControl(BlockPos pos, byte action, float value) implements Cust
         AmpControl::new);
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").optional().playToServer(TYPE, CODEC, AmpControl::handle);
+        event.registrar("2").optional().playToServer(TYPE, CODEC, AmpControl::handle);
     }
 
     /** Client side. */
@@ -42,6 +43,11 @@ public record AmpControl(BlockPos pos, byte action, float value) implements Cust
             case SUB_GAIN -> rack.setSubGain(value);
             case TOP_GAIN -> rack.setTopGain(value);
             case PROPAGATION -> rack.setPropagation(value > 0.5f);
+            case MUTE_TOPS -> rack.setMuteTops(value > 0.5f);
+            case MUTE_SUBS -> rack.setMuteSubs(value > 0.5f);
+            case BASS_CONTOUR -> rack.setBassContour((int) value);
+            case SUB_CUT -> rack.setSubCut((int) value);
+            case DELAY_MS -> rack.setDelayMs(value);
             default -> {}
         }
     }

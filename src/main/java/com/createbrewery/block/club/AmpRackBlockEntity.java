@@ -9,14 +9,21 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * A booth's amp rack: the crossover that sends the lows to its subwoofers and the rest to its
  * speakers, and the gain of each side. Linked to the booth like a speaker (see MusicPulse).
+ * Features 4-channel DSP: crossover, sub/top gains, channel mutes, bass contour, subsonic cut, and delay line alignment.
  */
 public class AmpRackBlockEntity extends SpeakerBlockEntity {
     public static final float MIN_CROSSOVER = 60f, MAX_CROSSOVER = 200f;
+    public static final int BASS_FLAT = 0, BASS_DEEP = 1, BASS_PUNCH = 2;
+    public static final int SUBCUT_OFF = 0, SUBCUT_30 = 1, SUBCUT_40 = 2;
 
     /** The crossover's corner in Hz; the gain knobs 0..1 as DeckFx.eqGain reads them (0.5 = unity). */
     private float crossover = 100f, subGain = 0.5f, topGain = 0.5f;
     /** Sound takes its time through the air, and far speakers are delayed to match (delay towers). Off by default. */
     private boolean propagation;
+    private boolean muteTops, muteSubs;
+    private int bassContour = BASS_FLAT;
+    private int subCut = SUBCUT_OFF;
+    private float delayMs = 0f;
 
     public AmpRackBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -36,6 +43,26 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
 
     public boolean isPropagation() {
         return propagation;
+    }
+
+    public boolean isMuteTops() {
+        return muteTops;
+    }
+
+    public boolean isMuteSubs() {
+        return muteSubs;
+    }
+
+    public int getBassContour() {
+        return bassContour;
+    }
+
+    public int getSubCut() {
+        return subCut;
+    }
+
+    public float getDelayMs() {
+        return delayMs;
     }
 
     public void setPropagation(boolean on) {
@@ -58,6 +85,31 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
         changed();
     }
 
+    public void setMuteTops(boolean mute) {
+        muteTops = mute;
+        changed();
+    }
+
+    public void setMuteSubs(boolean mute) {
+        muteSubs = mute;
+        changed();
+    }
+
+    public void setBassContour(int mode) {
+        bassContour = Math.floorMod(mode, 3);
+        changed();
+    }
+
+    public void setSubCut(int mode) {
+        subCut = Math.floorMod(mode, 3);
+        changed();
+    }
+
+    public void setDelayMs(float ms) {
+        delayMs = Math.max(0f, Math.min(50f, ms));
+        changed();
+    }
+
     private void changed() {
         setChanged();
         if (level != null && !level.isClientSide) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -70,6 +122,11 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
         tag.putFloat("SubGain", subGain);
         tag.putFloat("TopGain", topGain);
         tag.putBoolean("Propagation", propagation);
+        tag.putBoolean("MuteTops", muteTops);
+        tag.putBoolean("MuteSubs", muteSubs);
+        tag.putInt("BassContour", bassContour);
+        tag.putInt("SubCut", subCut);
+        tag.putFloat("DelayMs", delayMs);
     }
 
     @Override
@@ -79,5 +136,10 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
         if (tag.contains("SubGain")) subGain = tag.getFloat("SubGain");
         if (tag.contains("TopGain")) topGain = tag.getFloat("TopGain");
         propagation = tag.getBoolean("Propagation");
+        muteTops = tag.getBoolean("MuteTops");
+        muteSubs = tag.getBoolean("MuteSubs");
+        bassContour = tag.getInt("BassContour");
+        subCut = tag.getInt("SubCut");
+        delayMs = tag.getFloat("DelayMs");
     }
 }

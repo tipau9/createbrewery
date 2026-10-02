@@ -447,7 +447,7 @@ public final class DeckFx {
     }
 
     /** One RBJ biquad, transposed direct form II. */
-    private static final class Biquad {
+    static final class Biquad {
         private double b0 = 1, b1, b2, a1, a2, s1, s2;
         /** For the crossovers: the corner, negative for a high-pass. */
         double lowPassAt;

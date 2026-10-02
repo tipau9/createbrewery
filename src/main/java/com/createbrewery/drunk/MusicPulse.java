@@ -62,11 +62,16 @@ public final class MusicPulse {
     private static final float MONITOR = 0.2f;
 
     /** How loud a place plays a song, and which part of it (see {@link Emitter#band}). */
-    private record Want(float level, int band, float drive, double delay) {}
+    private record Want(float level, int band, float drive, double delay, int subCut) {}
 
-    /** A speaker's delay-tower alignment in seconds, or -1 with the speed of sound off. */
-    private static double align(boolean flight, Vec3 speaker, Vec3 booth, double nearest) {
-        return flight ? Math.max(0, speaker.distanceTo(booth) - nearest) / DeckFx.SPEED_OF_SOUND : -1;
+    /** A speaker's delay-tower alignment in seconds, or -1 with the speed of sound and extra delay off. */
+    private static double align(boolean flight, Vec3 speaker, Vec3 booth, double nearest, float extraDelayMs) {
+        if (!flight && extraDelayMs <= 0f) return -1;
+        double d = (double) extraDelayMs / 1000.0;
+        if (flight) {
+            d += Math.max(0, speaker.distanceTo(booth) - nearest) / DeckFx.SPEED_OF_SOUND;
+        }
+        return d;
     }
 
     /** Client: per booth, how hard its amps are limiting (1 not at all .. 0), for the rack's clip light. */
@@ -463,6 +468,22 @@ public final class MusicPulse {
         return song.beats;
     }
 
+    public static float hats() {
+        return hats;
+    }
+
+    public static float level() {
+        return level;
+    }
+
+    public static float bass() {
+        return CURRENT_SLICE[KickDetector.BASS];
+    }
+
+    public static float high() {
+        return CURRENT_SLICE[KickDetector.HIGH];
+    }
+
     /**
      * Once a frame: what is heard right now. Kicks and hats flash up and die away quickly, the
      * level follows smoothly. All 0 without music - no music, no beat.
@@ -552,7 +573,11 @@ public final class MusicPulse {
         // Without a rack the speakers play everything and the subs only thump; with one and subs to
         // drive, it splits at the crossover: the lows to the subs, the rest to the speakers.
         boolean split = rack != null && !subs.isEmpty();
-        float topDrive = rack == null ? 1f : DeckFx.eqGain(rack.getTopGain());
+        float topDrive = (rack != null && rack.isMuteTops()) ? 0f : (rack == null ? 1f : DeckFx.eqGain(rack.getTopGain()));
+        float extraDelayMs = rack == null ? 0f : rack.getDelayMs();
+        int subCut = rack == null ? AmpRackBlockEntity.SUBCUT_OFF : rack.getSubCut();
+        int bassContour = rack == null ? AmpRackBlockEntity.BASS_FLAT : rack.getBassContour();
+
         // Speed of sound (off unless the rack has it on): every speaker is heard as late as its sound
         // takes to reach you, and those further from the booth than the nearest are held back by the
         // extra distance - delay towers, so the far ones land in step with the main stack.
@@ -562,12 +587,17 @@ public final class MusicPulse {
         for (Vec3 p : tops) ref = Math.min(ref, p.distanceTo(boothAt));
         for (Vec3 p : subs) ref = Math.min(ref, p.distanceTo(boothAt));
         Map<Vec3, Want> wanted = new HashMap<>();
-        for (Vec3 top : tops) wanted.put(top, new Want(1f, split ? Emitter.HIGH : Emitter.FULL, topDrive, align(flight, top, boothAt, ref)));
+        for (Vec3 top : tops) wanted.put(top, new Want(1f, split ? Emitter.HIGH : Emitter.FULL, topDrive, align(flight, top, boothAt, ref, extraDelayMs), AmpRackBlockEntity.SUBCUT_OFF));
         if (split) {
-            float subDrive = DeckFx.eqGain(rack.getSubGain());
-            for (Vec3 sub : subs) wanted.put(sub, new Want(1f, Emitter.LOW, subDrive, align(flight, sub, boothAt, ref)));
+            float subDrive = (rack.isMuteSubs()) ? 0f : DeckFx.eqGain(rack.getSubGain());
+            if (bassContour == AmpRackBlockEntity.BASS_DEEP) {
+                subDrive *= 1.35f;
+            } else if (bassContour == AmpRackBlockEntity.BASS_PUNCH) {
+                subDrive *= 1.25f;
+            }
+            for (Vec3 sub : subs) wanted.put(sub, new Want(1f, Emitter.LOW, subDrive, align(flight, sub, boothAt, ref, extraDelayMs), subCut));
         }
-        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, flight ? 0 : -1));
+        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, (flight || extraDelayMs > 0) ? 0 : -1, AmpRackBlockEntity.SUBCUT_OFF));
         float crossover = rack == null ? 100f : rack.getCrossover();
 
         for (Iterator<Map.Entry<Vec3, Emitter>> it = t.emitters.entrySet().iterator(); it.hasNext(); ) {
@@ -584,6 +614,7 @@ public final class MusicPulse {
             e.drive = w.getValue().drive();
             e.delay = w.getValue().delay();
             e.crossover = crossover;
+            e.subCut = w.getValue().subCut();
             e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt);
         }
         if (dj != null) {
