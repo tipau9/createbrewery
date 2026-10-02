@@ -85,7 +85,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case FILTER -> dj.setFilter(deck, control.value);
             case FX -> dj.setFx(deck, (int) control.value);
             case FX_AMOUNT -> dj.setFxAmount(deck, control.value);
-            case LOOP -> dj.setLoop(deck, (int) control.value);
+            case LOOP -> dj.setLoop(deck, net.minecraft.util.Mth.clamp((int) control.value, 0, DjBoothBlockEntity.MAX_LOOP_BEATS));
             case CHANNEL_FADER -> dj.setChannelFader(deck, control.value);
             case COLOR_FX_SELECT -> dj.setActiveColorFx((int) control.value);
             case COLOR_FX_PARAM -> dj.setColorFxParam(control.value);

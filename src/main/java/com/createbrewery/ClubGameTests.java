@@ -87,8 +87,10 @@ public class ClubGameTests {
         helper.assertTrue(dj.getLoopBeats(b) == 4 && dj.getLoopSerial(b) != serial, "the loop did not engage");
         dj.setLoop(b, 4);
         helper.assertTrue(dj.getLoopBeats(b) == 0, "pressing the loop again did not let go");
-        dj.setLoop(b, 3);
-        helper.assertTrue(dj.getLoopBeats(b) == 0, "a loop length the mixer does not have was taken");
+        dj.setLoop(b, 128);
+        helper.assertTrue(dj.getLoopBeats(b) == DjBoothBlockEntity.MAX_LOOP_BEATS, "an absurd loop length was not clamped to max 64 beats");
+        dj.setLoop(b, -5);
+        helper.assertTrue(dj.getLoopBeats(b) == 0, "negative loop length did not clear loop");
         helper.succeed();
     }
 

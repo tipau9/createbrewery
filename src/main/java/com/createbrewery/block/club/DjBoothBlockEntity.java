@@ -534,11 +534,13 @@ public class DjBoothBlockEntity extends BlockEntity {
         sync();
     }
 
-    /** Loops the last {@code beats} beats (slip mode: the song runs on underneath); the same length again lets go. */
+    public static final int MAX_LOOP_BEATS = 64;
+
+    /** Loops the last {@code beats} beats (slip mode: the song runs on underneath); the same length again lets go. Clamped to 1..64 beats. */
     public void setLoop(int deck, int beats) {
         if (deck < 0 || deck >= DECKS) return;
         Deck d = decks[deck];
-        d.loopBeats = beats <= 0 || d.loopBeats == beats ? 0 : beats;
+        d.loopBeats = beats <= 0 || d.loopBeats == beats ? 0 : Math.min(MAX_LOOP_BEATS, beats);
         d.loopSerial++;
         sync();
     }

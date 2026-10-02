@@ -150,4 +150,28 @@ class DeckFxTest {
         assertEquals(1000, DeckFx.loopFrame(1300, 1000, 300));
         assertEquals(1150, DeckFx.loopFrame(1750, 1000, 300));
     }
+
+    @Test
+    void propagationCalculatesSpeedOfSoundFlight() {
+        double alignDelay = 0.05; // 50 ms delay tower
+        double distance = 343.0; // 343 blocks away
+        double totalProp = DeckFx.propagation(alignDelay, distance);
+        assertEquals(1.05, totalProp, 1e-4, "acoustic flight should be alignDelay + distance / SPEED_OF_SOUND");
+    }
+
+    @Test
+    void peakLimiterRestrictsOverload() {
+        DeckFx.Limiter limiter = new DeckFx.Limiter(44100.0);
+        float[] buffer = new float[] {0.5f, 0.8f, 1.5f, 2.0f, 3.0f, 0.5f};
+        limiter.process(buffer, buffer.length);
+
+        for (int i = 0; i < buffer.length; i++) {
+            assertTrue(Math.abs(buffer[i]) <= DeckFx.Limiter.CEILING + 0.01f,
+                "limiter failed to keep sample " + i + " (" + buffer[i] + ") below ceiling");
+        }
+
+        float reduction = limiter.takeReduction();
+        assertTrue(reduction < 0.5f, "gain reduction should have been triggered for 3.0f peak");
+        assertEquals(1.0f, limiter.takeReduction(), "subsequent take should be reset to unity");
+    }
 }
