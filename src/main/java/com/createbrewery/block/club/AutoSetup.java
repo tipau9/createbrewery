@@ -28,6 +28,15 @@ public final class AutoSetup {
         return s.distance() > nearestClear + DELAY_BEYOND ? AmpSettings.DELAY : AmpSettings.FLOOR;
     }
 
+    /** Zones for newly linked tops, judged against the nearest clear top of the whole batch (and {@code nearestKnown}), not in the order they come. */
+    public static Map<Long, Integer> sortFresh(List<Seen> fresh, double nearestKnown) {
+        double nearest = nearestKnown;
+        for (Seen s : fresh) if (!s.walled()) nearest = Math.min(nearest, s.distance());
+        Map<Long, Integer> zones = new HashMap<>();
+        for (Seen s : fresh) zones.put(s.pos(), zoneOf(s, nearest));
+        return zones;
+    }
+
     public static Result plan(List<Seen> seen) {
         double nearest = Double.POSITIVE_INFINITY;
         for (Seen s : seen) if (!s.sub() && !s.walled()) nearest = Math.min(nearest, s.distance());

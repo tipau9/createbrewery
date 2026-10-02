@@ -119,12 +119,10 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
             else if (a.zone() != AmpSettings.ROOM) nearest = Math.min(nearest, distance(booth, s));
         }
         boolean changed = prune(linked);
-        for (SpeakerBlockEntity s : fresh) {
-            boolean walled = walled(booth, s);
-            double d = distance(booth, s);
-            if (!walled) nearest = Math.min(nearest, d);
-            int zone = AutoSetup.zoneOf(new AutoSetup.Seen(s.getBlockPos().asLong(), d, false, walled), nearest);
-            settings.assign.put(s.getBlockPos().asLong(), new AmpSettings.Assignment(zone, false));
+        List<AutoSetup.Seen> seen = new ArrayList<>();
+        for (SpeakerBlockEntity s : fresh) seen.add(new AutoSetup.Seen(s.getBlockPos().asLong(), distance(booth, s), false, walled(booth, s)));
+        for (var e : AutoSetup.sortFresh(seen, nearest).entrySet()) {
+            settings.assign.put(e.getKey(), new AmpSettings.Assignment(e.getValue(), false));
             changed = true;
         }
         if (changed) changed();

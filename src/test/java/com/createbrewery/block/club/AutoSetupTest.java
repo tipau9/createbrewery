@@ -87,4 +87,14 @@ class AutoSetupTest {
         assertFalse(s.assign.containsKey(9L), "Auto Setup re-detects everything");
         assertEquals(new Assignment(ROOM, false), s.assign.get(2L));
     }
+
+    @Test
+    void sortingFreshSpeakersDoesNotDependOnTheirOrder() {
+        // The far one comes first in position order; it must still be a delay behind the near one.
+        var far = top(1, 20, false);
+        var near = top(2, 5, false);
+        assertEquals(DELAY, AutoSetup.sortFresh(List.of(far, near), Double.POSITIVE_INFINITY).get(1L));
+        assertEquals(FLOOR, AutoSetup.sortFresh(List.of(far, near), Double.POSITIVE_INFINITY).get(2L));
+        assertEquals(DELAY, AutoSetup.sortFresh(List.of(far), 5).get(1L), "against an already sorted top");
+    }
 }
