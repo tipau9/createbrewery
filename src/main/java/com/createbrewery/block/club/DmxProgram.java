@@ -10,7 +10,7 @@ import java.util.List;
  * {@link DmxConsoleBlockEntity}), and a fixture linked to no console runs its own.
  */
 final class DmxProgram {
-    static final int GROUPS = 8, SCENES = 4;
+    static final int GROUPS = 8, SCENES = 16, SCENE_PAGES = 4, SCENES_PER_PAGE = 4;
     /** With flashing lights hidden, the most a level may change in one tick. */
     static final float GLIDE = 0.1f;
     static final int MANUAL = 0, AUTO = 1, CHASE = 2, PROGRAMS = 3;
@@ -22,6 +22,25 @@ final class DmxProgram {
     /** White, red, amber, green, cyan, blue, magenta, UV. */
     static final int[] PALETTE = {0xFFFFFF, 0xFF1020, 0xFFA020, 0x20FF40, 0x20E0FF, 0x2040FF, 0xFF20C0, 0x7020FF};
 
+    /** Industry standard Lee / Rosco gel filters */
+    static final int[] GEL_FILTERS = {
+        0xFFFFFF, // 0: Open White
+        0x00E5FF, // 1: Lee 116 Tokyo Disco / Electric Cyan
+        0xFF1020, // 2: Lee 106 Primary Red
+        0xFF5500, // 3: Lee 105 Sunset Orange / Flame
+        0xFFA020, // 4: Lee 152 Golden Amber / Warm Tungsten
+        0x20FF40, // 5: Lee 139 Toxic Green / Acid
+        0x2040FF, // 6: Lee 174 Steel Blue
+        0xFF007F, // 7: Lee 128 Laser Magenta / Neon Pink
+        0x7020FF, // 8: Lee 181 Congo Blue / Deep UV
+        0xFFEE00  // 9: Lee 101 Sun Yellow
+    };
+
+    static int resolveColor(int val) {
+        if (val >= 0 && val < PALETTE.length) return PALETTE[val];
+        return val;
+    }
+
     /** What the console is set to; saved by the console, the same on server and clients. */
     static final class Settings {
         final float[] faders = new float[GROUPS];
@@ -32,6 +51,15 @@ final class DmxProgram {
         int colorFx, gobo, zoom = 1;
         boolean prism;
         boolean blackout;
+        /** Bump overrides: blind all (tungsten wash) and strobe all (20 Hz burst) */
+        boolean blindAll;
+        boolean strobeAll;
+        /** Crossfade time in seconds for scene recalls (0.0s = snap) */
+        float fadeTime = 0.0f;
+        /** Beat timing: lock to DJ booth beat or follow manual tap tempo BPM */
+        boolean djSync = true;
+        float manualBpm = 120.0f;
+        int scenePage = 0;
         /** Groups whose flash button is held, one bit each. */
         int flash;
         /** Stored looks, null where none was stored. */
@@ -77,15 +105,23 @@ final class DmxProgram {
     void update(Settings s, long tick, float dt, ClubState c) {
         time += dt;
         sinceStep += dt;
-        clock += dt / c.period;
         playing = c.playing;
         noFlashing = c.noFlashing;
         float tension = c.buildUp;
-        if (c.beat && ++beats % RATES[Math.floorMod(s.rate, RATES.length)] == 0) nextStep();
-        if (!playing && sinceStep >= 1.0) nextStep();
-        beatPhase = c.beatPhase;
+
+        double period;
+        if (s.djSync && c.playing && c.period > 0) {
+            period = c.period;
+            if (c.beat && ++beats % RATES[Math.floorMod(s.rate, RATES.length)] == 0) nextStep();
+            beatPhase = c.beatPhase;
+        } else {
+            period = 60.0 / Math.max(30.0, s.manualBpm);
+            if (sinceStep >= period * RATES[Math.floorMod(s.rate, RATES.length)]) nextStep();
+            beatPhase = (float) ((time / period) % 1.0);
+        }
+        clock += dt / Math.max(0.1, period);
         // One turn of a pattern every four beats; slow and steady with no music.
-        movePhase += (float) (playing ? dt * Math.PI / (2 * c.period) : dt * 0.5);
+        movePhase += (float) (dt * Math.PI / (2 * Math.max(0.1, period)));
 
         snapEnv = c.env;
         snapTension = tension;
@@ -147,7 +183,10 @@ final class DmxProgram {
             default -> lv = fader;
         }
         if ((s.flash >> g & 1) != 0) lv = 1f;
-        return s.blackout ? 0f : clamp(lv * s.master);
+        if (s.blackout) return 0f;
+        if (s.blindAll) return 1f;
+        if (s.strobeAll) return snapShutter ? 1f : 0f;
+        return clamp(lv * s.master);
     }
 
     /** The colour of group {@code group} for a fixture {@code fan} steps along: palette, colour program, scene or drop white. */
@@ -161,11 +200,14 @@ final class DmxProgram {
     }
 
     private int colorFor(Settings s, int g, int fan, double spread) {
+        if (s.blindAll) return 0xFFE0A0; // Warm tungsten wash
+        if (s.strobeAll) return 0xFFFFFF; // Blinding white
         int stp = step + fan;
         if (s.program == CHASE && !stored.isEmpty()) {
-            return PALETTE[Math.floorMod(stored.get(Math.floorMod(stp, stored.size())).colors()[g], PALETTE.length)];
+            return resolveColor(stored.get(Math.floorMod(stp, stored.size())).colors()[g]);
         }
-        int idx = Math.floorMod(s.colors[g], PALETTE.length), base = PALETTE[idx];
+        int base = resolveColor(s.colors[g]);
+        int idx = s.colors[g] >= 0 && s.colors[g] < PALETTE.length ? s.colors[g] : 0;
         int col = switch (s.colorFx) {
             case FADE -> {
                 // One palette colour every 8 beats, each fixture a step along the palette per fan.

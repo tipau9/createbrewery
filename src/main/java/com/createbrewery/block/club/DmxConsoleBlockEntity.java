@@ -8,6 +8,12 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -101,6 +107,55 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         changed();
     }
 
+    void setBlindAll(boolean on) {
+        settings.blindAll = on;
+        changed();
+    }
+
+    void setStrobeAll(boolean on) {
+        settings.strobeAll = on;
+        changed();
+    }
+
+    void setFadeTime(float sec) {
+        settings.fadeTime = Math.max(0f, sec);
+        changed();
+    }
+
+    void setManualBpm(float bpm) {
+        settings.manualBpm = Math.max(20f, Math.min(300f, bpm));
+        settings.djSync = false;
+        changed();
+    }
+
+    void setDjSync(boolean on) {
+        settings.djSync = on;
+        changed();
+    }
+
+    void setScenePage(int page) {
+        settings.scenePage = Math.floorMod(page, DmxProgram.SCENE_PAGES);
+        changed();
+    }
+
+    public void triggerHazer(@org.jetbrains.annotations.Nullable Player player) {
+        if (level instanceof ServerLevel server) {
+            server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                worldPosition.getX() + 0.5, worldPosition.getY() + 0.9, worldPosition.getZ() + 0.5,
+                16, 1.2, 0.4, 1.2, 0.015);
+            for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-16, -6, -16), worldPosition.offset(16, 10, 16))) {
+                if (server.isLoaded(p) && server.getBlockEntity(p) instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
+                    server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                        p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
+                }
+            }
+            server.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.6f, 1.5f);
+            if (player != null) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable("createbrewery.dmx.hazer_active"), true);
+            }
+        }
+    }
+
     /** A flash button pressed (or still held); it lets go on its own {@link #FLASH_HOLD} ticks after the last press. */
     void flash(int g) {
         if (level == null) return;
@@ -114,17 +169,40 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     }
 
     void storeScene(int i) {
+        if (i < 0 || i >= DmxProgram.SCENES) return;
         settings.scenes[i] = new DmxProgram.Scene(settings.faders.clone(), settings.colors.clone());
         sync();
     }
 
-    /** Puts a stored scene back on the faders; false if none was stored there. */
+    private float fadeDuration, fadeElapsed;
+    private final float[] fadeStartFaders = new float[DmxProgram.GROUPS];
+    private final float[] fadeTargetFaders = new float[DmxProgram.GROUPS];
+    private final int[] fadeStartColors = new int[DmxProgram.GROUPS];
+    private final int[] fadeTargetColors = new int[DmxProgram.GROUPS];
+    private boolean isFading;
+
+    /** Puts a stored scene back on the faders; smoothly crossfades if fadeTime > 0. */
     boolean recallScene(int i) {
+        if (i < 0 || i >= DmxProgram.SCENES) return false;
         DmxProgram.Scene sc = settings.scenes[i];
         if (sc == null) return false;
-        System.arraycopy(sc.levels(), 0, settings.faders, 0, DmxProgram.GROUPS);
-        System.arraycopy(sc.colors(), 0, settings.colors, 0, DmxProgram.GROUPS);
-        changed();
+        if (settings.fadeTime <= 0.05f) {
+            System.arraycopy(sc.levels(), 0, settings.faders, 0, DmxProgram.GROUPS);
+            System.arraycopy(sc.colors(), 0, settings.colors, 0, DmxProgram.GROUPS);
+            isFading = false;
+            changed();
+        } else {
+            System.arraycopy(settings.faders, 0, fadeStartFaders, 0, DmxProgram.GROUPS);
+            System.arraycopy(sc.levels(), 0, fadeTargetFaders, 0, DmxProgram.GROUPS);
+            for (int g = 0; g < DmxProgram.GROUPS; g++) {
+                fadeStartColors[g] = DmxProgram.resolveColor(settings.colors[g]);
+                fadeTargetColors[g] = DmxProgram.resolveColor(sc.colors()[g]);
+            }
+            fadeDuration = settings.fadeTime;
+            fadeElapsed = 0f;
+            isFading = true;
+            changed();
+        }
         return true;
     }
 
@@ -239,6 +317,18 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         adoptBooth();
         followSong();
         updateFlash();
+        if (isFading) {
+            fadeElapsed += 0.05f;
+            float progress = Math.min(1.0f, fadeElapsed / Math.max(0.05f, fadeDuration));
+            for (int g = 0; g < DmxProgram.GROUPS; g++) {
+                settings.faders[g] = Mth.lerp(progress, fadeStartFaders[g], fadeTargetFaders[g]);
+                settings.colors[g] = DmxProgram.mix(fadeStartColors[g], fadeTargetColors[g], progress);
+            }
+            if (progress >= 1.0f) {
+                isFading = false;
+            }
+            changed();
+        }
     }
 
     /** The flash buttons alone: a press must not run the show clock ({@link #followSong}) a second time in a tick. */
@@ -345,6 +435,12 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         tag.putInt("Zoom", s.zoom);
         tag.putBoolean("Prism", s.prism);
         tag.putInt("Flash", s.flash);
+        tag.putBoolean("BlindAll", s.blindAll);
+        tag.putBoolean("StrobeAll", s.strobeAll);
+        tag.putFloat("FadeTime", s.fadeTime);
+        tag.putBoolean("DjSync", s.djSync);
+        tag.putFloat("ManualBpm", s.manualBpm);
+        tag.putInt("ScenePage", s.scenePage);
         ListTag scenes = new ListTag();
         for (int i = 0; i < DmxProgram.SCENES; i++) {
             CompoundTag sc = new CompoundTag();
@@ -372,6 +468,12 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         s.zoom = tag.contains("Zoom") ? Math.floorMod(tag.getInt("Zoom"), DmxProgram.ZOOMS) : 1;
         s.prism = tag.getBoolean("Prism");
         s.flash = tag.getInt("Flash");
+        s.blindAll = tag.getBoolean("BlindAll");
+        s.strobeAll = tag.getBoolean("StrobeAll");
+        s.fadeTime = tag.getFloat("FadeTime");
+        s.djSync = !tag.contains("DjSync") || tag.getBoolean("DjSync");
+        s.manualBpm = tag.contains("ManualBpm") ? tag.getFloat("ManualBpm") : 120.0f;
+        s.scenePage = tag.contains("ScenePage") ? tag.getInt("ScenePage") : 0;
         ListTag scenes = tag.getList("Scenes", Tag.TAG_COMPOUND);
         for (int i = 0; i < DmxProgram.SCENES; i++) {
             CompoundTag sc = i < scenes.size() ? scenes.getCompound(i) : new CompoundTag();
