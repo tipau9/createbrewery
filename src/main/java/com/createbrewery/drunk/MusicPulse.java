@@ -1,7 +1,9 @@
 package com.createbrewery.drunk;
 
 import com.createbrewery.Config;
+import com.createbrewery.block.club.AmpMeters;
 import com.createbrewery.block.club.AmpRackBlockEntity;
+import com.createbrewery.block.club.AmpSettings;
 import com.createbrewery.block.club.DjBoothBlockEntity;
 import com.createbrewery.block.club.SpeakerBlockEntity;
 import com.createbrewery.block.club.SubwooferBlockEntity;
@@ -61,25 +63,57 @@ public final class MusicPulse {
     /** With linked speakers the booth itself is only the DJ's monitor. */
     private static final float MONITOR = 0.2f;
 
-    /** How loud a place plays a song, and which part of it (see {@link Emitter#band}). */
-    private record Want(float level, int band, float drive, double delay, int subCut) {}
+    /** How loud a place plays a song, which part of it (see {@link Emitter#band}), and its amp rack zone (-1 none). */
+    private record Want(float level, int band, float drive, double delay, int zone) {}
 
-    /** A speaker's delay-tower alignment in seconds, or -1 with the speed of sound and extra delay off. */
-    private static double align(boolean flight, Vec3 speaker, Vec3 booth, double nearest, float extraDelayMs) {
-        if (!flight && extraDelayMs <= 0f) return -1;
-        double d = (double) extraDelayMs / 1000.0;
-        if (flight) {
-            d += Math.max(0, speaker.distanceTo(booth) - nearest) / DeckFx.SPEED_OF_SOUND;
-        }
-        return d;
+    /** A speaker's delay-tower alignment in seconds, or -1 with the speed of sound off. */
+    private static double align(boolean flight, Vec3 speaker, Vec3 booth, double nearest) {
+        return flight ? Math.max(0, speaker.distanceTo(booth) - nearest) / DeckFx.SPEED_OF_SOUND : -1;
     }
 
-    /** Client: per booth, how hard its amps are limiting (1 not at all .. 0), for the rack's clip light. */
-    private static final Map<BlockPos, Float> LIMITING = new ConcurrentHashMap<>();
+    /** What a speaker in {@code zone} plays: the zone's drive under the power ramp, alignment plus the zone's own delay. */
+    private static Want want(AmpSettings amp, int zone, int band, float power, double align) {
+        if (amp == null || zone < 0) return new Want(1f, band, 1f, align, -1);
+        float ms = amp.zones[zone].delayMs;
+        double delay = align < 0 && ms <= 0 ? -1 : Math.max(0, align) + ms / 1000.0;
+        return new Want(1f, band, amp.drive(zone) * power, delay, zone);
+    }
 
-    /** The lowest limiter gain on the booth's speakers of late: under 1 the amps are being driven into their limiters. */
-    public static float limiting(BlockPos booth) {
-        return LIMITING.getOrDefault(booth, 1f);
+    /** Client: per booth, the amp rack's meters. */
+    private static final Map<BlockPos, AmpMeters> METERS = new ConcurrentHashMap<>();
+
+    @org.jetbrains.annotations.Nullable
+    public static AmpMeters meters(BlockPos booth) {
+        return METERS.get(booth);
+    }
+
+    /** Client: per booth {power 0..1, when last stepped}: the rack's power as heard, eased in over 2 s and out over half a second. */
+    private static final Map<BlockPos, double[]> POWER = new ConcurrentHashMap<>();
+
+    private static float power(BlockPos booth, AmpSettings amp, double now) {
+        if (amp == null) {
+            POWER.remove(booth);
+            return 1f;
+        }
+        double[] p = POWER.computeIfAbsent(booth.immutable(), k -> new double[] {amp.power ? 1 : 0, now});
+        // Switched while nothing played: no fade from a stale value, straight to where it is.
+        if (now - p[1] > 0.2) p[0] = amp.power ? 1 : 0;
+        double dt = Math.max(0, now - p[1]);
+        p[1] = now;
+        p[0] = amp.power ? Math.min(1, p[0] + dt / 2.0) : Math.max(0, p[0] - dt / 0.5);
+        return (float) p[0];
+    }
+
+    /** For the rack's lights: 0 off .. 1 on; 1 when no rack plays. */
+    public static float power(BlockPos booth) {
+        double[] p = POWER.get(booth);
+        return p == null ? 1f : (float) p[0];
+    }
+
+    /** True while the rack is fading up or down right now. */
+    public static boolean ramping(BlockPos booth) {
+        double[] p = POWER.get(booth);
+        return p != null && p[0] > 0 && p[0] < 1 && System.nanoTime() / 1e9 - p[1] < 0.2;
     }
 
     public static final class Track {
@@ -106,6 +140,8 @@ public final class MusicPulse {
         final DropDetector song = new DropDetector();
         /** Played from a DJ booth deck: its crossfader gain and pitch; 1 otherwise. */
         float mix = 1f, pitch = 1f;
+        /** The booth's amp rack power as heard (see {@link #power}); 1 without a rack. */
+        float power = 1f;
         /** Where it is heard from, by position (render thread). */
         final Map<Vec3, Emitter> emitters = new HashMap<>();
         /** The DJ's headphones, while this deck is cued on this client; null otherwise. */
@@ -468,22 +504,6 @@ public final class MusicPulse {
         return song.beats;
     }
 
-    public static float hats() {
-        return hats;
-    }
-
-    public static float level() {
-        return level;
-    }
-
-    public static float bass() {
-        return CURRENT_SLICE[KickDetector.BASS];
-    }
-
-    public static float high() {
-        return CURRENT_SLICE[KickDetector.HIGH];
-    }
-
     /**
      * Once a frame: what is heard right now. Kicks and hats flash up and die away quickly, the
      * level follows smoothly. All 0 without music - no music, no beat.
@@ -515,10 +535,10 @@ public final class MusicPulse {
             play(t, mc, player, cursor, now, dt);
 
             // A deck faded out on the crossfader is not heard, so it moves nothing.
-            float near = (player == null ? 0f : closeness(t, player.position())) * t.mix;
+            float near = (player == null ? 0f : closeness(t, player.position())) * t.mix * t.power;
             heard |= near > 0.05f;
             float kickNow = known ? CURRENT_SLICE[KickDetector.KICK] : 0f;
-            t.pulse = Math.max(kickNow * t.mix, t.pulse * (float) Math.exp(-dt * Math.max(9.0, 4.5 / t.song.period())));
+            t.pulse = Math.max(kickNow * t.mix * t.power, t.pulse * (float) Math.exp(-dt * Math.max(9.0, 4.5 / t.song.period())));
             if (!known) continue;
             int beatsBefore = t.song.beats;
             t.song.hear(kickNow, CURRENT_SLICE[KickDetector.LEVEL], CURRENT_SLICE[KickDetector.HATS], CURRENT_SLICE[KickDetector.BASS],
@@ -532,6 +552,7 @@ public final class MusicPulse {
             loud = Math.max(loud, CURRENT_SLICE[KickDetector.LOUD] * near);
             high = Math.max(high, CURRENT_SLICE[KickDetector.HIGH] * near);
         }
+        for (AmpMeters m : METERS.values()) m.step(dt);
         playing = heard;
         song.hear(k, l, h, bass, loud, high, heard, now, dt);
         // At techno tempos each kick dies away faster, so hits stay apart instead of smearing.
@@ -551,6 +572,7 @@ public final class MusicPulse {
         float lift = 1f + RollClient.peak; // at the peak the music sounds louder
         if (!t.placed() || mc.level == null) {
             setGain(t, base * lift * t.mix);
+            t.power = 1f;
             return;
         }
         setGain(t, 0f);
@@ -558,47 +580,49 @@ public final class MusicPulse {
         Vec3 at = new Vec3(t.sound.getX(), t.sound.getY(), t.sound.getZ());
         DjBoothBlockEntity dj = DjBoothBlockEntity.playingAt(mc.level, BlockPos.containing(at));
         List<SpeakerBlockEntity> linked = dj == null ? List.of() : SpeakerBlockEntity.linked(mc.level, dj.getBlockPos());
-        // The booth's amp rack (the first, if there are two), its speakers and its switched-on subwoofers.
-        AmpRackBlockEntity rack = null;
-        List<Vec3> tops = new ArrayList<>(), subs = new ArrayList<>();
+        // The rack that drives the booth (the first, if there are two), its speakers and its switched-on subwoofers.
+        AmpRackBlockEntity rack = dj == null ? null : AmpRackBlockEntity.driving(mc.level, dj.getBlockPos());
+        AmpSettings amp = rack == null ? null : rack.settings();
+        List<SpeakerBlockEntity> tops = new ArrayList<>();
+        List<Vec3> subs = new ArrayList<>();
         for (SpeakerBlockEntity s : linked) {
-            if (s instanceof AmpRackBlockEntity r) {
-                if (rack == null) rack = r;
-            } else if (s instanceof SubwooferBlockEntity sub) {
+            if (s instanceof SubwooferBlockEntity sub) {
                 if (sub.isActive()) subs.add(sub.mouth());
             } else if (s.isSpeaker()) {
-                tops.add(s.mouth());
+                tops.add(s);
             }
         }
+        float power = dj == null ? 1f : power(dj.getBlockPos(), amp, now);
+        t.power = power;
         // Without a rack the speakers play everything and the subs only thump; with one and subs to
         // drive, it splits at the crossover: the lows to the subs, the rest to the speakers.
-        boolean split = rack != null && !subs.isEmpty();
-        float topDrive = (rack != null && rack.isMuteTops()) ? 0f : (rack == null ? 1f : DeckFx.eqGain(rack.getTopGain()));
-        float extraDelayMs = rack == null ? 0f : rack.getDelayMs();
-        int subCut = rack == null ? AmpRackBlockEntity.SUBCUT_OFF : rack.getSubCut();
-        int bassContour = rack == null ? AmpRackBlockEntity.BASS_FLAT : rack.getBassContour();
-
+        boolean split = amp != null && !subs.isEmpty();
         // Speed of sound (off unless the rack has it on): every speaker is heard as late as its sound
         // takes to reach you, and those further from the booth than the nearest are held back by the
         // extra distance - delay towers, so the far ones land in step with the main stack.
-        boolean flight = rack != null && rack.isPropagation();
+        boolean flight = amp != null && amp.align;
         Vec3 boothAt = dj == null ? at : Vec3.atCenterOf(dj.getBlockPos());
         double ref = Double.MAX_VALUE;
-        for (Vec3 p : tops) ref = Math.min(ref, p.distanceTo(boothAt));
+        for (SpeakerBlockEntity s : tops) ref = Math.min(ref, s.mouth().distanceTo(boothAt));
         for (Vec3 p : subs) ref = Math.min(ref, p.distanceTo(boothAt));
         Map<Vec3, Want> wanted = new HashMap<>();
-        for (Vec3 top : tops) wanted.put(top, new Want(1f, split ? Emitter.HIGH : Emitter.FULL, topDrive, align(flight, top, boothAt, ref, extraDelayMs), AmpRackBlockEntity.SUBCUT_OFF));
-        if (split) {
-            float subDrive = (rack.isMuteSubs()) ? 0f : DeckFx.eqGain(rack.getSubGain());
-            if (bassContour == AmpRackBlockEntity.BASS_DEEP) {
-                subDrive *= 1.35f;
-            } else if (bassContour == AmpRackBlockEntity.BASS_PUNCH) {
-                subDrive *= 1.25f;
+        if (power > 0f) {
+            for (SpeakerBlockEntity s : tops) {
+                Vec3 mouth = s.mouth();
+                int zone = amp == null ? -1 : amp.zoneOf(s.getBlockPos().asLong());
+                wanted.put(mouth, want(amp, zone, split ? Emitter.HIGH : Emitter.FULL, power, align(flight, mouth, boothAt, ref)));
             }
-            for (Vec3 sub : subs) wanted.put(sub, new Want(1f, Emitter.LOW, subDrive, align(flight, sub, boothAt, ref, extraDelayMs), subCut));
+            if (split) for (Vec3 sub : subs) wanted.put(sub, want(amp, AmpSettings.SUBS, Emitter.LOW, power, align(flight, sub, boothAt, ref)));
         }
-        wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, (flight || extraDelayMs > 0) ? 0 : -1, AmpRackBlockEntity.SUBCUT_OFF));
-        float crossover = rack == null ? 100f : rack.getCrossover();
+        if (amp == null) {
+            wanted.putIfAbsent(at, new Want(wanted.isEmpty() ? 1f : MONITOR, Emitter.FULL, 1f, -1, -1));
+        } else {
+            // The DJ monitor: the rack's MONITOR zone while on; with the rig off the DJ still hears the deck, quietly.
+            Want monitor = want(amp, AmpSettings.MONITOR, Emitter.FULL, power, flight ? 0 : -1);
+            wanted.putIfAbsent(at, new Want(1f, Emitter.FULL, monitor.drive() + (1f - power) * MONITOR, monitor.delay(), AmpSettings.MONITOR));
+        }
+        float crossover = amp == null ? 100f : amp.crossover;
+        boolean steep = amp != null && amp.slope == AmpSettings.LR48;
 
         for (Iterator<Map.Entry<Vec3, Emitter>> it = t.emitters.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Vec3, Emitter> e = it.next();
@@ -608,21 +632,30 @@ public final class MusicPulse {
             }
         }
         for (Map.Entry<Vec3, Want> w : wanted.entrySet()) {
-            Emitter e = t.emitters.computeIfAbsent(w.getKey(), pos -> new Emitter(pos, w.getValue().level(), t.rate));
-            e.level = w.getValue().level();
-            e.band = w.getValue().band();
-            e.drive = w.getValue().drive();
-            e.delay = w.getValue().delay();
+            Want want = w.getValue();
+            Emitter e = t.emitters.computeIfAbsent(w.getKey(), pos -> new Emitter(pos, want.level(), t.rate));
+            e.level = want.level();
+            e.band = want.band();
+            e.drive = want.drive();
+            e.delay = want.delay();
             e.crossover = crossover;
-            e.subCut = w.getValue().subCut();
+            e.steep = steep;
+            e.zone = want.zone();
+            AmpSettings.Zone z = amp == null || want.zone() < 0 ? null : amp.zones[want.zone()];
+            if (z == null) {
+                e.dsp.set(0, 0, 0, 0, false);
+                e.limitDb = 0;
+            } else {
+                e.dsp.set(z.hpf, z.low, z.mid, z.high, z.invert);
+                e.limitDb = z.limit;
+            }
             e.update(t, t.source, cursor, base * lift * t.mix, t.pitch, mc.level, player, now, dt);
         }
-        if (dj != null) {
-            // The clip light: falls at once with the gain, lets go over about a second.
-            float worst = 1f;
-            for (Emitter e : t.emitters.values()) worst = Math.min(worst, e.takeReduction());
-            float shown = limiting(dj.getBlockPos());
-            LIMITING.put(dj.getBlockPos(), Math.min(worst, shown + (1f - shown) * Math.min(1f, dt * 2f)));
+        // The rack's meters; taken from every speaker each frame so nothing old piles up.
+        AmpMeters meters = amp == null ? null : METERS.computeIfAbsent(dj.getBlockPos().immutable(), k -> new AmpMeters());
+        for (Emitter e : t.emitters.values()) {
+            float peak = e.takePeak(), reduction = e.takeReduction();
+            if (meters != null) meters.add(e.zone, peak, reduction);
         }
 
         // The DJ's headphones: the cued deck whatever the crossfader says, so the next record can be
@@ -826,14 +859,14 @@ public final class MusicPulse {
     /** 1 at a drop of the music playing near {@code pos}, dying away over a second or two. */
     public static float dropNear(BlockPos pos) {
         float d = 0f;
-        for (Track t : tracks) if (near(t, pos)) d = Math.max(d, t.song.drop * t.mix);
+        for (Track t : tracks) if (near(t, pos)) d = Math.max(d, t.song.drop * t.mix * t.power);
         return d;
     }
 
     /** 0..1 how far into a build-up the music playing near {@code pos} is. */
     public static float tensionNear(BlockPos pos) {
         float x = 0f;
-        for (Track t : tracks) if (near(t, pos)) x = Math.max(x, t.song.tension * t.mix);
+        for (Track t : tracks) if (near(t, pos)) x = Math.max(x, t.song.tension * t.mix * t.power);
         return x;
     }
 
@@ -846,7 +879,7 @@ public final class MusicPulse {
 
     /** True while music can be heard near {@code pos}. */
     public static boolean playingNear(BlockPos pos) {
-        for (Track t : tracks) if (near(t, pos) && t.mix > 0.05f) return true;
+        for (Track t : tracks) if (near(t, pos) && t.mix * t.power > 0.05f) return true;
         return false;
     }
 

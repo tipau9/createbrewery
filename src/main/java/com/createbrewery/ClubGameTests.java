@@ -8,6 +8,11 @@ import com.createbrewery.block.club.FixtureBlockEntity;
 import com.createbrewery.block.club.SpeakerBlock;
 import com.createbrewery.block.club.SpeakerBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.nbt.CompoundTag;
+import com.createbrewery.block.club.AutoSetup;
+import com.createbrewery.block.club.AmpSettings;
+import com.createbrewery.block.club.AmpRackBlockEntity;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -221,28 +226,72 @@ public class ClubGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = TEMPLATE)
-    public static void subsAndAmpRackLinkAndTheRackHoldsItsRange(GameTestHelper helper) {
+    private static void link(GameTestHelper helper, BlockPos at, BlockPos booth) {
+        ItemStack stack = new ItemStack(helper.getBlockState(at).getBlock().asItem());
+        SpeakerBlock.link(stack, booth);
+        helper.assertTrue(SpeakerBlock.applyLink(helper.getLevel(), helper.absolutePos(at), stack), "not linked: " + at);
+    }
+
+    @GameTest(template = TEMPLATE, timeoutTicks = 120)
+    public static void ampRackSetsUpTheClubAndSortsNewSpeakers(GameTestHelper helper) {
         BlockPos booth = helper.absolutePos(POS);
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
-        BlockPos subPos = new BlockPos(0, 1, 0), rackPos = new BlockPos(2, 1, 0);
-        helper.setBlock(subPos, ModBlocks.SUBWOOFER.get());
+        BlockPos rackPos = new BlockPos(4, 1, 0), rack2Pos = new BlockPos(4, 1, 4), subPos = new BlockPos(0, 1, 0);
+        BlockPos openPos = new BlockPos(2, 1, 0), wallPos = new BlockPos(2, 1, 3), roomPos = new BlockPos(2, 1, 4), latePos = new BlockPos(0, 1, 2);
         helper.setBlock(rackPos, ModBlocks.AMP_RACK.get());
-        for (BlockPos at : new BlockPos[] {subPos, rackPos}) {
-            ItemStack stack = new ItemStack(helper.getBlockState(at).getBlock().asItem());
-            SpeakerBlock.link(stack, booth);
-            helper.assertTrue(SpeakerBlock.applyLink(helper.getLevel(), helper.absolutePos(at), stack), "not linked: " + at);
-            SpeakerBlockEntity linked = helper.getBlockEntity(at);
-            helper.assertTrue(booth.equals(linked.getBooth()), at + " linked to " + linked.getBooth());
-        }
+        helper.setBlock(rack2Pos, ModBlocks.AMP_RACK.get());
+        helper.setBlock(subPos, ModBlocks.SUBWOOFER.get());
+        helper.setBlock(openPos, ModBlocks.SPEAKER.get().defaultBlockState().setValue(SpeakerBlock.FACING, Direction.SOUTH));
+        helper.setBlock(wallPos, Blocks.STONE);
+        helper.setBlock(roomPos, ModBlocks.SPEAKER.get().defaultBlockState().setValue(SpeakerBlock.FACING, Direction.NORTH));
+        for (BlockPos at : new BlockPos[] {rackPos, rack2Pos, subPos, openPos, roomPos}) link(helper, at, booth);
 
-        com.createbrewery.block.club.AmpRackBlockEntity rack = helper.getBlockEntity(rackPos);
-        rack.setCrossover(10f);
-        rack.setSubGain(3f);
-        rack.setTopGain(-1f);
-        helper.assertTrue(rack.getCrossover() == 60f && rack.getSubGain() == 1f && rack.getTopGain() == 0f,
-            "out of range: " + rack.getCrossover() + " / " + rack.getSubGain() + " / " + rack.getTopGain());
-        helper.succeed();
+        AmpRackBlockEntity rack = helper.getBlockEntity(rackPos), rack2 = helper.getBlockEntity(rack2Pos);
+        helper.assertTrue(rack.drives() && !rack2.drives(), "the lowest rack must drive the booth");
+
+        AutoSetup.Result r = rack.autoSetup();
+        helper.assertTrue(r != null && r.subs() == 1 && r.tops() == 2, "Auto Setup saw " + r);
+        AmpSettings s = rack.settings();
+        helper.assertTrue(s.zoneOf(helper.absolutePos(openPos).asLong()) == AmpSettings.FLOOR, "open speaker in zone " + s.zoneOf(helper.absolutePos(openPos).asLong()));
+        helper.assertTrue(s.zoneOf(helper.absolutePos(roomPos).asLong()) == AmpSettings.ROOM, "walled speaker in zone " + s.zoneOf(helper.absolutePos(roomPos).asLong()));
+        helper.assertTrue(s.crossover == 80f && s.align, "crossover " + s.crossover + ", align " + s.align);
+
+        rack.apply(AmpSettings.MASTER, 0, 99f, helper.absolutePos(rackPos), null);
+        rack.apply(AmpSettings.ZONE_GAIN, 9, 0f, helper.absolutePos(rackPos), null);
+        rack.apply(AmpSettings.ASSIGN, AmpSettings.SUBS, 0f, helper.absolutePos(openPos), null);
+        helper.assertTrue(rack.settings().master == AmpSettings.MAX_MASTER, "master " + rack.settings().master);
+        helper.assertTrue(rack.settings().zoneOf(helper.absolutePos(openPos).asLong()) == AmpSettings.FLOOR, "a top was put in SUBS");
+        rack.apply(AmpSettings.ASSIGN, AmpSettings.DELAY, 0f, helper.absolutePos(openPos), null);
+        helper.assertTrue(rack.settings().assign.get(helper.absolutePos(openPos).asLong()).manual(), "a hand-made assignment must be marked manual");
+
+        int[] counts = rack.zoneCounts();
+        helper.assertTrue(counts[AmpSettings.FLOOR] == 0 && counts[AmpSettings.DELAY] == 1 && counts[AmpSettings.ROOM] == 1 && counts[AmpSettings.MONITOR] == 1,
+            "counts " + java.util.Arrays.toString(counts));
+
+        // A speaker linked later is sorted in by the rack within two seconds; the manual one stays.
+        helper.setBlock(latePos, ModBlocks.SPEAKER.get().defaultBlockState().setValue(SpeakerBlock.FACING, Direction.EAST));
+        link(helper, latePos, booth);
+        helper.runAfterDelay(45, () -> {
+            AmpSettings.Assignment late = rack.settings().assign.get(helper.absolutePos(latePos).asLong());
+            helper.assertTrue(late != null && late.zone() == AmpSettings.FLOOR && !late.manual(), "late speaker: " + late);
+            helper.assertTrue(rack.settings().zoneOf(helper.absolutePos(openPos).asLong()) == AmpSettings.DELAY, "the background sort moved a manual speaker");
+
+            // Saved and loaded, then an old rack's tags migrated.
+            var registries = helper.getLevel().registryAccess();
+            CompoundTag saved = rack.saveWithoutMetadata(registries);
+            rack.loadWithComponents(saved, registries);
+            helper.assertTrue(rack.settings().zoneOf(helper.absolutePos(roomPos).asLong()) == AmpSettings.ROOM, "zones lost on save");
+            CompoundTag old = new CompoundTag();
+            old.putFloat("Crossover", 150f);
+            old.putFloat("SubGain", 0f);
+            old.putBoolean("MuteTops", true);
+            old.putInt("SubCut", 2);
+            rack2.loadWithComponents(old, registries);
+            AmpSettings m = rack2.settings();
+            helper.assertTrue(m.crossover == 150f && m.zones[AmpSettings.SUBS].gain == AmpSettings.MIN_GAIN
+                && m.zones[AmpSettings.FLOOR].mute && m.zones[AmpSettings.SUBS].hpf == 40f && m.preset == AmpSettings.CUSTOM, "migration");
+            helper.succeed();
+        });
     }
 
     @GameTest(template = TEMPLATE)

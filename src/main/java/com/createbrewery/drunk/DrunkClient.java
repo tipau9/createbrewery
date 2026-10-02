@@ -577,6 +577,8 @@ public final class DrunkClient {
             com.createbrewery.entity.client.BouncerRenderer::new);
         event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.DJ_BOOTH.get(),
             com.createbrewery.block.club.DjBoothRenderer::new);
+        event.registerBlockEntityRenderer(com.createbrewery.ModBlockEntities.AMP_RACK.get(),
+            com.createbrewery.block.club.AmpRackRenderer::new);
     }
 
     public static void registerLayerDefinitions(net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterLayerDefinitions event) {
