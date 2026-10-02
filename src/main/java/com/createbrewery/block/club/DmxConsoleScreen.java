@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,14 +14,17 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * The DMX desk:
  * - 8 group channels with Lee/Rosco gel swatches, vertical faders and flash pads.
  * - GrandMA3 bump / flasher / blinder / hazer section.
- * - Master fader and 16 scenes across 4 pages with smooth crossfade time.
- * - BPM sync locking to DJ booth or manual tap tempo.
- * - 2D live stage visualizer rendering truss, fixtures, beams, gobos, prism, strobe and blinder wash.
- * - Fixture attribute encoders and HSV / gel palette modal picker.
+ * - Master fader and 16 scenes across 4 pages with smooth crossfade time and active cue highlighting.
+ * - BPM sync locking to DJ booth or manual tap tempo with rolling average.
+ * - 2D live stage visualizer rendering truss, fixtures, beams, gobos, prism, strobe, hazer smoke and blinder wash.
+ * - Fixture attribute encoders and HSV / gel palette modal picker with Escape handling.
  */
 public class DmxConsoleScreen extends Screen {
     private static final int W = 500, H = 216, COL = 27;
@@ -45,6 +49,7 @@ public class DmxConsoleScreen extends Screen {
     private final Button[] pageButtons = new Button[DmxProgram.SCENE_PAGES];
     private final Button[] sceneButtons = new Button[DmxProgram.SCENES_PER_PAGE];
     private Button fadeTime, record, djSync, tapTempo;
+    private int activeScene = -1;
 
     // Attributes & Color Picker
     private Button program, move, rate, colorFx, gobo, prism, zoom, gels;
@@ -54,9 +59,11 @@ public class DmxConsoleScreen extends Screen {
     private int gelTargetGroup = 0; // -1 for ALL
     private boolean draggingHue;
 
-    // Tap tempo history
-    private final long[] tapHistory = new long[4];
-    private int tapCount;
+    // Tap tempo history (rolling timestamps)
+    private final List<Long> tapTimes = new ArrayList<>();
+
+    // Hazer smoke animation in 2D visualizer
+    private long hazerTriggerTime = 0;
 
     private DmxConsoleScreen(BlockPos pos) {
         super(Component.translatable("createbrewery.dmx.console"));
@@ -91,30 +98,57 @@ public class DmxConsoleScreen extends Screen {
         int px = left + 258;
         blindAll = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DmxConsoleBlockEntity c = console();
-            if (c != null) DmxControl.send(pos, DmxControl.BLIND_ALL, 0, c.settings.blindAll ? 0f : 1f);
-        }).bounds(px, top + 24, 84, 15).build());
+            if (c != null) {
+                boolean next = !c.settings.blindAll;
+                c.settings.blindAll = next;
+                DmxControl.send(pos, DmxControl.BLIND_ALL, 0, next ? 1f : 0f);
+            }
+        }).bounds(px, top + 24, 84, 15)
+        .tooltip(Tooltip.create(Component.literal("BLIND ALL: Halogen-Flutlicht (100% Warmweiß)")))
+        .build());
 
         strobeAll = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DmxConsoleBlockEntity c = console();
-            if (c != null) DmxControl.send(pos, DmxControl.STROBE_ALL, 0, c.settings.strobeAll ? 0f : 1f);
-        }).bounds(px, top + 42, 84, 15).build());
+            if (c != null) {
+                boolean next = !c.settings.strobeAll;
+                c.settings.strobeAll = next;
+                DmxControl.send(pos, DmxControl.STROBE_ALL, 0, next ? 1f : 0f);
+            }
+        }).bounds(px, top + 42, 84, 15)
+        .tooltip(Tooltip.create(Component.literal("STROBE ALL: 20 Hz Gewitter-Blitz auf allen Scheinwerfern")))
+        .build());
 
         hazer = addRenderableWidget(Button.builder(Component.translatable("createbrewery.dmx.hazer"), b -> {
+            hazerTriggerTime = System.currentTimeMillis();
             DmxControl.send(pos, DmxControl.HAZER, 0, 1f);
-        }).bounds(px, top + 60, 84, 15).build());
+        }).bounds(px, top + 60, 84, 15)
+        .tooltip(Tooltip.create(Component.literal("HAZER: Dichten Dunst & Bühnennebel ausstoßen")))
+        .build());
 
         blackout = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DmxConsoleBlockEntity c = console();
-            if (c != null) DmxControl.send(pos, DmxControl.BLACKOUT, 0, c.settings.blackout ? 0f : 1f);
-        }).bounds(px, top + 78, 84, 15).build());
+            if (c != null) {
+                boolean next = !c.settings.blackout;
+                c.settings.blackout = next;
+                DmxControl.send(pos, DmxControl.BLACKOUT, 0, next ? 1f : 0f);
+            }
+        }).bounds(px, top + 78, 84, 15)
+        .tooltip(Tooltip.create(Component.literal("BLACKOUT: Alle Scheinwerfer sofort verdunkeln")))
+        .build());
 
         // 4. Cue & Scene Playback (4 Pages x 4 Scenes)
         for (int p = 0; p < DmxProgram.SCENE_PAGES; p++) {
             int page = p;
             pageButtons[p] = addRenderableWidget(Button.builder(
                 Component.translatable("createbrewery.dmx.page", page + 1),
-                b -> DmxControl.send(pos, DmxControl.SCENE_PAGE, 0, page)
-            ).bounds(px + p * 21, top + 98, 20, 13).build());
+                b -> {
+                    DmxConsoleBlockEntity c = console();
+                    if (c != null) c.settings.scenePage = page;
+                    DmxControl.send(pos, DmxControl.SCENE_PAGE, 0, page);
+                }
+            ).bounds(px + p * 21, top + 98, 20, 13)
+            .tooltip(Tooltip.create(Component.literal("Szenen-Seite " + (page + 1))))
+            .build());
         }
 
         for (int i = 0; i < DmxProgram.SCENES_PER_PAGE; i++) {
@@ -125,9 +159,10 @@ public class DmxConsoleScreen extends Screen {
                 DmxConsoleBlockEntity c = console();
                 if (c == null) return;
                 int scene = c.settings.scenePage * DmxProgram.SCENES_PER_PAGE + slot;
+                if (!hasShiftDown()) activeScene = scene;
                 DmxControl.send(pos, hasShiftDown() ? DmxControl.STORE : DmxControl.RECALL, scene, 0f);
             }).bounds(bx, by, 40, 14)
-            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("createbrewery.dmx.scene_hint")))
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.scene_hint")))
             .build());
         }
 
@@ -142,8 +177,12 @@ public class DmxConsoleScreen extends Screen {
                     break;
                 }
             }
-            DmxControl.send(pos, DmxControl.FADE_TIME, 0, FADE_TIMES[nextIdx]);
-        }).bounds(px, top + 148, 52, 14).build());
+            float val = FADE_TIMES[nextIdx];
+            c.settings.fadeTime = val;
+            DmxControl.send(pos, DmxControl.FADE_TIME, 0, val);
+        }).bounds(px, top + 148, 52, 14)
+        .tooltip(Tooltip.create(Component.literal("Überblendzeit für Szenenwechsel (Klick zum Umschalten)")))
+        .build());
 
         record = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DmxConsoleBlockEntity c = console();
@@ -151,16 +190,24 @@ public class DmxConsoleScreen extends Screen {
             if (hasShiftDown()) DmxControl.send(pos, DmxControl.CLEAR_SHOW, 0, 0f);
             else DmxControl.send(pos, DmxControl.RECORD, 0, c.recording ? 0f : 1f);
         }).bounds(px + 54, top + 148, 30, 14)
-        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("createbrewery.dmx.record_hint")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.record_hint")))
         .build());
 
         djSync = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DmxConsoleBlockEntity c = console();
-            if (c != null) DmxControl.send(pos, DmxControl.DJ_SYNC, 0, c.settings.djSync ? 0f : 1f);
-        }).bounds(px, top + 165, 42, 14).build());
+            if (c != null) {
+                boolean next = !c.settings.djSync;
+                c.settings.djSync = next;
+                DmxControl.send(pos, DmxControl.DJ_SYNC, 0, next ? 1f : 0f);
+            }
+        }).bounds(px, top + 165, 42, 14)
+        .tooltip(Tooltip.create(Component.literal("DJ-Sync: Takt an Beat des DJ-Pults koppeln")))
+        .build());
 
         tapTempo = addRenderableWidget(Button.builder(Component.empty(), b -> onTapTempo())
-            .bounds(px + 44, top + 165, 40, 14).build());
+            .bounds(px + 44, top + 165, 40, 14)
+            .tooltip(Tooltip.create(Component.literal("Tap Tempo: Rhythmisches Klicken stellt manuelle BPM ein")))
+            .build());
 
         // 5. Fixture Attributes (Right side)
         int px2 = left + 350;
@@ -171,29 +218,43 @@ public class DmxConsoleScreen extends Screen {
         gobo = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.GOBO, s -> s.gobo)).bounds(px2, top + 146, 69, 15).build());
         prism = addRenderableWidget(Button.builder(Component.empty(), b -> {
             DmxConsoleBlockEntity c = console();
-            if (c != null) DmxControl.send(pos, DmxControl.PRISM, 0, c.settings.prism ? 0f : 1f);
+            if (c != null) {
+                boolean next = !c.settings.prism;
+                c.settings.prism = next;
+                DmxControl.send(pos, DmxControl.PRISM, 0, next ? 1f : 0f);
+            }
         }).bounds(px2 + 73, top + 146, 69, 15).build());
         zoom = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.ZOOM, s -> s.zoom)).bounds(px2, top + 164, 69, 15).build());
         gels = addRenderableWidget(Button.builder(Component.translatable("createbrewery.dmx.gels"), b -> openGelPicker(0))
-            .bounds(px2 + 73, top + 164, 69, 15).build());
+            .bounds(px2 + 73, top + 164, 69, 15)
+            .tooltip(Tooltip.create(Component.literal("Lee/Rosco Farbfilter & RGB-Farbwähler öffnen")))
+            .build());
 
         refresh();
     }
 
     private void onTapTempo() {
         long now = System.currentTimeMillis();
-        if (tapCount > 0 && now - tapHistory[(tapCount - 1) % 4] > 2500) {
-            tapCount = 0;
+        if (!tapTimes.isEmpty() && (now - tapTimes.get(tapTimes.size() - 1)) > 2500) {
+            tapTimes.clear();
         }
-        tapHistory[tapCount % 4] = now;
-        tapCount++;
-        if (tapCount >= 2) {
-            int n = Math.min(tapCount, 4);
-            long oldest = tapHistory[(tapCount - n) % 4];
-            double avgDeltaMs = (double) (now - oldest) / (n - 1);
-            float bpm = (float) Math.round(60000.0 / avgDeltaMs);
+        tapTimes.add(now);
+        if (tapTimes.size() > 4) tapTimes.remove(0);
+
+        if (tapTimes.size() >= 2) {
+            long totalDelta = tapTimes.get(tapTimes.size() - 1) - tapTimes.get(0);
+            double avgDeltaMs = (double) totalDelta / (tapTimes.size() - 1);
+            float bpm = (float) Math.round(60000.0 / Math.max(10.0, avgDeltaMs));
             bpm = Math.max(30f, Math.min(240f, bpm));
+            DmxConsoleBlockEntity c = console();
+            if (c != null) {
+                c.settings.manualBpm = bpm;
+                c.settings.djSync = false;
+                refresh();
+            }
             DmxControl.send(pos, DmxControl.TAP_TEMPO, 0, bpm);
+        } else {
+            tapTempo.setMessage(Component.literal("TAP...").withStyle(ChatFormatting.YELLOW));
         }
     }
 
@@ -203,11 +264,14 @@ public class DmxConsoleScreen extends Screen {
     }
 
     private void applyColor(int rgb) {
+        DmxConsoleBlockEntity c = console();
         if (gelTargetGroup == -1) {
             for (int g = 0; g < DmxProgram.GROUPS; g++) {
+                if (c != null) c.settings.colors[g] = rgb;
                 DmxControl.send(pos, DmxControl.COLOR_RGB, g, rgb);
             }
         } else {
+            if (c != null) c.settings.colors[gelTargetGroup] = rgb;
             DmxControl.send(pos, DmxControl.COLOR_RGB, gelTargetGroup, rgb);
         }
     }
@@ -227,24 +291,26 @@ public class DmxConsoleScreen extends Screen {
         for (int g = 0; g < DmxProgram.GROUPS; g++) faders[g].show(s.faders[g]);
         master.show(s.master);
 
-        blindAll.setMessage(Component.translatable("createbrewery.dmx.blind_all")
+        blindAll.setMessage(Component.literal(s.blindAll ? "[BLIND ALL]" : "BLIND ALL")
             .withStyle(s.blindAll ? ChatFormatting.GOLD : ChatFormatting.GRAY));
-        strobeAll.setMessage(Component.translatable("createbrewery.dmx.strobe_all")
+        strobeAll.setMessage(Component.literal(s.strobeAll ? "[STROBE ALL]" : "STROBE ALL")
             .withStyle(s.strobeAll ? ChatFormatting.WHITE : ChatFormatting.GRAY));
-        blackout.setMessage(Component.translatable("createbrewery.dmx.blackout", CommonComponents.optionStatus(s.blackout))
+        blackout.setMessage(Component.literal(s.blackout ? "[B.O. ON]" : "BLACKOUT")
             .withStyle(s.blackout ? ChatFormatting.RED : ChatFormatting.GRAY));
 
         for (int p = 0; p < DmxProgram.SCENE_PAGES; p++) {
             boolean active = s.scenePage == p;
-            pageButtons[p].setMessage(Component.translatable("createbrewery.dmx.page", p + 1)
+            pageButtons[p].setMessage(Component.literal(active ? ">P" + (p + 1) + "<" : "P" + (p + 1))
                 .withStyle(active ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
         }
 
         for (int i = 0; i < DmxProgram.SCENES_PER_PAGE; i++) {
             int scene = s.scenePage * DmxProgram.SCENES_PER_PAGE + i;
             boolean stored = s.scenes[scene] != null;
-            sceneButtons[i].setMessage(Component.literal((stored ? "● " : "") + (scene + 1))
-                .withStyle(stored ? ChatFormatting.WHITE : ChatFormatting.GRAY));
+            boolean active = activeScene == scene;
+            String prefix = stored ? (active ? "▶ " : "● ") : "";
+            sceneButtons[i].setMessage(Component.literal(prefix + (scene + 1))
+                .withStyle(active ? ChatFormatting.AQUA : stored ? ChatFormatting.WHITE : ChatFormatting.GRAY));
         }
 
         fadeTime.setMessage(s.fadeTime <= 0.05f
@@ -254,10 +320,12 @@ public class DmxConsoleScreen extends Screen {
         record.setMessage(Component.translatable("createbrewery.dmx.record")
             .withStyle(c.recording ? ChatFormatting.RED : ChatFormatting.RESET));
 
-        djSync.setMessage(Component.literal("SYNC")
+        djSync.setMessage(Component.literal(s.djSync ? "SYNC ON" : "MANUAL")
             .withStyle(s.djSync ? ChatFormatting.GREEN : ChatFormatting.GRAY));
 
-        tapTempo.setMessage(Component.literal(String.format(java.util.Locale.ROOT, "TAP %d", Math.round(s.manualBpm))));
+        if (tapTimes.size() < 2) {
+            tapTempo.setMessage(Component.literal(String.format(java.util.Locale.ROOT, "TAP %d", Math.round(s.manualBpm))));
+        }
 
         program.setMessage(Component.translatable("createbrewery.dmx.program." + PROGRAMS[s.program]));
         move.setMessage(Component.translatable("createbrewery.dmx.move." + MOVES[s.move]));
@@ -270,8 +338,10 @@ public class DmxConsoleScreen extends Screen {
 
     @Override
     public void tick() {
+        DmxConsoleBlockEntity c = console();
+        if (c != null) c.output();
         refresh();
-        if (console() == null) return;
+        if (c == null) return;
         for (VFader f : faders) f.flush();
         master.flush();
         for (FlashPad p : pads) p.tick();
@@ -288,6 +358,15 @@ public class DmxConsoleScreen extends Screen {
     public void removed() {
         for (FlashPad p : pads) if (p != null) p.letGo();
         super.removed();
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (gelPickerOpen && keyCode == 256) { // GLFW_KEY_ESCAPE closes modal
+            gelPickerOpen = false;
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -332,6 +411,8 @@ public class DmxConsoleScreen extends Screen {
     }
 
     private void renderStageVisualizer(GuiGraphics g, int vx, int vy, int vw, int vh, DmxConsoleBlockEntity c) {
+        c.output();
+
         // 1. Dark stage background
         g.fill(vx, vy, vx + vw, vy + vh, 0xFF0B0B12);
         g.renderOutline(vx, vy, vw, vh, 0xFF353545);
@@ -407,9 +488,21 @@ public class DmxConsoleScreen extends Screen {
         if (blind) {
             g.fill(vx + 1, vy + 1, vx + vw - 1, vy + vh - 1, 0x60FFE0A0);
         }
-        // 6. Strobe flash overlay
+        // 6. Strobe flash overlay (20 Hz)
         if (strobe && (System.currentTimeMillis() / 50) % 2 == 0) {
-            g.fill(vx + 1, vy + 1, vx + vw - 1, vy + vh - 1, 0x80FFFFFF);
+            g.fill(vx + 1, vy + 1, vx + vw - 1, vy + vh - 1, 0x85FFFFFF);
+        }
+
+        // 7. Hazer smoke drift simulation
+        long hazerAge = System.currentTimeMillis() - hazerTriggerTime;
+        if (hazerAge < 3500) {
+            float hazerAlpha = (1.0f - hazerAge / 3500f) * 0.35f;
+            int smokeCol = ((int) (hazerAlpha * 255) << 24) | 0xD0E0E8;
+            for (int s = 0; s < 4; s++) {
+                int sx = vx + 15 + s * 30 + (int) ((hazerAge / 40) % 15);
+                int sy = vy + vh - 10 - (int) ((hazerAge / 35) + s * 12) % (vh - 20);
+                g.fill(sx, sy, sx + 22, sy + 6, smokeCol);
+            }
         }
 
         // Overlay status indicators
@@ -474,76 +567,82 @@ public class DmxConsoleScreen extends Screen {
     }
 
     private void renderGelPicker(GuiGraphics g, int mouseX, int mouseY) {
-        g.fill(left, top, left + W, top + H, 0xAA0A0A10);
+        g.fill(left, top, left + W, top + H, 0xB8080810);
 
-        int gw = 260, gh = 154;
+        int gw = 264, gh = 156;
         int gx = left + (W - gw) / 2;
         int gy = top + (H - gh) / 2;
 
-        g.fill(gx, gy, gx + gw, gy + gh, 0xF2161622);
-        g.renderOutline(gx, gy, gw, gh, 0xFF555570);
+        g.fill(gx, gy, gx + gw, gy + gh, 0xF4141420);
+        g.renderOutline(gx, gy, gw, gh, 0xFF4A4A64);
 
-        String grpLabel = gelTargetGroup == -1 ? "ALL" : String.valueOf(gelTargetGroup + 1);
-        g.drawString(font, "GEL & FARBE - GRUPPE " + grpLabel, gx + 10, gy + 8, 0xFFE0E0E0);
+        String grpLabel = gelTargetGroup == -1 ? "ALLE" : String.valueOf(gelTargetGroup + 1);
+        g.drawString(font, "GEL & RGB-FARBE - GRUPPE " + grpLabel, gx + 10, gy + 8, 0xFFE0E0E0);
 
         // Close button [X]
         int closeX = gx + gw - 18, closeY = gy + 6;
         boolean closeHov = mouseX >= closeX && mouseX <= closeX + 12 && mouseY >= closeY && mouseY <= closeY + 12;
-        g.fill(closeX, closeY, closeX + 12, closeY + 12, closeHov ? 0xFF802020 : 0xFF353545);
+        g.fill(closeX, closeY, closeX + 12, closeY + 12, closeHov ? 0xFF902020 : 0xFF353545);
         g.drawCenteredString(font, "✕", closeX + 6, closeY + 2, 0xFFFFFF);
 
-        // Group selector tabs
+        // Group selector tabs [1]..[8] and [ALL]
         int tabW = 22, tabH = 13;
         for (int gIdx = 0; gIdx < DmxProgram.GROUPS; gIdx++) {
             int tx = gx + 10 + gIdx * (tabW + 2);
             boolean sel = gelTargetGroup == gIdx;
-            g.fill(tx, gy + 22, tx + tabW, gy + 22 + tabH, sel ? 0xFF355588 : 0xFF252535);
+            g.fill(tx, gy + 22, tx + tabW, gy + 22 + tabH, sel ? 0xFF355588 : 0xFF222230);
             g.renderOutline(tx, gy + 22, tabW, tabH, sel ? 0xFF6599DD : 0xFF3A3A4A);
             g.drawCenteredString(font, String.valueOf(gIdx + 1), tx + tabW / 2, gy + 25, sel ? 0xFFFFFF : 0xAAAAAA);
         }
         int allX = gx + 10 + 8 * (tabW + 2);
         boolean allSel = gelTargetGroup == -1;
-        g.fill(allX, gy + 22, allX + tabW + 6, gy + 22 + tabH, allSel ? 0xFF355588 : 0xFF252535);
+        g.fill(allX, gy + 22, allX + tabW + 6, gy + 22 + tabH, allSel ? 0xFF355588 : 0xFF222230);
         g.renderOutline(allX, gy + 22, tabW + 6, tabH, allSel ? 0xFF6599DD : 0xFF3A3A4A);
         g.drawCenteredString(font, "ALL", allX + (tabW + 6) / 2, gy + 25, allSel ? 0xFFFFFF : 0xAAAAAA);
+
+        DmxConsoleBlockEntity c = console();
+        int curCol = c != null && gelTargetGroup >= 0 ? DmxProgram.resolveColor(c.settings.colors[gelTargetGroup]) : 0xFFFFFF;
 
         // 10 Gel chips
         String[] gelCodes = {"000", "116", "106", "105", "152", "139", "174", "128", "181", "101"};
         String[] gelLabels = {"White", "Tokyo", "Red", "Flame", "Amber", "Acid", "Blue", "Pink", "Congo", "Sun"};
         int chipW = 46, chipH = 20;
         for (int i = 0; i < DmxProgram.GEL_FILTERS.length; i++) {
-            int r = i / 5, c = i % 5;
-            int cx = gx + 10 + c * (chipW + 3);
+            int r = i / 5, colIdx = i % 5;
+            int cx = gx + 10 + colIdx * (chipW + 3);
             int cy = gy + 42 + r * (chipH + 3);
             int gelCol = DmxProgram.GEL_FILTERS[i];
+            boolean activeGel = (curCol & 0xFFFFFF) == (gelCol & 0xFFFFFF);
             boolean hov = mouseX >= cx && mouseX < cx + chipW && mouseY >= cy && mouseY < cy + chipH;
 
-            g.fill(cx, cy, cx + chipW, cy + chipH, hov ? 0xFF353545 : 0xFF222230);
-            g.renderOutline(cx, cy, chipW, chipH, hov ? 0xFFFFFFFF : 0xFF404050);
+            g.fill(cx, cy, cx + chipW, cy + chipH, hov ? 0xFF323244 : 0xFF1E1E2C);
+            g.renderOutline(cx, cy, chipW, chipH, activeGel ? 0xFFFFD040 : hov ? 0xFFFFFFFF : 0xFF38384A);
             g.fill(cx + 2, cy + 2, cx + 14, cy + chipH - 2, 0xFF000000 | gelCol);
             g.renderOutline(cx + 2, cy + 2, 12, chipH - 4, 0xFF101018);
-            g.drawString(font, gelCodes[i], cx + 16, cy + 3, 0xFFFFFF, false);
+            g.drawString(font, gelCodes[i], cx + 16, cy + 3, activeGel ? 0xFFFFD040 : 0xFFFFFF, false);
             g.drawString(font, gelLabels[i], cx + 16, cy + 11, 0x888888, false);
         }
 
         // Rainbow Hue Bar
-        int hx = gx + 10, hy = gy + 96, hw = 240, hh = 12;
-        g.drawString(font, "HUE SLIDER (RGB)", hx, hy - 9, 0x888888, false);
+        int hx = gx + 10, hy = gy + 96, hw = 244, hh = 13;
+        g.drawString(font, "HUE SLIDER (RGB FARBE)", hx, hy - 9, 0x888888, false);
         for (int x = 0; x < hw; x++) {
             float hue = (float) x / hw;
             g.fill(hx + x, hy, hx + x + 1, hy + hh, 0xFF000000 | DmxProgram.hsv(hue));
         }
         g.renderOutline(hx, hy, hw, hh, 0xFF606075);
 
-        DmxConsoleBlockEntity c = console();
-        int curCol = c != null && gelTargetGroup >= 0 ? DmxProgram.resolveColor(c.settings.colors[gelTargetGroup]) : 0xFFFFFF;
-        g.drawString(font, String.format(java.util.Locale.ROOT, "HEX: #%06X", curCol & 0xFFFFFF), hx + 150, hy - 9, 0xAAAAAA, false);
+        // Current color swatch and hex readout
+        int previewX = hx + 184, previewY = hy + 18;
+        g.fill(previewX, previewY, previewX + 16, previewY + 12, 0xFF000000 | curCol);
+        g.renderOutline(previewX, previewY, 16, 12, 0xFFFFFFFF);
+        g.drawString(font, String.format(java.util.Locale.ROOT, "HEX: #%06X", curCol & 0xFFFFFF), hx + 100, previewY + 2, 0xCCCCCC, false);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (gelPickerOpen) {
-            int gw = 260, gh = 154;
+            int gw = 264, gh = 156;
             int gx = left + (W - gw) / 2;
             int gy = top + (H - gh) / 2;
 
@@ -573,8 +672,8 @@ public class DmxConsoleScreen extends Screen {
 
             int chipW = 46, chipH = 20;
             for (int i = 0; i < DmxProgram.GEL_FILTERS.length; i++) {
-                int r = i / 5, c = i % 5;
-                int cx = gx + 10 + c * (chipW + 3);
+                int r = i / 5, colIdx = i % 5;
+                int cx = gx + 10 + colIdx * (chipW + 3);
                 int cy = gy + 42 + r * (chipH + 3);
                 if (mouseX >= cx && mouseX < cx + chipW && mouseY >= cy && mouseY < cy + chipH) {
                     applyColor(DmxProgram.GEL_FILTERS[i]);
@@ -582,7 +681,7 @@ public class DmxConsoleScreen extends Screen {
                 }
             }
 
-            int hx = gx + 10, hy = gy + 96, hw = 240, hh = 12;
+            int hx = gx + 10, hy = gy + 96, hw = 244, hh = 13;
             if (mouseX >= hx && mouseX < hx + hw && mouseY >= hy && mouseY < hy + hh) {
                 draggingHue = true;
                 float hue = (float) Math.max(0.0, Math.min(1.0, (mouseX - hx) / (double) hw));
@@ -597,9 +696,9 @@ public class DmxConsoleScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (gelPickerOpen && draggingHue) {
-            int gw = 260;
+            int gw = 264;
             int gx = left + (W - gw) / 2;
-            int hx = gx + 10, hw = 240;
+            int hx = gx + 10, hw = 244;
             float hue = (float) Math.max(0.0, Math.min(1.0, (mouseX - hx) / (double) hw));
             applyColor(DmxProgram.hsv(hue));
             return true;
@@ -687,12 +786,13 @@ public class DmxConsoleScreen extends Screen {
         Swatch(int x, int y, int group) {
             super(x, y, 22, 10, Component.translatable("createbrewery.dmx.color"));
             this.group = group;
+            setTooltip(Tooltip.create(Component.literal("Gruppe " + (group + 1) + " Farbe (Links: Palette, Rechts: Gels/RGB)")));
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (!isHovered()) return false;
-            if (button == 1) {
+            if (button == 1) { // Right click opens Gel picker
                 openGelPicker(group);
                 return true;
             }
@@ -702,7 +802,12 @@ public class DmxConsoleScreen extends Screen {
         @Override
         public void onClick(double mouseX, double mouseY) {
             DmxConsoleBlockEntity c = console();
-            if (c != null) DmxControl.send(pos, DmxControl.COLOR, group, c.settings.colors[group] + 1);
+            if (c != null) {
+                int cur = c.settings.colors[group];
+                int next = (cur >= 0 && cur < DmxProgram.PALETTE.length) ? (cur + 1) % DmxProgram.PALETTE.length : 0;
+                c.settings.colors[group] = next;
+                DmxControl.send(pos, DmxControl.COLOR, group, 0f);
+            }
         }
 
         @Override
@@ -728,6 +833,7 @@ public class DmxConsoleScreen extends Screen {
         FlashPad(int x, int y, int group) {
             super(x, y, 22, 16, Component.translatable("createbrewery.dmx.flash"));
             this.group = group;
+            setTooltip(Tooltip.create(Component.literal("Flash Gruppe " + (group + 1) + " (100% solange gehalten)")));
         }
 
         @Override

@@ -8,6 +8,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import com.createbrewery.particle.ModParticles;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -62,8 +63,27 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         changed();
     }
 
+    void cycleColor(int g) {
+        if (g < 0 || g >= DmxProgram.GROUPS) return;
+        int cur = settings.colors[g];
+        int next = (cur >= 0 && cur < DmxProgram.PALETTE.length) ? (cur + 1) % DmxProgram.PALETTE.length : 0;
+        settings.colors[g] = next;
+        changed();
+    }
+
+    void setColorRgb(int g, int rgb) {
+        if (g < 0 || g >= DmxProgram.GROUPS) return;
+        settings.colors[g] = rgb & 0xFFFFFF;
+        changed();
+    }
+
     void setColor(int g, int c) {
-        settings.colors[g] = Math.floorMod(c, DmxProgram.PALETTE.length);
+        if (g < 0 || g >= DmxProgram.GROUPS) return;
+        if (c >= 0 && c < DmxProgram.PALETTE.length) {
+            settings.colors[g] = c;
+        } else {
+            settings.colors[g] = c & 0xFFFFFF;
+        }
         changed();
     }
 
@@ -140,16 +160,31 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 
     public void triggerHazer(@org.jetbrains.annotations.Nullable Player player) {
         if (level instanceof ServerLevel server) {
+            // Spawn fine haze and cozy smoke at console
+            server.sendParticles(ModParticles.HAZE.get(),
+                worldPosition.getX() + 0.5, worldPosition.getY() + 0.9, worldPosition.getZ() + 0.5,
+                16, 1.0, 0.4, 1.0, 0.02);
             server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
                 worldPosition.getX() + 0.5, worldPosition.getY() + 0.9, worldPosition.getZ() + 0.5,
-                16, 1.2, 0.4, 1.2, 0.015);
-            for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-16, -6, -16), worldPosition.offset(16, 10, 16))) {
-                if (server.isLoaded(p) && server.getBlockEntity(p) instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
-                    server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
-                        p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
+                12, 1.0, 0.4, 1.0, 0.015);
+
+            // Also trigger at linked fixtures and activate nearby hazers
+            for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-24, -8, -24), worldPosition.offset(24, 12, 24))) {
+                if (server.isLoaded(p)) {
+                    if (server.getBlockEntity(p) instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
+                        server.sendParticles(ModParticles.HAZE.get(),
+                            p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 6, 0.5, 0.3, 0.5, 0.02);
+                        server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                            p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
+                    } else if (server.getBlockEntity(p) instanceof HazerBlockEntity) {
+                        BlockState st = server.getBlockState(p);
+                        if (st.hasProperty(HazerBlock.ON) && !st.getValue(HazerBlock.ON)) {
+                            server.setBlock(p, st.setValue(HazerBlock.ON, true), 3);
+                        }
+                    }
                 }
             }
-            server.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.6f, 1.5f);
+            server.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.7f, 1.4f);
             if (player != null) {
                 player.displayClientMessage(net.minecraft.network.chat.Component.translatable("createbrewery.dmx.hazer_active"), true);
             }

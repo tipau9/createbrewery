@@ -51,7 +51,7 @@ public record DmxControl(BlockPos pos, byte action, byte index, float value) imp
         switch (c.action) {
             case FADER -> { if (group) dmx.setFader(i, c.value); }
             case MASTER -> dmx.setMaster(c.value);
-            case COLOR -> { if (group) dmx.setColor(i, (int) c.value); }
+            case COLOR -> { if (group) dmx.cycleColor(i); }
             case FLASH -> { if (group) dmx.flash(i); }
             case RELEASE -> { if (group) dmx.release(i); }
             case PROGRAM -> dmx.setProgram((int) c.value);
@@ -71,7 +71,7 @@ public record DmxControl(BlockPos pos, byte action, byte index, float value) imp
             case BLIND_ALL -> dmx.setBlindAll(c.value > 0.5f);
             case STROBE_ALL -> dmx.setStrobeAll(c.value > 0.5f);
             case HAZER -> dmx.triggerHazer(player);
-            case COLOR_RGB -> { if (group) dmx.setColor(i, (int) c.value); }
+            case COLOR_RGB -> { if (group) dmx.setColorRgb(i, (int) c.value); }
             case FADE_TIME -> dmx.setFadeTime(c.value);
             case TAP_TEMPO -> dmx.setManualBpm(c.value);
             case DJ_SYNC -> dmx.setDjSync(c.value > 0.5f);
