@@ -38,16 +38,19 @@ final class Emitter {
 
     final Vec3 pos;
     float level;
-    /** Set each frame: {@link #FULL}, {@link #LOW} (a subwoofer) or {@link #HIGH} (a speaker above the subs), and the crossover in Hz. */
+    /** Set each frame: {@link #FULL}, {@link #LOW} (a subwoofer) or {@link #HIGH} (a speaker above the subs), the crossover in Hz and its slope. */
     int band = FULL;
     float crossover = 100f;
+    boolean steep;
     private DeckFx.Crossover split;
-    /** The amp rack's gain for this side, put into the samples so the limiter sees it (the game's volume stays on the source). */
+    /** The amp rack zone it plays (-1: no rack), that zone's channel, and its limit in dBFS. */
+    int zone = -1;
+    final DeckFx.ZoneDsp dsp;
+    float limitDb;
+    /** The amp rack's gain for this zone (master, fader, power), put into the samples so the limiter sees it (the game's volume stays on the source). */
     float drive = 1f;
-    /** With the rack's speed of sound on: this speaker's alignment delay in seconds (a delay tower's); -1 off. */
+    /** This speaker's alignment delay in seconds (speed of sound and the zone's delay); -1 off. */
     double delay = -1;
-    int subCut = com.createbrewery.block.club.AmpRackBlockEntity.SUBCUT_OFF;
-    private DeckFx.Biquad subHp;
     private final DeckFx.Limiter limiter;
     private final BlockPos home;
     /** Which way the sound leaves it. */
@@ -92,6 +95,7 @@ final class Emitter {
         this.rate = rate;
         this.filter = new WallFilter(rate);
         this.limiter = new DeckFx.Limiter(rate);
+        this.dsp = new DeckFx.ZoneDsp(rate);
     }
 
     /**
@@ -143,21 +147,13 @@ final class Emitter {
             fx.setColorFx(t.colorType, t.filter, t.colorParam);
             fx.setMasterTempo(t.masterTempo, pitch);
         }
-        // A rack placed or removed, the last sub switched off, the corner moved: taken up at once.
-        if (band == FULL) {
-            split = null;
-            subHp = null;
-        } else {
+        // A rack placed or removed, the last sub switched off, the corner or slope moved: taken up at once.
+        if (band == FULL) split = null;
+        else {
             if (split == null) split = new DeckFx.Crossover(rate);
-            split.set(band == LOW, crossover);
-            if (band == LOW && subCut != com.createbrewery.block.club.AmpRackBlockEntity.SUBCUT_OFF) {
-                if (subHp == null) subHp = new DeckFx.Biquad();
-                double cutFreq = subCut == com.createbrewery.block.club.AmpRackBlockEntity.SUBCUT_40 ? 40.0 : 30.0;
-                subHp.highPass(cutFreq, rate, Math.sqrt(0.5));
-            } else {
-                subHp = null;
-            }
+            split.set(band == LOW, crossover, steep);
         }
+        limiter.setThreshold(limitDb);
         feed(t, target + (long) (LEAD * rate * pitch));
         AL10.alSourcef(source, AL10.AL_GAIN, gain * level);
         AL10.alSourcef(source, AL10.AL_PITCH, pitch * servo);
@@ -221,9 +217,7 @@ final class Emitter {
             if (n <= 0) return;
             if (fx != null && t.deck) fx.process(in, n);
             if (split != null) split.process(in, n);
-            if (subHp != null) {
-                for (int i = 0; i < n; i++) in[i] = (float) subHp.run(in[i]);
-            }
+            dsp.process(in, n);
             if (drive != 1f) for (int i = 0; i < n; i++) in[i] *= drive;
             limiter.process(in, n);
             filter.process(in, 0, n, out);
@@ -287,6 +281,11 @@ final class Emitter {
             if (at.distanceToSqr(from) >= length * length) break;
         }
         return walls;
+    }
+
+    /** The loudest it played since last asked, for the rack's meters. */
+    float takePeak() {
+        return limiter.takePeak();
     }
 
     /** How hard the limiter worked since last asked: 1 not at all .. 0. */
