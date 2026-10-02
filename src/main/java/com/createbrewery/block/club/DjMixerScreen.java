@@ -903,6 +903,19 @@ public class DjMixerScreen extends Screen {
         DjBoothBlockEntity dj = booth();
         if (dj == null || minecraft == null || minecraft.level == null) return;
         long time = minecraft.level.getGameTime();
+        // The amp rack's traffic light above the mixer: the DJ sees at once when the rig is too loud or off.
+        AmpRackBlockEntity rack = AmpRackBlockEntity.driving(minecraft.level, pos);
+        if (rack != null) {
+            AmpStatus.Status st = AmpRackScreen.status(minecraft.level, rack);
+            int col = AmpRackScreen.color(st.light());
+            g.fill(left + 6, top - 11, left + 14, top - 3, 0xFF000000 | col);
+            g.drawString(font, AmpRackScreen.message(st), left + 18, top - 11, col);
+            AmpMeters meters = MusicPulse.meters(pos);
+            if (meters != null && meters.worstLimit() >= 0.1f) {
+                Component lim = Component.translatable("createbrewery.amp.limit", String.format("%.1f", meters.worstLimit()));
+                g.drawString(font, lim, left + W - 6 - font.width(lim), top - 11, 0xFF4040);
+            }
+        }
 
         // ---------------------------------------------------------------------------------
         // 10.1" CENTRAL TOUCHSCREEN DISPLAY
