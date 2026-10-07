@@ -11,6 +11,7 @@ public class Config {
     public static final ModConfigSpec.DoubleValue SCREEN_EFFECTS;
     public static final ModConfigSpec.BooleanValue RECORD_MUSIC;
     public static final ModConfigSpec.BooleanValue ENABLE_VEIL_LIGHTS;
+    public static final ModConfigSpec.BooleanValue PERFORMANCE_MODE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -40,7 +41,17 @@ public class Config {
                 "Off by default: Veil's voxel shadow texture used to crash Nvidia OpenGL drivers (nvoglv64.dll glTexImage3D);",
                 "Create Brewery now guards that upload. Turn it off again if your game crashes with Veil lights on.")
             .define("enableVeilLights", false);
+        PERFORMANCE_MODE = client
+            .comment("For weaker PCs: fog and haze skip most block collision (haze may drift through walls), the DMX",
+                "console's hazer blast makes less haze, and the DMX stage view and DJ waveforms are drawn in one batch.",
+                "Off: everything as it always was.")
+            .define("performanceMode", false);
         CLIENT_SPEC = client.build();
+    }
+
+    /** Client: whether {@link #PERFORMANCE_MODE} is on; false before the client config is loaded. */
+    public static boolean performance() {
+        return CLIENT_SPEC.isLoaded() && PERFORMANCE_MODE.get();
     }
 
     /** Nvidia too: VoxelShadowGridMixin keeps Veil's shadow texture upload from crashing its driver. */

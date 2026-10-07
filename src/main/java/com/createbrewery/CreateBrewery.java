@@ -497,6 +497,7 @@ public class CreateBrewery {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.createbrewery.drugs.DrugServer.class);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_SPEC);
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) ConfigScreen.register(modContainer);
     }
 
     private static void advancement(String path, String title, String description) {

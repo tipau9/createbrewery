@@ -435,7 +435,9 @@ public class DmxConsoleScreen extends Screen {
         g.drawString(font, Component.translatable("createbrewery.dmx.cues", c.cues), left + 258, top + 184, c.recording ? 0xFF6060 : 0x888888);
 
         // 2D Stage Visualizer window (upper right)
-        renderStageVisualizer(g, left + 350, top + 20, 142, 84, c);
+        // Thousands of one-pixel fills: in performance mode one draw call instead of one each.
+        if (com.createbrewery.Config.performance()) g.drawManaged(() -> renderStageVisualizer(g, left + 350, top + 20, 142, 84, c));
+        else renderStageVisualizer(g, left + 350, top + 20, 142, 84, c);
 
         // Render modal Gel / HSV dialog if open
         if (gelPickerOpen) {

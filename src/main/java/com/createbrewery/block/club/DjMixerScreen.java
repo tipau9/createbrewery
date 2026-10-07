@@ -1011,6 +1011,12 @@ public class DjMixerScreen extends Screen {
     }
 
     /** Renders the 10.1" tilted touchscreen of the XDJ-AZ with tabs for WAVE, BROWSE, and INFO. */
+    /** A waveform is a fill per pixel column: in performance mode one draw call for all of them. */
+    private static void batched(GuiGraphics g, Runnable draw) {
+        if (com.createbrewery.Config.performance()) g.drawManaged(draw);
+        else draw.run();
+    }
+
     private void renderTouchScreen(GuiGraphics g, int x, int y, int w, int h, DjBoothBlockEntity dj, long time, float pt) {
         // Metallic outer bezel
         g.fill(x, y, x + w, y + h, 0xFF1B1D25);
@@ -1026,9 +1032,9 @@ public class DjMixerScreen extends Screen {
         if (screenTab == 0) {
             // ================= WAVEFORM TAB =================
             // Left Deck Waveform
-            renderWaveform(g, sx + 2, sy + 14, sw - 4, 22, leftDeck, dj, DECK_COLORS[leftDeck], 0xFF0055AA, time, pt);
+            batched(g, () -> renderWaveform(g, sx + 2, sy + 14, sw - 4, 22, leftDeck, dj, DECK_COLORS[leftDeck], 0xFF0055AA, time, pt));
             // Right Deck Waveform
-            renderWaveform(g, sx + 2, sy + 38, sw - 4, 22, rightDeck, dj, DECK_COLORS[rightDeck], 0xFFAA5500, time, pt);
+            batched(g, () -> renderWaveform(g, sx + 2, sy + 38, sw - 4, 22, rightDeck, dj, DECK_COLORS[rightDeck], 0xFFAA5500, time, pt));
 
             // Beat Phase Grid (4-beat indicator dots & bar progress)
             int phaseX = sx + (sw - 40) / 2, phaseY = sy + 64;

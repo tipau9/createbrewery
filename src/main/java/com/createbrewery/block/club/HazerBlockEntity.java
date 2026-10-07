@@ -111,7 +111,7 @@ public class HazerBlockEntity extends BlockEntity implements ConsoleLinked {
         var random = level.random;
         if (running || blast > 0) {
             // A thin, fast jet that fans out and slows within a few blocks; a blast fires it hard and wide.
-            for (int i = 0; i < (blast > 0 ? 10 : 2); i++) {
+            for (int i = 0; i < (blast > 0 ? (com.createbrewery.Config.performance() ? 4 : 10) : 2); i++) {
                 double speed = (blast > 0 ? 0.45 : 0.2) + random.nextDouble() * 0.08;
                 double fan = blast > 0 ? 0.25 : 0.05;
                 level.addParticle(ModParticles.HAZE.get(), nozzle.x, nozzle.y, nozzle.z,
@@ -123,7 +123,7 @@ public class HazerBlockEntity extends BlockEntity implements ConsoleLinked {
         // The veil already in the air: faint patches through the room, floor to ceiling and out to its
         // walls, reaching further across it as it fills - the room's shape, not a ball round the hazer.
         // ponytail: ~650 live patches at full haze, ~2000 more for a while after a blast; fewer if fill-rate bites on weak GPUs.
-        int patches = blast > 0 ? 8 : fill > 0.02f && random.nextFloat() < fill * 1.3f ? 1 : 0;
+        int patches = blast > 0 ? (com.createbrewery.Config.performance() ? 3 : 8) : fill > 0.02f && random.nextFloat() < fill * 1.3f ? 1 : 0;
         // Many hazers blasting at once share one budget per tick: each patch costs three raycasts.
         long now = level.getGameTime();
         if (now != budgetTick) {

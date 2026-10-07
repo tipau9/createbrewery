@@ -38,6 +38,14 @@ public final class PlayerTextLang {
         registrate.addRawLang("createbrewery.club.stamped_other", "\u00a7a[Club] Stamped %s.");
         registrate.addRawLang("createbrewery.club_stamp.tooltip.0", "Club stamp for re-entry.");
         registrate.addRawLang("createbrewery.club_stamp.tooltip.1", "Right-click a player to stamp them.");
+        registrate.addRawLang("createbrewery.configuration.drunkScreenEffects", "Drunk screen effects");
+        registrate.addRawLang("createbrewery.configuration.enableCans", "Cans");
+        registrate.addRawLang("createbrewery.configuration.enableDrugs", "Drugs");
+        registrate.addRawLang("createbrewery.configuration.enableVeilLights", "Veil lights");
+        registrate.addRawLang("createbrewery.configuration.fermentationDurationMultiplier", "Fermentation time multiplier");
+        registrate.addRawLang("createbrewery.configuration.performanceMode", "Performance mode");
+        registrate.addRawLang("createbrewery.configuration.performanceMode.tooltip", "For weaker PCs: fog and haze skip most block collision (haze may drift through walls), the hazer button makes less haze, and the DMX stage view and DJ waveforms are drawn in one batch. Off: everything as it always was.");
+        registrate.addRawLang("createbrewery.configuration.recordMusicTraces", "Record music traces (debug)");
         registrate.addRawLang("createbrewery.dj.loop_in.tip", "Loop In / Hold Shift for 4-Beat Auto Loop");
         registrate.addRawLang("createbrewery.dj.loop_out.tip", "Loop Out");
         registrate.addRawLang("createbrewery.dj.master_tempo.tip", "Master Tempo (Key Lock): Preserve musical pitch when changing tempo");

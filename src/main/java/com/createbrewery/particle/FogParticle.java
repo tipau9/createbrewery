@@ -114,6 +114,7 @@ public class FogParticle extends TextureSheetParticle {
         if (age > 25) spread(0.045, 6);
         stir();
 
+        cheapPhysics(false);
         move(xd, yd, zd);
         // Air drag: the jet carries it far (~9 blocks), then it drifts.
         xd *= 0.955;
@@ -127,6 +128,19 @@ public class FogParticle extends TextureSheetParticle {
         float in = Math.min(1f, age / 12f);
         float out = Math.min(1f, (lifetime - age) / 90f);
         alpha = peakAlpha * in * out;
+    }
+
+    /**
+     * Performance mode: a haze patch that hangs in the room ({@code still}) never checks the blocks
+     * around it; anything else checks only every fourth tick once it has slowed down. Block
+     * collision was most of what a club's fog and haze cost (spark: ~16 % of a frame).
+     */
+    protected void cheapPhysics(boolean still) {
+        if (!com.createbrewery.Config.performance()) {
+            hasPhysics = true;
+            return;
+        }
+        hasPhysics = !still && ((age & 3) == 0 || xd * xd + yd * yd + zd * zd > 0.01);
     }
 
     /**

@@ -61,6 +61,7 @@ public class HazeParticle extends FogParticle {
         // Its push spent, the jet's mist keeps spreading out through the room.
         if (jet && age > 15) spread(0.03, 8);
         stir();
+        cheapPhysics(!jet);
         move(xd, yd, zd);
         xd *= drag;
         yd *= drag;
