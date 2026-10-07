@@ -447,6 +447,24 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void thePatchSetsAFixturesBrightnessAndReverse(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.MOVING_HEAD.get());
+        BlockPos console = helper.absolutePos(CONSOLE), light = helper.absolutePos(POS);
+        ItemStack link = new ItemStack(ModBlocks.MOVING_HEAD.get());
+        ClubTestAccess.linkFixture(link, console);
+        helper.assertTrue(ClubTestAccess.applyFixtureLink(helper.getLevel(), light, link),
+            "the head did not take the link");
+        helper.assertTrue(ClubTestAccess.adjustLight(helper.getLevel(), console, light, 1, 6), "brightness refused");
+        helper.assertTrue(ClubTestAccess.adjustLight(helper.getLevel(), console, light, 2, 3), "reverse refused");
+        int[] di = ClubTestAccess.fixtureDimInvert(helper.getLevel(), light);
+        helper.assertTrue(di[0] == 6 && di[1] == 3, "got brightness " + di[0] + " and reverse " + di[1]);
+        helper.assertFalse(ClubTestAccess.adjustLight(helper.getLevel(), console, light, 1, 11), "accepted 110 %");
+        helper.assertFalse(ClubTestAccess.adjustLight(helper.getLevel(), console.offset(1, 0, 0), light, 1, 5), "adjusted from a console it is not linked to");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void effectGateFollowsBlackoutAndMaster(GameTestHelper helper) {
         helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
         helper.setBlock(POS, ModBlocks.LASER_PROJECTOR.get());

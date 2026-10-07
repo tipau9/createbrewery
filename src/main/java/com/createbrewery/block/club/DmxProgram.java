@@ -16,6 +16,10 @@ final class DmxProgram {
     static final int MANUAL = 0, AUTO = 1, CHASE = 2, PROGRAMS = 3;
     static final int CIRCLE = 0, FIGURE8 = 1, SWEEP = 2, BALLYHOO = 3, CROWD = 4, STRAIGHT = 5, FAN = 6, MIRROR = 7, MOVES = 8;
     static final int STATIC = 0, FADE = 1, RAINBOW = 2, COMPLEMENT = 3, COLOR_FX = 4;
+    /** LED bar pixel effects: AUTO is the run on each beat the auto program always had. */
+    static final int PX_AUTO = 0, PX_SOLID = 1, PX_CHASE = 2, PX_WAVE = 3, PX_SPARKLE = 4, PX_FILL = 5, PIXEL_FX = 6;
+    /** Where the moving heads point: their movement program, or fixed on the DJ or the dance floor. */
+    static final int POS_PROGRAM = 0, POS_DJ = 1, POS_FLOOR = 2, POSITIONS = 3;
     static final int GOBOS = 4, ZOOMS = 3;
     /** Beats per chase step. */
     static final int[] RATES = {1, 2, 4};
@@ -49,6 +53,8 @@ final class DmxProgram {
         int program = AUTO, move = CIRCLE, rate;
         /** Colour program (see COLOR_FX), the moving heads' gobo and zoom, and whether their prism is in. */
         int colorFx, gobo, zoom = 1;
+        /** LED bar pixel effect (PX_*) and where the heads point (POS_*). */
+        int pixelFx, position;
         boolean prism;
         boolean blackout;
         /** Bump overrides: blind all (tungsten wash) and strobe all (20 Hz burst) */
@@ -291,8 +297,30 @@ final class DmxProgram {
         };
     }
 
-    /** How lit pixel {@code i} of an LED bar is, times its group level: a knight-rider run across the bar on each beat. */
+    /** How lit pixel {@code i} of an LED bar is, times its group level, for the console's pixel effect. */
     float pixel(Settings s, int i, int pixels) {
+        switch (s.pixelFx) {
+            case PX_SOLID:
+                return 1f;
+            case PX_CHASE: {
+                // Two pixels a beat round the bar, with a short tail.
+                double at = (clock * 2) % pixels, d = Math.abs(i - at);
+                d = Math.min(d, pixels - d);
+                return Math.max(0.1f, 1f - (float) d / 1.5f);
+            }
+            case PX_WAVE:
+                return 0.55f + 0.45f * (float) Math.sin(2 * Math.PI * (i / (double) pixels - clock / 2));
+            case PX_SPARKLE: {
+                // A new random quarter of the pixels four times a beat.
+                int h = (i * 73856093 ^ (int) Math.floor(clock * 4) * 19349663) * 0x9E3779B1;
+                return (h >>> 24) < 70 ? 1f : 0.1f;
+            }
+            case PX_FILL:
+                return i < Math.ceil(beatPhase * pixels) ? 1f : 0.1f;
+            default:
+                break;
+        }
+        // AUTO: a knight-rider run across the bar on each beat, while the auto program plays.
         if (s.program != AUTO || !playing) return 1f;
         float at = beatPhase * (pixels - 1);
         if (step % 2 == 1) at = pixels - 1 - at;

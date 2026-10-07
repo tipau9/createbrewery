@@ -36,6 +36,28 @@ final class LaserBeams {
         };
     }
 
+    /**
+     * The {pan, tilt} in degrees that point a beam from facing {@code (nx, ny, nz)} along {@code (dx, dy, dz)}:
+     * the inverse of {@link #direction(int, int, int, double, double)} (which clamps it).
+     */
+    static double[] aimAt(int nx, int ny, int nz, double dx, double dy, double dz) {
+        double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (len < 1e-9) return new double[] {0, 0};
+        dx /= len;
+        dy /= len;
+        dz /= len;
+        double side, lift;
+        if (ny != 0) {
+            side = dx;
+            lift = dz;
+        } else {
+            side = -nz * dx + nx * dz;
+            lift = dy;
+        }
+        double forward = dx * nx + dy * ny + dz * nz;
+        return new double[] {Math.toDegrees(Math.atan2(side, forward)), Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, lift))))};
+    }
+
     private static double clamp(double deg) {
         return Math.max(-MAX_DEFLECTION, Math.min(MAX_DEFLECTION, deg));
     }

@@ -75,6 +75,9 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
             // Everything below is relative to the block centre (the pose is translated there).
             Vec3 relStart = startWorld.subtract(center);
             Vec3 relEnd = endWorld.subtract(center);
+            // A laser is seen only where it hits haze (or a wall): faint in clear air, full in a hazed room.
+            float hz = Math.max(HazerBlockEntity.hazeAt(level, center), HazerBlockEntity.hazeAt(level, startWorld.add(endWorld).scale(0.5)));
+            air = 0.15f + 0.85f * Math.min(1f, hz);
             renderBeam(v, m, relStart, relEnd, r, g, b, kickBoost);
 
             if (hitBlock) {
@@ -158,6 +161,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
     private static float haze = 1f;
     /** What the linked console lets through, set per projector before its beams. */
     private static float gateFade = 1f;
+    /** How much of a beam the air shows, 0.15 clear to 1 in full haze; set per beam. */
+    private static float air = 1f;
 
     private static void renderBeam(VertexConsumer v, Matrix4f m, Vec3 start, Vec3 end,
                                    float r, float g, float b, float boost) {
@@ -172,12 +177,12 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
         float coreW = 0.016f + boost * 0.010f;
         float glowW = 0.055f + boost * 0.050f;
-        float glowAlpha = Math.min(1f, (0.55f + boost * 0.35f) * haze) * gateFade;
+        float glowAlpha = Math.min(1f, (0.55f + boost * 0.35f) * haze) * gateFade * air;
         glowW *= haze;
 
         // Hot white core inside a coloured sheath
-        beamPlane(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f * gateFade);
-        beamPlane(v, m, start, end, up.scale(coreW), 1f, 1f, 1f, 0.95f * gateFade);
+        beamPlane(v, m, start, end, right.scale(coreW), 1f, 1f, 1f, 0.95f * gateFade * air);
+        beamPlane(v, m, start, end, up.scale(coreW), 1f, 1f, 1f, 0.95f * gateFade * air);
         beamPlane(v, m, start, end, right.scale(glowW), r, g, b, glowAlpha);
         beamPlane(v, m, start, end, up.scale(glowW), r, g, b, glowAlpha);
     }

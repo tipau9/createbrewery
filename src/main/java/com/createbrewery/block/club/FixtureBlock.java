@@ -131,6 +131,15 @@ public class FixtureBlock extends Block implements EntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (stack.isEmpty()) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (com.simibubi.create.AllItems.WRENCH.isIn(stack) && kind != Kind.MOVING_HEAD && !player.isShiftKeyDown()) {
+            // The wrench tilts a PAR, blinder or LED bar 15 degrees further (a moving head aims itself).
+            if (!level.isClientSide && level.getBlockEntity(pos) instanceof FixtureBlockEntity fixture) {
+                int deg = fixture.cycleTilt(player);
+                level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.4f, 1.4f);
+                player.displayClientMessage(Component.translatable("createbrewery.dmx.fixture_tilt", deg), true);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!(stack.getItem() instanceof BlockItem item && item.getBlock() instanceof FixtureBlock) || linkOf(stack).isEmpty()) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }

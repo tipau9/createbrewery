@@ -35,6 +35,17 @@ public class FixtureBlockEntity extends BlockEntity {
     private BlockPos console;
     private int group;
     private int fan;
+    /** Per light, set from the patch list: brightness in tenths (10 = full), and pan (bit 1) and tilt (bit 2) reversed. */
+    private int dim = 10, invert;
+    /** Pan and tilt a PAR, blinder or LED bar is turned off its facing, in degrees (the wrench). */
+    private int aimPan, aimTilt;
+
+    /** Client: lights picked in the patch list to flash white, until the game time given. */
+    private static final java.util.Map<BlockPos, Long> IDENTIFY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static void identify(BlockPos pos, long until) {
+        IDENTIFY.put(pos.immutable(), until);
+    }
 
     // Client only.
     private DmxProgram own;
@@ -112,6 +123,42 @@ public class FixtureBlockEntity extends BlockEntity {
         sync();
     }
 
+    int getDim() {
+        return dim;
+    }
+
+    void setDim(int tenths) {
+        dim = Math.max(1, Math.min(10, tenths));
+        sync();
+    }
+
+    int getInvert() {
+        return invert;
+    }
+
+    void setInvert(int bits) {
+        invert = bits & 3;
+        sync();
+    }
+
+    /** Server, the wrench: a PAR, blinder or LED bar tilts 15 degrees further, back to straight after 45. Returns the new angle. */
+    int cycleTilt(net.minecraft.world.entity.player.Player player) {
+        int next = (Math.max(Math.abs(aimPan), Math.abs(aimTilt)) + 15) % 60;
+        Direction facing = getBlockState().getValue(FixtureBlock.FACING);
+        if (facing.getAxis().isHorizontal()) {
+            // On a wall or truss: down towards the floor.
+            aimPan = 0;
+            aimTilt = -next;
+        } else {
+            // On the ceiling or floor: the way the player looks.
+            Direction look = player.getDirection();
+            aimPan = look.getStepX() * next;
+            aimTilt = look.getStepZ() * next;
+        }
+        sync();
+        return next;
+    }
+
     private void sync() {
         setChanged();
         if (level != null && !level.isClientSide) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -123,9 +170,11 @@ public class FixtureBlockEntity extends BlockEntity {
         if (level == null) return;
         DmxProgram program;
         DmxProgram.Settings settings;
+        DmxConsoleBlockEntity linked = null;
         if (console != null && level.isLoaded(console) && level.getBlockEntity(console) instanceof DmxConsoleBlockEntity dmx) {
             program = dmx.output();
             settings = dmx.settings;
+            linked = dmx;
         } else {
             // On its own: the console's auto program, from the music heard here.
             if (own == null) {
@@ -147,7 +196,7 @@ public class FixtureBlockEntity extends BlockEntity {
             if (program.noFlashing()) target = FixtureResponse.glide(glideLevel, target);
             glideLevel = target;
         }
-        lit = response.dimmer(lampOf(kind), target);
+        lit = response.dimmer(lampOf(kind), target * dim / 10f);
         int targetColor = kind == FixtureBlock.Kind.BLINDER ? TUNGSTEN : fan == 0 ? program.color[group] : program.colorFor(settings, group, fan);
         boolean calm = program.noFlashing();
         color = response.color(targetColor, FixtureResponse.fade(kind == FixtureBlock.Kind.BLINDER ? 0f : kind == FixtureBlock.Kind.MOVING_HEAD ? 5f : 2f, calm));
@@ -155,6 +204,16 @@ public class FixtureBlockEntity extends BlockEntity {
             pixels[i] = program.pixel(settings, i, pixels.length);
             int px = program.pixelColor(settings, i, pixels.length, group, fan);
             pixelColors[i] = calm ? FixtureResponse.blend(pixelColors[i], px, FixtureResponse.CALM_FADE) : px;
+        }
+        Long shown = IDENTIFY.get(worldPosition);
+        if (shown != null) {
+            // Picked in the patch list: blinks white so it is found in the rig.
+            if (level.getGameTime() > shown) {
+                IDENTIFY.remove(worldPosition);
+            } else {
+                lit = level.getGameTime() / 4 % 2 == 0 ? 1f : 0.15f;
+                color = 0xFFFFFF;
+            }
         }
         zoom = settings.zoom;
         gobo = settings.gobo;
@@ -167,7 +226,18 @@ public class FixtureBlockEntity extends BlockEntity {
         prevTilt = tilt;
         if (kind == FixtureBlock.Kind.MOVING_HEAD) {
             // Motors with a top speed and a limit on how hard they speed up and brake, like a real head.
-            float[] aim = program.aim(settings, group, fan);
+            float[] aim;
+            Vec3 focus = linked == null ? null : linked.focusPoint(settings.position, group);
+            if (focus != null) {
+                Vec3 d = focus.subtract(lens(facing));
+                double[] a = LaserBeams.aimAt(facing.getStepX(), facing.getStepY(), facing.getStepZ(), d.x, d.y, d.z);
+                aim = new float[] {(float) a[0], (float) a[1]};
+            } else {
+                aim = program.aim(settings, group, fan);
+                // Hung the other way round: mirrored so a rig moves symmetrically.
+                if ((invert & 1) != 0) aim[0] = -aim[0];
+                if ((invert & 2) != 0) aim[1] = -aim[1];
+            }
             response.motor(aim[0], aim[1]);
             pan = response.pan;
             tilt = response.tilt;
@@ -274,9 +344,13 @@ public class FixtureBlockEntity extends BlockEntity {
         return Vec3.atCenterOf(worldPosition).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.4));
     }
 
-    /** Which way the beam goes: the facing, panned and tilted for a moving head. */
+    /** Which way the beam goes: the facing, panned and tilted for a moving head, or as the wrench turned it. */
     Vec3 direction(Direction facing, float partialTick) {
-        if (kind() != FixtureBlock.Kind.MOVING_HEAD) return Vec3.atLowerCornerOf(facing.getNormal());
+        if (kind() != FixtureBlock.Kind.MOVING_HEAD) {
+            if (aimPan == 0 && aimTilt == 0) return Vec3.atLowerCornerOf(facing.getNormal());
+            double[] d = LaserBeams.direction(facing.getStepX(), facing.getStepY(), facing.getStepZ(), aimPan, aimTilt);
+            return new Vec3(d[0], d[1], d[2]);
+        }
         double[] d = LaserBeams.direction(facing.getStepX(), facing.getStepY(), facing.getStepZ(),
             prevPan + (pan - prevPan) * partialTick, prevTilt + (tilt - prevTilt) * partialTick);
         return new Vec3(d[0], d[1], d[2]);
@@ -322,6 +396,10 @@ public class FixtureBlockEntity extends BlockEntity {
         if (console != null) tag.put("Console", NbtUtils.writeBlockPos(console));
         tag.putInt("Group", group);
         tag.putInt("Fan", fan);
+        tag.putInt("Dim", dim);
+        tag.putInt("Invert", invert);
+        tag.putInt("AimPan", aimPan);
+        tag.putInt("AimTilt", aimTilt);
     }
 
     @Override
@@ -330,6 +408,10 @@ public class FixtureBlockEntity extends BlockEntity {
         console = NbtUtils.readBlockPos(tag, "Console").orElse(null);
         group = Math.floorMod(tag.getInt("Group"), DmxProgram.GROUPS);
         fan = Math.floorMod(tag.getInt("Fan"), 8);
+        dim = tag.contains("Dim") ? Math.max(1, Math.min(10, tag.getInt("Dim"))) : 10;
+        invert = tag.getInt("Invert") & 3;
+        aimPan = Math.max(-45, Math.min(45, tag.getInt("AimPan")));
+        aimTilt = Math.max(-45, Math.min(45, tag.getInt("AimTilt")));
     }
 
     @Override

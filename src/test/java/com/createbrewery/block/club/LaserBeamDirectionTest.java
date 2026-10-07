@@ -41,4 +41,19 @@ class LaserBeamDirectionTest {
             assertEquals(true, wild[0] * n[0] + wild[1] * n[1] + wild[2] * n[2] > 0.15);
         }
     }
+
+    @Test
+    void aimAtFindsThePanAndTiltBack() {
+        int[][] facings = {{0, -1, 0}, {0, 1, 0}, {1, 0, 0}, {0, 0, -1}};
+        for (int[] n : facings) {
+            for (double pan = -60; pan <= 60; pan += 20) {
+                for (double tilt = -60; tilt <= 60; tilt += 20) {
+                    double[] d = LaserBeams.direction(n[0], n[1], n[2], pan, tilt);
+                    double[] a = LaserBeams.aimAt(n[0], n[1], n[2], d[0] * 3, d[1] * 3, d[2] * 3);
+                    assertEquals(pan, a[0], 1e-6, "pan, facing " + java.util.Arrays.toString(n));
+                    assertEquals(tilt, a[1], 1e-6, "tilt, facing " + java.util.Arrays.toString(n));
+                }
+            }
+        }
+    }
 }

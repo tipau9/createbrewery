@@ -20,6 +20,14 @@ public final class ClubTestAccess {
         return console.blastHazers(level);
     }
 
+    public static boolean adjustLight(Level level, BlockPos console, BlockPos light, int action, int value) {
+        return DmxPatch.adjust(level, console, light, action, value);
+    }
+
+    public static int[] fixtureDimInvert(Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof FixtureBlockEntity f ? new int[] {f.getDim(), f.getInvert()} : null;
+    }
+
     public static void linkFixture(ItemStack stack, BlockPos console) {
         FixtureBlock.link(stack, console);
     }
@@ -63,12 +71,15 @@ public final class ClubTestAccess {
         dmx.setZoom(7);
         dmx.setPrism(true);
         dmx.setMove(13);
+        dmx.setPixelFx(9);
+        dmx.setPosition(-1);
         net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
         DmxConsoleBlockEntity.write(dmx.settings, tag);
         DmxProgram.Settings back = new DmxProgram.Settings();
         DmxConsoleBlockEntity.read(back, tag);
         return back.colorFx == Math.floorMod(99, DmxProgram.COLOR_FX) && back.gobo == Math.floorMod(-1, DmxProgram.GOBOS)
-            && back.zoom == Math.floorMod(7, DmxProgram.ZOOMS) && back.prism && back.move == Math.floorMod(13, DmxProgram.MOVES);
+            && back.zoom == Math.floorMod(7, DmxProgram.ZOOMS) && back.prism && back.move == Math.floorMod(13, DmxProgram.MOVES)
+            && back.pixelFx == Math.floorMod(9, DmxProgram.PIXEL_FX) && back.position == Math.floorMod(-1, DmxProgram.POSITIONS);
     }
 
     /** A tag from before the light settings: only the old keys. */

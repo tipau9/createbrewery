@@ -109,4 +109,23 @@ class DmxProgramTest {
             }
         }
     }
+
+    @Test
+    void pixelEffectsLightTheBarTheirOwnWay() {
+        DmxProgram p = new DmxProgram();
+        DmxProgram.Settings s = new DmxProgram.Settings();
+        s.pixelFx = DmxProgram.PX_SOLID;
+        for (int i = 0; i < 8; i++) assertEquals(1f, p.pixel(s, i, 8));
+        s.pixelFx = DmxProgram.PX_FILL;
+        p.beatPhase = 0.5f;
+        assertEquals(1f, p.pixel(s, 3, 8));
+        assertEquals(0.1f, p.pixel(s, 6, 8));
+        for (int fx = 0; fx < DmxProgram.PIXEL_FX; fx++) {
+            s.pixelFx = fx;
+            for (int i = 0; i < 8; i++) {
+                float v = p.pixel(s, i, 8);
+                assertTrue(v >= 0f && v <= 1f, "effect " + fx + " pixel " + i + " = " + v);
+            }
+        }
+    }
 }

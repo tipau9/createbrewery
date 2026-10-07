@@ -34,13 +34,15 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         Vec3 lens = be.lens(facing).subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
         Vec3 side = Math.abs(facing.getStepY()) > 0 ? new Vec3(1, 0, 0) : new Vec3(-facing.getStepZ(), 0, facing.getStepX());
         float len = be.beam();
-        // Through haze the beams stand out; without any they look as they always did.
-        haze = 1f + 1.5f * HazerBlockEntity.hazeAt(be.getLevel(), Vec3.atCenterOf(be.getBlockPos()));
+        // Through haze the beams stand out (where the beam is, not only at the fixture); without any they look as they always did.
+        Vec3 lensWorld = be.lens(facing);
+        haze = hazeAlong(be.getLevel(), lensWorld, dir, len);
 
         switch (be.kind()) {
             case PAR -> {
                 cone(v, pose, lens, dir, len, 0.22f, 0.22f + len * 0.2f, r, g, b, 0.22f * lv);
-                lensGlow(v, pose, lens, 0.35f, r, g, b, lv);
+                float glare = glare(lensWorld, dir, 0.97f);
+                lensGlow(v, pose, lens, 0.35f * (1f + 2.5f * glare), r, g, b, lv * (1f + glare));
                 BlockHitResult wash = be.hit();
                 if (wash != null) {
                     pose.pushPose();
@@ -52,9 +54,12 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
             case MOVING_HEAD -> {
                 // Zoom: 0 narrow, 1 normal (as before), 2 wide.
                 float zoomK = be.zoom() == 0 ? 0.6f : be.zoom() == 2 ? 1.8f : 1f;
+                float glare = 0f;
                 for (int bm = 0; bm < be.beamCount(); bm++) {
                     Vec3 bdir = be.beamDirection(bm, partialTick);
                     float blen = be.beamLength(bm);
+                    haze = hazeAlong(be.getLevel(), lensWorld, bdir, blen);
+                    glare = Math.max(glare, glare(lensWorld, bdir, be.zoom() == 0 ? 0.995f : be.zoom() == 2 ? 0.975f : 0.99f));
                     // A tight beam with a hot core, and its spot on whatever it hits.
                     cone(v, pose, lens, bdir, blen, 0.07f, 0.07f + blen * 0.035f * zoomK, r, g, b, 0.35f * lv);
                     cone(v, pose, lens, bdir, blen, 0.03f, 0.03f + blen * 0.01f * zoomK, 1f, 1f, 1f, 0.3f * lv);
@@ -71,7 +76,7 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
                         pose.popPose();
                     }
                 }
-                lensGlow(v, pose, lens, 0.25f, r, g, b, lv);
+                lensGlow(v, pose, lens, 0.25f * (1f + 3f * glare), r, g, b, lv * (1f + glare));
             }
             case BLINDER -> {
                 // Two lamps side by side; they light the crowd rather than draw beams.
@@ -102,8 +107,28 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         }
     }
 
-    /** 1 in clear air, up to 2.5 in a full haze; set per fixture before its beams (render thread). */
+    /** 1 in clear air, up to 2.5 in a full haze; set per beam before it is drawn (render thread). */
     private static float haze = 1f;
+
+    /** How much a beam stands out: the thickest haze at its lens, middle or end. */
+    private static float hazeAlong(net.minecraft.world.level.Level level, Vec3 from, Vec3 dir, float len) {
+        float h = HazerBlockEntity.hazeAt(level, from);
+        h = Math.max(h, HazerBlockEntity.hazeAt(level, from.add(dir.scale(len * 0.5))));
+        h = Math.max(h, HazerBlockEntity.hazeAt(level, from.add(dir.scale(len))));
+        return 1f + 1.5f * h;
+    }
+
+    /**
+     * 0..1, how straight the camera looks into a beam from {@code lens} along {@code dir}: 0 outside
+     * the cone whose half-angle has cosine {@code edge}, 1 right down its middle. Makes the lens flare.
+     */
+    private static float glare(Vec3 lens, Vec3 dir, float edge) {
+        Vec3 to = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().subtract(lens);
+        double d = to.length();
+        if (d < 0.5) return 0f;
+        double cos = to.scale(1 / d).dot(dir);
+        return cos <= edge ? 0f : (float) ((cos - edge) / (1 - edge));
+    }
 
     /** A soft cone of light from {@code from} along {@code dir}, fading out toward its end. */
     private static void cone(VertexConsumer v, PoseStack pose, Vec3 from, Vec3 dir, float len, float r0, float r1,
@@ -114,15 +139,17 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         pose.translate(from.x, from.y, from.z);
         pose.mulPose(new Quaternionf().rotationTo(0f, 1f, 0f, (float) dir.x, (float) dir.y, (float) dir.z));
         Matrix4f m = pose.last().pose();
-        int n = 10;
-        // Three nested cones: a bright core inside a fading skirt, so the edge of the beam is soft.
-        float[] scale = {1f, 0.6f, 0.3f}, share = {0.4f, 0.35f, 0.25f};
-        for (int layer = 0; layer < 3; layer++) {
+        int n = 16;
+        // Four nested cones: a bright core inside fading skirts and a faint halo, so the edge of the beam is soft.
+        float[] scale = {1.5f, 1f, 0.6f, 0.3f}, share = {0.1f, 0.33f, 0.32f, 0.25f};
+        // A short beam that hits a wall still reaches it; a long one fades out into the air.
+        float reach = 0.35f * Math.max(0f, 1f - len / (float) FixtureBlockEntity.RANGE);
+        for (int layer = 0; layer < scale.length; layer++) {
             float q0 = r0 * scale[layer], q1 = r1 * scale[layer], al = a * share[layer];
             for (int i = 0; i < n; i++) {
                 float a0 = Mth.TWO_PI * i / n, a1 = Mth.TWO_PI * (i + 1) / n;
                 float c0 = Mth.cos(a0), s0 = Mth.sin(a0), c1 = Mth.cos(a1), s1 = Mth.sin(a1);
-                quad(v, m, c0 * q0, 0, s0 * q0, c1 * q0, 0, s1 * q0, c1 * q1, len, s1 * q1, c0 * q1, len, s0 * q1, r, g, b, al, 0f);
+                quad(v, m, c0 * q0, 0, s0 * q0, c1 * q0, 0, s1 * q0, c1 * q1, len, s1 * q1, c0 * q1, len, s0 * q1, r, g, b, al, al * reach);
             }
         }
         pose.popPose();
@@ -182,8 +209,8 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         pose.translate(at.x, at.y, at.z);
         pose.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
         Matrix4f m = pose.last().pose();
-        glow(v, m, size * 0.4f, 1f, 1f, 1f, a);
-        glow(v, m, size, r, g, b, a * 0.6f);
+        glow(v, m, size * 0.4f, 1f, 1f, 1f, Math.min(1f, a));
+        glow(v, m, size, r, g, b, Math.min(1f, a * 0.6f));
         pose.popPose();
     }
 

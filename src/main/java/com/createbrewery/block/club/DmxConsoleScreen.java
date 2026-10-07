@@ -33,6 +33,8 @@ public class DmxConsoleScreen extends Screen {
     private static final String[] COLOR_FX = {"static", "fade", "rainbow", "complement"};
     private static final String[] GOBOS = {"circle", "star", "dots", "bar"};
     private static final String[] ZOOMS = {"narrow", "normal", "wide"};
+    private static final String[] PIXEL_FX = {"auto", "solid", "chase", "wave", "sparkle", "fill"};
+    private static final String[] POSITIONS = {"program", "dj", "floor"};
     private static final float[] FADE_TIMES = {0.0f, 0.5f, 1.0f, 2.0f, 3.0f, 5.0f};
 
     private final BlockPos pos;
@@ -55,7 +57,7 @@ public class DmxConsoleScreen extends Screen {
     private int activeScene = -1;
 
     // Attributes & Color Picker
-    private Button program, move, rate, colorFx, gobo, prism, zoom, gels;
+    private Button program, move, rate, colorFx, gobo, prism, zoom, gels, pixelFx, position;
 
     // Modal Gel & HSV color picker state
     private boolean gelPickerOpen;
@@ -238,6 +240,10 @@ public class DmxConsoleScreen extends Screen {
             .bounds(px2 + 73, top + 164, 69, 15)
             .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.gels.tip")))
             .build());
+        pixelFx = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.PIXEL_FX, s -> s.pixelFx)).bounds(px2, top + 182, 69, 15)
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.pixels.tip"))).build());
+        position = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.POSITION, s -> s.position)).bounds(px2 + 73, top + 182, 69, 15)
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.position.tip"))).build());
 
         refresh();
     }
@@ -343,6 +349,8 @@ public class DmxConsoleScreen extends Screen {
         gobo.setMessage(Component.translatable("createbrewery.dmx.gobo." + GOBOS[s.gobo]));
         prism.setMessage(Component.translatable("createbrewery.dmx.prism", CommonComponents.optionStatus(s.prism)));
         zoom.setMessage(Component.translatable("createbrewery.dmx.zoom." + ZOOMS[s.zoom]));
+        pixelFx.setMessage(Component.translatable("createbrewery.dmx.pixels." + PIXEL_FX[s.pixelFx]));
+        position.setMessage(Component.translatable("createbrewery.dmx.position." + POSITIONS[s.position]));
     }
 
     @Override

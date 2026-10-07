@@ -115,6 +115,45 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         changed();
     }
 
+    void setPixelFx(int v) {
+        settings.pixelFx = Math.floorMod(v, DmxProgram.PIXEL_FX);
+        changed();
+    }
+
+    void setPosition(int v) {
+        settings.position = Math.floorMod(v, DmxProgram.POSITIONS);
+        changed();
+    }
+
+    // Client: the booth the heads aim at, the followed one or else the nearest, looked for now and then.
+    @org.jetbrains.annotations.Nullable
+    private BlockPos focusBooth;
+    private long focusScan = Long.MIN_VALUE / 2;
+
+    /** Client: where a head of {@code group} points for {@code position}; null when it follows its program or there is no booth. */
+    @org.jetbrains.annotations.Nullable
+    net.minecraft.world.phys.Vec3 focusPoint(int position, int group) {
+        if (position == DmxProgram.POS_PROGRAM || level == null) return null;
+        BlockPos b = booth;
+        if (b == null) {
+            if (level.getGameTime() - focusScan >= 40) {
+                focusScan = level.getGameTime();
+                focusBooth = nearestBooth();
+            }
+            b = focusBooth;
+        }
+        if (b == null || !level.isLoaded(b)) return null;
+        BlockState st = level.getBlockState(b);
+        if (!st.hasProperty(DjBoothBlock.FACING)) return null;
+        // The booth faces its DJ; the crowd is on the other side.
+        net.minecraft.core.Direction f = st.getValue(DjBoothBlock.FACING);
+        net.minecraft.world.phys.Vec3 c = net.minecraft.world.phys.Vec3.atBottomCenterOf(b), out = net.minecraft.world.phys.Vec3.atLowerCornerOf(f.getNormal());
+        if (position == DmxProgram.POS_DJ) return c.add(out).add(0, 1.4, 0);
+        // The dance floor: six blocks out, the groups side by side across it.
+        net.minecraft.world.phys.Vec3 across = new net.minecraft.world.phys.Vec3(-f.getStepZ(), 0, f.getStepX());
+        return c.add(out.scale(-6)).add(across.scale((group - 3.5) * 0.9)).add(0, 0.05, 0);
+    }
+
     void setZoom(int v) {
         settings.zoom = Math.floorMod(v, DmxProgram.ZOOMS);
         changed();
@@ -524,6 +563,8 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         tag.putInt("ColorFx", s.colorFx);
         tag.putInt("Gobo", s.gobo);
         tag.putInt("Zoom", s.zoom);
+        tag.putInt("PixelFx", s.pixelFx);
+        tag.putInt("Position", s.position);
         tag.putBoolean("Prism", s.prism);
         tag.putInt("Flash", s.flash);
         tag.putInt("DropFlash", s.dropFlash);
@@ -566,6 +607,8 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         s.colorFx = Math.floorMod(tag.getInt("ColorFx"), DmxProgram.COLOR_FX);
         s.gobo = Math.floorMod(tag.getInt("Gobo"), DmxProgram.GOBOS);
         s.zoom = tag.contains("Zoom") ? Math.floorMod(tag.getInt("Zoom"), DmxProgram.ZOOMS) : 1;
+        s.pixelFx = Math.floorMod(tag.getInt("PixelFx"), DmxProgram.PIXEL_FX);
+        s.position = Math.floorMod(tag.getInt("Position"), DmxProgram.POSITIONS);
         s.prism = tag.getBoolean("Prism");
         s.flash = tag.getInt("Flash");
         s.dropFlash = tag.getInt("DropFlash") & (1 << DmxProgram.GROUPS) - 1;
