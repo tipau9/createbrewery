@@ -319,7 +319,11 @@ public class AmpRackScreen extends Screen {
         int col = color(st.light());
         g.fill(left + 75, top + 25, left + 87, top + 37, 0xFF000000);
         g.fill(left + 76, top + 26, left + 86, top + 36, 0xFF000000 | col);
-        g.drawString(font, message(st), left + 92, top + 27, col);
+        // Two lines fit above Auto Setup; the longer hints need them.
+        var lines = font.split(message(st), W - 100);
+        for (int i = 0; i < Math.min(2, lines.size()); i++) {
+            g.drawString(font, lines.get(i), left + 92, top + (lines.size() > 1 ? 23 : 27) + i * 9, col, false);
+        }
         section(g, Component.translatable("createbrewery.amp.section.zones"), top + 104);
         if (r.settings().preset == AmpSettings.CUSTOM) {
             Component custom = Component.translatable("createbrewery.amp.preset.custom");

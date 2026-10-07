@@ -55,6 +55,8 @@ class AmpStatusTest {
         assertEquals("solo", s.key());
         assertEquals(SUBS, s.zone());
         assertEquals(AmpStatus.Light.YELLOW, s.light());
+        assertEquals("solo", AmpStatus.of(true, false, true, new float[ZONES], new int[] {3, 0, 0, 0, 1}, solo, NONE_MUTED).key(),
+            "a rig without subs still hears why it went quiet");
     }
 
     @Test
