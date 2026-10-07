@@ -51,11 +51,11 @@ public final class WeedClient {
 
     // ---- the mind: round and round ----
 
-    private static final String[] HIGH = {"Was, wenn wir alle nur in einem Spiel leben… Moment.", "Warum heißt das eigentlich Block?",
-        "Ich hab so Hunger auf was Süßes.", "Wie lange spielen wir schon? Fünf Minuten? Fünf Stunden?",
-        "Was wollt ich grad machen?", "Die Musik ist so… tief. So tief.", "Ich steh gleich auf. Gleich.",
-        "Wenn man drüber nachdenkt, ist ein Creeper eigentlich nur traurig.", "Hat jemand Chips?",
-        "Warte, was hab ich grad gesagt?", "Das ist so ein guter Gedanke. Den muss ich mir merken. …welcher?"};
+    private static final String[] HIGH = {"createbrewery.thought.weed.high.0", "createbrewery.thought.weed.high.1",
+        "createbrewery.thought.weed.high.2", "createbrewery.thought.weed.high.3",
+        "createbrewery.thought.weed.high.4", "createbrewery.thought.weed.high.5", "createbrewery.thought.weed.high.6",
+        "createbrewery.thought.weed.high.7", "createbrewery.thought.weed.high.8",
+        "createbrewery.thought.weed.high.9", "createbrewery.thought.weed.high.10"};
 
     private static void thoughts(LocalPlayer player, float high, RandomSource r) {
         if (player.tickCount < nextThought || DrunkClient.trip > 0.2f) return;
@@ -64,12 +64,12 @@ public final class WeedClient {
             return;
         }
         // Round and round: now and then the same thought again.
-        if (lastThought != null && r.nextFloat() < 0.25f) think(player, lastThought + " …warte, das hab ich grad schon gedacht.", 0x8FCF5A);
-        else think(player, lastThought = HIGH[r.nextInt(HIGH.length)], 0x8FCF5A);
+        if (lastThought != null && r.nextFloat() < 0.25f) think(player, Component.translatable("createbrewery.thought.weed.again", Component.translatable(lastThought)), 0x8FCF5A);
+        else think(player, Component.translatable(lastThought = HIGH[r.nextInt(HIGH.length)]), 0x8FCF5A);
     }
 
-    private static void think(LocalPlayer player, String text, int colour) {
-        player.displayClientMessage(Component.literal(text).withStyle(ChatFormatting.ITALIC).withColor(colour), true);
+    private static void think(LocalPlayer player, Component text, int colour) {
+        player.displayClientMessage(text.copy().withStyle(ChatFormatting.ITALIC).withColor(colour), true);
         nextThought = player.tickCount + 700 + player.getRandom().nextInt(700);
     }
 }

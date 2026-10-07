@@ -34,8 +34,8 @@ public final class DissociativeHandler {
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "keta_bladder"));
 
     private static final String[] NUMB = {
-        "Meine Zehen kribbeln… schon den ganzen Tag.", "Ich spür meine Finger nicht richtig.",
-        "Warum lauf ich so komisch?"
+        "createbrewery.thought.dissociative.numb.0", "createbrewery.thought.dissociative.numb.1",
+        "createbrewery.thought.dissociative.numb.2"
     };
 
     public static void take(Player player, DrugServer.Kind kind) {
@@ -114,9 +114,9 @@ public final class DissociativeHandler {
                 if (s.bladder >= 0.6f) {
                     player.hurt(new DamageSource(player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
                         .getHolderOrThrow(BLADDER)), 1f);
-                    DrugServer.think(player, "Au… das brennt. Und da ist Blut.", 0xD06060);
+                    DrugServer.think(player, "createbrewery.thought.dissociative.blood", 0xD06060);
                 } else {
-                    DrugServer.think(player, "Ich muss schon wieder… schon wieder?!", 0xC8C890);
+                    DrugServer.think(player, "createbrewery.thought.dissociative.again", 0xC8C890);
                 }
             }
         }

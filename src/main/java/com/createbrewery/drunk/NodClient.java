@@ -137,17 +137,17 @@ public final class NodClient {
 
     // ---- the mind: slow ----
 
-    private static final String[] RUSH = {"Ohhhhh…", "Warm. So warm.", "Das ist es. Das ist alles.", "Wie nach Hause kommen."};
-    private static final String[] NOD = {"Nur kurz die Augen zu…", "Alles egal. Schön egal.", "Wie in Watte.",
-        "Ich bin nicht müde. Ich ruh mich nur aus.", "Nichts tut weh. Gar nichts.", "Keine Sorgen. Keine einzige.",
-        "Ich könnt hier ewig sitzen.", "Alles ist… gut… so."};
-    private static final String[] WOKE = {"Hm? Wo war ich?", "Hab ich geschlafen?", "Ich hab was geträumt… was war das?",
-        "Ich war doch grad noch…", "Nicht einschlafen. Nicht einschlafen."};
-    private static final String[] ITCH = {"Juckt die Nase…", "Kratzen. Nur kurz kratzen.", "Überall juckt's. Angenehm irgendwie."};
-    private static final String[] AIR = {"Atmen… nicht vergessen… zu atmen…", "So kalt…", "So schwer…", "Nur… ein… bisschen… schlafen…"};
-    private static final String[] SICK = {"Mir ist kalt. Und heiß. Und kalt.", "Alles tut weh. Die Knochen.",
-        "Nur ein bisschen. Dann geht's wieder.", "Meine Beine. Die müssen sich bewegen.", "*gähn* …*gähn*",
-        "Gänsehaut. Überall.", "Ich brauch was. Ich brauch was."};
+    private static final String[] RUSH = {"createbrewery.thought.nod.rush.0", "createbrewery.thought.nod.rush.1", "createbrewery.thought.nod.rush.2", "createbrewery.thought.nod.rush.3"};
+    private static final String[] NOD = {"createbrewery.thought.nod.nod.0", "createbrewery.thought.nod.nod.1", "createbrewery.thought.nod.nod.2",
+        "createbrewery.thought.nod.nod.3", "createbrewery.thought.nod.nod.4", "createbrewery.thought.nod.nod.5",
+        "createbrewery.thought.nod.nod.6", "createbrewery.thought.nod.nod.7"};
+    private static final String[] WOKE = {"createbrewery.thought.nod.woke.0", "createbrewery.thought.nod.woke.1", "createbrewery.thought.nod.woke.2",
+        "createbrewery.thought.nod.woke.3", "createbrewery.thought.nod.woke.4"};
+    private static final String[] ITCH = {"createbrewery.thought.nod.itch.0", "createbrewery.thought.nod.itch.1", "createbrewery.thought.nod.itch.2"};
+    private static final String[] AIR = {"createbrewery.thought.nod.air.0", "createbrewery.thought.nod.air.1", "createbrewery.thought.nod.air.2", "createbrewery.thought.nod.air.3"};
+    private static final String[] SICK = {"createbrewery.thought.nod.sick.0", "createbrewery.thought.nod.sick.1",
+        "createbrewery.thought.nod.sick.2", "createbrewery.thought.nod.sick.3", "createbrewery.thought.nod.sick.4",
+        "createbrewery.thought.nod.sick.5", "createbrewery.thought.nod.sick.6"};
 
     private static void thoughts(LocalPlayer player, float felt, boolean failing) {
         if (player.tickCount < nextThought || DrunkClient.trip > 0.2f) return;
@@ -158,7 +158,7 @@ public final class NodClient {
     }
 
     private static void think(LocalPlayer player, String[] pool, int colour) {
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)])
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)])
             .withStyle(ChatFormatting.ITALIC).withColor(colour), true);
         // Slow thoughts, far apart; the dying breath does not wait.
         nextThought = player.tickCount + (pool == AIR ? 200 : 700 + player.getRandom().nextInt(700));

@@ -161,6 +161,11 @@ public final class Intoxication {
      * and often it just stops halfway.
      */
     public static String trailOff(String text, java.util.Random random) {
+        return trailOff(text, random, true);
+    }
+
+    /** The words added are in German or English, after the speaker's own game language (chat text is not translated per reader). */
+    public static String trailOff(String text, java.util.Random random, boolean german) {
         String[] words = text.replace('!', '.').split(" ");
         int keep = random.nextFloat() < 0.4f ? Math.max(1, (int) (words.length * (0.4f + 0.3f * random.nextFloat()))) : words.length;
         StringBuilder sb = new StringBuilder();
@@ -169,7 +174,8 @@ public final class Intoxication {
             sb.append(words[i]);
         }
         if (keep < words.length) {
-            String[] lost = {"…", "… äh…", "… was wollt ich sagen?", "… egal."};
+            String[] lost = german ? new String[] {"…", "… äh…", "… was wollt ich sagen?", "… egal."}
+                : new String[] {"…", "… uh…", "… what was I saying?", "… whatever."};
             sb.append(lost[random.nextInt(lost.length)]);
         }
         return sb.toString();
@@ -180,6 +186,10 @@ public final class Intoxication {
      * often one more thing about yourself on top.
      */
     public static String hype(String text, java.util.Random random) {
+        return hype(text, random, true);
+    }
+
+    public static String hype(String text, java.util.Random random, boolean german) {
         StringBuilder sb = new StringBuilder();
         for (String word : text.replace('.', '!').split(" ")) {
             if (sb.length() > 0) sb.append(' ');
@@ -187,8 +197,10 @@ public final class Intoxication {
         }
         if (!sb.toString().endsWith("!")) sb.append('!');
         if (random.nextFloat() < 0.35f) {
-            String[] ego = {" Ehrlich, ich bin genial.", " Hört mir zu!", " Und noch was—", " Ich hab das voll im Griff.",
-                " Keiner kann das so wie ich."};
+            String[] ego = german ? new String[] {" Ehrlich, ich bin genial.", " Hört mir zu!", " Und noch was—", " Ich hab das voll im Griff.",
+                " Keiner kann das so wie ich."}
+                : new String[] {" Honestly, I'm a genius.", " Listen to me!", " And another thing—", " I've totally got this.",
+                " Nobody does it like me."};
             sb.append(ego[random.nextInt(ego.length)]);
         }
         return sb.toString();

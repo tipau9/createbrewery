@@ -32,25 +32,26 @@ public class BreweryCommonEvents {
     public static void onServerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
         float bac = DrunkServer.felt(player);
+        boolean german = player.clientInformation().language().startsWith("de");
 
         if (bac >= Intoxication.TIPSY) {
             int stage = Intoxication.slurStage(bac); // 0 = occasional slip ... 3 = barely legible
             String original = event.getRawText();
-            String slurred = slurText(original, player.getRandom(), stage);
+            String slurred = slurText(original, player.getRandom(), stage, german);
             event.setMessage(Component.literal(slurred));
         } else if (com.createbrewery.drugs.DrugEffect.felt(player, ModEffects.COKE_HIGH) > 0.4f) {
-            event.setMessage(Component.literal(Intoxication.hype(event.getRawText(), new java.util.Random(player.getRandom().nextLong()))));
+            event.setMessage(Component.literal(Intoxication.hype(event.getRawText(), new java.util.Random(player.getRandom().nextLong()), german)));
         } else if (com.createbrewery.drugs.DrugEffect.felt(player, ModEffects.CALM) > 0.4f) {
-            event.setMessage(Component.literal(Intoxication.trailOff(event.getRawText(), new java.util.Random(player.getRandom().nextLong()))));
+            event.setMessage(Component.literal(Intoxication.trailOff(event.getRawText(), new java.util.Random(player.getRandom().nextLong()), german)));
         } else if (player.hasEffect(ModEffects.HANGOVER)) {
             // Hungover player also mumbles occasionally
             String original = event.getRawText();
-            String slurred = slurText(original, player.getRandom(), 1);
+            String slurred = slurText(original, player.getRandom(), 1, german);
             event.setMessage(Component.literal(slurred));
         }
     }
 
-    private static String slurText(String text, RandomSource random, int stage) {
+    private static String slurText(String text, RandomSource random, int stage, boolean german) {
         if (stage == 0 && random.nextFloat() > 0.35f) {
             return text; // Level I: only 35% chance to slur slightly
         }
@@ -77,7 +78,8 @@ public class BreweryCommonEvents {
         // Random hiccup / burp at end of message (more frequent at higher stages)
         float hiccupChance = 0.25f + (stage * 0.22f);
         if (random.nextFloat() < hiccupChance) {
-            String[] hiccups = { " *hick*", " *r\u00fclps*", "... *hicks*", " *hik!*", " ...waasss?" };
+            String[] hiccups = german ? new String[] { " *hick*", " *r\u00fclps*", "... *hicks*", " *hik!*", " ...waasss?" }
+                : new String[] { " *hic*", " *burp*", "... *hic*", " *hik!*", " ...whaaat?" };
             sb.append(hiccups[random.nextInt(hiccups.length)]);
         }
 

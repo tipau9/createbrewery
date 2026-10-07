@@ -35,6 +35,7 @@ public class CreateBrewery {
         // Optional: only filled when Tobacconery is installed, no dependency on it.
         REGISTRATE.addDataGenerator(com.tterrag.registrate.providers.ProviderType.ITEM_TAGS, tags -> tags.addTag(ModTags.JOINT_TOBACCO)
             .addOptional(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("tobacconery", "chopped_tobacco")));
+        com.createbrewery.data.PlayerTextLang.register(REGISTRATE);
         REGISTRATE.addRawLang("itemGroup.createbrewery", "Create Brewery");
         REGISTRATE.addRawLang("effect.createbrewery.inebriation", "Inebriation");
         REGISTRATE.addRawLang("effect.createbrewery.hangover", "Severe Hangover");

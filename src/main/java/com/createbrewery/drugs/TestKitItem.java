@@ -23,7 +23,7 @@ public class TestKitItem extends Item {
         ItemStack kit = player.getItemInHand(hand);
         ItemStack drug = player.getItemInHand(hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
         if (!(drug.getItem() instanceof DrugItem item)) {
-            if (!level.isClientSide) DrugServer.think(player, "Die Droge in die andere Hand, dann testen.", 0xA0A0A0);
+            if (!level.isClientSide) DrugServer.think(player, "createbrewery.thought.test_kit.offhand", 0xA0A0A0);
             return InteractionResultHolder.fail(kit);
         }
         if (!level.isClientSide) {

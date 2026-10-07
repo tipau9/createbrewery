@@ -233,25 +233,25 @@ public final class RollClient {
 
     // ---- the mind ----
 
-    private static final String[] COMING_UP = {"Hm. Ist mir schlecht?", "Mein Bauch kribbelt so komisch.", "Oh… oh. OH.",
-        "Wirkt das schon? Ich glaub… ja."};
-    private static final String[] ROLLING = {"Ich liebe euch alle!", "Die Musik… ich BIN die Musik.", "Mein Kiefer macht, was er will.",
-        "Warum hab ich nie gesagt, wie toll du bist?", "Alles ist gut. Wirklich alles.", "Fühlt sich das gut an…",
-        "Ich will jeden umarmen.", "Hat jemand Kaugummi?", "*gähn* …warum gähn ich die ganze Zeit?",
-        "Ich hab keinen Hunger. Gar keinen.", "Mund so trocken…", "Wir sollten alle mal reden. Über alles."};
-    private static final String[] FADING = {"Es lässt nach… nein, nein, nein.", "Noch eine halbe? Nur eine halbe.",
-        "Wo ist die Tüte hin?", "Kommt da noch was?"};
-    private static final String[] DROP = {"DA IST ER!!!", "DER DROP!", "Ohhh jaaaa!", "Hände hoch!!!"};
-    private static final String[] BUILD_UP = {"Gleich… gleich kommt's…", "Warte… warte…", "Es baut sich auf…"};
-    private static final String[] GROOVE = {"Ich bin eins mit dem Beat.", "Im Takt. Alles im Takt.", "Mein Körper tanzt von allein."};
-    private static final String[] PEAK = {"ICH BIN DER BASS.", "Lauter. LAUTER!", "Alles bebt. Ich bebe.", "Die Musik ist in meinem Kopf. Ganz drin."};
-    private static final String[] ZAP = {"Bzzt. Was war das?", "Da hat's im Kopf gezuckt.", "Mein Hirn blitzt."};
-    private static final String[] MORNING = {"Wie, schon hell?!", "Die Nacht war doch gerade erst…", "Wo sind die Stunden hin?"};
-    private static final String[] RUSH = {"Wow… WOW.", "Da ist sie wieder, die Welle.", "Gänsehaut. Überall."};
-    private static final String[] SOFT = {"Ist das weich…", "Ich könnte den ganzen Tag über Wolle laufen.", "Dieser Teppich. DIESER TEPPICH."};
-    private static final String[] HOT = {"Wasser… brauch Wasser.", "Ist das heiß hier drin.", "Kurz Pause machen. Nur kurz."};
-    private static final String[] LOW = {"Warum bin ich so traurig?", "Nichts macht mehr Spaß.", "Nie wieder. …bis Samstag.",
-        "Alles ist so grau."};
+    private static final String[] COMING_UP = {"createbrewery.thought.roll.coming_up.0", "createbrewery.thought.roll.coming_up.1", "createbrewery.thought.roll.coming_up.2",
+        "createbrewery.thought.roll.coming_up.3"};
+    private static final String[] ROLLING = {"createbrewery.thought.roll.rolling.0", "createbrewery.thought.roll.rolling.1", "createbrewery.thought.roll.rolling.2",
+        "createbrewery.thought.roll.rolling.3", "createbrewery.thought.roll.rolling.4", "createbrewery.thought.roll.rolling.5",
+        "createbrewery.thought.roll.rolling.6", "createbrewery.thought.roll.rolling.7", "createbrewery.thought.roll.rolling.8",
+        "createbrewery.thought.roll.rolling.9", "createbrewery.thought.roll.rolling.10", "createbrewery.thought.roll.rolling.11"};
+    private static final String[] FADING = {"createbrewery.thought.roll.fading.0", "createbrewery.thought.roll.fading.1",
+        "createbrewery.thought.roll.fading.2", "createbrewery.thought.roll.fading.3"};
+    private static final String[] DROP = {"createbrewery.thought.roll.drop.0", "createbrewery.thought.roll.drop.1", "createbrewery.thought.roll.drop.2", "createbrewery.thought.roll.drop.3"};
+    private static final String[] BUILD_UP = {"createbrewery.thought.roll.build_up.0", "createbrewery.thought.roll.build_up.1", "createbrewery.thought.roll.build_up.2"};
+    private static final String[] GROOVE = {"createbrewery.thought.roll.groove.0", "createbrewery.thought.roll.groove.1", "createbrewery.thought.roll.groove.2"};
+    private static final String[] PEAK = {"createbrewery.thought.roll.peak.0", "createbrewery.thought.roll.peak.1", "createbrewery.thought.roll.peak.2", "createbrewery.thought.roll.peak.3"};
+    private static final String[] ZAP = {"createbrewery.thought.roll.zap.0", "createbrewery.thought.roll.zap.1", "createbrewery.thought.roll.zap.2"};
+    private static final String[] MORNING = {"createbrewery.thought.roll.morning.0", "createbrewery.thought.roll.morning.1", "createbrewery.thought.roll.morning.2"};
+    private static final String[] RUSH = {"createbrewery.thought.roll.rush.0", "createbrewery.thought.roll.rush.1", "createbrewery.thought.roll.rush.2"};
+    private static final String[] SOFT = {"createbrewery.thought.roll.soft.0", "createbrewery.thought.roll.soft.1", "createbrewery.thought.roll.soft.2"};
+    private static final String[] HOT = {"createbrewery.thought.roll.hot.0", "createbrewery.thought.roll.hot.1", "createbrewery.thought.roll.hot.2"};
+    private static final String[] LOW = {"createbrewery.thought.roll.low.0", "createbrewery.thought.roll.low.1", "createbrewery.thought.roll.low.2",
+        "createbrewery.thought.roll.low.3"};
 
     private static void thoughts(LocalPlayer player, float roll) {
         if (player.tickCount < nextThought) return;
@@ -276,7 +276,7 @@ public final class RollClient {
     }
 
     private static void think(LocalPlayer player, String[] pool) {
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
             .withColor(pool == LOW || pool == ZAP ? 0x8A8A9A : pool == HOT ? 0xFF6040 : 0xFF7EB6), true);
         nextThought = player.tickCount + 500 + player.getRandom().nextInt(500);
     }

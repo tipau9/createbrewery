@@ -333,7 +333,7 @@ public final class DrugServer {
         } else if (instance.is(ModEffects.EDIBLE_PENDING) && entity instanceof Player player) {
             edibleKicksIn(player, instance.getAmplifier() + 1);
         } else if (instance.is(ModEffects.SEIZURE) && entity instanceof Player player) {
-            think(player, "Was… war das? Alles tut weh. Ich hab mir auf die Zunge gebissen.", 0xB090D0);
+            think(player, "createbrewery.thought.seizure_after", 0xB090D0);
             player.addEffect(new MobEffectInstance(ModEffects.DAZED, 600, 0));
         }
     }
@@ -344,21 +344,21 @@ public final class DrugServer {
         DrugEffect weed = (DrugEffect) ModEffects.WEED_HIGH.value();
         player.addEffect(new MobEffectInstance(ModEffects.WEED_HIGH, weed.total() - weed.onset(), hits, false, false, true));
         player.addEffect(new MobEffectInstance(ModEffects.COTTONMOUTH, COTTONMOUTH_TICKS, 0, false, false, true));
-        think(player, "Oh. Oh nein. Da ist es. Das ist… viel.", 0x8FCF5A);
+        think(player, "createbrewery.thought.edible.kicks_in", 0x8FCF5A);
         if (joints(player) >= 2.5f || player.getRandom().nextFloat() < 0.3f * (brownies - 1)) greenOut(player);
     }
 
     public static void edibleTick(LivingEntity entity, int level) {
         MobEffectInstance pending = entity.getEffect(ModEffects.EDIBLE_PENDING);
         if (entity instanceof Player player && pending != null && pending.getDuration() / 20 == EdibleItem.DELAY / 40) {
-            think(player, "Merk nix. Gar nix. …vielleicht noch einen?", 0x8FCF5A);
+            think(player, "createbrewery.thought.edible.waiting", 0x8FCF5A);
         }
     }
 
     private static void spins(Player player) {
         if (player.isSleeping() && DrunkServer.state(player).blood >= Intoxication.DRUNK && player.getSleepTimer() >= 60) {
             player.stopSleeping();
-            think(player, "Alles dreht sich… Bett, Decke, alles… ich muss…", 0xC8B070);
+            think(player, "createbrewery.thought.drunk.spins", 0xC8B070);
             DrunkServer.vomit(player);
         }
     }
@@ -388,8 +388,9 @@ public final class DrugServer {
         OpioidHandler.onIncomingDamage(event);
     }
 
-    public static void think(Player player, String text, int colour) {
-        player.displayClientMessage(net.minecraft.network.chat.Component.literal(text)
+    /** A thought in the action bar; {@code key} is a translation key, so it reads in the player's language. */
+    public static void think(Player player, String key, int colour) {
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(key)
             .withStyle(net.minecraft.ChatFormatting.ITALIC).withColor(colour), true);
     }
 

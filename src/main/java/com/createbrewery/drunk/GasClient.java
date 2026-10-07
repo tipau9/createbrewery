@@ -60,16 +60,16 @@ public final class GasClient {
         if (strength > 0.4f && r.nextFloat() < 1f / 120f) think(player, GIGGLE, 0xC8DCFF);
     }
 
-    private static final String[] DEJA_VU = {"Moment… das hab ich doch schon mal erlebt.", "Genau so war's schon mal. Genau so.",
-        "Ich weiß, was jetzt kommt…"};
-    private static final String[] REVELATION = {"ICH HAB'S! Alles ergibt Sinn! Es ist—", "Jetzt versteh ich's. Das Universum ist—",
-        "Oh. OH. Die Antwort auf alles ist—"};
-    private static final String[] FORGOTTEN = {"…weg. Was war's?", "…es war… irgendwas mit… nein. Weg.", "Verdammt. Es war SO klar."};
-    private static final String[] BACK = {"Wer… wo… ach so. Ich. Ich bin das.", "War ich weg? Wie lange?", "Ich war… überall. Und nirgends."};
-    private static final String[] GIGGLE = {"HAHA warum ist das so lustig", "Hihihi… wah… wah… hihi", "Meine Stimme klingt so KOMISCH"};
+    private static final String[] DEJA_VU = {"createbrewery.thought.gas.deja_vu.0", "createbrewery.thought.gas.deja_vu.1",
+        "createbrewery.thought.gas.deja_vu.2"};
+    private static final String[] REVELATION = {"createbrewery.thought.gas.revelation.0", "createbrewery.thought.gas.revelation.1",
+        "createbrewery.thought.gas.revelation.2"};
+    private static final String[] FORGOTTEN = {"createbrewery.thought.gas.forgotten.0", "createbrewery.thought.gas.forgotten.1", "createbrewery.thought.gas.forgotten.2"};
+    private static final String[] BACK = {"createbrewery.thought.gas.back.0", "createbrewery.thought.gas.back.1", "createbrewery.thought.gas.back.2"};
+    private static final String[] GIGGLE = {"createbrewery.thought.gas.giggle.0", "createbrewery.thought.gas.giggle.1", "createbrewery.thought.gas.giggle.2"};
 
     private static void think(LocalPlayer player, String[] pool, int colour) {
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)])
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)])
             .withStyle(ChatFormatting.ITALIC).withColor(colour), true);
     }
 }

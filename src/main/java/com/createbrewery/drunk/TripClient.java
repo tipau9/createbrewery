@@ -309,7 +309,7 @@ public final class TripClient {
             }
         }
         if (mc.crosshairPickEntity instanceof Animal && shroom > 0.35f && r.nextFloat() < 1f / 300f) {
-            player.displayClientMessage(Component.literal(ANIMALS[r.nextInt(ANIMALS.length)])
+            player.displayClientMessage(Component.translatable(ANIMALS[r.nextInt(ANIMALS.length)])
                 .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
         }
         // Laughing fits: out of nowhere, for a few seconds, you cannot stop - and cannot run.
@@ -371,8 +371,8 @@ public final class TripClient {
     }
 
     /** Mushrooms: looking an animal in the eye, the feeling of being one with it (not words - a thought). */
-    private static final String[] ANIMALS = {"Die guckt mich an, als wüsste sie alles.", "Wir sind gar nicht so verschieden, du und ich.",
-        "Du lebst. Ich lebe. Das ist… so viel.", "Hast du auch Angst manchmal?", "Ich hab dich lieb. Einfach so."};
+    private static final String[] ANIMALS = {"createbrewery.thought.trip.animals.0", "createbrewery.thought.trip.animals.1",
+        "createbrewery.thought.trip.animals.2", "createbrewery.thought.trip.animals.3", "createbrewery.thought.trip.animals.4"};
 
     private static final ResourceLocation FROST = ResourceLocation.withDefaultNamespace("textures/misc/powder_snow_outline.png");
     private static final ResourceLocation VINE = ResourceLocation.withDefaultNamespace("textures/block/vine.png");
@@ -469,34 +469,34 @@ public final class TripClient {
 
     // ---- the mind ----
 
-    private static final String[] COMING_UP = {"Merkst du schon was?", "Die Farben sind… irgendwie intensiver?",
-        "Ist das schon der Trip, oder bilde ich mir das ein?", "Warum kribbelt alles?"};
-    private static final String[] TRIPPING = {"Die Blöcke atmen…", "Wer hat eigentlich Steine erfunden?", "Moment. Wo war ich?",
-        "Das Gras ist so… grün.", "Warum ist alles aus Würfeln?", "Meine Hände sehen komisch aus.",
-        "Ich hab die Musik gerade gesehen.", "Hat der Baum mich angeschaut?", "Alles ist verbunden. Alles."};
-    private static final String[] PEAK = {"Ich bin der Block. Der Block ist ich.", "Zeit ist nur eine Idee.",
-        "Es gibt kein Ich. Nur Minecraft.", "Ich verstehe jetzt alles. Alles!", "Wo hört mein Körper auf?",
-        "Die Welt wird gerade erst geladen…"};
-    private static final String[] BAD = {"Irgendwas stimmt nicht.", "Da war was. Hinter mir.", "Das hört nie wieder auf.",
-        "Ich hätte das nicht nehmen sollen.", "Ruhig atmen. Es ist nur die Droge.", "Die Wände kommen näher.",
-        "Die wissen, dass ich hier bin."};
-    private static final String[] SHROOM_COMING_UP = {"*gähn*", "Mir ist irgendwie kalt.", "Mein Bauch fühlt sich komisch an.",
-        "Warum bin ich so müde?"};
-    private static final String[] SHROOM_TRIPPING = {"Die Bäume reden miteinander.", "Ich hab euch alle so lieb.",
-        "Warum ist Gras eigentlich so lustig?", "Hihi. Hihihi.", "Der Boden lebt.", "Alles wächst. Auch ich.",
-        "Wie lange sitz ich hier schon? Minuten? Stunden?", "War das grad eben… oder vor einer Ewigkeit?", "Die Sonne blendet so."};
-    private static final String[] SHROOM_PEAK = {"Wir sind ein Netz. Unter der Erde.", "Ich weine… aber schön.",
-        "Der Wald hat mich die ganze Zeit angeschaut.", "Ich bin nur ein Pilz, der träumt, dass er ein Mensch ist."};
-    private static final String[] MESC_COMING_UP = {"Dieser Geschmack…", "Mein Magen… aber es geht.",
-        "Die Wüste atmet.", "Etwas Altes erwacht."};
-    private static final String[] MESC_TRIPPING = {"Die Falten meiner Kleidung… unendlich.", "Die Steine sind heilig.",
-        "Goldenes Licht überall.", "Die Ahnen sind nah.", "Istigkeit.",
-        "Ein einfacher Holzblock. Ein Meisterwerk der Existenz.", "Kein Grund zu rennen. Alles ist schon hier."};
-    private static final String[] MESC_PEAK = {"Die Pforten der Wahrnehmung sind offen.", "Alles leuchtet von innen.",
-        "Ich sehe das Licht der Schöpfung.", "Zeitlos. Heilig. Eins.",
-        "Die Welt tut nichts, und doch bleibt nichts ungetan."};
-    private static final String[] AFTER = {"Was für ein Tag.", "Alles fühlt sich friedlich an.", "Die Welt ist schön, eigentlich.",
-        "Ich sollte öfter die Sonne anschauen."};
+    private static final String[] COMING_UP = {"createbrewery.thought.trip.coming_up.0", "createbrewery.thought.trip.coming_up.1",
+        "createbrewery.thought.trip.coming_up.2", "createbrewery.thought.trip.coming_up.3"};
+    private static final String[] TRIPPING = {"createbrewery.thought.trip.tripping.0", "createbrewery.thought.trip.tripping.1", "createbrewery.thought.trip.tripping.2",
+        "createbrewery.thought.trip.tripping.3", "createbrewery.thought.trip.tripping.4", "createbrewery.thought.trip.tripping.5",
+        "createbrewery.thought.trip.tripping.6", "createbrewery.thought.trip.tripping.7", "createbrewery.thought.trip.tripping.8"};
+    private static final String[] PEAK = {"createbrewery.thought.trip.peak.0", "createbrewery.thought.trip.peak.1",
+        "createbrewery.thought.trip.peak.2", "createbrewery.thought.trip.peak.3", "createbrewery.thought.trip.peak.4",
+        "createbrewery.thought.trip.peak.5"};
+    private static final String[] BAD = {"createbrewery.thought.trip.bad.0", "createbrewery.thought.trip.bad.1", "createbrewery.thought.trip.bad.2",
+        "createbrewery.thought.trip.bad.3", "createbrewery.thought.trip.bad.4", "createbrewery.thought.trip.bad.5",
+        "createbrewery.thought.trip.bad.6"};
+    private static final String[] SHROOM_COMING_UP = {"createbrewery.thought.trip.shroom_coming_up.0", "createbrewery.thought.trip.shroom_coming_up.1", "createbrewery.thought.trip.shroom_coming_up.2",
+        "createbrewery.thought.trip.shroom_coming_up.3"};
+    private static final String[] SHROOM_TRIPPING = {"createbrewery.thought.trip.shroom_tripping.0", "createbrewery.thought.trip.shroom_tripping.1",
+        "createbrewery.thought.trip.shroom_tripping.2", "createbrewery.thought.trip.shroom_tripping.3", "createbrewery.thought.trip.shroom_tripping.4", "createbrewery.thought.trip.shroom_tripping.5",
+        "createbrewery.thought.trip.shroom_tripping.6", "createbrewery.thought.trip.shroom_tripping.7", "createbrewery.thought.trip.shroom_tripping.8"};
+    private static final String[] SHROOM_PEAK = {"createbrewery.thought.trip.shroom_peak.0", "createbrewery.thought.trip.shroom_peak.1",
+        "createbrewery.thought.trip.shroom_peak.2", "createbrewery.thought.trip.shroom_peak.3"};
+    private static final String[] MESC_COMING_UP = {"createbrewery.thought.trip.mesc_coming_up.0", "createbrewery.thought.trip.mesc_coming_up.1",
+        "createbrewery.thought.trip.mesc_coming_up.2", "createbrewery.thought.trip.mesc_coming_up.3"};
+    private static final String[] MESC_TRIPPING = {"createbrewery.thought.trip.mesc_tripping.0", "createbrewery.thought.trip.mesc_tripping.1",
+        "createbrewery.thought.trip.mesc_tripping.2", "createbrewery.thought.trip.mesc_tripping.3", "createbrewery.thought.trip.mesc_tripping.4",
+        "createbrewery.thought.trip.mesc_tripping.5", "createbrewery.thought.trip.mesc_tripping.6"};
+    private static final String[] MESC_PEAK = {"createbrewery.thought.trip.mesc_peak.0", "createbrewery.thought.trip.mesc_peak.1",
+        "createbrewery.thought.trip.mesc_peak.2", "createbrewery.thought.trip.mesc_peak.3",
+        "createbrewery.thought.trip.mesc_peak.4"};
+    private static final String[] AFTER = {"createbrewery.thought.trip.after.0", "createbrewery.thought.trip.after.1", "createbrewery.thought.trip.after.2",
+        "createbrewery.thought.trip.after.3"};
 
     /** Now and then a thought drifts past above the hotbar. */
     private static void thoughts(LocalPlayer player, float trip, float bad) {
@@ -514,7 +514,7 @@ public final class TripClient {
             return;
         }
         ChatFormatting color = pool == BAD ? ChatFormatting.DARK_RED : mesc ? ChatFormatting.GOLD : shroom ? ChatFormatting.DARK_GREEN : ChatFormatting.LIGHT_PURPLE;
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)])
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)])
             .withStyle(ChatFormatting.ITALIC, color), true);
         nextThought = player.tickCount + 500 + player.getRandom().nextInt(500);
     }

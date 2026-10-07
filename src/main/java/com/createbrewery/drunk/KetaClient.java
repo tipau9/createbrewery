@@ -82,14 +82,14 @@ public final class KetaClient {
 
     // ---- the mind: far off ----
 
-    private static final String[] KETA = {"Ist das meine Hand?", "Wie lange steh ich schon hier? Stunden?",
-        "Mein Körper ist irgendwo da unten.", "Alles ist aus Klötzen. Warte— ist es ja.", "Ich bin ein Gedanke, der denkt.",
-        "Die Welt ist… ein Bild von der Welt.", "Meine Beine gehen. Ich nicht.", "Alles ist so… weit weg. Und gut so."};
-    private static final String[] HOLE = {"Ich bin… weg.", "Wer ist das da unten?", "Da ist ein Licht. Ganz weiß."};
-    private static final String[] IN_HOLE = {"Ist das der Tod? Es ist… okay.", "Da sind Leute aus Licht.", "Ich war schon immer hier.",
-        "Es gibt kein Oben mehr.", "Ich bin die Maschine."};
-    private static final String[] BACK = {"…ach. Ich hab ja einen Körper.", "Wie lange war ich weg? Ein Leben?", "Zurück. Glaub ich."};
-    private static final String[] AFTER = {"Irgendwie ist alles leichter jetzt.", "Ich hab keine Sorgen. Komisch.", "Alles halb so schlimm."};
+    private static final String[] KETA = {"createbrewery.thought.keta.keta.0", "createbrewery.thought.keta.keta.1",
+        "createbrewery.thought.keta.keta.2", "createbrewery.thought.keta.keta.3", "createbrewery.thought.keta.keta.4",
+        "createbrewery.thought.keta.keta.5", "createbrewery.thought.keta.keta.6", "createbrewery.thought.keta.keta.7"};
+    private static final String[] HOLE = {"createbrewery.thought.keta.hole.0", "createbrewery.thought.keta.hole.1", "createbrewery.thought.keta.hole.2"};
+    private static final String[] IN_HOLE = {"createbrewery.thought.keta.in_hole.0", "createbrewery.thought.keta.in_hole.1", "createbrewery.thought.keta.in_hole.2",
+        "createbrewery.thought.keta.in_hole.3", "createbrewery.thought.keta.in_hole.4"};
+    private static final String[] BACK = {"createbrewery.thought.keta.back.0", "createbrewery.thought.keta.back.1", "createbrewery.thought.keta.back.2"};
+    private static final String[] AFTER = {"createbrewery.thought.keta.after.0", "createbrewery.thought.keta.after.1", "createbrewery.thought.keta.after.2"};
 
     private static void thoughts(LocalPlayer player, float keta) {
         if (player.tickCount < nextThought || DrunkClient.trip > 0.2f) return;
@@ -101,7 +101,7 @@ public final class KetaClient {
 
     private static void think(LocalPlayer player, String[] pool, int colour) {
         RandomSource r = player.getRandom();
-        player.displayClientMessage(Component.literal(pool[r.nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC).withColor(colour), true);
+        player.displayClientMessage(Component.translatable(pool[r.nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC).withColor(colour), true);
         // Time stretches: thoughts come far apart.
         nextThought = player.tickCount + 800 + r.nextInt(800);
     }

@@ -146,20 +146,20 @@ public final class CokeClient {
 
     // ---- the mind: loud ----
 
-    private static final String[] LINE = {"Sssssnff. Oh ja.", "Kalt. Bitter. Gut.", "Die Augen tränen. Egal.", "Da geht's los."};
-    private static final String[] HIGH = {"Ich bin so gut in allem.", "Ich muss dir was erzählen. Und dann noch was.",
-        "Alles ist klar. Kristallklar.", "Mein Gesicht ist taub. Meine Zähne auch.", "Bitter hinten im Hals…",
-        "Ich hab alles unter Kontrolle.", "Ich hab die beste Idee überhaupt.", "Ich muss mich bewegen. Irgendwas machen.",
-        "Warum redet eigentlich keiner mit mir? Ich bin der Interessanteste hier."};
-    private static final String[] FADING = {"Noch eine Line. Nur eine.", "Es lässt schon nach? Jetzt schon?",
-        "Nur noch eine kleine.", "Wo ist das Tütchen?"};
-    private static final String[] CRASH = {"Alles ist scheiße.", "Nur eine, dann geht's wieder.", "Lasst mich in Ruhe.",
-        "Warum hab ich so viel geredet?", "Mein Kopf. Mein Kopf.", "Nie wieder. Also… heute nicht mehr."};
-    private static final String[] DRIP = {"Bitter… läuft hinten den Hals runter.", "Der Drip. Ekelhaft. Geil."};
-    private static final String[] REACH = {"Die Hand ist schon am Tütchen…", "Wie ist das in meine Hand gekommen?"};
-    private static final String[] PARANOID = {"War da wer?", "Hinter mir. Da war was.", "Wer ist da?! …niemand?",
-        "Die gucken alle. Ich merk das."};
-    private static final String[] BUGS = {"Da krabbelt was auf dem Arm.", "Käfer? Unter der Haut? Nein. Doch?"};
+    private static final String[] LINE = {"createbrewery.thought.coke.line.0", "createbrewery.thought.coke.line.1", "createbrewery.thought.coke.line.2", "createbrewery.thought.coke.line.3"};
+    private static final String[] HIGH = {"createbrewery.thought.coke.high.0", "createbrewery.thought.coke.high.1",
+        "createbrewery.thought.coke.high.2", "createbrewery.thought.coke.high.3", "createbrewery.thought.coke.high.4",
+        "createbrewery.thought.coke.high.5", "createbrewery.thought.coke.high.6", "createbrewery.thought.coke.high.7",
+        "createbrewery.thought.coke.high.8"};
+    private static final String[] FADING = {"createbrewery.thought.coke.fading.0", "createbrewery.thought.coke.fading.1",
+        "createbrewery.thought.coke.fading.2", "createbrewery.thought.coke.fading.3"};
+    private static final String[] CRASH = {"createbrewery.thought.coke.crash.0", "createbrewery.thought.coke.crash.1", "createbrewery.thought.coke.crash.2",
+        "createbrewery.thought.coke.crash.3", "createbrewery.thought.coke.crash.4", "createbrewery.thought.coke.crash.5"};
+    private static final String[] DRIP = {"createbrewery.thought.coke.drip.0", "createbrewery.thought.coke.drip.1"};
+    private static final String[] REACH = {"createbrewery.thought.coke.reach.0", "createbrewery.thought.coke.reach.1"};
+    private static final String[] PARANOID = {"createbrewery.thought.coke.paranoid.0", "createbrewery.thought.coke.paranoid.1", "createbrewery.thought.coke.paranoid.2",
+        "createbrewery.thought.coke.paranoid.3"};
+    private static final String[] BUGS = {"createbrewery.thought.coke.bugs.0", "createbrewery.thought.coke.bugs.1"};
 
     private static void thoughts(LocalPlayer player, net.minecraft.world.effect.MobEffectInstance high, boolean fading) {
         if (player.tickCount < nextThought || DrunkClient.trip > 0.2f) return;
@@ -172,7 +172,7 @@ public final class CokeClient {
     }
 
     private static void think(LocalPlayer player, String[] pool, int colour) {
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)])
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)])
             .withStyle(ChatFormatting.ITALIC).withColor(colour), true);
         // A racing mouth: on the high the next thought is never far.
         nextThought = player.tickCount + (pool == HIGH ? 240 + player.getRandom().nextInt(300) : 600 + player.getRandom().nextInt(600));

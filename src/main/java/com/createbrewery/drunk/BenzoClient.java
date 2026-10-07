@@ -90,14 +90,14 @@ public final class BenzoClient {
 
     // ---- the mind: calm, then not ----
 
-    private static final String[] CALM = {"Alles halb so wild.", "Mir ist alles egal. Angenehm egal.", "Ich merk gar nichts. Wirkt das überhaupt?",
-        "Ich bin total klar im Kopf. Total.", "Vielleicht noch eine. Merk ja eh nix.", "Keine Sorgen. Nicht eine.",
-        "Ich könnt jetzt überall schlafen.", "Was hab ich… ach, egal."};
-    private static final String[] GAP = {"…Moment. Wie bin ich hierher gekommen?", "Was ist grad passiert?", "Hab ich was gemacht?",
-        "Wie spät ist es?", "…wo war ich?"};
-    private static final String[] FORGOT = {"Was wollte ich hier nochmal?", "Warum hab ich die aufgemacht?", "Hm. Vergessen."};
-    private static final String[] REBOUND = {"Irgendwas stimmt nicht.", "Mein Herz rast.", "Was hab ich gestern gemacht? Ich weiß es nicht mehr.",
-        "Warum hab ich solche Angst?", "Alles ist zu laut.", "Nur eine. Nur um runterzukommen."};
+    private static final String[] CALM = {"createbrewery.thought.benzo.calm.0", "createbrewery.thought.benzo.calm.1", "createbrewery.thought.benzo.calm.2",
+        "createbrewery.thought.benzo.calm.3", "createbrewery.thought.benzo.calm.4", "createbrewery.thought.benzo.calm.5",
+        "createbrewery.thought.benzo.calm.6", "createbrewery.thought.benzo.calm.7"};
+    private static final String[] GAP = {"createbrewery.thought.benzo.gap.0", "createbrewery.thought.benzo.gap.1", "createbrewery.thought.benzo.gap.2",
+        "createbrewery.thought.benzo.gap.3", "createbrewery.thought.benzo.gap.4"};
+    private static final String[] FORGOT = {"createbrewery.thought.benzo.forgot.0", "createbrewery.thought.benzo.forgot.1", "createbrewery.thought.benzo.forgot.2"};
+    private static final String[] REBOUND = {"createbrewery.thought.benzo.rebound.0", "createbrewery.thought.benzo.rebound.1", "createbrewery.thought.benzo.rebound.2",
+        "createbrewery.thought.benzo.rebound.3", "createbrewery.thought.benzo.rebound.4", "createbrewery.thought.benzo.rebound.5"};
 
     private static void thoughts(LocalPlayer player, float felt) {
         if (player.tickCount < nextThought || DrunkClient.trip > 0.2f || gapTicks > 0) return;
@@ -107,7 +107,7 @@ public final class BenzoClient {
     }
 
     private static void think(LocalPlayer player, String[] pool) {
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
             .withColor(pool == REBOUND ? 0xD06070 : 0xB8C8E0), true);
         nextThought = player.tickCount + 700 + player.getRandom().nextInt(800);
     }

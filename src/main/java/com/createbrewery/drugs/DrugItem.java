@@ -177,7 +177,7 @@ public class DrugItem extends Item {
                 java.util.function.Consumer<Player> dose = p -> {
                     if (!(purity.fentanyl() && kind == DrugServer.Kind.XANAX)) {
                         for (int i = 0; i < doses; i++) DrugServer.take(p, kind);
-                        if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(p, "Gestreckt… das merk ich kaum.", 0xA0A0A0);
+                        if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(p, "createbrewery.thought.cut", 0xA0A0A0);
                     }
                     if (purity.fentanyl()) Opioids.fentanyl(p);
                 };
@@ -251,7 +251,7 @@ public class DrugItem extends Item {
                 // A fake Xanax bar is only the fentanyl; laced heroin is both.
                 if (!(purity.fentanyl() && kind == DrugServer.Kind.XANAX)) {
                     for (int i = 0; i < doses; i++) DrugServer.take(p, kind);
-                    if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(p, "Gestreckt… das merk ich kaum.", 0xA0A0A0);
+                    if (doses == 0 && kind != DrugServer.Kind.WEED) DrugServer.think(p, "createbrewery.thought.cut", 0xA0A0A0);
                 }
                 if (purity.fentanyl()) Opioids.fentanyl(p);
             };

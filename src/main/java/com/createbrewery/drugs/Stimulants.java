@@ -60,7 +60,7 @@ public final class Stimulants {
         int ticks = spent ? ((DrugEffect) high.value()).fade() / 2
             : DrugEffect.doseTicks(before, high, mdma ? DrugServer.stomach(player, high, MDMA_TICKS) : METH_TICKS);
         player.addEffect(new MobEffectInstance(high, ticks, level, false, false, true));
-        if (spent) DrugServer.think(player, "Irgendwie… nicht wie letztes Mal.", 0xB08AB0);
+        if (spent) DrugServer.think(player, "createbrewery.thought.stimulants.spent", 0xB08AB0);
         // Another dose pushes the comedown back (and stills the craving, for now).
         player.removeEffect(mdma ? ModEffects.COMEDOWN : ModEffects.METH_CRASH);
         if (!mdma) {
@@ -167,8 +167,8 @@ public final class Stimulants {
         if (s.water >= 1.5f && !player.hasEffect(ModEffects.SEIZURE) && player.getRandom().nextFloat() < 0.02f) Opioids.seize(player);
     }
 
-    private static final String[] WATER = {"Mein Kopf… als würd er platzen.", "Mir ist so schlecht. Noch mehr Wasser?",
-        "Wo… bin ich nochmal?", "Ich hab doch genug getrunken… oder?"};
+    private static final String[] WATER = {"createbrewery.thought.stimulants.water.0", "createbrewery.thought.stimulants.water.1",
+        "createbrewery.thought.stimulants.water.2", "createbrewery.thought.stimulants.water.3"};
 
     /** Wasservergiftung, every second: sick to the stomach. */
     public static void waterTick(LivingEntity entity, int level) {
@@ -215,7 +215,7 @@ public final class Stimulants {
             entity.addEffect(new MobEffectInstance(ModEffects.COMEDOWN_PENDING, 36000 + entity.getRandom().nextInt(12000), 0, false, false, false));
         } else if (instance.is(ModEffects.COMEDOWN_PENDING)) {
             entity.addEffect(new MobEffectInstance(ModEffects.COMEDOWN, 3600, 0));
-            if (entity instanceof Player player) DrugServer.think(player, "Warum bin ich so… leer? Grundlos. Einfach leer.", 0x8A8AB0);
+            if (entity instanceof Player player) DrugServer.think(player, "createbrewery.thought.stimulants.empty", 0x8A8AB0);
         } else if (instance.is(ModEffects.TWEAK)) {
             entity.addEffect(new MobEffectInstance(ModEffects.METH_CRASH, 3600 + 1800 * instance.getAmplifier(), 0));
             // Meth grips hardest: the craving comes after every run, not just a binge.

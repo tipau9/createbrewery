@@ -28,7 +28,7 @@ public final class OpioidHandler {
 
     public static void expired(LivingEntity entity, MobEffectInstance instance) {
         if (instance.is(ModEffects.NALOXONE) && entity.hasEffect(ModEffects.NOD) && entity instanceof Player player) {
-            DrugServer.think(player, "Es… kommt zurück. Warm. Schwer.", 0xC8A060);
+            DrugServer.think(player, "createbrewery.thought.opioid.back", 0xC8A060);
         }
     }
 

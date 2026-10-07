@@ -83,22 +83,22 @@ public final class DmtClient {
         mc.getSoundManager().play(SimpleSoundInstance.forUI(sound, pitch, volume));
     }
 
-    private static final String[] CRACK = {"Dieses Summen… es wird lauter… LAUTER…", "Alles vibriert. Der ganze Raum.",
-        "Oh nein. Oh nein, es geht los."};
-    private static final String[] WAITING = {"Eine Blüte… sie öffnet sich… immer weiter…", "Ich falle. Nach innen.",
-        "Ein Raum. Jemand hat mich erwartet."};
-    private static final String[] ARRIVE = {"Ich bin… woanders. Das ist kein Traum.", "Eine Halle aus Licht. Sie ist riesig.",
-        "Hier war ich schon mal. Schon immer."};
-    private static final String[] BEINGS = {"Sie haben auf mich gewartet.", "Sie zeigen mir etwas.",
-        "Sie freuen sich, dass ich da bin.", "Das hier ist echter als echt."};
-    private static final String[] DESCENT = {"Wie soll ich das je jemandem erklären?", "Ich hab keine Worte dafür.",
-        "Das war… realer als alles hier."};
+    private static final String[] CRACK = {"createbrewery.thought.dmt.crack.0", "createbrewery.thought.dmt.crack.1",
+        "createbrewery.thought.dmt.crack.2"};
+    private static final String[] WAITING = {"createbrewery.thought.dmt.waiting.0", "createbrewery.thought.dmt.waiting.1",
+        "createbrewery.thought.dmt.waiting.2"};
+    private static final String[] ARRIVE = {"createbrewery.thought.dmt.arrive.0", "createbrewery.thought.dmt.arrive.1",
+        "createbrewery.thought.dmt.arrive.2"};
+    private static final String[] BEINGS = {"createbrewery.thought.dmt.beings.0", "createbrewery.thought.dmt.beings.1",
+        "createbrewery.thought.dmt.beings.2", "createbrewery.thought.dmt.beings.3"};
+    private static final String[] DESCENT = {"createbrewery.thought.dmt.descent.0", "createbrewery.thought.dmt.descent.1",
+        "createbrewery.thought.dmt.descent.2"};
 
     /** Each line once per journey, marked in {@link #said} by bit. */
     private static boolean say(LocalPlayer player, int bit, String[] pool, int colour) {
         if ((said & bit) != 0) return false;
         said |= bit;
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)])
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)])
             .withStyle(ChatFormatting.ITALIC).withColor(colour), true);
         return true;
     }

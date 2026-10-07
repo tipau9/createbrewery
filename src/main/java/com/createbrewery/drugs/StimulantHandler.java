@@ -35,13 +35,13 @@ public final class StimulantHandler {
         ResourceLocation.fromNamespaceAndPath(CreateBrewery.MOD_ID, "nosebleed"));
 
     private static final String[] CRAVING = {
-        "Nur noch eine Line…", "Eine noch, dann hör ich auf.", "Wo krieg ich jetzt noch was her?",
-        "Ohne ist alles so flach.", "Ich bin so unruhig."
+        "createbrewery.thought.stimulant.craving.0", "createbrewery.thought.stimulant.craving.1", "createbrewery.thought.stimulant.craving.2",
+        "createbrewery.thought.stimulant.craving.3", "createbrewery.thought.stimulant.craving.4"
     };
 
     private static final String[] PUND = {
-        "Noch einen. Perfekt. Noch einen.", "Genau so. Jeder gleich. Wunderschön.",
-        "Ich könnte das ewig machen.", "Ordnung. Endlich Ordnung."
+        "createbrewery.thought.stimulant.pund.0", "createbrewery.thought.stimulant.pund.1",
+        "createbrewery.thought.stimulant.pund.2", "createbrewery.thought.stimulant.pund.3"
     };
 
     public static void take(Player player, DrugServer.Kind kind) {
@@ -127,7 +127,7 @@ public final class StimulantHandler {
         } else {
             if (s.pundStreak >= 12) {
                 player.addEffect(new MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, 200, 0, false, false, true));
-                DrugServer.think(player, "Nein, nein, NEIN. Ich war noch nicht fertig. Das war noch nicht fertig.", 0xE08080);
+                DrugServer.think(player, "createbrewery.thought.stimulant.interrupted", 0xE08080);
             }
             s.pundBlock = block;
             s.pundStreak = 1;

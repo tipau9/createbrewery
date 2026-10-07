@@ -135,19 +135,19 @@ public final class TweakClient {
 
     // ---- the mind: fast ----
 
-    private static final String[] SPEED = {"Ich bau heute noch eine ganze Fabrik. Heute noch.", "So viele Ideen. SO VIELE IDEEN.",
-        "Die Kisten. Die müssen sortiert werden. Jetzt.", "Schlaf ist was für Leute ohne Pläne.", "Schneller. Alles schneller.",
-        "Ich hab alles im Griff. Alles.", "Noch einen Block. Und noch einen. Und noch einen.", "Warum sind alle so langsam?",
-        "Ich könnte das nochmal umbauen. Und nochmal. Besser.", "Konzentrier dich. Konzentrier dich. Ja. Genau das."};
-    private static final String[] TWEAKING = {"Die beobachten mich.", "Hör auf zu kratzen. Hör auf zu kratzen.",
-        "Wer hat die Tür aufgemacht?", "Ich muss wach bleiben. Wenn ich schlafe, kommen sie.", "Da ist wer. Ich weiß es.",
-        "Nicht umdrehen. Nicht umdrehen.", "Warum guckt das Schaf so?", "Ich hab seit Tagen nicht geschlafen. Oder Stunden?"};
-    private static final String[] WHAT = {"Was war das?!", "Da! Da ist was vorbei!", "Hab ich das gesehen?"};
-    private static final String[] HEARD = {"Schritte. Da sind Schritte.", "Wer ist da?", "Hallo? …Hallo?!"};
-    private static final String[] MITES = {"Da krabbelt was. Unter der Haut.", "Käfer. Überall Käfer.", "Es juckt. Es JUCKT."};
-    private static final String[] NIGHT = {"Wie, schon wieder Nacht?", "Wo ist der Tag hin?", "War nicht grad erst Morgen?"};
-    private static final String[] CRASH = {"Schlafen. Drei Tage lang.", "Mir tut alles weh.", "Nie wieder. Nie, nie wieder.",
-        "Nur noch ein bisschen… nein. Nein.", "Alles leer."};
+    private static final String[] SPEED = {"createbrewery.thought.tweak.speed.0", "createbrewery.thought.tweak.speed.1",
+        "createbrewery.thought.tweak.speed.2", "createbrewery.thought.tweak.speed.3", "createbrewery.thought.tweak.speed.4",
+        "createbrewery.thought.tweak.speed.5", "createbrewery.thought.tweak.speed.6", "createbrewery.thought.tweak.speed.7",
+        "createbrewery.thought.tweak.speed.8", "createbrewery.thought.tweak.speed.9"};
+    private static final String[] TWEAKING = {"createbrewery.thought.tweak.tweaking.0", "createbrewery.thought.tweak.tweaking.1",
+        "createbrewery.thought.tweak.tweaking.2", "createbrewery.thought.tweak.tweaking.3", "createbrewery.thought.tweak.tweaking.4",
+        "createbrewery.thought.tweak.tweaking.5", "createbrewery.thought.tweak.tweaking.6", "createbrewery.thought.tweak.tweaking.7"};
+    private static final String[] WHAT = {"createbrewery.thought.tweak.what.0", "createbrewery.thought.tweak.what.1", "createbrewery.thought.tweak.what.2"};
+    private static final String[] HEARD = {"createbrewery.thought.tweak.heard.0", "createbrewery.thought.tweak.heard.1", "createbrewery.thought.tweak.heard.2"};
+    private static final String[] MITES = {"createbrewery.thought.tweak.mites.0", "createbrewery.thought.tweak.mites.1", "createbrewery.thought.tweak.mites.2"};
+    private static final String[] NIGHT = {"createbrewery.thought.tweak.night.0", "createbrewery.thought.tweak.night.1", "createbrewery.thought.tweak.night.2"};
+    private static final String[] CRASH = {"createbrewery.thought.tweak.crash.0", "createbrewery.thought.tweak.crash.1", "createbrewery.thought.tweak.crash.2",
+        "createbrewery.thought.tweak.crash.3", "createbrewery.thought.tweak.crash.4"};
 
     private static void thoughts(LocalPlayer player, boolean on, RandomSource r) {
         if (player.tickCount < nextThought || DrunkClient.trip > 0.2f) return;
@@ -164,7 +164,7 @@ public final class TweakClient {
     }
 
     private static void think(LocalPlayer player, String[] pool) {
-        player.displayClientMessage(Component.literal(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
+        player.displayClientMessage(Component.translatable(pool[player.getRandom().nextInt(pool.length)]).withStyle(ChatFormatting.ITALIC)
             .withColor(pool == CRASH ? 0x8A8A9A : pool == SPEED ? 0x9FE3FF : 0xB07CFF), true);
         nextThought = player.tickCount + 500 + player.getRandom().nextInt(500);
     }
