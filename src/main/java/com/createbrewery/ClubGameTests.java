@@ -159,6 +159,21 @@ public class ClubGameTests {
         helper.assertTrue(Math.abs(dj.getPitch(DjBoothBlockEntity.C) - 1.04f) < 1e-4, "Pitch on Deck 3 did not set");
         dj.jogScrub(DjBoothBlockEntity.C, 20f, null);
 
+        // 7. Reset: every setting of the deck back to a new booth's
+        dj.setEq(DjBoothBlockEntity.C, DjBoothBlockEntity.LOW, 0f);
+        dj.setFilter(DjBoothBlockEntity.C, -0.7f);
+        dj.setLoop(DjBoothBlockEntity.C, 4);
+        dj.setPadMode(DjBoothBlockEntity.C, DjBoothBlockEntity.PAD_HOT_CUE);
+        dj.resetDeck(DjBoothBlockEntity.C);
+        helper.assertTrue(Math.abs(dj.getPitch(DjBoothBlockEntity.C) - 1f) < 1e-4, "Reset left the pitch");
+        helper.assertTrue(dj.getEq(DjBoothBlockEntity.C, DjBoothBlockEntity.LOW) == 0.5f, "Reset left the EQ");
+        helper.assertTrue(dj.getFilter(DjBoothBlockEntity.C) == 0f, "Reset left the filter");
+        helper.assertTrue(dj.getLoopBeats(DjBoothBlockEntity.C) == 0, "Reset left the loop");
+        helper.assertTrue(dj.getChannelFader(DjBoothBlockEntity.C) == 1f && dj.getTrim(DjBoothBlockEntity.C) == 0.5f, "Reset left fader or trim");
+        helper.assertTrue(dj.getCrossfaderAssign(DjBoothBlockEntity.C) == 0, "Reset left the crossfader side");
+        helper.assertTrue(dj.getPadMode(DjBoothBlockEntity.C) == DjBoothBlockEntity.PAD_BEAT_LOOP, "Reset left the pad mode");
+        helper.assertTrue(dj.getLoopBeats(DjBoothBlockEntity.A) == 8, "Reset touched another deck");
+
         helper.succeed();
     }
 

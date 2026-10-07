@@ -269,6 +269,7 @@
   "createbrewery.dj.playing": "▶ Playing %s: %s",
   "createbrewery.dj.quantize.tip": "Quantize Beat Snapping",
   "createbrewery.dj.reloop.tip": "Reloop / Exit",
+  "createbrewery.dj.reset.tip": "Reset this deck: pitch, EQ, filter, effect, loop, fader, trim and switches back to default. The record, cues and playback stay.",
   "createbrewery.dj.reverse_hint": "Reverse: Play track backwards",
   "createbrewery.dj.slip_hint": "Slip Mode: Track continues playing underneath scratch, loop, or reverse",
   "createbrewery.dj.stop": "■ Stop",

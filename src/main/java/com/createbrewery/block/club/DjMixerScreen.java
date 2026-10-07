@@ -422,6 +422,9 @@ public class DjMixerScreen extends Screen {
         cueHeadphones[playerIdx] = addRenderableWidget(Button.builder(Component.literal("CUE"), b -> MusicPulse.toggleCue(pos, currentDeck(isLeft)))
             .bounds(px + 86, top + 124, 30, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.cue_hint"))).build());
 
+        addRenderableWidget(Button.builder(Component.literal("RST"), b -> resetDeck(currentDeck(isLeft)))
+            .bounds(px + 120, top + 124, 30, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reset.tip"))).build());
+
         // Pad Mode Tabs: HOT CUE, LOOP, SLIP, JUMP
         String[] padLabels = {"CUE", "LOOP", "SLIP", "JUMP"};
         for (int m = 0; m < 4; m++) {
@@ -536,6 +539,29 @@ public class DjMixerScreen extends Screen {
             if (minecraft != null && minecraft.player != null) {
                 minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.4f);
             }
+        }
+    }
+
+    /** RST: the deck's settings back to default, here at once and on the server. A running loop is left where the music is. */
+    private void resetDeck(int cd) {
+        DjBoothBlockEntity dj = booth();
+        if (dj == null) return;
+        MusicPulse.Track track = MusicPulse.trackFor(pos, cd);
+        if (track != null && (dj.getLoopBeats(cd) > 0 || track.manualLoopIn >= 0)) {
+            track.deckFrame = track.getEffectiveFrame();
+            track.slipFrame = track.deckFrame;
+            track.loopLen = 0;
+            track.manualLoopIn = -1;
+            track.manualLoopOut = -1;
+            DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) track.deckFrame);
+        }
+        manualLoopIn[cd] = -1;
+        manualLoopOut[cd] = -1;
+        DjControl.send(pos, DjControl.RESET_DECK, cd, 0);
+        dj.resetDeck(cd);
+        refresh();
+        if (minecraft != null && minecraft.player != null) {
+            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.6f, 0.8f);
         }
     }
 

@@ -502,6 +502,34 @@ public class DjBoothBlockEntity extends BlockEntity {
         sync();
     }
 
+    /**
+     * The deck's knobs and switches back to how a new booth has them: pitch, EQ, filter, effect,
+     * loop, channel fader, trim, crossfader side, pad mode, vinyl, slip, reverse and master tempo.
+     * The record, its cues and the playback itself stay.
+     */
+    public void resetDeck(int deck) {
+        if (deck < 0 || deck >= DECKS) return;
+        setPitch(deck, 1f);
+        Deck d = decks[deck];
+        java.util.Arrays.fill(d.eq, 0.5f);
+        d.filter = 0f;
+        d.fx = 0;
+        d.fxAmount = 0f;
+        if (d.loopBeats > 0) {
+            d.loopBeats = 0;
+            d.loopSerial++;
+        }
+        d.fader = 1f;
+        d.trim = 0.5f;
+        d.xfAssign = deck % 2;
+        d.padMode = PAD_BEAT_LOOP;
+        d.vinylMode = true;
+        d.slipMode = false;
+        d.reverse = false;
+        d.masterTempo = true;
+        sync();
+    }
+
     public void setEq(int deck, int band, float knob) {
         if (deck < 0 || deck >= DECKS || band < 0 || band >= 3) return;
         decks[deck].eq[band] = Mth.clamp(knob, 0f, 1f);

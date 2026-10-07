@@ -28,6 +28,8 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     public static final byte MASTER_TEMPO = 39, JUMP_PLAYHEAD = 40;
     /** A beat jump measured by the client: {@code value} is the jump in song ticks (the server knows no tempo). */
     public static final byte BEAT_JUMP = 41;
+    /** The deck's settings back to default ({@link DjBoothBlockEntity#resetDeck}). */
+    public static final byte RESET_DECK = 42;
 
     public static final Type<DjControl> TYPE = new Type<>(CreateBrewery.ID("dj_control"));
     public static final StreamCodec<ByteBuf, DjControl> CODEC = StreamCodec.composite(
@@ -116,6 +118,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case MASTER_TEMPO -> dj.setMasterTempo(deck, control.value > 0.5f);
             case JUMP_PLAYHEAD -> dj.jumpPlayhead(deck, (long) control.value);
             case BEAT_JUMP -> dj.beatJump(deck, control.value);
+            case RESET_DECK -> dj.resetDeck(deck);
             default -> {}
         }
     }

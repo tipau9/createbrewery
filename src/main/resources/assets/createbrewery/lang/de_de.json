@@ -269,6 +269,7 @@
   "createbrewery.dj.playing": "▶ Spiele %s: %s",
   "createbrewery.dj.quantize.tip": "Quantize: auf den Beat einrasten",
   "createbrewery.dj.reloop.tip": "Reloop / Exit",
+  "createbrewery.dj.reset.tip": "Deck zurücksetzen: Pitch, EQ, Filter, Effekt, Loop, Fader, Trim und Schalter auf Standard. Platte, Cues und Wiedergabe bleiben.",
   "createbrewery.dj.reverse_hint": "Reverse: Track rückwärts abspielen",
   "createbrewery.dj.slip_hint": "Slip-Modus: Track läuft im Hintergrund während Scratch, Loop oder Reverse weiter",
   "createbrewery.dj.stop": "■ Stopp",
