@@ -6,7 +6,8 @@
   "client": [
     "ChannelMixin",
     "LibraryMixin",
-    "LightTextureMixin"
+    "LightTextureMixin",
+    "VoxelShadowGridMixin"
   ],
   "injectors": {
     "defaultRequire": 1
