@@ -71,8 +71,39 @@ public class SpeakerBlockEntity extends BlockEntity {
         return getClass() == SpeakerBlockEntity.class;
     }
 
-    /** Everything loaded that is linked to the booth at {@code boothPos} - speakers, subwoofers, amp racks, microphones - in position order. */
+    /** Client: this tick's links per booth, shared by all that ask every frame (the music, the rack, the mixer). */
+    private static final Map<BlockPos, List<SpeakerBlockEntity>> CACHE = new java.util.HashMap<>();
+    @Nullable
+    private static Level cacheLevel;
+    private static long cacheTick;
+
+    /**
+     * Everything loaded that is linked to the booth at {@code boothPos} - speakers, subwoofers, amp
+     * racks, microphones - in position order. Read only. On the client the same list serves a whole
+     * tick; any link made or broken clears it.
+     */
     public static List<SpeakerBlockEntity> linked(Level level, BlockPos boothPos) {
+        if (!level.isClientSide) return find(level, boothPos);
+        if (level != cacheLevel || level.getGameTime() != cacheTick) {
+            CACHE.clear();
+            cacheLevel = level;
+            cacheTick = level.getGameTime();
+        }
+        List<SpeakerBlockEntity> hit = CACHE.get(boothPos);
+        if (hit == null) {
+            hit = List.copyOf(find(level, boothPos));
+            CACHE.put(boothPos.immutable(), hit);
+        }
+        return hit;
+    }
+
+    /** Client, out of the world. */
+    public static void clearCache() {
+        CACHE.clear();
+        cacheLevel = null;
+    }
+
+    private static List<SpeakerBlockEntity> find(Level level, BlockPos boothPos) {
         List<SpeakerBlockEntity> linked = new ArrayList<>();
         Map<BlockPos, BlockPos> links = links(level);
         for (Map.Entry<BlockPos, BlockPos> link : links.entrySet()) {
@@ -101,6 +132,7 @@ public class SpeakerBlockEntity extends BlockEntity {
 
     private void register() {
         if (level == null) return;
+        if (level.isClientSide) CACHE.clear();
         if (booth == null || isRemoved()) links(level).remove(worldPosition);
         else links(level).put(worldPosition.immutable(), booth);
     }

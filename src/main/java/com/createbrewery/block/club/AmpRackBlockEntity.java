@@ -227,6 +227,7 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
             zt.putFloat("Hpf", z.hpf);
             zt.putFloat("Delay", z.delayMs);
             zt.putBoolean("Invert", z.invert);
+            zt.putBoolean("Solo", z.solo);
             zt.putFloat("Limit", z.limit);
             zones.add(zt);
         }
@@ -263,6 +264,7 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
             z.hpf = zt.getFloat("Hpf");
             z.delayMs = zt.getFloat("Delay");
             z.invert = zt.getBoolean("Invert");
+            z.solo = zt.getBoolean("Solo");
             z.limit = zt.getFloat("Limit");
         }
         long[] pos = t.getLongArray("AssignPos");

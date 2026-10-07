@@ -170,4 +170,19 @@ class AmpSettingsTest {
         assertEquals(6f, o.zones[FLOOR].gain, 0.05);
         assertEquals(0f, o.zones[SUBS].hpf);
     }
+
+    @Test
+    void aSoloSilencesTheOtherZonesButNotTheMonitor() {
+        AmpSettings s = new AmpSettings();
+        int preset = s.preset;
+        assertTrue(s.set(ZONE_SOLO, SUBS, 1f));
+        assertEquals(preset, s.preset, "solo is a check, not a new sound");
+        assertTrue(s.drive(SUBS) > 0f);
+        assertEquals(0f, s.drive(FLOOR));
+        assertTrue(s.drive(MONITOR) > 0f);
+        assertTrue(s.set(RESET, SUBS, ZONE_SOLO));
+        assertFalse(s.soloed());
+        assertTrue(s.drive(FLOOR) > 0f);
+        assertFalse(s.set(ZONE_SOLO, ZONES, 1f));
+    }
 }

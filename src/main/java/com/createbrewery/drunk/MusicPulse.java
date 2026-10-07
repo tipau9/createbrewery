@@ -92,6 +92,7 @@ public final class MusicPulse {
 
     /** Client, out of the world: the booths of the last one are gone. */
     public static void clearClub() {
+        SpeakerBlockEntity.clearCache();
         METERS.clear();
         POWER.clear();
     }

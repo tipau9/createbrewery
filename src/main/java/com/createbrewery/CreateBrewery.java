@@ -232,8 +232,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.amp.status.unlinked", "Not linked: right-click the DJ booth with the rack in hand");
         REGISTRATE.addRawLang("createbrewery.amp.status.other_rack", "Another rack drives this booth");
         REGISTRATE.addRawLang("createbrewery.amp.status.power_off", "Power is off: press POWER");
-        REGISTRATE.addRawLang("createbrewery.amp.status.too_loud", "Too loud! Turn MASTER down");
-        REGISTRATE.addRawLang("createbrewery.amp.status.at_limit", "At the limit: a little quieter");
+        REGISTRATE.addRawLang("createbrewery.amp.status.too_loud", "%s far too loud! Turn it or MASTER down");
+        REGISTRATE.addRawLang("createbrewery.amp.status.at_limit", "%s at the limit: a little quieter");
         REGISTRATE.addRawLang("createbrewery.amp.status.no_speakers", "No speakers linked: right-click the booth with speakers in hand");
         REGISTRATE.addRawLang("createbrewery.amp.status.no_subs", "No subwoofers on: the bass comes from the speakers");
         REGISTRATE.addRawLang("createbrewery.amp.status.muted", "Zone %s is muted");

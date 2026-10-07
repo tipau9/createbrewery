@@ -8,6 +8,14 @@ public final class PlayerTextLang {
     private PlayerTextLang() {}
 
     public static void register(com.simibubi.create.foundation.data.CreateRegistrate registrate) {
+        registrate.addRawLang("createbrewery.amp.clip", "CLIP");
+        registrate.addRawLang("createbrewery.amp.meter.tip", "Peak %s dB \u00b7 limiter taking off %s dB");
+        registrate.addRawLang("createbrewery.amp.section.zone", "ZONE");
+        registrate.addRawLang("createbrewery.amp.section.zones", "ZONES");
+        registrate.addRawLang("createbrewery.amp.solo", "S");
+        registrate.addRawLang("createbrewery.amp.solo.tip", "Solo: only this zone (and the DJ monitor) plays, to hear it on its own. Right-click: off.");
+        registrate.addRawLang("createbrewery.amp.status.solo", "%s is soloed: every other zone is silent");
+        registrate.addRawLang("createbrewery.amp.zones.identify", "Click: shows this speaker in the world");
         registrate.addRawLang("createbrewery.blackout.woke", "\u00a78\u00a7l...Blackout. \u00a77How did you get here? What happened?");
         registrate.addRawLang("createbrewery.bouncer.cameras_taped", "\u00a7e[Bouncer] Phones and cameras get taped over. No photos in the club!");
         registrate.addRawLang("createbrewery.bouncer.cash_collected", "\u00a7aCash box emptied: took %s emeralds.");

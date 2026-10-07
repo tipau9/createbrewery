@@ -20,12 +20,14 @@ public final class AmpSettings {
     /** What a move does; the same bytes go over the wire (see AmpControl). */
     public static final byte POWER = 0, MASTER = 1, PRESET = 2, AUTO_SETUP = 3, CROSSOVER = 4, SLOPE = 5, ALIGN = 6,
         ZONE_GAIN = 7, ZONE_MUTE = 8, ZONE_LOW = 9, ZONE_MID = 10, ZONE_HIGH = 11, ZONE_HPF = 12, ZONE_DELAY = 13,
-        ZONE_INVERT = 14, ZONE_LIMIT = 15, ASSIGN = 16, RESET = 17;
+        ZONE_INVERT = 14, ZONE_LIMIT = 15, ASSIGN = 16, RESET = 17, ZONE_SOLO = 18;
 
     /** One zone's channel: gain and EQ in dB, high-pass in Hz (0 off), delay in ms, limit in dBFS. */
     public static final class Zone {
         public float gain, low, mid, high, hpf, delayMs, limit;
         public boolean mute, invert;
+        /** Only the soloed zones play (and the DJ monitor): to hear one zone on its own. */
+        public boolean solo;
     }
 
     /** A top's zone, and whether a person put it there (the background sort leaves those alone). */
@@ -74,6 +76,12 @@ public final class AmpSettings {
     /** A move from the screen or a packet; false if it was refused or is not a settings move. */
     public boolean set(byte action, int zone, float v) {
         if (!Float.isFinite(v)) return false;
+        if (action == ZONE_SOLO) {
+            // A check, not a sound of its own: the preset stays lit.
+            if (zone < 0 || zone >= ZONES) return false;
+            zones[zone].solo = v > 0.5f;
+            return true;
+        }
         if ((zoneAction(action) || action == RESET) && (zone < 0 || zone >= ZONES)) return false;
         Zone z = zoneAction(action) ? zones[zone] : null;
         switch (action) {
@@ -131,6 +139,7 @@ public final class AmpSettings {
             case ZONE_DELAY -> z.delayMs;
             case ZONE_INVERT -> z.invert ? 1 : 0;
             case ZONE_LIMIT -> z.limit;
+            case ZONE_SOLO -> z.solo ? 1 : 0;
             default -> 0;
         };
     }
@@ -165,10 +174,17 @@ public final class AmpSettings {
         preset = p < 0 || p > CUSTOM ? CUSTOM : p;
     }
 
-    /** How hard a zone is driven, as a gain: master times the zone's fader; 0 muted or at the bottom. */
+    /** Whether any zone is soloed. */
+    public boolean soloed() {
+        for (Zone z : zones) if (z.solo) return true;
+        return false;
+    }
+
+    /** How hard a zone is driven, as a gain: master times the zone's fader; 0 muted, at the bottom, or another zone soloed. */
     public float drive(int zone) {
         Zone z = zones[zone];
         if (z.mute || z.gain <= MIN_GAIN) return 0f;
+        if (zone != MONITOR && !z.solo && soloed()) return 0f;
         return lin(z.gain + master);
     }
 

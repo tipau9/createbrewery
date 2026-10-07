@@ -10,7 +10,9 @@ class AmpStatusTest {
     private static final boolean[] NONE_MUTED = new boolean[ZONES];
 
     private static AmpStatus.Status of(boolean linked, boolean other, boolean power, float limit, int[] counts, boolean[] muted) {
-        return AmpStatus.of(linked, other, power, limit, counts, muted);
+        float[] limits = new float[ZONES];
+        limits[FLOOR] = limit;
+        return AmpStatus.of(linked, other, power, limits, counts, new boolean[ZONES], muted);
     }
 
     @Test
@@ -32,6 +34,27 @@ class AmpStatusTest {
         assertEquals(AmpStatus.Light.YELLOW, limit.light());
         assertEquals("no_speakers", of(true, false, true, 0.5f, new int[] {0, 0, 0, 0, 1}, NONE_MUTED).key());
         assertEquals("no_subs", of(true, false, true, 0f, new int[] {3, 0, 0, 0, 1}, NONE_MUTED).key());
+    }
+
+    @Test
+    void theLimitNamesTheLoudestZone() {
+        float[] limits = new float[ZONES];
+        limits[SUBS] = 2f;
+        limits[ROOM] = 7f;
+        AmpStatus.Status s = AmpStatus.of(true, false, true, limits, RIG, new boolean[ZONES], NONE_MUTED);
+        assertEquals("too_loud", s.key());
+        assertEquals(ROOM, s.zone());
+    }
+
+    @Test
+    void aSoloLeftOnIsShownBeforeAMute() {
+        boolean[] solo = new boolean[ZONES], muted = new boolean[ZONES];
+        solo[SUBS] = true;
+        muted[FLOOR] = true;
+        AmpStatus.Status s = AmpStatus.of(true, false, true, new float[ZONES], RIG, solo, muted);
+        assertEquals("solo", s.key());
+        assertEquals(SUBS, s.zone());
+        assertEquals(AmpStatus.Light.YELLOW, s.light());
     }
 
     @Test

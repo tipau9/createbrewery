@@ -12,6 +12,9 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
@@ -29,7 +32,7 @@ import java.util.function.Function;
  * {@link AmpControl}) and is heard here at once. Client only.
  */
 public class AmpRackScreen extends Screen {
-    private static final int W = 300, H = 214;
+    private static final int W = 340, H = 228;
     private static final int SIMPLE = 0, ZONES = 1, EXPERT = 2;
     private static final String[] TABS = {"createbrewery.amp.tab.simple", "createbrewery.amp.tab.zones", "createbrewery.amp.tab.expert"};
     private static final int ROW = 14;
@@ -41,6 +44,9 @@ public class AmpRackScreen extends Screen {
     private final List<AbstractWidget> tabButtons = new ArrayList<>();
     private List<Row> rows = List.of();
     private int subCount;
+    /** The speaker picked on the Zones page to be shown in the world, and for how many more ticks. */
+    private BlockPos identify;
+    private int identifyTicks;
 
     /** A top on the Zones page. */
     private record Row(BlockPos pos, int distance, Direction dir, int zone, boolean manual) {}
@@ -65,9 +71,14 @@ public class AmpRackScreen extends Screen {
         AmpRackBlockEntity driver = booth == null ? null : AmpRackBlockEntity.driving(level, booth);
         AmpMeters m = booth == null ? null : MusicPulse.meters(booth);
         AmpSettings s = rack.settings();
-        boolean[] muted = new boolean[AmpSettings.ZONES];
-        for (int z = 0; z < AmpSettings.ZONES; z++) muted[z] = s.zones[z].mute;
-        return AmpStatus.of(booth != null, driver != null && driver != rack, s.power, m == null ? 0f : m.worstLimit(), rack.zoneCounts(), muted);
+        boolean[] muted = new boolean[AmpSettings.ZONES], solo = new boolean[AmpSettings.ZONES];
+        float[] limits = new float[AmpSettings.ZONES];
+        for (int z = 0; z < AmpSettings.ZONES; z++) {
+            muted[z] = s.zones[z].mute;
+            solo[z] = s.zones[z].solo;
+            limits[z] = m == null ? 0f : m.limitDb(z);
+        }
+        return AmpStatus.of(booth != null, driver != null && driver != rack, s.power, limits, rack.zoneCounts(), solo, muted);
     }
 
     static int color(AmpStatus.Light light) {
@@ -124,12 +135,12 @@ public class AmpRackScreen extends Screen {
             on -> Component.translatable("createbrewery.amp.power").withStyle(on ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY),
             "createbrewery.amp.power.tip");
         addRenderableWidget(Button.builder(Component.translatable("createbrewery.amp.auto"), b -> send(AmpSettings.AUTO_SETUP, 0, 1f))
-            .bounds(left + 76, top + 42, 216, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.amp.auto.tip"))).build());
-        new Slider(left + 8, top + 62, 284, AmpSettings.MASTER, 0, AmpSettings.MIN_MASTER, AmpSettings.MAX_MASTER, false, false, "createbrewery.amp.master.tip");
+            .bounds(left + 76, top + 42, W - 84, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.amp.auto.tip"))).build());
+        new Slider(left + 8, top + 62, W - 16, AmpSettings.MASTER, 0, AmpSettings.MIN_MASTER, AmpSettings.MAX_MASTER, false, false, "createbrewery.amp.master.tip");
         for (int p = 0; p < AmpSettings.CUSTOM; p++) {
             int preset = p;
             Button b = addRenderableWidget(Button.builder(Component.empty(), btn -> send(AmpSettings.PRESET, 0, preset))
-                .bounds(left + 8 + p * 72, top + 82, 68, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.amp.preset.tip"))).build());
+                .bounds(left + 8 + p * 82, top + 82, 78, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.amp.preset.tip"))).build());
             refresh.add(() -> {
                 AmpRackBlockEntity now = rack();
                 boolean lit = now != null && now.settings().preset == preset;
@@ -137,12 +148,19 @@ public class AmpRackScreen extends Screen {
             });
         }
         for (int z = 0; z < AmpSettings.ZONES; z++) {
-            int y = top + 114 + z * 19;
-            new Slider(left + 8, y, 170, AmpSettings.ZONE_GAIN, z, AmpSettings.MIN_GAIN, AmpSettings.MAX_GAIN, false, false, "createbrewery.amp.zone.tip." + z);
-            toggle(left + 182, y, 20, 16, AmpSettings.ZONE_MUTE, z,
+            int y = zoneRow(z);
+            new Slider(left + 8, y, 160, AmpSettings.ZONE_GAIN, z, AmpSettings.MIN_GAIN, AmpSettings.MAX_GAIN, false, false, "createbrewery.amp.zone.tip." + z);
+            toggle(left + 172, y, 18, 16, AmpSettings.ZONE_MUTE, z,
                 on -> Component.translatable("createbrewery.amp.mute").withStyle(on ? ChatFormatting.RED : ChatFormatting.GRAY),
                 "createbrewery.amp.mute.tip");
+            toggle(left + 192, y, 18, 16, AmpSettings.ZONE_SOLO, z,
+                on -> Component.translatable("createbrewery.amp.solo").withStyle(on ? ChatFormatting.YELLOW : ChatFormatting.GRAY),
+                "createbrewery.amp.solo.tip");
         }
+    }
+
+    private int zoneRow(int zone) {
+        return top + 116 + zone * 19;
     }
 
     private void initExpert() {
@@ -151,24 +169,24 @@ public class AmpRackScreen extends Screen {
             Button b = addRenderableWidget(Button.builder(zoneName(z), btn -> {
                 expertZone = zone;
                 rebuildWidgets();
-            }).bounds(left + 8 + z * 57, top + 24, 55, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.amp.zone.tip." + z))).build());
+            }).bounds(left + 8 + z * 65, top + 24, 63, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.amp.zone.tip." + z))).build());
             b.active = expertZone != z;
         }
         int z = expertZone;
-        new Slider(left + 8, top + 44, 140, AmpSettings.ZONE_LOW, z, -AmpSettings.MAX_EQ, AmpSettings.MAX_EQ, false, false, "createbrewery.amp.low.tip");
-        new Slider(left + 152, top + 44, 140, AmpSettings.ZONE_MID, z, -AmpSettings.MAX_EQ, AmpSettings.MAX_EQ, false, false, "createbrewery.amp.mid.tip");
-        new Slider(left + 8, top + 64, 140, AmpSettings.ZONE_HIGH, z, -AmpSettings.MAX_EQ, AmpSettings.MAX_EQ, false, false, "createbrewery.amp.high.tip");
-        new Slider(left + 152, top + 64, 140, AmpSettings.ZONE_HPF, z, AmpSettings.MIN_HPF, AmpSettings.MAX_HPF, true, true, "createbrewery.amp.hpf.tip");
-        new Slider(left + 8, top + 84, 140, AmpSettings.ZONE_DELAY, z, 0, AmpSettings.MAX_DELAY, false, false, "createbrewery.amp.delay.tip");
-        new Slider(left + 152, top + 84, 140, AmpSettings.ZONE_LIMIT, z, AmpSettings.MIN_LIMIT, 0, false, false, "createbrewery.amp.limit.tip");
-        toggle(left + 8, top + 104, 140, 16, AmpSettings.ZONE_INVERT, z,
+        new Slider(left + 8, top + 44, 160, AmpSettings.ZONE_LOW, z, -AmpSettings.MAX_EQ, AmpSettings.MAX_EQ, false, false, "createbrewery.amp.low.tip");
+        new Slider(left + 172, top + 44, 160, AmpSettings.ZONE_MID, z, -AmpSettings.MAX_EQ, AmpSettings.MAX_EQ, false, false, "createbrewery.amp.mid.tip");
+        new Slider(left + 8, top + 64, 160, AmpSettings.ZONE_HIGH, z, -AmpSettings.MAX_EQ, AmpSettings.MAX_EQ, false, false, "createbrewery.amp.high.tip");
+        new Slider(left + 172, top + 64, 160, AmpSettings.ZONE_HPF, z, AmpSettings.MIN_HPF, AmpSettings.MAX_HPF, true, true, "createbrewery.amp.hpf.tip");
+        new Slider(left + 8, top + 84, 160, AmpSettings.ZONE_DELAY, z, 0, AmpSettings.MAX_DELAY, false, false, "createbrewery.amp.delay.tip");
+        new Slider(left + 172, top + 84, 160, AmpSettings.ZONE_LIMIT, z, AmpSettings.MIN_LIMIT, 0, false, false, "createbrewery.amp.limit.tip");
+        toggle(left + 8, top + 104, 160, 16, AmpSettings.ZONE_INVERT, z,
             on -> Component.translatable("createbrewery.amp.invert", Component.translatable(on ? "createbrewery.amp.invert.on" : "createbrewery.amp.invert.off")),
             "createbrewery.amp.invert.tip");
-        new Slider(left + 8, top + 140, 284, AmpSettings.CROSSOVER, 0, AmpSettings.MIN_CROSSOVER, AmpSettings.MAX_CROSSOVER, true, false, "createbrewery.amp.crossover.tip");
-        toggle(left + 8, top + 160, 140, 16, AmpSettings.SLOPE, 0,
+        new Slider(left + 8, top + 140, W - 16, AmpSettings.CROSSOVER, 0, AmpSettings.MIN_CROSSOVER, AmpSettings.MAX_CROSSOVER, true, false, "createbrewery.amp.crossover.tip");
+        toggle(left + 8, top + 160, 160, 16, AmpSettings.SLOPE, 0,
             on -> Component.translatable("createbrewery.amp.slope", Component.translatable("createbrewery.amp.slope." + (on ? 1 : 0))),
             "createbrewery.amp.slope.tip");
-        toggle(left + 152, top + 160, 140, 16, AmpSettings.ALIGN, 0,
+        toggle(left + 172, top + 160, 160, 16, AmpSettings.ALIGN, 0,
             on -> Component.translatable("createbrewery.amp.align", net.minecraft.network.chat.CommonComponents.optionStatus(on)),
             "createbrewery.amp.align.tip");
     }
@@ -208,6 +226,31 @@ public class AmpRackScreen extends Screen {
         }
         refresh.forEach(Runnable::run);
         if (tab == ZONES) rows = rows(r);
+        tickIdentify();
+    }
+
+    /** Shows a speaker in the world: a bell from it and a column of light rising out of it, for five seconds. */
+    private void identify(BlockPos speaker) {
+        identify = speaker;
+        identifyTicks = 100;
+    }
+
+    private void tickIdentify() {
+        if (identify == null) return;
+        if (--identifyTicks <= 0) {
+            identify = null;
+            return;
+        }
+        Level level = minecraft.level;
+        Vec3 c = Vec3.atCenterOf(identify);
+        if (identifyTicks % 20 == 19) {
+            level.playLocalSound(c.x, c.y, c.z, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 1f, 1.5f, false);
+            level.addParticle(ParticleTypes.NOTE, c.x, c.y + 0.9, c.z, (identifyTicks % 24) / 24.0, 0, 0);
+        }
+        for (int i = 0; i < 2; i++) {
+            level.addParticle(ParticleTypes.END_ROD, c.x + (level.random.nextDouble() - 0.5) * 0.7, c.y + 0.6,
+                c.z + (level.random.nextDouble() - 0.5) * 0.7, 0, 0.12, 0);
+        }
     }
 
     private List<Row> rows(AmpRackBlockEntity r) {
@@ -233,9 +276,16 @@ public class AmpRackScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+        // No blur: the club stays in sight while you tune it (and a speaker you pick lights up in it).
         g.fill(left, top, left + W, top + H, 0xE80E0F13);
+        g.fill(left, top, left + W, top + 21, 0xFF16171D);
         g.renderOutline(left, top, W, H, 0xFF3A3A48);
+    }
+
+    /** A small grey heading with a rule running to the right edge. */
+    private void section(GuiGraphics g, Component text, int y) {
+        g.drawString(font, text, left + 8, y, 0x777777, false);
+        g.fill(left + 12 + font.width(text), y + 4, left + W - 8, y + 5, 0xFF2A2B36);
     }
 
     @Override
@@ -247,36 +297,96 @@ public class AmpRackScreen extends Screen {
         AmpRackBlockEntity driver = r.getBooth() == null ? null : AmpRackBlockEntity.driving(minecraft.level, r.getBooth());
         if (driver != null && driver != r) {
             BlockPos d = driver.getBlockPos();
-            g.drawCenteredString(font, Component.translatable("createbrewery.amp.readonly", d.getX(), d.getY(), d.getZ()), left + W / 2, top + H - 12, 0xFF6060);
+            g.drawCenteredString(font, Component.translatable("createbrewery.amp.readonly", d.getX(), d.getY(), d.getZ()), left + W / 2, top + H - 11, 0xFF6060);
         }
-        if (tab == SIMPLE) renderSimple(g, r);
+        if (tab == SIMPLE) renderSimple(g, r, mouseX, mouseY);
         else if (tab == ZONES) renderZones(g, mouseX, mouseY);
-        else g.drawString(font, Component.translatable("createbrewery.amp.system"), left + 8, top + 128, 0xAAAAAA);
-        if (tab == EXPERT) g.drawCenteredString(font, Component.translatable("createbrewery.amp.reset_hint"), left + W / 2, top + 184, 0x666666);
+        else renderExpert(g, r, mouseX, mouseY);
     }
 
-    private void renderSimple(GuiGraphics g, AmpRackBlockEntity r) {
+    private void renderExpert(GuiGraphics g, AmpRackBlockEntity r, int mouseX, int mouseY) {
+        section(g, Component.translatable("createbrewery.amp.system"), top + 128);
+        g.drawCenteredString(font, Component.translatable("createbrewery.amp.reset_hint"), left + W / 2, top + 184, 0x666666);
+        // The zone being set, as it plays right now.
+        if (r.zoneCounts()[expertZone] > 0) {
+            AmpMeters m = r.getBooth() == null ? null : MusicPulse.meters(r.getBooth());
+            meterWithReadout(g, left + 172, top + 107, 124, m, expertZone, mouseX, mouseY);
+        }
+    }
+
+    private void renderSimple(GuiGraphics g, AmpRackBlockEntity r, int mouseX, int mouseY) {
         AmpStatus.Status st = status(minecraft.level, r);
         int col = color(st.light());
+        g.fill(left + 75, top + 25, left + 87, top + 37, 0xFF000000);
         g.fill(left + 76, top + 26, left + 86, top + 36, 0xFF000000 | col);
-        g.drawString(font, message(st), left + 90, top + 27, col);
-        if (r.settings().preset == AmpSettings.CUSTOM) g.drawString(font, Component.translatable("createbrewery.amp.preset.custom"), left + 8, top + 100, 0x888888);
+        g.drawString(font, message(st), left + 92, top + 27, col);
+        section(g, Component.translatable("createbrewery.amp.section.zones"), top + 104);
+        if (r.settings().preset == AmpSettings.CUSTOM) {
+            Component custom = Component.translatable("createbrewery.amp.preset.custom");
+            int x = left + W - 8 - font.width(custom);
+            g.fill(x - 4, top + 102, left + W - 6, top + 113, 0xFF0E0F13);
+            g.drawString(font, custom, x, top + 104, 0x888888, false);
+        }
         int[] counts = r.zoneCounts();
         AmpMeters m = r.getBooth() == null ? null : MusicPulse.meters(r.getBooth());
         for (int z = 0; z < AmpSettings.ZONES; z++) {
-            int y = top + 114 + z * 19;
-            if (counts[z] == 0) g.drawString(font, Component.translatable("createbrewery.amp.none"), left + 208, y + 4, 0x666666);
-            else meter(g, left + 206, y + 3, 86, 10, m, z);
+            int y = zoneRow(z);
+            if (counts[z] == 0) g.drawString(font, Component.translatable("createbrewery.amp.none"), left + 218, y + 4, 0x666666);
+            else meterWithReadout(g, left + 216, y + 3, 80, m, z, mouseX, mouseY);
         }
     }
 
+    /**
+     * A zone's meter and, right of it, what the limiter is doing: nothing while it rests, how many
+     * dB it takes off while it works, a flashing CLIP when it is slammed. Hover for both numbers.
+     */
+    private void meterWithReadout(GuiGraphics g, int x, int y, int w, AmpMeters m, int zone, int mouseX, int mouseY) {
+        meter(g, x, y, w, 10, m, zone);
+        float lim = m == null ? 0f : m.limitDb(zone);
+        int tx = x + w + 4;
+        if (lim > 6f) {
+            if (minecraft.player.tickCount / 4 % 2 == 0) g.drawString(font, Component.translatable("createbrewery.amp.clip"), tx, y + 1, 0xFF4040, false);
+        } else if (lim >= 0.5f) {
+            g.drawString(font, String.format("-%.1f", lim), tx, y + 1, lim >= 1f ? 0xF0C030 : 0x999999, false);
+        } else if (m != null && m.peakDb(zone) > AmpMeters.FLOOR_DB) {
+            g.drawString(font, String.format("%.0f", m.peakDb(zone)), tx, y + 1, 0x5A5A66, false);
+        }
+        if (m != null && mouseX >= x && mouseX < tx + 30 && mouseY >= y - 2 && mouseY < y + 12) {
+            g.renderTooltip(font, Component.translatable("createbrewery.amp.meter.tip", String.format("%.1f", m.peakDb(zone)), String.format("%.1f", lim)), mouseX, mouseY);
+        }
+    }
+
+    /** Green to -6 dB, yellow to -1, red above, like a rack's LEDs; the limiter's work along the bottom from the right. */
     private static void meter(GuiGraphics g, int x, int y, int w, int h, AmpMeters m, int zone) {
-        g.fill(x, y, x + w, y + h, 0xFF101010);
-        if (m == null) return;
-        float p = m.peakDb(zone);
-        int fill = (int) (w * Math.max(0f, (p - AmpMeters.FLOOR_DB) / -AmpMeters.FLOOR_DB));
-        int col = m.limitDb(zone) >= 1f ? 0xFFFF4040 : p > -6f ? 0xFFF0C030 : 0xFF40D060;
-        g.fill(x, y, x + fill, y + h, col);
+        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF2A2B36);
+        g.fill(x, y, x + w, y + h, 0xFF0A0A0C);
+        if (m != null) {
+            int fill = px(m.peakDb(zone), w), yellow = px(-6f, w), red = px(-1f, w);
+            g.fill(x, y, x + Math.min(fill, yellow), y + h, 0xFF40D060);
+            if (fill > yellow) g.fill(x + yellow, y, x + Math.min(fill, red), y + h, 0xFFF0C030);
+            if (fill > red) g.fill(x + red, y, x + fill, y + h, 0xFFFF4040);
+            float lim = m.limitDb(zone);
+            if (lim > 0.1f) {
+                int gr = (int) Math.min(w, w * lim / 12f);
+                g.fill(x + w - gr, y + h - 2, x + w, y + h, 0xFFFF6040);
+            }
+        }
+        for (float db : new float[] {-24, -12, -6, -3}) {
+            int t = x + px(db, w);
+            g.fill(t, y, t + 1, y + h, 0x70000000);
+        }
+    }
+
+    private static int px(float db, int w) {
+        return (int) (w * Math.max(0f, Math.min(1f, (db - AmpMeters.FLOOR_DB) / -AmpMeters.FLOOR_DB)));
+    }
+
+    private static int zoneColor(int zone) {
+        return switch (zone) {
+            case AmpSettings.DELAY -> 0xFF2A3F66;
+            case AmpSettings.ROOM -> 0xFF4A2F60;
+            default -> 0xFF2A5236;
+        };
     }
 
     private void renderZones(GuiGraphics g, int mouseX, int mouseY) {
@@ -288,32 +398,41 @@ public class AmpRackScreen extends Screen {
         for (int i = 0; i < visible && i + scroll < rows.size(); i++) {
             Row row = rows.get(i + scroll);
             int y = y0 + i * ROW;
-            if (row.pos().equals(looked)) g.fill(left + 4, y - 1, left + W - 4, y + ROW - 2, 0x40FFFFFF);
+            boolean shown = row.pos().equals(identify);
+            boolean name = mouseX >= left + 6 && mouseX < left + 214 && mouseY >= y - 1 && mouseY < y + ROW - 2;
+            if (shown) g.fill(left + 4, y - 1, left + W - 4, y + ROW - 2, 0x5040A0FF);
+            else if (row.pos().equals(looked)) g.fill(left + 4, y - 1, left + W - 4, y + ROW - 2, 0x40FFFFFF);
+            else if (name) g.fill(left + 4, y - 1, left + 214, y + ROW - 2, 0x20FFFFFF);
             g.drawString(font, Component.translatable("createbrewery.amp.row", row.distance(),
-                Component.translatable("createbrewery.amp.dir." + row.dir().getName())), left + 10, y + 2, 0xDDDDDD);
-            boolean hover = mouseX >= left + 190 && mouseX < left + 280 && mouseY >= y && mouseY < y + ROW - 2;
-            g.fill(left + 190, y, left + 280, y + ROW - 2, hover ? 0xFF3A3F50 : 0xFF262A35);
-            g.drawCenteredString(font, zoneName(row.zone()), left + 235, y + 2, 0xFFFFFF);
-            if (!row.manual()) g.drawString(font, Component.translatable("createbrewery.amp.zones.auto"), left + 284, y + 2, 0x888888);
+                Component.translatable("createbrewery.amp.dir." + row.dir().getName())), left + 10, y + 2, shown ? 0x9FD0FF : 0xDDDDDD);
+            boolean hover = mouseX >= left + 218 && mouseX < left + 308 && mouseY >= y && mouseY < y + ROW - 2;
+            g.fill(left + 218, y, left + 308, y + ROW - 2, hover ? 0xFF3A3F50 : zoneColor(row.zone()));
+            g.drawCenteredString(font, zoneName(row.zone()), left + 263, y + 2, 0xFFFFFF);
+            if (!row.manual()) g.drawString(font, Component.translatable("createbrewery.amp.zones.auto"), left + 312, y + 2, 0x888888);
         }
         g.drawString(font, Component.translatable("createbrewery.amp.zones.subs", subCount), left + 10, top + H - 26, 0x888888);
-        if (mouseX >= left + 190 && mouseX < left + 280 && mouseY >= y0 && mouseY < y0 + visible * ROW) {
-            g.renderTooltip(font, Component.translatable("createbrewery.amp.zones.tip"), mouseX, mouseY);
+        if (mouseY >= y0 && mouseY < y0 + Math.min(visible, rows.size() - scroll) * ROW) {
+            if (mouseX >= left + 218 && mouseX < left + 308) g.renderTooltip(font, Component.translatable("createbrewery.amp.zones.tip"), mouseX, mouseY);
+            else if (mouseX >= left + 6 && mouseX < left + 214) g.renderTooltip(font, Component.translatable("createbrewery.amp.zones.identify"), mouseX, mouseY);
         }
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         AmpRackBlockEntity r = rack();
-        if (tab == ZONES && button == 0 && r != null && !readOnly(r) && mx >= left + 190 && mx < left + 280) {
-            int i = (int) ((my - (top + 26)) / ROW);
-            if (my >= top + 26 && i >= 0 && i < (H - 56) / ROW && i + scroll < rows.size()) {
-                Row row = rows.get(i + scroll);
-                int next = row.zone() == AmpSettings.FLOOR ? AmpSettings.DELAY : row.zone() == AmpSettings.DELAY ? AmpSettings.ROOM : AmpSettings.FLOOR;
-                send(AmpSettings.ASSIGN, next, 0f, row.pos());
-                rows = rows(r);
-                return true;
-            }
+        int i = (int) Math.floor((my - (top + 26)) / ROW);
+        boolean onRow = tab == ZONES && button == 0 && r != null && i >= 0 && i < (H - 56) / ROW && i + scroll < rows.size();
+        // Anyone may look where a speaker is, even at a rack that only watches.
+        if (onRow && mx >= left + 6 && mx < left + 214) {
+            identify(rows.get(i + scroll).pos());
+            return true;
+        }
+        if (onRow && !readOnly(r) && mx >= left + 218 && mx < left + 308) {
+            Row row = rows.get(i + scroll);
+            int next = row.zone() == AmpSettings.FLOOR ? AmpSettings.DELAY : row.zone() == AmpSettings.DELAY ? AmpSettings.ROOM : AmpSettings.FLOOR;
+            send(AmpSettings.ASSIGN, next, 0f, row.pos());
+            rows = rows(r);
+            return true;
         }
         return super.mouseClicked(mx, my, button);
     }
