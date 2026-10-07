@@ -43,7 +43,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         float kickBoost = Math.max(Math.max(be.getKick() * 0.8f, drop * 1.2f), beat);
 
         Vec3 center = Vec3.atCenterOf(pos);
-        Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.46));
+        // Out of the lens on top of the model, 14 sixteenths up as it lies on the floor.
+        Vec3 startWorld = center.add(Vec3.atLowerCornerOf(facing.getNormal()).scale(StrobeLightRenderer.LENS));
 
         float[][] beams = aim(be, partialTick, beat, drop);
         // Through haze the beams stand out; without any they look as they always did.

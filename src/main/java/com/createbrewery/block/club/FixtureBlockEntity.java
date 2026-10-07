@@ -229,7 +229,7 @@ public class FixtureBlockEntity extends BlockEntity {
             float[] aim;
             Vec3 focus = linked == null ? null : linked.focusPoint(settings.position, group);
             if (focus != null) {
-                Vec3 d = focus.subtract(lens(facing));
+                Vec3 d = focus.subtract(pivot(facing));
                 double[] a = LaserBeams.aimAt(facing.getStepX(), facing.getStepY(), facing.getStepZ(), d.x, d.y, d.z);
                 aim = new float[] {(float) a[0], (float) a[1]};
             } else {
@@ -290,9 +290,12 @@ public class FixtureBlockEntity extends BlockEntity {
     private void castBeams(Direction facing) {
         beams = prism ? 3 : 1;
         Vec3 from = lens(facing);
+        boolean head = kind() == FixtureBlock.Kind.MOVING_HEAD;
         for (int b = 0; b < beams; b++) {
             Vec3 dir = beamDirection(b, 1f);
-            BlockHitResult h = level.clip(new ClipContext(from, from.add(dir.scale(RANGE)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+            // A head's lens is inside its own collision box, which would stop the beam at once: the ray starts past it.
+            Vec3 start = head ? pivot(facing).add(dir.scale(0.6)) : from;
+            BlockHitResult h = level.clip(new ClipContext(start, from.add(dir.scale(RANGE)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
             beamLen[b] = h.getType() == HitResult.Type.MISS ? (float) RANGE : (float) h.getLocation().distanceTo(from);
             beamHits[b] = h.getType() == HitResult.Type.MISS ? null : h;
         }
@@ -340,8 +343,32 @@ public class FixtureBlockEntity extends BlockEntity {
         return pixelColors[i];
     }
 
+    /** The middle of a moving head's head (its model: 5 to 14 sixteenths up), what it turns around; and how far its lens sits from there. */
+    private static final double HEAD_PIVOT = 9.5 / 16 - 0.5, HEAD_RADIUS = 0.26;
+
     Vec3 lens(Direction facing) {
-        return Vec3.atCenterOf(worldPosition).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.4));
+        return lens(facing, 1f);
+    }
+
+    /**
+     * Where the beam leaves the housing: on the face of the model (the models lie on the floor,
+     * lens up), a hair out so it is not hidden in it. A moving head's beam leaves its head on the
+     * side it points to.
+     */
+    Vec3 lens(Direction facing, float partialTick) {
+        Vec3 n = Vec3.atLowerCornerOf(facing.getNormal());
+        Vec3 c = Vec3.atCenterOf(worldPosition);
+        return switch (kind()) {
+            case MOVING_HEAD -> pivot(facing).add(direction(facing, partialTick).scale(HEAD_RADIUS));
+            case PAR -> c.add(n.scale(12 / 16.0 - 0.5 + 0.01));
+            case BLINDER -> c.add(n.scale(6 / 16.0 - 0.5 + 0.01));
+            case LED_BAR -> c.add(n.scale(4 / 16.0 - 0.5 + 0.01));
+        };
+    }
+
+    /** What a moving head turns around. */
+    private Vec3 pivot(Direction facing) {
+        return Vec3.atCenterOf(worldPosition).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(HEAD_PIVOT));
     }
 
     /** Which way the beam goes: the facing, panned and tilted for a moving head, or as the wrench turned it. */

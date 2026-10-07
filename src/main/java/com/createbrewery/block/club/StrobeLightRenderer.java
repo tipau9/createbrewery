@@ -18,6 +18,9 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlockEntity> {
+    /** How far out of the block centre the lens face is (the model is 14 sixteenths tall), a hair out. */
+    static final double LENS = 14 / 16.0 - 0.5 + 0.01;
+
 
     public StrobeLightRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -33,7 +36,8 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
         Level level = be.getLevel();
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         Vec3 cameraPos = camera.getPosition();
-        Vec3 worldLens = Vec3.atCenterOf(be.getBlockPos()).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(0.52));
+        // The lens is the top of the model, 14 sixteenths up as it lies on the floor.
+        Vec3 worldLens = Vec3.atCenterOf(be.getBlockPos()).add(Vec3.atLowerCornerOf(facing.getNormal()).scale(LENS));
 
         // Check if the lens is directly visible from camera (not behind a solid wall or closed door)
         boolean lensVisible = level == null || !StrobeFlash.isLightOccluded(level, worldLens, cameraPos, Minecraft.getInstance().player);
@@ -72,7 +76,7 @@ public class StrobeLightRenderer implements BlockEntityRenderer<StrobeLightBlock
 
         // 2. The flash halo on the lens: only rendered when line of sight to the lens is unoccluded
         if (lensVisible) {
-            Vec3 lens = new Vec3(0.5 + facing.getStepX() * 0.52, 0.5 + facing.getStepY() * 0.52, 0.5 + facing.getStepZ() * 0.52);
+            Vec3 lens = new Vec3(0.5 + facing.getStepX() * LENS, 0.5 + facing.getStepY() * LENS, 0.5 + facing.getStepZ() * LENS);
             pose.pushPose();
             pose.translate(lens.x, lens.y, lens.z);
             pose.mulPose(camera.rotation());

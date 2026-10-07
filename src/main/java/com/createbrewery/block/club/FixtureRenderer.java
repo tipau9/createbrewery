@@ -31,11 +31,11 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
         float r = (c >> 16 & 255) / 255f, g = (c >> 8 & 255) / 255f, b = (c & 255) / 255f;
         VertexConsumer v = buffers.getBuffer(ClubRenderTypes.GLOW);
         Vec3 dir = be.direction(facing, partialTick);
-        Vec3 lens = be.lens(facing).subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
+        Vec3 lens = be.lens(facing, partialTick).subtract(Vec3.atLowerCornerOf(be.getBlockPos()));
         Vec3 side = Math.abs(facing.getStepY()) > 0 ? new Vec3(1, 0, 0) : new Vec3(-facing.getStepZ(), 0, facing.getStepX());
         float len = be.beam();
         // Through haze the beams stand out (where the beam is, not only at the fixture); without any they look as they always did.
-        Vec3 lensWorld = be.lens(facing);
+        Vec3 lensWorld = be.lens(facing, partialTick);
         haze = hazeAlong(be.getLevel(), lensWorld, dir, len);
 
         switch (be.kind()) {
