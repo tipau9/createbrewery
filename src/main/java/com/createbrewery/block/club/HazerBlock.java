@@ -69,6 +69,19 @@ public class HazerBlock extends Block implements EntityBlock {
     }
 
     @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                                                  net.minecraft.world.InteractionHand hand, BlockHitResult hit) {
+        if (ConsoleLink.holdsLink(stack)) return ConsoleLink.use(level, pos, player, stack);
+        return super.useItemOn(stack, state, level, pos, player, hand, hit);
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        ConsoleLink.onPlaced(level, pos, placer, stack);
+    }
+
+    @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         boolean on = !state.getValue(ON);
         if (!level.isClientSide) {

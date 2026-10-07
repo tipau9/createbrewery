@@ -426,6 +426,27 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void theHazerButtonFiresLinkedHazersOnly(GameTestHelper helper) {
+        BlockPos other = POS.east(2);
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.HAZER.get());
+        helper.setBlock(other, ModBlocks.HAZER.get());
+        DmxConsoleBlockEntity dmx = helper.getBlockEntity(CONSOLE);
+        java.util.List<BlockPos> both = ClubTestAccess.blastHazers(dmx, helper.getLevel());
+        helper.assertTrue(both.size() == 2, "with none linked, every hazer near the console should fire");
+
+        ItemStack link = new ItemStack(ModBlocks.HAZER.get());
+        ClubTestAccess.linkFixture(link, helper.absolutePos(CONSOLE));
+        helper.assertTrue(ClubTestAccess.applyEffectLink(helper.getLevel(), helper.absolutePos(POS), link), "the hazer did not take the link");
+        java.util.List<BlockPos> linked = ClubTestAccess.blastHazers(dmx, helper.getLevel());
+        helper.assertTrue(linked.equals(java.util.List.of(helper.absolutePos(POS))), "only the linked hazer should fire, got " + linked);
+        dmx.triggerHazer(null);
+        helper.assertTrue(helper.getBlockState(POS).getValue(com.createbrewery.block.club.HazerBlock.ON), "the linked hazer was not switched on");
+        helper.assertFalse(helper.getBlockState(other).getValue(com.createbrewery.block.club.HazerBlock.ON), "an unlinked hazer was switched on");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void effectGateFollowsBlackoutAndMaster(GameTestHelper helper) {
         helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
         helper.setBlock(POS, ModBlocks.LASER_PROJECTOR.get());

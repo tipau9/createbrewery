@@ -20,7 +20,12 @@ public final class AmpSettings {
     /** What a move does; the same bytes go over the wire (see AmpControl). */
     public static final byte POWER = 0, MASTER = 1, PRESET = 2, AUTO_SETUP = 3, CROSSOVER = 4, SLOPE = 5, ALIGN = 6,
         ZONE_GAIN = 7, ZONE_MUTE = 8, ZONE_LOW = 9, ZONE_MID = 10, ZONE_HIGH = 11, ZONE_HPF = 12, ZONE_DELAY = 13,
-        ZONE_INVERT = 14, ZONE_LIMIT = 15, ASSIGN = 16, RESET = 17, ZONE_SOLO = 18;
+        ZONE_INVERT = 14, ZONE_LIMIT = 15, ASSIGN = 16, RESET = 17, ZONE_SOLO = 18,
+    /** The rack's own presets: the value is the slot. */
+        USER_SAVE = 19, USER_LOAD = 20;
+    public static final int USER_SLOTS = 4;
+    /** How many numbers a snapshot holds: master, crossover, slope, align, then every zone's channel. */
+    public static final int SNAPSHOT = 4 + ZONES * (ZONE_LIMIT - ZONE_GAIN + 1);
 
     /** One zone's channel: gain and EQ in dB, high-pass in Hz (0 off), delay in ms, limit in dBFS. */
     public static final class Zone {
@@ -53,6 +58,9 @@ public final class AmpSettings {
     /** Speed of sound and delay towers. */
     public boolean align;
     public final Zone[] zones = new Zone[ZONES];
+    /** The rack's own presets ({@link #snapshot}), null where none was stored, and the one last loaded (-1 none). */
+    public final float[][] user = new float[USER_SLOTS][];
+    public int userSlot = -1;
     /** Tops by {@code BlockPos.asLong()}. Subwoofers are always SUBS and the booth always MONITOR. */
     public final Map<Long, Assignment> assign = new HashMap<>();
 
@@ -76,6 +84,17 @@ public final class AmpSettings {
     /** A move from the screen or a packet; false if it was refused or is not a settings move. */
     public boolean set(byte action, int zone, float v) {
         if (!Float.isFinite(v)) return false;
+        if (action == USER_SAVE || action == USER_LOAD) {
+            int slot = (int) v;
+            if (slot != v || slot < 0 || slot >= USER_SLOTS) return false;
+            if (action == USER_SAVE) {
+                user[slot] = snapshot();
+            } else {
+                if (!restore(user[slot])) return false;
+            }
+            userSlot = slot;
+            return true;
+        }
         if (action == ZONE_SOLO) {
             // A check, not a sound of its own: the preset stays lit.
             if (zone < 0 || zone >= ZONES) return false;
@@ -96,7 +115,8 @@ public final class AmpSettings {
             }
             case RESET -> {
                 byte target = (byte) v;
-                if (target == POWER || target == PRESET || target == RESET || target == AUTO_SETUP || target == ASSIGN) return false;
+                if (target == POWER || target == PRESET || target == RESET || target == AUTO_SETUP || target == ASSIGN
+                    || target == USER_SAVE || target == USER_LOAD) return false;
                 return set(target, zone, target == CROSSOVER ? 100f : 0f);
             }
             case MASTER -> master = clamp(v, MIN_MASTER, MAX_MASTER);
@@ -115,6 +135,36 @@ public final class AmpSettings {
             default -> {
                 return false;
             }
+        }
+        preset = CUSTOM;
+        userSlot = -1;
+        return true;
+    }
+
+    /** Every sound setting - not power, which zone a speaker plays or solo - in a fixed order. */
+    public float[] snapshot() {
+        float[] v = new float[SNAPSHOT];
+        int i = 0;
+        v[i++] = master;
+        v[i++] = crossover;
+        v[i++] = slope;
+        v[i++] = align ? 1 : 0;
+        for (int z = 0; z < ZONES; z++) {
+            for (byte a = ZONE_GAIN; a <= ZONE_LIMIT; a++) v[i++] = get(a, z);
+        }
+        return v;
+    }
+
+    /** Puts a snapshot back, through {@link #set} so it is clamped; false (and nothing changed) if it is not one. */
+    public boolean restore(float[] v) {
+        if (v == null || v.length != SNAPSHOT) return false;
+        int i = 0;
+        set(MASTER, 0, v[i++]);
+        set(CROSSOVER, 0, v[i++]);
+        set(SLOPE, 0, v[i++]);
+        set(ALIGN, 0, v[i++]);
+        for (int z = 0; z < ZONES; z++) {
+            for (byte a = ZONE_GAIN; a <= ZONE_LIMIT; a++) set(a, z, v[i++]);
         }
         preset = CUSTOM;
         return true;
@@ -157,6 +207,7 @@ public final class AmpSettings {
         if (p == LIVE) zones[FLOOR].mid = 2;
         zones[SUBS].hpf = PRESET_SUB_HPF[p];
         preset = p;
+        userSlot = -1;
     }
 
     /** After loading: every value back in range, without counting as a move. */

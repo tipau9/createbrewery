@@ -185,4 +185,27 @@ class AmpSettingsTest {
         assertTrue(s.drive(FLOOR) > 0f);
         assertFalse(s.set(ZONE_SOLO, ZONES, 1f));
     }
+
+    @Test
+    void aUserPresetBringsTheSoundBack() {
+        AmpSettings s = new AmpSettings();
+        s.set(MASTER, 0, -7f);
+        s.set(ZONE_LOW, SUBS, 4f);
+        s.set(CROSSOVER, 0, 120f);
+        assertTrue(s.set(USER_SAVE, 0, 2f));
+        assertEquals(2, s.userSlot);
+        s.applyPreset(NIGHT);
+        assertEquals(-1, s.userSlot);
+        assertTrue(s.set(USER_LOAD, 0, 2f));
+        assertEquals(-7f, s.master);
+        assertEquals(4f, s.zones[SUBS].low);
+        assertEquals(120f, s.crossover);
+        assertEquals(2, s.userSlot);
+        s.set(MASTER, 0, -3f);
+        assertEquals(-1, s.userSlot, "a move leaves the slot");
+        assertFalse(s.set(USER_LOAD, 0, 1f), "slot 2 was never stored");
+        assertFalse(s.set(USER_SAVE, 0, USER_SLOTS));
+        assertFalse(s.set(USER_SAVE, 0, 0.5f));
+        assertFalse(s.restore(new float[3]));
+    }
 }

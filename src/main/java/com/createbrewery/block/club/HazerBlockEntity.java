@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** The haze a {@link HazerBlock} has put into the air around it. Client only. */
-public class HazerBlockEntity extends BlockEntity {
+public class HazerBlockEntity extends BlockEntity implements ConsoleLinked {
     /** Out to here the haze is as thick as at the hazer; thinning out to nothing at {@link #REACH}. */
     private static final double FULL = 8, REACH = 24;
     /** Seconds to fill the room, and to clear it again. */
@@ -43,8 +43,40 @@ public class HazerBlockEntity extends BlockEntity {
     /** Client: 1 right after a blast, settling back to 0 as the room clears: how far out the haze hangs. */
     private float boost;
 
+    /** The console whose hazer button sets this one off (none: any console near it). */
+    private final ConsoleLinkData link = new ConsoleLinkData();
+
     public HazerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    @Override
+    public ConsoleLinkData consoleLink() {
+        return link;
+    }
+
+    @Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        link.save(tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        link.load(tag);
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = super.getUpdateTag(registries);
+        link.save(tag);
+        return tag;
     }
 
     @Override

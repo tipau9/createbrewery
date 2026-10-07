@@ -170,6 +170,33 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     private static final int HAZER_COOLDOWN = 20;
     private long hazedAt = Long.MIN_VALUE / 2;
 
+    /**
+     * Puffs at the linked fixtures, and which hazers the button sets off: the ones linked to this
+     * console; with none linked, every unlinked hazer near it (24 blocks round, 8 down, 12 up).
+     */
+    java.util.List<BlockPos> blastHazers(ServerLevel server) {
+        java.util.List<BlockPos> linked = new java.util.ArrayList<>(), near = new java.util.ArrayList<>();
+        int r = FixtureBlock.MAX_LINK;
+        for (BlockEntity be : blockEntitiesNear(server, worldPosition, r, -r, r)) {
+            BlockPos p = be.getBlockPos();
+            if (be instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
+                server.sendParticles(ModParticles.HAZE.get(),
+                    p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 6, 0.5, 0.3, 0.5, 0.02);
+                server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                    p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
+            } else if (be instanceof HazerBlockEntity hazer) {
+                BlockPos console = hazer.consoleLink().console;
+                if (worldPosition.equals(console)) {
+                    if (p.closerThan(worldPosition, r)) linked.add(p);
+                } else if (console == null && Math.abs(p.getX() - worldPosition.getX()) <= 24 && Math.abs(p.getZ() - worldPosition.getZ()) <= 24
+                    && p.getY() - worldPosition.getY() >= -8 && p.getY() - worldPosition.getY() <= 12) {
+                    near.add(p);
+                }
+            }
+        }
+        return linked.isEmpty() ? near : linked;
+    }
+
     public void triggerHazer(@org.jetbrains.annotations.Nullable Player player) {
         if (level instanceof ServerLevel server && server.getGameTime() - hazedAt >= HAZER_COOLDOWN) {
             hazedAt = server.getGameTime();
@@ -181,22 +208,13 @@ public class DmxConsoleBlockEntity extends BlockEntity {
                 worldPosition.getX() + 0.5, worldPosition.getY() + 0.9, worldPosition.getZ() + 0.5,
                 12, 1.0, 0.4, 1.0, 0.015);
 
-            // Also trigger at linked fixtures and activate nearby hazers
-            for (BlockEntity be : blockEntitiesNear(server, worldPosition, 24, -8, 12)) {
-                BlockPos p = be.getBlockPos();
-                if (be instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
-                    server.sendParticles(ModParticles.HAZE.get(),
-                        p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 6, 0.5, 0.3, 0.5, 0.02);
-                    server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
-                        p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
-                } else if (be instanceof HazerBlockEntity) {
-                    BlockState st = server.getBlockState(p);
-                    if (st.hasProperty(HazerBlock.ON) && !st.getValue(HazerBlock.ON)) {
-                        server.setBlock(p, st.setValue(HazerBlock.ON, true), 3);
-                    }
-                    // Every hazer blasts the whole room full at once.
-                    server.blockEvent(p, st.getBlock(), HazerBlockEntity.BLAST, 0);
+            for (BlockPos p : blastHazers(server)) {
+                BlockState st = server.getBlockState(p);
+                if (st.hasProperty(HazerBlock.ON) && !st.getValue(HazerBlock.ON)) {
+                    server.setBlock(p, st.setValue(HazerBlock.ON, true), 3);
                 }
+                // Each one blasts the whole room full at once.
+                server.blockEvent(p, st.getBlock(), HazerBlockEntity.BLAST, 0);
             }
             server.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.7f, 1.4f);
             if (player != null) {
@@ -219,7 +237,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 
     void storeScene(int i) {
         if (i < 0 || i >= DmxProgram.SCENES) return;
-        settings.scenes[i] = new DmxProgram.Scene(settings.faders.clone(), settings.colors.clone());
+        settings.scenes[i] = new DmxProgram.Scene(settings.faders.clone(), settings.colors.clone(), DmxTimecode.Look.of(settings));
         sync();
     }
 
@@ -235,6 +253,8 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         if (i < 0 || i >= DmxProgram.SCENES) return false;
         DmxProgram.Scene sc = settings.scenes[i];
         if (sc == null) return false;
+        // The rest of the look snaps at once; only faders and colours fade.
+        if (sc.look() != null) sc.look().applyStyleTo(settings);
         if (settings.fadeTime <= 0.05f) {
             System.arraycopy(sc.levels(), 0, settings.faders, 0, DmxProgram.GROUPS);
             System.arraycopy(sc.colors(), 0, settings.colors, 0, DmxProgram.GROUPS);
@@ -519,6 +539,14 @@ public class DmxConsoleBlockEntity extends BlockEntity {
             if (s.scenes[i] != null) {
                 sc.put("Levels", floats(s.scenes[i].levels()));
                 sc.putIntArray("Colors", s.scenes[i].colors());
+                if (s.scenes[i].look() != null) {
+                    DmxProgram.Settings look = new DmxProgram.Settings();
+                    s.scenes[i].look().applyTo(look);
+                    CompoundTag lt = new CompoundTag();
+                    write(look, lt);
+                    lt.remove("Scenes");
+                    sc.put("Look", lt);
+                }
             }
             scenes.add(sc);
         }
@@ -559,7 +587,13 @@ public class DmxConsoleBlockEntity extends BlockEntity {
             readFloats(sc.getList("Levels", Tag.TAG_FLOAT), levels);
             int[] c = sc.getIntArray("Colors");
             System.arraycopy(c, 0, cols, 0, Math.min(c.length, DmxProgram.GROUPS));
-            s.scenes[i] = new DmxProgram.Scene(levels, cols);
+            DmxTimecode.Look look = null;
+            if (sc.contains("Look")) {
+                DmxProgram.Settings l = new DmxProgram.Settings();
+                read(l, sc.getCompound("Look"));
+                look = DmxTimecode.Look.of(l);
+            }
+            s.scenes[i] = new DmxProgram.Scene(levels, cols, look);
         }
     }
 

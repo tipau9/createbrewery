@@ -16,6 +16,10 @@ public final class ClubTestAccess {
         return DmxPatch.linkedTo(level, console).size();
     }
 
+    public static java.util.List<BlockPos> blastHazers(DmxConsoleBlockEntity console, net.minecraft.server.level.ServerLevel level) {
+        return console.blastHazers(level);
+    }
+
     public static void linkFixture(ItemStack stack, BlockPos console) {
         FixtureBlock.link(stack, console);
     }

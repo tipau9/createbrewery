@@ -325,7 +325,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.dmx.master", "Master");
         REGISTRATE.addRawLang("createbrewery.dmx.color", "Colour");
         REGISTRATE.addRawLang("createbrewery.dmx.flash", "Flash");
-        REGISTRATE.addRawLang("createbrewery.dmx.scene_hint", "Click: recall scene - Shift-click: store the faders in it");
+        REGISTRATE.addRawLang("createbrewery.dmx.scene_hint", "Click: recall scene - Shift-click: store the whole look in it (faders, colours, program, movement, gobo)");
         REGISTRATE.addRawLang("createbrewery.dmx.blind_all", "BLIND");
         REGISTRATE.addRawLang("createbrewery.dmx.strobe_all", "STROBE");
         REGISTRATE.addRawLang("createbrewery.dmx.hazer", "HAZER");

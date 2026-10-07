@@ -15,6 +15,9 @@ public final class PlayerTextLang {
         registrate.addRawLang("createbrewery.amp.solo", "S");
         registrate.addRawLang("createbrewery.amp.solo.tip", "Solo: only this zone (and the DJ monitor) plays, to hear it on its own. Right-click: off.");
         registrate.addRawLang("createbrewery.amp.status.solo", "%s is soloed: every other zone is silent");
+        registrate.addRawLang("createbrewery.amp.user", "User %s");
+        registrate.addRawLang("createbrewery.amp.user.saved", "Saved to User %s");
+        registrate.addRawLang("createbrewery.amp.user.tip", "This rack's own preset. Click: load it. Right-click: store the sound as it is now (everything but power, speaker zones and solo).");
         registrate.addRawLang("createbrewery.amp.zones.identify", "Click: shows this speaker in the world");
         registrate.addRawLang("createbrewery.blackout.woke", "\u00a78\u00a7l...Blackout. \u00a77How did you get here? What happened?");
         registrate.addRawLang("createbrewery.bouncer.cameras_taped", "\u00a7e[Bouncer] Phones and cameras get taped over. No photos in the club!");

@@ -72,7 +72,15 @@ final class DmxProgram {
         }
     }
 
-    record Scene(float[] levels, int[] colors) {}
+    /**
+     * A stored look: the faders and colours, and (scenes stored since 1.0.1) the rest of the desk -
+     * program, movement, rate, colour program, gobo, zoom and prism. Master and blackout stay the operator's.
+     */
+    record Scene(float[] levels, int[] colors, @org.jetbrains.annotations.Nullable DmxTimecode.Look look) {
+        Scene(float[] levels, int[] colors) {
+            this(levels, colors, null);
+        }
+    }
 
     final float[] level = new float[GROUPS];
     final int[] color = new int[GROUPS];

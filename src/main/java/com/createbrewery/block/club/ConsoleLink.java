@@ -17,10 +17,10 @@ import java.util.Optional;
 final class ConsoleLink {
     private ConsoleLink() {}
 
-    /** Blocks that take the console's link item: fixtures and the five effects (the cold spark is a CO2 jet). */
+    /** Blocks that take the console's link item: fixtures, the five effects (the cold spark is a CO2 jet) and the hazer. */
     static boolean linkable(Block block) {
         return block instanceof FixtureBlock || block instanceof StrobeLightBlock || block instanceof LaserProjectorBlock
-            || block instanceof FogMachineBlock || block instanceof Co2JetBlock;
+            || block instanceof FogMachineBlock || block instanceof Co2JetBlock || block instanceof HazerBlock;
     }
 
     static boolean holdsLink(ItemStack stack) {

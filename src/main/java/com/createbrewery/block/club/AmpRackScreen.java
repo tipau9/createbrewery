@@ -32,7 +32,7 @@ import java.util.function.Function;
  * {@link AmpControl}) and is heard here at once. Client only.
  */
 public class AmpRackScreen extends Screen {
-    private static final int W = 340, H = 228;
+    private static final int W = 340, H = 244;
     private static final int SIMPLE = 0, ZONES = 1, EXPERT = 2;
     private static final String[] TABS = {"createbrewery.amp.tab.simple", "createbrewery.amp.tab.zones", "createbrewery.amp.tab.expert"};
     private static final int ROW = 14;
@@ -147,6 +147,7 @@ public class AmpRackScreen extends Screen {
                 b.setMessage(Component.translatable("createbrewery.amp.preset." + preset).withStyle(lit ? ChatFormatting.GREEN : ChatFormatting.WHITE));
             });
         }
+        for (int slot = 0; slot < AmpSettings.USER_SLOTS; slot++) new UserPreset(left + 8 + slot * 82, top + 100, slot);
         for (int z = 0; z < AmpSettings.ZONES; z++) {
             int y = zoneRow(z);
             new Slider(left + 8, y, 160, AmpSettings.ZONE_GAIN, z, AmpSettings.MIN_GAIN, AmpSettings.MAX_GAIN, false, false, "createbrewery.amp.zone.tip." + z);
@@ -160,7 +161,7 @@ public class AmpRackScreen extends Screen {
     }
 
     private int zoneRow(int zone) {
-        return top + 116 + zone * 19;
+        return top + 136 + zone * 19;
     }
 
     private void initExpert() {
@@ -324,12 +325,12 @@ public class AmpRackScreen extends Screen {
         for (int i = 0; i < Math.min(2, lines.size()); i++) {
             g.drawString(font, lines.get(i), left + 92, top + (lines.size() > 1 ? 23 : 27) + i * 9, col, false);
         }
-        section(g, Component.translatable("createbrewery.amp.section.zones"), top + 104);
-        if (r.settings().preset == AmpSettings.CUSTOM) {
+        section(g, Component.translatable("createbrewery.amp.section.zones"), top + 122);
+        if (r.settings().preset == AmpSettings.CUSTOM && r.settings().userSlot < 0) {
             Component custom = Component.translatable("createbrewery.amp.preset.custom");
             int x = left + W - 8 - font.width(custom);
-            g.fill(x - 4, top + 102, left + W - 6, top + 113, 0xFF0E0F13);
-            g.drawString(font, custom, x, top + 104, 0x888888, false);
+            g.fill(x - 4, top + 120, left + W - 6, top + 131, 0xFF0E0F13);
+            g.drawString(font, custom, x, top + 122, 0x888888, false);
         }
         int[] counts = r.zoneCounts();
         AmpMeters m = r.getBooth() == null ? null : MusicPulse.meters(r.getBooth());
@@ -456,6 +457,43 @@ public class AmpRackScreen extends Screen {
     }
 
     // ---------------------------------------------------------------- controls
+
+    /** One of the rack's own presets: click loads it, right-click stores the sound as it is now. */
+    private class UserPreset extends Button {
+        private final int slot;
+
+        UserPreset(int x, int y, int slot) {
+            super(x, y, 78, 14, Component.empty(), b -> ((UserPreset) b).load(), DEFAULT_NARRATION);
+            this.slot = slot;
+            setTooltip(Tooltip.create(Component.translatable("createbrewery.amp.user.tip")));
+            addRenderableWidget(this);
+            refresh.add(() -> {
+                AmpRackBlockEntity now = rack();
+                if (now == null) return;
+                AmpSettings s = now.settings();
+                ChatFormatting style = s.userSlot == slot ? ChatFormatting.GREEN : s.user[slot] != null ? ChatFormatting.WHITE : ChatFormatting.DARK_GRAY;
+                setMessage(Component.translatable("createbrewery.amp.user", slot + 1).withStyle(style));
+            });
+        }
+
+        private void load() {
+            AmpRackBlockEntity now = rack();
+            if (now != null && now.settings().user[slot] != null) send(AmpSettings.USER_LOAD, 0, slot);
+        }
+
+        @Override
+        public boolean mouseClicked(double mx, double my, int button) {
+            if (button == 1 && active && visible && isMouseOver(mx, my)) {
+                send(AmpSettings.USER_SAVE, 0, slot);
+                if (minecraft.player != null) {
+                    minecraft.player.displayClientMessage(Component.translatable("createbrewery.amp.user.saved", slot + 1), true);
+                    minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.5f, 1.4f);
+                }
+                return true;
+            }
+            return super.mouseClicked(mx, my, button);
+        }
+    }
 
     /** A toggle; right-click resets it. */
     private class Toggle extends Button {

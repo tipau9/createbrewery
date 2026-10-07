@@ -232,6 +232,13 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
             zones.add(zt);
         }
         t.put("Zones", zones);
+        for (int i = 0; i < AmpSettings.USER_SLOTS; i++) {
+            if (s.user[i] == null) continue;
+            int[] bits = new int[s.user[i].length];
+            for (int j = 0; j < bits.length; j++) bits[j] = Float.floatToIntBits(s.user[i][j]);
+            t.putIntArray("User" + i, bits);
+        }
+        t.putInt("UserSlot", s.userSlot);
         long[] pos = new long[s.assign.size()];
         int[] zone = new int[pos.length];
         int i = 0;
@@ -276,6 +283,16 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
             }
         }
         s.clampAll();
+        // After clampAll, which counts as moves and would forget the loaded slot.
+        for (int i = 0; i < AmpSettings.USER_SLOTS; i++) {
+            int[] bits = t.getIntArray("User" + i);
+            if (bits.length != AmpSettings.SNAPSHOT) continue;
+            float[] v = new float[bits.length];
+            for (int j = 0; j < bits.length; j++) v[j] = Float.intBitsToFloat(bits[j]);
+            s.user[i] = v;
+        }
+        int slot = t.contains("UserSlot") ? t.getInt("UserSlot") : -1;
+        s.userSlot = slot >= 0 && slot < AmpSettings.USER_SLOTS && s.user[slot] != null ? slot : -1;
         return s;
     }
 

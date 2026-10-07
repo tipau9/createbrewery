@@ -36,6 +36,17 @@ final class DmxTimecode {
             s.zoom = zoom;
             s.prism = prism;
         }
+
+        /** The look without its faders, colours, master and blackout: what a scene puts back beside its faders. */
+        void applyStyleTo(DmxProgram.Settings s) {
+            s.program = program;
+            s.move = move;
+            s.rate = rate;
+            s.colorFx = colorFx;
+            s.gobo = gobo;
+            s.zoom = zoom;
+            s.prism = prism;
+        }
     }
 
     record Cue(int tick, Look look) {}
