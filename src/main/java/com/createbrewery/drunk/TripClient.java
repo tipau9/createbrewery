@@ -143,7 +143,7 @@ public final class TripClient {
         boolean hasAbsorption = player.hasEffect(MobEffects.ABSORPTION);
         if (hasAbsorption && !wasAbsorption && DrunkClient.desert > 0.2f) {
             purgaFlash = 1f;
-            player.displayClientMessage(Component.literal("Die Schwere weicht. Rein und leicht.")
+            player.displayClientMessage(Component.translatable("createbrewery.thought.trip.lifted")
                 .withStyle(ChatFormatting.ITALIC, ChatFormatting.GOLD), true);
         }
         wasAbsorption = hasAbsorption;
@@ -258,7 +258,7 @@ public final class TripClient {
             obeTicks = 0;
             obeBefore = mc.options.getCameraType();
             mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            player.displayClientMessage(Component.literal("Wer ist das da unten?").withStyle(ChatFormatting.ITALIC, ChatFormatting.LIGHT_PURPLE), true);
+            player.displayClientMessage(Component.translatable("createbrewery.thought.trip.below").withStyle(ChatFormatting.ITALIC, ChatFormatting.LIGHT_PURPLE), true);
         }
         if (obeTicks >= 0 && ++obeTicks > OBE_TICKS) {
             mc.options.setCameraType(obeBefore);
@@ -282,7 +282,7 @@ public final class TripClient {
         boolean heroic = Psychedelics.silentDarkness(player) && DrugEffect.strength(player, ModEffects.SHROOM_TRIP) > 0.7f;
         overgrown = heroic ? Math.min(1f, overgrown + 1f / 200f) : Math.max(0f, overgrown - 1f / 60f);
         if (overgrown >= 1f && !forestSpoke) {
-            player.displayClientMessage(Component.literal("Ich bin der Wald.").withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
+            player.displayClientMessage(Component.translatable("createbrewery.thought.trip.forest").withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
             forestSpoke = true;
         } else if (overgrown <= 0f) forestSpoke = false;
         if (shroom < 0.2f || mc.level == null) {

@@ -155,12 +155,12 @@ public final class HallucinationClient {
         if (DrunkClient.trip < 0.05f) eyesHinted = eyesSeen = false;
         if (DrunkClient.trip > 0.35f && !eyesHinted && player.tickCount % 200 == 0) {
             eyesHinted = true;
-            player.displayClientMessage(Component.literal("Was wohl passiert, wenn ich die Augen zumache…? (still hocken)")
+            player.displayClientMessage(Component.translatable("createbrewery.thought.trip.eyes_hint")
                 .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
         }
         if (eyes > 0.9f && !eyesSeen) {
             eyesSeen = true;
-            player.displayClientMessage(Component.literal("Oh. OH. Hinter den Augen… da ist ja alles.")
+            player.displayClientMessage(Component.translatable("createbrewery.thought.trip.eyes_seen")
                 .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN), true);
         }
     }

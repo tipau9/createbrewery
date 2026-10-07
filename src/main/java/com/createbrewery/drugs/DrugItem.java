@@ -104,16 +104,16 @@ public class DrugItem extends Item {
             boolean lit = isLit(stack);
             int hitsLeft = Math.max(0, stack.getMaxDamage() - stack.getDamageValue());
             if (lit) {
-                tooltip.add(Component.literal("§6Angezündet"));
+                tooltip.add(Component.translatable("createbrewery.joint.lit"));
             } else {
-                tooltip.add(Component.literal("§7Nicht angezündet §8(Feuerzeug im Inventar benötigt)"));
+                tooltip.add(Component.translatable("createbrewery.joint.unlit"));
             }
-            tooltip.add(Component.literal("§aZüge: §f" + hitsLeft + " / " + stack.getMaxDamage()));
+            tooltip.add(Component.translatable("createbrewery.joint.hits", hitsLeft, stack.getMaxDamage()));
             return;
         }
         Purity purity = stack.get(Purity.PURITY.get());
         tooltip.add(purity != null && purity.tested() ? TestKitItem.result(purity)
-            : Component.literal("Ungetestet - was drin ist, weiß keiner").withStyle(ChatFormatting.GRAY));
+            : Component.translatable("createbrewery.drug.untested").withStyle(ChatFormatting.GRAY));
     }
 
     @Override
@@ -141,7 +141,7 @@ public class DrugItem extends Item {
                 ItemStack lighter = findLighter(player);
                 if (lighter.isEmpty()) {
                     if (level.isClientSide) {
-                        player.displayClientMessage(Component.literal("§cDu brauchst ein Feuerzeug im Inventar, um den Joint anzuzünden."), true);
+                        player.displayClientMessage(Component.translatable("createbrewery.joint.need_lighter"), true);
                     }
                     return InteractionResultHolder.fail(stack);
                 }

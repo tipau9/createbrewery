@@ -30,8 +30,8 @@ public class ClubStampItem extends Item {
             targetPlayer.level().playSound(null, targetPlayer.getX(), targetPlayer.getY(), targetPlayer.getZ(),
                 SoundEvents.WOODEN_BUTTON_CLICK_ON, SoundSource.PLAYERS, 1.0f, 1.4f);
             if (!targetPlayer.level().isClientSide) {
-                targetPlayer.displayClientMessage(Component.literal("§6[Club] Du hast den Club-Stempel erhalten (Wiedereinlass aktiv)!"), false);
-                player.displayClientMessage(Component.literal("§a[Club] " + targetPlayer.getName().getString() + " gestempelt."), true);
+                targetPlayer.displayClientMessage(Component.translatable("createbrewery.club.stamped"), false);
+                player.displayClientMessage(Component.translatable("createbrewery.club.stamped_other", targetPlayer.getName()), true);
             }
             return InteractionResult.sidedSuccess(targetPlayer.level().isClientSide);
         }
@@ -40,7 +40,7 @@ public class ClubStampItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("Club-Stempel für Wiedereinlass.").withStyle(ChatFormatting.GOLD));
-        tooltip.add(Component.literal("Rechtsklick auf einen Spieler zum Stempeln.").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("createbrewery.club_stamp.tooltip.0").withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable("createbrewery.club_stamp.tooltip.1").withStyle(ChatFormatting.GRAY));
     }
 }

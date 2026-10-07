@@ -190,7 +190,7 @@ public class BreweryScenes {
     /** First aid: someone is out cold - crouch next to them, Naloxon for heroin, electrolytes for MDMA. */
     public static void firstAid(SceneBuilder builder, SceneBuildingUtil util) {
         CreateSceneBuilder scene = new CreateSceneBuilder(builder);
-        scene.title("first_aid", "Erste Hilfe");
+        scene.title("first_aid", "First Aid");
         scene.configureBasePlate(0, 0, 5);
         scene.showBasePlate();
         scene.idle(10);
@@ -212,7 +212,7 @@ public class BreweryScenes {
         });
         scene.idle(10);
         scene.overlay().showText(80)
-            .text("Jemand ist bewusstlos: Filmriss, K-Loch, Herzinfarkt, oder die Atmung setzt aus.")
+            .text("Someone is unconscious: blackout, K-hole, heart attack, or respiratory failure.")
             .pointAt(friend)
             .placeNearTarget()
             .attachKeyFrame();
@@ -221,7 +221,7 @@ public class BreweryScenes {
         scene.overlay().showControls(friend.add(0, 0.5, 0), Pointing.DOWN, 80).whileSneaking();
         scene.overlay().showText(90)
             .colored(PonderPalette.GREEN)
-            .text("Hock dich direkt daneben (Schleichen). Solange du da hockst: Herzdruckmassage und stabile Seitenlage - nichts kommt in die Atemwege.")
+            .text("Crouch directly next to them (Sneak). As long as you stay there: CPR and recovery position keep airways clear.")
             .pointAt(friend)
             .placeNearTarget()
             .attachKeyFrame();
@@ -231,7 +231,7 @@ public class BreweryScenes {
             .withItem(ModItems.NALOXON.asStack())
             .rightClick();
         scene.overlay().showText(90)
-            .text("Heroin: Naloxon, Rechtsklick auf die Person. Es wirkt nur etwa eine Minute - das Heroin kommt zurück, also bleib da.")
+            .text("Heroin: Naloxone, right-click on the victim. It only lasts about a minute - the heroin returns, so stay with them.")
             .pointAt(friend)
             .placeNearTarget()
             .attachKeyFrame();
@@ -240,7 +240,7 @@ public class BreweryScenes {
         scene.overlay().showControls(friend.add(0, 0.5, 0), Pointing.DOWN, 70)
             .withItem(ModItems.ELECTROLYTE.asStack());
         scene.overlay().showText(90)
-            .text("MDMA und Hitze: in den Schatten, Pause, Elektrolyt-Drink statt literweise Wasser.")
+            .text("MDMA and overheating: shade, rest, electrolyte drink instead of chugging plain water.")
             .pointAt(friend)
             .placeNearTarget()
             .attachKeyFrame();
@@ -248,7 +248,7 @@ public class BreweryScenes {
 
         scene.overlay().showText(80)
             .colored(PonderPalette.RED)
-            .text("Nie allein konsumieren. Und nicht mischen: Alkohol mit Heroin, Xanax oder Keta legt die Atmung lahm.")
+            .text("Never use alone. Never mix: alcohol with heroin, Xanax, or ketamine halts breathing.")
             .pointAt(friend)
             .placeNearTarget()
             .attachKeyFrame();

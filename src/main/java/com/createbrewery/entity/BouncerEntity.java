@@ -117,7 +117,7 @@ public class BouncerEntity extends PathfinderMob {
         if (source.getEntity() instanceof Player player && !player.getAbilities().instabuild) {
             // Push aggressive player away
             pushAway(player, 1.2f);
-            say(player, "§cKeine Schlägereien vor der Tür!");
+            say(player, "no_fights");
             return false;
         }
         return super.hurt(source, amount);
@@ -138,7 +138,7 @@ public class BouncerEntity extends PathfinderMob {
             // Book: update guest list
             if (held.is(Items.WRITABLE_BOOK) || held.is(Items.WRITTEN_BOOK)) {
                 int count = readGuestListBook(held);
-                say(player, "§aGästeliste aktualisiert: " + count + " Gäste eingetragen.");
+                say(player, "guest_list_updated", count);
                 level().playSound(null, getX(), getY(), getZ(), SoundEvents.BOOK_PAGE_TURN, SoundSource.NEUTRAL, 1.0f, 1.2f);
                 return InteractionResult.SUCCESS;
             }
@@ -146,7 +146,7 @@ public class BouncerEntity extends PathfinderMob {
             // Emerald: configure entry fee
             if (held.is(Items.EMERALD)) {
                 entryFee = Math.max(1, held.getCount());
-                say(player, "§aEintrittspreis auf " + entryFee + " Smaragde gesetzt.");
+                say(player, "fee_set", entryFee);
                 level().playSound(null, getX(), getY(), getZ(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
                 return InteractionResult.SUCCESS;
             }
@@ -156,11 +156,11 @@ public class BouncerEntity extends PathfinderMob {
                 if (collectedEmeralds > 0) {
                     ItemStack cash = new ItemStack(Items.EMERALD, collectedEmeralds);
                     if (!player.addItem(cash)) player.drop(cash, false);
-                    say(player, "§aKasse geleert: " + collectedEmeralds + " Smaragde entnommen.");
+                    say(player, "cash_collected", collectedEmeralds);
                     collectedEmeralds = 0;
                     level().playSound(null, getX(), getY(), getZ(), SoundEvents.ITEM_PICKUP, SoundSource.NEUTRAL, 1.0f, 1.0f);
                 } else {
-                    say(player, "§fStatus: Eintritt: " + entryFee + " Smaragde | Kasse: 0 Smaragde | Gästeliste: " + guestList.size() + " Gäste.");
+                    say(player, "status", entryFee, guestList.size());
                 }
                 return InteractionResult.SUCCESS;
             }
@@ -175,7 +175,7 @@ public class BouncerEntity extends PathfinderMob {
         // 1. Club-Stempel Check (Wiedereinlass)
         long stampExpiry = player.getPersistentData().getLong("createbrewery:club_stamp");
         if (stampExpiry > level().getGameTime()) {
-            say(player, "§aStempel passt. Geh wieder rein.");
+            say(player, "stamp_ok");
             admit(player);
             return;
         }
@@ -184,13 +184,13 @@ public class BouncerEntity extends PathfinderMob {
         DrunkState state = DrunkServer.state(player);
         if (state.blood >= 0.8f || player.hasEffect(ModEffects.BLACKOUT)
             || player.hasEffect(ModEffects.POISONING) || player.hasEffect(ModEffects.HANGOVER)) {
-            say(player, "§cHeute leider nicht. Trink erst mal ein Wasser draußen, du schwankst ja schon.");
+            say(player, "too_drunk");
             reject(player);
             return;
         }
         if (player.hasEffect(ModEffects.PSYCHOSIS) || player.hasEffect(ModEffects.BAD_TRIP)
             || player.hasEffect(ModEffects.WITHDRAWAL)) {
-            say(player, "§cKomm erst mal runter, nicht in dem Zustand.");
+            say(player, "too_high");
             reject(player);
             return;
         }
@@ -198,7 +198,7 @@ public class BouncerEntity extends PathfinderMob {
         // 3. Gästeliste Check
         String playerName = player.getName().getString().toLowerCase();
         if (guestList.contains(playerName) || guestList.contains(player.getStringUUID().toLowerCase())) {
-            say(player, "§aStehst auf der Gästeliste. Viel Spaß drin!");
+            say(player, "on_list");
             tapeCameras(player);
             stamp(player);
             admit(player);
@@ -210,16 +210,16 @@ public class BouncerEntity extends PathfinderMob {
             if (held.getCount() >= entryFee) {
                 held.shrink(entryFee);
                 collectedEmeralds += entryFee;
-                say(player, "§aAlles klar, " + entryFee + " Smaragde. Viel Spaß drin! Garderobe ist links.");
+                say(player, "paid", entryFee);
                 tapeCameras(player);
                 stamp(player);
                 admit(player);
             } else {
-                say(player, "§cEintritt kostet " + entryFee + " Smaragde. Du hast nur " + held.getCount() + " in der Hand.");
+                say(player, "not_enough", entryFee, held.getCount());
                 reject(player);
             }
         } else {
-            say(player, "§fEinlass nur mit Gästeliste oder " + entryFee + " Smaragden Eintritt.");
+            say(player, "entry_rules", entryFee);
             level().playSound(null, getX(), getY(), getZ(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 0.9f);
         }
     }
@@ -258,7 +258,7 @@ public class BouncerEntity extends PathfinderMob {
         if (taped) {
             level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0f, 1.4f);
-            player.displayClientMessage(Component.literal("§e[Türsteher] Handy und Kamera werden abgeklebt. Keine Fotos im Club!"), false);
+            player.displayClientMessage(Component.translatable("createbrewery.bouncer.cameras_taped"), false);
         }
     }
 
@@ -266,7 +266,7 @@ public class BouncerEntity extends PathfinderMob {
         player.getPersistentData().putLong("createbrewery:club_stamp", level().getGameTime() + 24000L);
         level().playSound(null, player.getX(), player.getY(), player.getZ(),
             SoundEvents.WOODEN_BUTTON_CLICK_ON, SoundSource.PLAYERS, 1.0f, 1.5f);
-        player.displayClientMessage(Component.literal("§6[Club] Du hast den Club-Stempel erhalten (Wiedereinlass aktiv)!"), false);
+        player.displayClientMessage(Component.translatable("createbrewery.club.stamped"), false);
     }
 
     private void openDoors() {
@@ -321,8 +321,9 @@ public class BouncerEntity extends PathfinderMob {
         GuestList.add(guestList, text);
     }
 
-    private void say(Player player, String message) {
-        player.displayClientMessage(Component.literal("§8[§6Türsteher§8] §f" + message), false);
+    /** {@code key} is under {@code createbrewery.bouncer.}; it reads in the player's language. */
+    private void say(Player player, String key, Object... args) {
+        player.displayClientMessage(Component.translatable("createbrewery.bouncer.say", Component.translatable("createbrewery.bouncer." + key, args)), false);
     }
 
     /** The cash box goes with him: entry fees not yet collected drop where he falls. */

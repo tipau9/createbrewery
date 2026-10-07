@@ -37,11 +37,11 @@ public class TestKitItem extends Item {
 
     /** The reading, as the test kit shows it and the tooltip repeats it. */
     static Component result(Purity purity) {
-        if (purity.fentanyl()) return Component.literal("FENTANYL! Nicht nehmen.").withColor(0xFF3030);
+        if (purity.fentanyl()) return Component.translatable("createbrewery.test_kit.fentanyl").withColor(0xFF3030);
         int percent = Math.round(purity.strength() * 100f);
-        String verdict = purity.strength() < 0.6f ? "stark gestreckt" : purity.strength() < 0.9f ? "gestreckt"
-            : purity.strength() <= 1.2f ? "normal" : "sehr stark - nur die Hälfte nehmen!";
+        String verdict = purity.strength() < 0.6f ? "heavily_cut" : purity.strength() < 0.9f ? "cut"
+            : purity.strength() <= 1.2f ? "normal" : "very_strong";
         int colour = purity.strength() < 0.9f ? 0xC8C8A0 : purity.strength() <= 1.2f ? 0x80E080 : 0xFFA030;
-        return Component.literal("Stärke " + percent + " % einer normalen Dosis: " + verdict).withColor(colour);
+        return Component.translatable("createbrewery.test_kit.result", percent, Component.translatable("createbrewery.test_kit." + verdict)).withColor(colour);
     }
 }

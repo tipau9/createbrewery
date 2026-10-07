@@ -31,7 +31,7 @@ public class TapedSpyglassItem extends Item {
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0f, 1.3f);
             if (!level.isClientSide) {
-                player.displayClientMessage(Component.literal("§7[Club] Sticker abgezogen. Die Linse ist wieder frei."), true);
+                player.displayClientMessage(Component.translatable("createbrewery.taped_spyglass.peeled"), true);
                 ItemStack normal = new ItemStack(Items.SPYGLASS);
                 if (stack.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
                     normal.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
@@ -45,15 +45,15 @@ public class TapedSpyglassItem extends Item {
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
             SoundEvents.WOOL_PLACE, SoundSource.PLAYERS, 0.8f, 0.8f);
         if (level.isClientSide) {
-            player.displayClientMessage(Component.literal("§c[!] Die Linse ist abgeklebt! Keine Fotos im Club."), true);
+            player.displayClientMessage(Component.translatable("createbrewery.taped_spyglass.blocked"), true);
         }
         return InteractionResultHolder.fail(stack);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("Mit einem Club-Sticker abgeklebt.").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Keine Fotos im Club!").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
-        tooltip.add(Component.literal("Sneak + Rechtsklick zum Abziehen.").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable("createbrewery.taped_spyglass.tooltip.0").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("createbrewery.taped_spyglass.tooltip.1").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
+        tooltip.add(Component.translatable("createbrewery.taped_spyglass.tooltip.2").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

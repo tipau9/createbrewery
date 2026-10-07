@@ -338,8 +338,7 @@ public final class DrunkServer {
         MobEffectInstance instance = event.getEffectInstance();
         if (event.getEntity() instanceof Player player && !player.level().isClientSide
             && instance != null && instance.is(ModEffects.BLACKOUT)) {
-            player.displayClientMessage(Component.literal(
-                "§8§l...Filmriss. §7Wie bist du hierhergekommen? Was ist passiert?"), false);
+            player.displayClientMessage(Component.translatable("createbrewery.blackout.woke"), false);
         }
     }
 

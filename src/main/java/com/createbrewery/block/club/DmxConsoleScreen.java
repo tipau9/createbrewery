@@ -104,7 +104,7 @@ public class DmxConsoleScreen extends Screen {
                 DmxControl.send(pos, DmxControl.BLIND_ALL, 0, next ? 1f : 0f);
             }
         }).bounds(px, top + 24, 84, 15)
-        .tooltip(Tooltip.create(Component.literal("BLIND ALL: Halogen-Flutlicht (100% Warmweiß)")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.blind_all.tip")))
         .build());
 
         strobeAll = addRenderableWidget(Button.builder(Component.empty(), b -> {
@@ -115,14 +115,14 @@ public class DmxConsoleScreen extends Screen {
                 DmxControl.send(pos, DmxControl.STROBE_ALL, 0, next ? 1f : 0f);
             }
         }).bounds(px, top + 42, 84, 15)
-        .tooltip(Tooltip.create(Component.literal("STROBE ALL: 20 Hz Gewitter-Blitz auf allen Scheinwerfern")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.strobe_all.tip")))
         .build());
 
         hazer = addRenderableWidget(Button.builder(Component.translatable("createbrewery.dmx.hazer"), b -> {
             hazerTriggerTime = System.currentTimeMillis();
             DmxControl.send(pos, DmxControl.HAZER, 0, 1f);
         }).bounds(px, top + 60, 84, 15)
-        .tooltip(Tooltip.create(Component.literal("HAZER: Dichten Dunst & Bühnennebel ausstoßen")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.hazer.tip")))
         .build());
 
         blackout = addRenderableWidget(Button.builder(Component.empty(), b -> {
@@ -133,7 +133,7 @@ public class DmxConsoleScreen extends Screen {
                 DmxControl.send(pos, DmxControl.BLACKOUT, 0, next ? 1f : 0f);
             }
         }).bounds(px, top + 78, 84, 15)
-        .tooltip(Tooltip.create(Component.literal("BLACKOUT: Alle Scheinwerfer sofort verdunkeln")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.blackout.tip")))
         .build());
 
         // 4. Cue & Scene Playback (4 Pages x 4 Scenes)
@@ -147,7 +147,7 @@ public class DmxConsoleScreen extends Screen {
                     DmxControl.send(pos, DmxControl.SCENE_PAGE, 0, page);
                 }
             ).bounds(px + p * 21, top + 98, 20, 13)
-            .tooltip(Tooltip.create(Component.literal("Szenen-Seite " + (page + 1))))
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.scene_page.tip", page + 1)))
             .build());
         }
 
@@ -181,7 +181,7 @@ public class DmxConsoleScreen extends Screen {
             c.settings.fadeTime = val;
             DmxControl.send(pos, DmxControl.FADE_TIME, 0, val);
         }).bounds(px, top + 148, 52, 14)
-        .tooltip(Tooltip.create(Component.literal("Überblendzeit für Szenenwechsel (Klick zum Umschalten)")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.fade_time.tip")))
         .build());
 
         record = addRenderableWidget(Button.builder(Component.empty(), b -> {
@@ -201,12 +201,12 @@ public class DmxConsoleScreen extends Screen {
                 DmxControl.send(pos, DmxControl.DJ_SYNC, 0, next ? 1f : 0f);
             }
         }).bounds(px, top + 165, 42, 14)
-        .tooltip(Tooltip.create(Component.literal("DJ-Sync: Takt an Beat des DJ-Pults koppeln")))
+        .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.dj_sync.tip")))
         .build());
 
         tapTempo = addRenderableWidget(Button.builder(Component.empty(), b -> onTapTempo())
             .bounds(px + 44, top + 165, 40, 14)
-            .tooltip(Tooltip.create(Component.literal("Tap Tempo: Rhythmisches Klicken stellt manuelle BPM ein")))
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.tap.tip")))
             .build());
 
         // 5. Fixture Attributes (Right side)
@@ -227,7 +227,7 @@ public class DmxConsoleScreen extends Screen {
         zoom = addRenderableWidget(Button.builder(Component.empty(), b -> cycle(DmxControl.ZOOM, s -> s.zoom)).bounds(px2, top + 164, 69, 15).build());
         gels = addRenderableWidget(Button.builder(Component.translatable("createbrewery.dmx.gels"), b -> openGelPicker(0))
             .bounds(px2 + 73, top + 164, 69, 15)
-            .tooltip(Tooltip.create(Component.literal("Lee/Rosco Farbfilter & RGB-Farbwähler öffnen")))
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.gels.tip")))
             .build());
 
         refresh();
@@ -786,7 +786,7 @@ public class DmxConsoleScreen extends Screen {
         Swatch(int x, int y, int group) {
             super(x, y, 22, 10, Component.translatable("createbrewery.dmx.color"));
             this.group = group;
-            setTooltip(Tooltip.create(Component.literal("Gruppe " + (group + 1) + " Farbe (Links: Palette, Rechts: Gels/RGB)")));
+            setTooltip(Tooltip.create(Component.translatable("createbrewery.dmx.group_color.tip", group + 1)));
         }
 
         @Override
@@ -833,7 +833,7 @@ public class DmxConsoleScreen extends Screen {
         FlashPad(int x, int y, int group) {
             super(x, y, 22, 16, Component.translatable("createbrewery.dmx.flash"));
             this.group = group;
-            setTooltip(Tooltip.create(Component.literal("Flash Gruppe " + (group + 1) + " (100% solange gehalten)")));
+            setTooltip(Tooltip.create(Component.translatable("createbrewery.dmx.group_flash.tip", group + 1)));
         }
 
         @Override

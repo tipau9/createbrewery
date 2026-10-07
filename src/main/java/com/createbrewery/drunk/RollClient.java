@@ -300,7 +300,7 @@ public final class RollClient {
 
     private static void onNameTag(RenderNameTagEvent event) {
         if (DrunkClient.rolling < 0.4f || !(event.getEntity() instanceof Enemy)) return;
-        event.setContent(Component.literal("Kumpel ♥").withColor(0xFF7EB6));
+        event.setContent(Component.translatable("createbrewery.thought.roll.buddy").withColor(0xFF7EB6));
         event.setCanRender(TriState.TRUE);
     }
 }

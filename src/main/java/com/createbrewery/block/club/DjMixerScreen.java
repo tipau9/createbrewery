@@ -295,13 +295,13 @@ public class DjMixerScreen extends Screen {
 
         // Manual Loop Buttons: IN / 4BEAT, OUT, RELOOP/EXIT, and MASTER TEMPO (MT)
         loopInButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("IN"), b -> handleLoopIn(isLeft))
-            .bounds(px + 43, top + 8, 22, 14).tooltip(Tooltip.create(Component.literal("Loop In / Hold Shift for 4-Beat Auto Loop"))).build());
+            .bounds(px + 43, top + 8, 22, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.loop_in.tip"))).build());
 
         loopOutButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("OUT"), b -> handleLoopOut(isLeft))
-            .bounds(px + 68, top + 8, 26, 14).tooltip(Tooltip.create(Component.literal("Loop Out"))).build());
+            .bounds(px + 68, top + 8, 26, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.loop_out.tip"))).build());
 
         reloopButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("EXIT"), b -> handleReloop(isLeft))
-            .bounds(px + 97, top + 8, 30, 14).tooltip(Tooltip.create(Component.literal("Reloop / Exit"))).build());
+            .bounds(px + 97, top + 8, 30, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reloop.tip"))).build());
 
         mtButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("MT"), b -> {
             DjBoothBlockEntity dj = booth();
@@ -315,7 +315,7 @@ public class DjMixerScreen extends Screen {
                 }
                 refresh();
             }
-        }).bounds(px + 130, top + 8, 20, 14).tooltip(Tooltip.create(Component.literal("Master Tempo (Key Lock): Preserve musical pitch when changing tempo"))).build());
+        }).bounds(px + 130, top + 8, 20, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.master_tempo.tip"))).build());
 
         // CDJ Jogwheel (Center at px + 40, top + 56, radius 32)
         jogWheels[playerIdx] = addRenderableWidget(new JogWheelWidget(px + 14, top + 28, 64, 64, isLeft));
@@ -345,7 +345,7 @@ public class DjMixerScreen extends Screen {
         quantizeButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("QTZ"), b -> {
             quantizeEnabled = !quantizeEnabled;
             refresh();
-        }).bounds(px + 91, top + 96, 26, 14).tooltip(Tooltip.create(Component.literal("Quantize Beat Snapping"))).build());
+        }).bounds(px + 91, top + 96, 26, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.quantize.tip"))).build());
 
         syncButtons[playerIdx] = addRenderableWidget(Button.builder(Component.literal("SYNC"), b -> syncTempo(currentDeck(isLeft)))
             .bounds(px + 120, top + 96, 30, 14).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.sync"))).build());
