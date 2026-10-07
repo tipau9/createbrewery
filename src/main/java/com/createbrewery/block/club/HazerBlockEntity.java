@@ -32,6 +32,10 @@ public class HazerBlockEntity extends BlockEntity {
     /** The rise a blast gives its patches: under a jet's speed, it tells HazeParticle to make them thick. */
     public static final double THICK = 0.01;
 
+    /** Client: haze patches all hazers may still place this tick. */
+    private static long budgetTick;
+    private static int budget;
+
     /** 0 clear air .. 1 the room full of haze. */
     private float fill;
     /** Client: ticks of blast left. */
@@ -88,6 +92,14 @@ public class HazerBlockEntity extends BlockEntity {
         // walls, reaching further across it as it fills - the room's shape, not a ball round the hazer.
         // ponytail: ~650 live patches at full haze, ~2000 more for a while after a blast; fewer if fill-rate bites on weak GPUs.
         int patches = blast > 0 ? 8 : fill > 0.02f && random.nextFloat() < fill * 1.3f ? 1 : 0;
+        // Many hazers blasting at once share one budget per tick: each patch costs three raycasts.
+        long now = level.getGameTime();
+        if (now != budgetTick) {
+            budgetTick = now;
+            budget = 32;
+        }
+        patches = Math.min(patches, budget);
+        budget -= patches;
         for (int i = 0; i < patches; i++) {
             double a = random.nextDouble() * Math.PI * 2;
             Vec3 flat = new Vec3(Math.cos(a), 0, Math.sin(a));
