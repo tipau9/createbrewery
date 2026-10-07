@@ -1,3 +1,6 @@
+> **Historical (Phase 1, 2026-09-24).** Spirits, intoxication and the club were built after this was
+> written. Section 4 (hard-won facts about Create, Registrate and NeoForge) is still accurate.
+
 # HANDOFF — Create Brewery, Phase 1
 
 **For whoever picks this up next (human or AI).** Written 2026-09-24.

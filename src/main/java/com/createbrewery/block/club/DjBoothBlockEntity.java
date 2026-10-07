@@ -392,11 +392,8 @@ public class DjBoothBlockEntity extends BlockEntity {
             case PAD_BEAT_LOOP, PAD_SLIP_LOOP -> setLoop(deck, LOOPS[pad % LOOPS.length]);
             case PAD_BEAT_JUMP -> {
                 int[] jumps = {-8, -4, -2, -1, 1, 2, 4, 8};
-                int jumpBeats = jumps[pad];
-                if (d.playing && d.endsAt > 0 && level != null) {
-                    d.endsAt -= (long) (jumpBeats * 10 / (double) d.pitch);
-                    sync();
-                }
+                // No measured tempo here: 120 BPM, 10 ticks a beat. The screen sends BEAT_JUMP with the real one.
+                beatJump(deck, jumps[pad] * 10f);
             }
         }
     }
@@ -627,6 +624,17 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     public boolean isMasterTempo(int deck) {
         return deck >= 0 && deck < DECKS && decks[deck].masterTempo;
+    }
+
+    /** The song jumped {@code songTicks} (forward positive): it ends that much sooner, at the deck's pitch. */
+    public void beatJump(int deck, float songTicks) {
+        if (deck < 0 || deck >= DECKS || level == null) return;
+        Deck d = decks[deck];
+        if (d.playing && d.endsAt > 0) {
+            // 8 beats at a slow 60 BPM at most.
+            d.endsAt -= (long) (Mth.clamp(songTicks, -160f, 160f) / (double) d.pitch);
+            sync();
+        }
     }
 
     public void jumpPlayhead(int deck, long frame) {

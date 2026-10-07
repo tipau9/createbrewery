@@ -647,15 +647,15 @@ public class DjMixerScreen extends Screen {
             case DjBoothBlockEntity.PAD_BEAT_JUMP -> {
                 int[] jumps = {-8, -4, -2, -1, 1, 2, 4, 8};
                 int jumpBeats = jumps[padIndex];
-                if (track != null && track.rate > 0) {
-                    double period = track.getBeatPeriod();
-                    if (period > 0) {
-                        long deltaFrames = (long) (jumpBeats * period * track.rate);
-                        track.scrub(deltaFrames);
-                        DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) track.deckFrame);
-                    }
+                double period = track != null && track.rate > 0 ? track.getBeatPeriod() : 0;
+                if (period > 0) {
+                    long deltaFrames = (long) (jumpBeats * period * track.rate);
+                    track.scrub(deltaFrames);
+                    DjControl.send(pos, DjControl.JUMP_PLAYHEAD, cd, (float) track.deckFrame);
+                    DjControl.send(pos, DjControl.BEAT_JUMP, cd, (float) (jumpBeats * period * 20));
+                } else {
+                    DjControl.send(pos, DjControl.PAD_TRIGGER, cd, padIndex);
                 }
-                DjControl.send(pos, DjControl.PAD_TRIGGER, cd, padIndex);
                 if (minecraft != null && minecraft.player != null) {
                     minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.6f, 1.2f);
                 }
