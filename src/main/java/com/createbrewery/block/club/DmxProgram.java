@@ -62,6 +62,8 @@ final class DmxProgram {
         int scenePage = 0;
         /** Groups whose flash button is held, one bit each. */
         int flash;
+        /** Groups that flash to full on every drop (blinders), one bit each. */
+        int dropFlash;
         /** Stored looks, null where none was stored. */
         final Scene[] scenes = new Scene[SCENES];
 
@@ -183,6 +185,7 @@ final class DmxProgram {
             default -> lv = fader;
         }
         if ((s.flash >> g & 1) != 0) lv = 1f;
+        if ((s.dropFlash >> g & 1) != 0 && snapDrop > 0.02f) lv = Math.max(lv, snapDrop);
         if (s.blackout) return 0f;
         if (s.blindAll) return 1f;
         if (s.strobeAll) return snapShutter ? 1f : 0f;

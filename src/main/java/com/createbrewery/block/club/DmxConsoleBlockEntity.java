@@ -130,6 +130,11 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         changed();
     }
 
+    void setDropFlash(int g, boolean on) {
+        settings.dropFlash = on ? settings.dropFlash | 1 << g : settings.dropFlash & ~(1 << g);
+        changed();
+    }
+
     void setBlindAll(boolean on) {
         settings.blindAll = on;
         changed();
@@ -177,7 +182,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
                 12, 1.0, 0.4, 1.0, 0.015);
 
             // Also trigger at linked fixtures and activate nearby hazers
-            for (BlockEntity be : blockEntitiesNear(24, -8, 12)) {
+            for (BlockEntity be : blockEntitiesNear(server, worldPosition, 24, -8, 12)) {
                 BlockPos p = be.getBlockPos();
                 if (be instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
                     server.sendParticles(ModParticles.HAZE.get(),
@@ -297,17 +302,17 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     @org.jetbrains.annotations.Nullable
     private BlockPos nearestBooth() {
         BlockPos best = null;
-        for (BlockEntity be : blockEntitiesNear(16, -8, 8)) {
+        for (BlockEntity be : blockEntitiesNear(level, worldPosition, 16, -8, 8)) {
             BlockPos p = be.getBlockPos();
             if (be instanceof DjBoothBlockEntity && (best == null || p.distSqr(worldPosition) < best.distSqr(worldPosition))) best = p;
         }
         return best;
     }
 
-    /** Block entities of the loaded chunks within {@code r} blocks sideways and {@code down..up} vertically: a few chunk maps, not a block scan. */
-    private java.util.List<BlockEntity> blockEntitiesNear(int r, int down, int up) {
+    /** Block entities of the loaded chunks within {@code r} blocks of {@code at} sideways and {@code down..up} vertically: a few chunk maps, not a block scan. */
+    static java.util.List<BlockEntity> blockEntitiesNear(net.minecraft.world.level.Level level, BlockPos at, int r, int down, int up) {
         java.util.List<BlockEntity> out = new java.util.ArrayList<>();
-        int x = worldPosition.getX(), y = worldPosition.getY(), z = worldPosition.getZ();
+        int x = at.getX(), y = at.getY(), z = at.getZ();
         for (int cx = (x - r) >> 4; cx <= (x + r) >> 4; cx++) {
             for (int cz = (z - r) >> 4; cz <= (z + r) >> 4; cz++) {
                 if (!(level.getChunk(cx, cz, net.minecraft.world.level.chunk.status.ChunkStatus.FULL, false) instanceof net.minecraft.world.level.chunk.LevelChunk chunk)) continue;
@@ -499,6 +504,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         tag.putInt("Zoom", s.zoom);
         tag.putBoolean("Prism", s.prism);
         tag.putInt("Flash", s.flash);
+        tag.putInt("DropFlash", s.dropFlash);
         tag.putBoolean("BlindAll", s.blindAll);
         tag.putBoolean("StrobeAll", s.strobeAll);
         tag.putFloat("FadeTime", s.fadeTime);
@@ -532,6 +538,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         s.zoom = tag.contains("Zoom") ? Math.floorMod(tag.getInt("Zoom"), DmxProgram.ZOOMS) : 1;
         s.prism = tag.getBoolean("Prism");
         s.flash = tag.getInt("Flash");
+        s.dropFlash = tag.getInt("DropFlash") & (1 << DmxProgram.GROUPS) - 1;
         s.blindAll = tag.getBoolean("BlindAll");
         s.strobeAll = tag.getBoolean("StrobeAll");
         s.fadeTime = tag.getFloat("FadeTime");

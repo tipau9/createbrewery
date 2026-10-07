@@ -8,6 +8,14 @@ import net.minecraft.world.level.Level;
 public final class ClubTestAccess {
     private ClubTestAccess() {}
 
+    public static boolean regroup(Level level, BlockPos console, BlockPos light, int group) {
+        return DmxPatch.regroup(level, console, light, group);
+    }
+
+    public static int linkedLights(Level level, BlockPos console) {
+        return DmxPatch.linkedTo(level, console).size();
+    }
+
     public static void linkFixture(ItemStack stack, BlockPos console) {
         FixtureBlock.link(stack, console);
     }

@@ -36,6 +36,9 @@ public class DmxConsoleScreen extends Screen {
     private static final float[] FADE_TIMES = {0.0f, 0.5f, 1.0f, 2.0f, 3.0f, 5.0f};
 
     private final BlockPos pos;
+    private final DropToggle[] dropToggles = new DropToggle[DmxProgram.GROUPS];
+    /** Per group, the linked lights in it by name; read again every second. */
+    private final List<java.util.Map<String, Integer>> patch = new ArrayList<>();
     private int left, top;
     private final Swatch[] swatches = new Swatch[DmxProgram.GROUPS];
     private final VFader[] faders = new VFader[DmxProgram.GROUPS];
@@ -89,7 +92,13 @@ public class DmxConsoleScreen extends Screen {
             swatches[g] = addRenderableWidget(new Swatch(x, top + 30, group));
             faders[g] = addRenderableWidget(new VFader(x, top + 42, 22, 104, DmxControl.FADER, g));
             pads[g] = addRenderableWidget(new FlashPad(x, top + 150, group));
+            dropToggles[g] = addRenderableWidget(new DropToggle(x, top + 169, group));
         }
+        addRenderableWidget(Button.builder(Component.translatable("createbrewery.dmx.patch"), b -> minecraft.setScreen(new DmxPatchScreen(pos)))
+            .bounds(left + 8, top + 198, 49, 13)
+            .tooltip(Tooltip.create(Component.translatable("createbrewery.dmx.patch.tip")))
+            .build());
+        readPatch();
 
         // 2. Master Fader
         master = addRenderableWidget(new VFader(left + 230, top + 42, 22, 104, DmxControl.MASTER, 0));
@@ -345,6 +354,16 @@ public class DmxConsoleScreen extends Screen {
         for (VFader f : faders) f.flush();
         master.flush();
         for (FlashPad p : pads) p.tick();
+        if (minecraft.player.tickCount % 20 == 0) readPatch();
+    }
+
+    private void readPatch() {
+        patch.clear();
+        for (int g = 0; g < DmxProgram.GROUPS; g++) patch.add(new java.util.TreeMap<>());
+        if (minecraft == null || minecraft.level == null) return;
+        for (DmxPatch.Light l : DmxPatch.linkedTo(minecraft.level, pos)) {
+            patch.get(l.group()).merge(l.block().getName().getString(), 1, Integer::sum);
+        }
     }
 
     @Override
@@ -391,6 +410,20 @@ public class DmxConsoleScreen extends Screen {
             g.fill(x, top + 27, x + 22, top + 28, 0xFF202028);
             if (out > 0) {
                 g.fill(x, top + 27, x + Math.min(22, out), top + 28, 0xFF000000 | c.program.color[i]);
+            }
+        }
+
+        // Lights per group, under its drop toggle; hovering lists them.
+        for (int i = 0; i < DmxProgram.GROUPS && i < patch.size(); i++) {
+            int x = left + 8 + i * COL, n = 0;
+            for (int count : patch.get(i).values()) n += count;
+            g.drawCenteredString(font, String.valueOf(n), x + 11, top + 185, n > 0 ? 0xCCCCCC : 0x555555);
+            if (mouseX >= x && mouseX < x + 22 && mouseY >= top + 183 && mouseY < top + 195) {
+                List<Component> lines = new ArrayList<>();
+                lines.add(Component.translatable("createbrewery.dmx.group_lights", i + 1));
+                patch.get(i).forEach((name, count) -> lines.add(Component.literal(count + "× " + name).withStyle(ChatFormatting.GRAY)));
+                if (n == 0) lines.add(Component.translatable("createbrewery.dmx.group_empty").withStyle(ChatFormatting.DARK_GRAY));
+                g.renderComponentTooltip(font, lines, mouseX, mouseY);
             }
         }
 
@@ -825,6 +858,43 @@ public class DmxConsoleScreen extends Screen {
     }
 
     /** Full on while held. */
+    /** D: the group flashes to full on every drop. */
+    private class DropToggle extends AbstractWidget {
+        private final int group;
+
+        DropToggle(int x, int y, int group) {
+            super(x, y, 22, 12, Component.literal("D"));
+            this.group = group;
+            setTooltip(Tooltip.create(Component.translatable("createbrewery.dmx.drop_flash.tip", group + 1)));
+        }
+
+        private boolean on() {
+            DmxConsoleBlockEntity c = console();
+            return c != null && (c.settings.dropFlash >> group & 1) != 0;
+        }
+
+        @Override
+        public void onClick(double mouseX, double mouseY) {
+            DmxConsoleBlockEntity c = console();
+            if (c == null) return;
+            boolean next = !on();
+            c.settings.dropFlash = next ? c.settings.dropFlash | 1 << group : c.settings.dropFlash & ~(1 << group);
+            DmxControl.send(pos, DmxControl.DROP_FLASH, group, next ? 1f : 0f);
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            boolean on = on();
+            g.fill(getX(), getY(), getX() + width, getY() + height, on ? 0xFFE0A030 : isHoveredOrFocused() ? 0xFF505060 : 0xFF303040);
+            g.drawCenteredString(Minecraft.getInstance().font, "D", getX() + width / 2, getY() + 2, on ? 0x101010 : 0xA0A0A0);
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput out) {
+            defaultButtonNarrationText(out);
+        }
+    }
+
     private class FlashPad extends AbstractWidget {
         private final int group;
         private boolean pressed;

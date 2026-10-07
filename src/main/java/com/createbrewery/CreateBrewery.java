@@ -486,6 +486,7 @@ public class CreateBrewery {
         modEventBus.addListener(com.createbrewery.drugs.DrugDebug::register);
         modEventBus.addListener(com.createbrewery.block.club.DjControl::register);
         modEventBus.addListener(com.createbrewery.block.club.DmxControl::register);
+        modEventBus.addListener(com.createbrewery.block.club.DmxPatch::register);
         modEventBus.addListener(com.createbrewery.block.club.AmpControl::register);
         modEventBus.addListener(ModRecipeProvider::gatherData);
         ModLootModifiers.register(modEventBus);

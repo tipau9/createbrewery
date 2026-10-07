@@ -408,6 +408,24 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void theConsoleRegroupsItsOwnLightsOnly(GameTestHelper helper) {
+        helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
+        helper.setBlock(POS, ModBlocks.STROBE_LIGHT.get());
+        ItemStack link = new ItemStack(ModBlocks.STROBE_LIGHT.get());
+        BlockPos console = helper.absolutePos(CONSOLE), light = helper.absolutePos(POS);
+        ClubTestAccess.linkFixture(link, console);
+        ClubTestAccess.applyEffectLink(helper.getLevel(), light, link);
+
+        helper.assertTrue(ClubTestAccess.linkedLights(helper.getLevel(), console) == 1, "the patch does not list the linked strobe");
+        helper.assertTrue(ClubTestAccess.regroup(helper.getLevel(), console, light, 5), "regrouping a linked light failed");
+        helper.assertTrue(ClubTestAccess.effectGroup(helper.getLevel(), light) == 5, "the strobe is not in group 6");
+        helper.assertFalse(ClubTestAccess.regroup(helper.getLevel(), console, light, 8), "accepted group 9");
+        helper.assertFalse(ClubTestAccess.regroup(helper.getLevel(), console.offset(1, 0, 0), light, 2), "regrouped from a console it is not linked to");
+        helper.assertTrue(ClubTestAccess.effectGroup(helper.getLevel(), light) == 5, "a refused regroup changed the group");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void effectGateFollowsBlackoutAndMaster(GameTestHelper helper) {
         helper.setBlock(CONSOLE, ModBlocks.DMX_CONSOLE.get());
         helper.setBlock(POS, ModBlocks.LASER_PROJECTOR.get());

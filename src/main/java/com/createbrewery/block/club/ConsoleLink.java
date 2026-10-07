@@ -39,15 +39,20 @@ final class ConsoleLink {
             || !(level.getBlockEntity(console.get()) instanceof DmxConsoleBlockEntity)) return false;
         ConsoleLinkData data = linked.consoleLink();
         if (console.get().equals(data.console)) {
-            data.group = Math.floorMod(data.group + 1, DmxProgram.GROUPS);
+            setGroup(be, data, data.group + 1);
         } else {
             data.console = console.get().immutable();
-            data.group = 0;
+            setGroup(be, data, 0);
         }
-        be.setChanged();
-        level.sendBlockUpdated(pos, be.getBlockState(), be.getBlockState(), 3);
-        if (be instanceof com.simibubi.create.foundation.blockEntity.SmartBlockEntity smart) smart.sendData();
         return true;
+    }
+
+    /** Server: puts the effect in {@code group} (wrapping round) and sends it to the clients. */
+    static void setGroup(BlockEntity be, ConsoleLinkData data, int group) {
+        data.group = Math.floorMod(group, DmxProgram.GROUPS);
+        be.setChanged();
+        be.getLevel().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
+        if (be instanceof com.simibubi.create.foundation.blockEntity.SmartBlockEntity smart) smart.sendData();
     }
 
     /** The shared {@code useItemOn} hook: call it first, and return its result when {@link #holdsLink} is true. */

@@ -20,7 +20,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record DmxControl(BlockPos pos, byte action, byte index, float value) implements CustomPacketPayload {
     public static final byte FADER = 0, MASTER = 1, COLOR = 2, FLASH = 3, RELEASE = 4, PROGRAM = 5, MOVE = 6, RATE = 7,
         BLACKOUT = 8, STORE = 9, RECALL = 10, RECORD = 11, CLEAR_SHOW = 12, COLORFX = 13, GOBO = 14, PRISM = 15, ZOOM = 16,
-        BLIND_ALL = 17, STROBE_ALL = 18, HAZER = 19, COLOR_RGB = 20, FADE_TIME = 21, TAP_TEMPO = 22, DJ_SYNC = 23, SCENE_PAGE = 24;
+        BLIND_ALL = 17, STROBE_ALL = 18, HAZER = 19, COLOR_RGB = 20, FADE_TIME = 21, TAP_TEMPO = 22, DJ_SYNC = 23, SCENE_PAGE = 24, DROP_FLASH = 25;
 
     public static final Type<DmxControl> TYPE = new Type<>(CreateBrewery.ID("dmx_control"));
     public static final StreamCodec<ByteBuf, DmxControl> CODEC = StreamCodec.composite(
@@ -76,6 +76,7 @@ public record DmxControl(BlockPos pos, byte action, byte index, float value) imp
             case TAP_TEMPO -> dmx.setManualBpm(c.value);
             case DJ_SYNC -> dmx.setDjSync(c.value > 0.5f);
             case SCENE_PAGE -> dmx.setScenePage((int) c.value);
+            case DROP_FLASH -> { if (group) dmx.setDropFlash(i, c.value > 0.5f); }
             default -> {}
         }
     }

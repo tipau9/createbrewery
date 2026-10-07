@@ -32,6 +32,24 @@ class DmxProgramTest {
     }
 
     @Test
+    void aDropFlashGroupHitsFullOnTheDropOnly() {
+        DmxProgram p = new DmxProgram();
+        DmxProgram.Settings s = new DmxProgram.Settings();
+        s.program = DmxProgram.MANUAL;
+        s.faders[2] = 0f;
+        s.faders[3] = 0f;
+        s.dropFlash = 1 << 2;
+        tick(p, s, 0, 0, 0, true, false);
+        assertEquals(0f, p.level[2], 1e-6, "no drop: the fader rules");
+        tick(p, s, 0, 1f, 0, true, false);
+        assertEquals(1f, p.level[2], 1e-4, "the drop flashes the group");
+        assertEquals(0f, p.level[3], 1e-6, "a group without D stays at its fader");
+        s.blackout = true;
+        tick(p, s, 0, 1f, 0, true, false);
+        assertEquals(0f, p.level[2], 1e-6, "blackout beats the drop flash");
+    }
+
+    @Test
     void theDropGoesFullWhite() {
         DmxProgram p = new DmxProgram();
         DmxProgram.Settings s = new DmxProgram.Settings();
