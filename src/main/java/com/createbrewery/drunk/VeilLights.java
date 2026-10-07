@@ -28,7 +28,7 @@ final class VeilLights {
 
     /** Each frame, on the render thread. */
     static void frame(LocalPlayer player, float partial) {
-        if (!com.createbrewery.Config.ENABLE_VEIL_LIGHTS.get() || DrunkClient.shaderPack()) {
+        if (!com.createbrewery.Config.areVeilLightsEnabled() || DrunkClient.shaderPack()) {
             clear();
             return;
         }

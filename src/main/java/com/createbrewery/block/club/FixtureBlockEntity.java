@@ -179,7 +179,7 @@ public class FixtureBlockEntity extends BlockEntity {
             boolean steady = Math.abs(lit - prevLit) < 0.2f;
             StrobeFlash.offer(level, worldPosition, facing, lit, 4, steady);
         }
-        if (veil && com.createbrewery.Config.ENABLE_VEIL_LIGHTS.get() && kind != FixtureBlock.Kind.MOVING_HEAD) {
+        if (veil && com.createbrewery.Config.areVeilLightsEnabled() && kind != FixtureBlock.Kind.MOVING_HEAD) {
             try {
                 float brightness = lit * (kind == FixtureBlock.Kind.BLINDER ? 1.6f : kind == FixtureBlock.Kind.PAR ? 1f : 0.6f);
                 roomLight = StrobeRoomLight.update(roomLight, worldPosition, facing, brightness, true, color);
@@ -188,7 +188,7 @@ public class FixtureBlockEntity extends BlockEntity {
                 LOGGER.warn("Veil fixture light unavailable", e);
             }
         }
-        if (veil && com.createbrewery.Config.ENABLE_VEIL_LIGHTS.get() && kind == FixtureBlock.Kind.MOVING_HEAD) {
+        if (veil && com.createbrewery.Config.areVeilLightsEnabled() && kind == FixtureBlock.Kind.MOVING_HEAD) {
             try {
                 long now = net.minecraft.client.Minecraft.getInstance().gui.getGuiTicks();
                 if (now != headLightsTick) {

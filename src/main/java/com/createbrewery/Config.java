@@ -42,4 +42,33 @@ public class Config {
             .define("enableVeilLights", false);
         CLIENT_SPEC = client.build();
     }
+
+    private static volatile Boolean isNvidia = null;
+    private static boolean warnedNvidia = false;
+
+    public static boolean isNvidiaGpu() {
+        if (isNvidia != null) return isNvidia;
+        try {
+            String vendor = org.lwjgl.opengl.GL11C.glGetString(org.lwjgl.opengl.GL11C.GL_VENDOR);
+            if (vendor != null) {
+                isNvidia = vendor.toLowerCase(java.util.Locale.ROOT).contains("nvidia");
+                return isNvidia;
+            }
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
+    public static boolean areVeilLightsEnabled() {
+        if (!ENABLE_VEIL_LIGHTS.get()) return false;
+        if (isNvidiaGpu()) {
+            if (!warnedNvidia) {
+                warnedNvidia = true;
+                com.mojang.logging.LogUtils.getLogger().warn(
+                    "Veil dynamic lights disabled: Nvidia GPU detected. Veil's VoxelShadowGrid crashes nvoglv64.dll in glTexImage3D."
+                );
+            }
+            return false;
+        }
+        return true;
+    }
 }
