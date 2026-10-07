@@ -33,7 +33,9 @@ public class HazeParticle extends FogParticle {
             lifetime = 500 + random.nextInt(300);
             startSize = 2.6f + random.nextFloat() * 1.2f;
             endSize = startSize + 1.2f;
-            peakAlpha = 0.014f + random.nextFloat() * 0.008f;
+            // A hazer blast's patches (a slight rise, see HazerBlockEntity.THICK) hang much thicker.
+            boolean thick = yd > com.createbrewery.block.club.HazerBlockEntity.THICK / 2;
+            peakAlpha = (0.014f + random.nextFloat() * 0.008f) * (thick ? 3f : 1f);
             drag = 0.97f;
         }
         quadSize = startSize;

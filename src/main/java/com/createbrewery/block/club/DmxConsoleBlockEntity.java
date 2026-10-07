@@ -194,6 +194,8 @@ public class DmxConsoleBlockEntity extends BlockEntity {
                     if (st.hasProperty(HazerBlock.ON) && !st.getValue(HazerBlock.ON)) {
                         server.setBlock(p, st.setValue(HazerBlock.ON, true), 3);
                     }
+                    // Every hazer blasts the whole room full at once.
+                    server.blockEvent(p, st.getBlock(), HazerBlockEntity.BLAST, 0);
                 }
             }
             server.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.7f, 1.4f);
