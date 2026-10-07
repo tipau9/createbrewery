@@ -37,38 +37,14 @@ public class Config {
             .define("recordMusicTraces", false);
         ENABLE_VEIL_LIGHTS = client
             .comment("Enable dynamic room lighting through Veil for club fixtures, strobes and drugs.",
-                "Disabled by default because Veil's VoxelShadowGrid crashes Nvidia OpenGL drivers (nvoglv64.dll glTexImage3D).",
-                "Leave false unless your GPU driver and Veil version support voxel shadow textures.")
+                "Off by default: Veil's voxel shadow texture used to crash Nvidia OpenGL drivers (nvoglv64.dll glTexImage3D);",
+                "Create Brewery now guards that upload. Turn it off again if your game crashes with Veil lights on.")
             .define("enableVeilLights", false);
         CLIENT_SPEC = client.build();
     }
 
-    private static volatile Boolean isNvidia = null;
-    private static boolean warnedNvidia = false;
-
-    public static boolean isNvidiaGpu() {
-        if (isNvidia != null) return isNvidia;
-        try {
-            String vendor = org.lwjgl.opengl.GL11C.glGetString(org.lwjgl.opengl.GL11C.GL_VENDOR);
-            if (vendor != null) {
-                isNvidia = vendor.toLowerCase(java.util.Locale.ROOT).contains("nvidia");
-                return isNvidia;
-            }
-        } catch (Throwable ignored) {}
-        return false;
-    }
-
+    /** Nvidia too: VoxelShadowGridMixin keeps Veil's shadow texture upload from crashing its driver. */
     public static boolean areVeilLightsEnabled() {
-        if (!ENABLE_VEIL_LIGHTS.get()) return false;
-        if (isNvidiaGpu()) {
-            if (!warnedNvidia) {
-                warnedNvidia = true;
-                com.mojang.logging.LogUtils.getLogger().warn(
-                    "Veil dynamic lights disabled: Nvidia GPU detected. Veil's VoxelShadowGrid crashes nvoglv64.dll in glTexImage3D."
-                );
-            }
-            return false;
-        }
-        return true;
+        return ENABLE_VEIL_LIGHTS.get();
     }
 }
