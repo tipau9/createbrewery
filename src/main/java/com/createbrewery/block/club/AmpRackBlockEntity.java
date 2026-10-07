@@ -48,7 +48,13 @@ public class AmpRackBlockEntity extends SpeakerBlockEntity {
     /** The rack that drives the booth: the first linked one, in position order. */
     @Nullable
     public static AmpRackBlockEntity driving(Level level, BlockPos booth) {
-        for (SpeakerBlockEntity s : linked(level, booth)) if (s instanceof AmpRackBlockEntity r) return r;
+        return driving(linked(level, booth));
+    }
+
+    /** The same, from a booth's links already looked up (they are sorted, so the same rack wins every time). */
+    @org.jetbrains.annotations.Nullable
+    public static AmpRackBlockEntity driving(List<SpeakerBlockEntity> linked) {
+        for (SpeakerBlockEntity s : linked) if (s instanceof AmpRackBlockEntity r) return r;
         return null;
     }
 

@@ -348,7 +348,6 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.amp.subcut.off", "OFF");
         REGISTRATE.addRawLang("createbrewery.amp.subcut.30", "30 Hz");
         REGISTRATE.addRawLang("createbrewery.amp.subcut.40", "40 Hz");
-        REGISTRATE.addRawLang("createbrewery.amp.delay", "Delay: %s ms (%s m)");
         REGISTRATE.addRawLang("createbrewery.amp.speed", "Speed: %s");
         REGISTRATE.addRawLang("createbrewery.amp.speed.on", "ON");
         REGISTRATE.addRawLang("createbrewery.amp.speed.off", "OFF");
@@ -356,6 +355,8 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("createbrewery.dj.mixer", "DJ Mixer");
         REGISTRATE.addRawLang("createbrewery.dj.deck_a", "Deck A");
         REGISTRATE.addRawLang("createbrewery.dj.deck_b", "Deck B");
+        REGISTRATE.addRawLang("createbrewery.dj.deck_c", "Deck C");
+        REGISTRATE.addRawLang("createbrewery.dj.deck_d", "Deck D");
         REGISTRATE.addRawLang("createbrewery.dj.play", "▶ Play");
         REGISTRATE.addRawLang("createbrewery.dj.stop", "■ Stop");
         REGISTRATE.addRawLang("createbrewery.dj.pitch", "Pitch %s");

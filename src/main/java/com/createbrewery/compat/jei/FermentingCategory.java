@@ -44,7 +44,8 @@ public class FermentingCategory extends CreateRecipeCategory<FermentingRecipe> {
     public void draw(FermentingRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
         AllGuiTextures.JEI_ARROW.render(graphics, 85, 25);
 
-        int duration = recipe.getProcessingDuration();
+        // The local config: right in single player; on a server with another multiplier it is the best the client knows.
+        int duration = (int) Math.round(recipe.getProcessingDuration() * com.createbrewery.Config.FERMENTATION_DURATION_MULTIPLIER.get());
         Component durationText;
         if (duration == 24000) {
             durationText = Component.translatable("createbrewery.jei.fermenting.one_day");

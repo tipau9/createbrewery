@@ -387,20 +387,9 @@ public class DjBoothBlockEntity extends BlockEntity {
     public void handlePad(int deck, int pad, Player player) {
         if (deck < 0 || deck >= DECKS || pad < 0 || pad >= 8) return;
         Deck d = decks[deck];
+        // Hot cues are set by the screen in PCM frames (SET_HOT_CUE); a pad press has nothing to add to them.
         switch (d.padMode) {
-            case PAD_BEAT_LOOP, PAD_SLIP_LOOP -> {
-                int beats = LOOPS[pad % LOOPS.length];
-                setLoop(deck, beats);
-            }
-            case PAD_HOT_CUE -> {
-                if (d.hotCues[pad] < 0) {
-                    d.hotCues[pad] = level != null ? level.getGameTime() : 0;
-                    if (player != null) player.displayClientMessage(Component.translatable("createbrewery.dj.hot_cue_set", pad + 1), true);
-                } else {
-                    if (player != null) player.displayClientMessage(Component.translatable("createbrewery.dj.hot_cue_jump", pad + 1), true);
-                }
-                sync();
-            }
+            case PAD_BEAT_LOOP, PAD_SLIP_LOOP -> setLoop(deck, LOOPS[pad % LOOPS.length]);
             case PAD_BEAT_JUMP -> {
                 int[] jumps = {-8, -4, -2, -1, 1, 2, 4, 8};
                 int jumpBeats = jumps[pad];
@@ -475,7 +464,10 @@ public class DjBoothBlockEntity extends BlockEntity {
         sync();
     }
 
-    public void jogScrub(int deck, float scrubAmount) {
+    /** Server: the tick each deck last played a scratch, so a spinning platter cannot flood the club with sounds. */
+    private final long[] scratchedAt = new long[DECKS];
+
+    public void jogScrub(int deck, float scrubAmount, @org.jetbrains.annotations.Nullable Player dj) {
         if (deck < 0 || deck >= DECKS || level == null) return;
         Deck d = decks[deck];
         if (!d.playing && d.disc.isEmpty()) return;
@@ -486,8 +478,12 @@ public class DjBoothBlockEntity extends BlockEntity {
         float vol = Mth.clamp(gain * (0.6f + Math.min(0.6f, Math.abs(scrubAmount) * 2.5f)), 0.2f, 1.2f);
         float pitch = Mth.clamp(0.8f + Math.abs(scrubAmount) * 3.0f, 0.6f, 1.8f);
 
-        level.playSound(null, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
-            sound.get(), SoundSource.BLOCKS, vol, pitch);
+        // The DJ already hears it from the screen.
+        if (level.getGameTime() - scratchedAt[deck] >= 2) {
+            scratchedAt[deck] = level.getGameTime();
+            level.playSound(dj, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
+                sound.get(), SoundSource.BLOCKS, vol, pitch);
+        }
 
         if (!d.slipMode && d.playing && d.endsAt > 0) {
             long shift = (long) ((scrubAmount / (2.0 * Math.PI)) * 36.0f);
@@ -683,7 +679,7 @@ public class DjBoothBlockEntity extends BlockEntity {
     }
 
     public void setBeatFxBeats(float beats) {
-        this.beatFxBeats = Math.max(0.0625f, beats);
+        this.beatFxBeats = Mth.clamp(beats, BFX_BEAT_FRACTIONS[0], BFX_BEAT_FRACTIONS[BFX_BEAT_FRACTIONS.length - 1]);
         sync();
     }
 
@@ -692,7 +688,7 @@ public class DjBoothBlockEntity extends BlockEntity {
     }
 
     public void setBeatFxChannel(int channel) {
-        this.beatFxChannel = channel;
+        this.beatFxChannel = Mth.clamp(channel, -1, DECKS - 1);
         sync();
     }
 
@@ -782,6 +778,11 @@ public class DjBoothBlockEntity extends BlockEntity {
 
     /** Client: every loaded booth, for the lights and effects that follow whichever booth plays near them. */
     private static final java.util.Set<BlockPos> BOOTHS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Client, out of the world. */
+    public static void clearClientBooths() {
+        BOOTHS.clear();
+    }
 
     @Override
     public void setRemoved() {
@@ -909,9 +910,9 @@ public class DjBoothBlockEntity extends BlockEntity {
             d.loopBeats = tag.getInt(keys[deck] + "Loop");
             d.loopSerial = tag.getInt(keys[deck] + "LoopSerial");
             d.fader = tag.contains(keys[deck] + "Fader") ? tag.getFloat(keys[deck] + "Fader") : 1f;
-            d.xfAssign = tag.contains(keys[deck] + "XfAssign") ? tag.getInt(keys[deck] + "XfAssign") : (deck % 2);
-            d.trim = tag.contains(keys[deck] + "Trim") ? tag.getFloat(keys[deck] + "Trim") : 0.5f;
-            d.padMode = tag.contains(keys[deck] + "PadMode") ? tag.getInt(keys[deck] + "PadMode") : PAD_BEAT_LOOP;
+            d.xfAssign = tag.contains(keys[deck] + "XfAssign") ? Math.floorMod(tag.getInt(keys[deck] + "XfAssign"), 3) : (deck % 2);
+            d.trim = tag.contains(keys[deck] + "Trim") ? Mth.clamp(tag.getFloat(keys[deck] + "Trim"), 0f, 1f) : 0.5f;
+            d.padMode = tag.contains(keys[deck] + "PadMode") ? Math.floorMod(tag.getInt(keys[deck] + "PadMode"), 4) : PAD_BEAT_LOOP;
             d.vinylMode = !tag.contains(keys[deck] + "Vinyl") || tag.getBoolean(keys[deck] + "Vinyl");
             d.slipMode = tag.getBoolean(keys[deck] + "Slip");
             d.reverse = tag.getBoolean(keys[deck] + "Reverse");
@@ -931,10 +932,10 @@ public class DjBoothBlockEntity extends BlockEntity {
         autoDrop = !tag.contains("AutoDrop") || tag.getBoolean("AutoDrop");
         crateSlot = tag.contains("CrateSlot") ? tag.getInt("CrateSlot") : -1;
         if (tag.contains("ActiveColorFx")) activeColorFx = Math.floorMod(tag.getInt("ActiveColorFx"), COLOR_FX_COUNT);
-        if (tag.contains("ColorFxParam")) colorFxParam = tag.getFloat("ColorFxParam");
+        if (tag.contains("ColorFxParam")) colorFxParam = Mth.clamp(tag.getFloat("ColorFxParam"), 0f, 1f);
         if (tag.contains("BeatFxType")) beatFxType = Math.floorMod(tag.getInt("BeatFxType"), BFX_COUNT);
         if (tag.contains("BeatFxBeats")) beatFxBeats = tag.getFloat("BeatFxBeats");
-        if (tag.contains("BeatFxChannel")) beatFxChannel = tag.getInt("BeatFxChannel");
+        if (tag.contains("BeatFxChannel")) beatFxChannel = Mth.clamp(tag.getInt("BeatFxChannel"), -1, DECKS - 1);
         if (tag.contains("BeatFxOn")) beatFxOn = tag.getBoolean("BeatFxOn");
         if (tag.contains("BeatFxDepth")) beatFxDepth = tag.getFloat("BeatFxDepth");
     }

@@ -90,6 +90,12 @@ public final class MusicPulse {
     /** Client: per booth {power 0..1, when last stepped}: the rack's power as heard, eased in over 2 s and out over half a second. */
     private static final Map<BlockPos, double[]> POWER = new ConcurrentHashMap<>();
 
+    /** Client, out of the world: the booths of the last one are gone. */
+    public static void clearClub() {
+        METERS.clear();
+        POWER.clear();
+    }
+
     private static float power(BlockPos booth, AmpSettings amp, double now) {
         if (amp == null) {
             POWER.remove(booth);
@@ -433,7 +439,7 @@ public final class MusicPulse {
         track.sound = sound;
         if (Config.CLIENT_SPEC.isLoaded() && Config.RECORD_MUSIC.get()) trace(track, sound);
         tracks.add(track);
-        LOGGER.info("MDMA hears {} ({} Hz)", sound.getLocation(), track.rate);
+        LOGGER.debug("MDMA hears {} ({} Hz)", sound.getLocation(), track.rate);
     }
 
     /** Starts writing what the detector hears of this song to logs/brewery-traces (Config.RECORD_MUSIC). */
@@ -523,7 +529,7 @@ public final class MusicPulse {
                 if (t.phones != null) t.phones.delete();
                 t.phones = null;
                 tracks.remove(t);
-                LOGGER.info("MDMA heard {}: {} kicks, {} volume changes held", t.sound.getLocation(), t.kicks, t.held);
+                LOGGER.debug("MDMA heard {}: {} kicks, {} volume changes held", t.sound.getLocation(), t.kicks, t.held);
                 java.io.PrintWriter trace = t.detector.trace;
                 t.detector.trace = null;
                 if (trace != null) trace.close();
@@ -581,7 +587,7 @@ public final class MusicPulse {
         DjBoothBlockEntity dj = DjBoothBlockEntity.playingAt(mc.level, BlockPos.containing(at));
         List<SpeakerBlockEntity> linked = dj == null ? List.of() : SpeakerBlockEntity.linked(mc.level, dj.getBlockPos());
         // The rack that drives the booth (the first, if there are two), its speakers and its switched-on subwoofers.
-        AmpRackBlockEntity rack = dj == null ? null : AmpRackBlockEntity.driving(mc.level, dj.getBlockPos());
+        AmpRackBlockEntity rack = AmpRackBlockEntity.driving(linked);
         AmpSettings amp = rack == null ? null : rack.settings();
         List<SpeakerBlockEntity> tops = new ArrayList<>();
         List<Vec3> subs = new ArrayList<>();

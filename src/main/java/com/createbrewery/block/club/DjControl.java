@@ -102,7 +102,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case REVERSE -> dj.setReverse(deck, control.value > 0.5f);
             case CROSSFADER_ASSIGN -> dj.setCrossfaderAssign(deck, (int) control.value);
             case TRIM -> dj.setTrim(deck, control.value);
-            case JOG_SCRUB -> dj.jogScrub(deck, control.value);
+            case JOG_SCRUB -> dj.jogScrub(deck, control.value, player);
             case PITCH -> dj.setPitch(deck, control.value);
             case JOG_TOUCH -> dj.setScratchHeld(deck, control.value > 0.5f);
             case SET_MAIN_CUE -> dj.setMainCue(deck, (long) control.value);

@@ -54,6 +54,8 @@ public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements
     public static final Map<Integer, DrugPose> SEEN = new ConcurrentHashMap<>();
     /** Client side: the running action of each player, by entity id. */
     public static final Map<Integer, Action> ACTING = new ConcurrentHashMap<>();
+    /** Server: the tick each player's pose was last passed on. Weak, so a player who left is forgotten. */
+    private static final Map<ServerPlayer, Integer> RELAYED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
     /** An action as the client plays it: which, since when and until when (System.currentTimeMillis). */
     public record Action(int kind, long start, long end) {
@@ -80,8 +82,16 @@ public record DrugPose(int entity, byte kind, byte amount, byte eyes) implements
     private static void handle(DrugPose pose, IPayloadContext context) {
         if (context.flow().isServerbound()) {
             // Clients only report their lasting pose; actions come from the server.
-            if (context.player() instanceof ServerPlayer player && pose.kind < VOMIT) {
-                PacketDistributor.sendToPlayersTrackingEntity(player, new DrugPose(player.getId(), pose.kind, pose.amount, pose.eyes));
+            // Untrusted input: a known pose, eyes in range, and no faster than the client's own four a second.
+            if (context.player() instanceof ServerPlayer player && pose.kind >= NONE && pose.kind < VOMIT
+                && pose.eyes >= 0 && pose.eyes <= EYES_GLASSY && player.tickCount - RELAYED.getOrDefault(player, -10) >= 4) {
+                RELAYED.put(player, player.tickCount);
+                DrugPose relay = new DrugPose(player.getId(), pose.kind, pose.amount, pose.eyes);
+                for (ServerPlayer other : player.serverLevel().players()) {
+                    if (other != player && other.distanceToSqr(player) < 96 * 96 && other.connection.hasChannel(TYPE)) {
+                        PacketDistributor.sendToPlayer(other, relay);
+                    }
+                }
             }
         } else if (pose.kind >= VOMIT) {
             long now = System.currentTimeMillis();

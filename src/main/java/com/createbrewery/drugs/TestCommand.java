@@ -99,7 +99,7 @@ public final class TestCommand {
 
     /** The client writes what its drug vision does into its log for the next 90 seconds (DrugDebug). */
     private static void debugLog(Player player) {
-        if (player instanceof net.minecraft.server.level.ServerPlayer p) {
+        if (player instanceof net.minecraft.server.level.ServerPlayer p && p.connection.hasChannel(DrugDebug.TYPE)) {
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new DrugDebug(90));
         }
     }

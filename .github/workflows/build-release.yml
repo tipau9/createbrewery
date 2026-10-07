@@ -49,6 +49,11 @@ jobs:
           cp build/libs/createbrewery-*.jar build/createbrewery.jar
           
           if gh release view "$TAG" >/dev/null 2>&1; then
+            # A published version is never replaced by a branch push: bump mod_version for a new release.
+            if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+              echo "Release $TAG already exists; bump mod_version to publish. Skipping upload."
+              exit 0
+            fi
             echo "Uploading asset to existing release $TAG..."
             gh release upload "$TAG" build/libs/*.jar build/createbrewery.jar --clobber
           else

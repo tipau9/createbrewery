@@ -42,8 +42,11 @@ public class DmxConsoleBlockEntity extends BlockEntity {
     boolean recording;
     int cues;
     /** Song ticks into each deck's record (at its pitch), whether it played last tick, and what is heard now. */
-    private final float[] songTime = new float[2];
-    private final boolean[] wasPlaying = new boolean[2];
+    private final float[] songTime = new float[DjBoothBlockEntity.DECKS];
+    private final boolean[] wasPlaying = new boolean[DjBoothBlockEntity.DECKS];
+    /** The disc whose saved form {@link #song} was hashed from: hashing it every tick allocates its whole NBT. */
+    private net.minecraft.world.item.ItemStack hashedDisc = net.minecraft.world.item.ItemStack.EMPTY;
+    private int hashedSong;
     private int song, songTick, lastCue = -1, lastSong;
     private boolean hearing;
 
@@ -158,8 +161,13 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         changed();
     }
 
+    /** Hazer presses come from the network; one puff a second is plenty. */
+    private static final int HAZER_COOLDOWN = 20;
+    private long hazedAt = Long.MIN_VALUE / 2;
+
     public void triggerHazer(@org.jetbrains.annotations.Nullable Player player) {
-        if (level instanceof ServerLevel server) {
+        if (level instanceof ServerLevel server && server.getGameTime() - hazedAt >= HAZER_COOLDOWN) {
+            hazedAt = server.getGameTime();
             // Spawn fine haze and cozy smoke at console
             server.sendParticles(ModParticles.HAZE.get(),
                 worldPosition.getX() + 0.5, worldPosition.getY() + 0.9, worldPosition.getZ() + 0.5,
@@ -169,18 +177,17 @@ public class DmxConsoleBlockEntity extends BlockEntity {
                 12, 1.0, 0.4, 1.0, 0.015);
 
             // Also trigger at linked fixtures and activate nearby hazers
-            for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-24, -8, -24), worldPosition.offset(24, 12, 24))) {
-                if (server.isLoaded(p)) {
-                    if (server.getBlockEntity(p) instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
-                        server.sendParticles(ModParticles.HAZE.get(),
-                            p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 6, 0.5, 0.3, 0.5, 0.02);
-                        server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
-                            p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
-                    } else if (server.getBlockEntity(p) instanceof HazerBlockEntity) {
-                        BlockState st = server.getBlockState(p);
-                        if (st.hasProperty(HazerBlock.ON) && !st.getValue(HazerBlock.ON)) {
-                            server.setBlock(p, st.setValue(HazerBlock.ON, true), 3);
-                        }
+            for (BlockEntity be : blockEntitiesNear(24, -8, 12)) {
+                BlockPos p = be.getBlockPos();
+                if (be instanceof FixtureBlockEntity fix && worldPosition.equals(fix.getConsole())) {
+                    server.sendParticles(ModParticles.HAZE.get(),
+                        p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 6, 0.5, 0.3, 0.5, 0.02);
+                    server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                        p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4, 0.5, 0.3, 0.5, 0.01);
+                } else if (be instanceof HazerBlockEntity) {
+                    BlockState st = server.getBlockState(p);
+                    if (st.hasProperty(HazerBlock.ON) && !st.getValue(HazerBlock.ON)) {
+                        server.setBlock(p, st.setValue(HazerBlock.ON, true), 3);
                     }
                 }
             }
@@ -283,19 +290,34 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         return booth != null && level != null && level.isLoaded(booth) && level.getBlockEntity(booth) instanceof DjBoothBlockEntity dj ? dj : null;
     }
 
-    /** The scan below visits about 18k positions; a spammed REC button must not repeat it every packet. */
+    /** A spammed REC button must not repeat the scan below every packet. */
     private static final int SCAN_COOLDOWN = 20;
     private long scannedAt = Long.MIN_VALUE / 2;
 
     @org.jetbrains.annotations.Nullable
     private BlockPos nearestBooth() {
         BlockPos best = null;
-        for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-16, -8, -16), worldPosition.offset(16, 8, 16))) {
-            if (level.isLoaded(p) && level.getBlockEntity(p) instanceof DjBoothBlockEntity && (best == null || p.distSqr(worldPosition) < best.distSqr(worldPosition))) {
-                best = p.immutable();
-            }
+        for (BlockEntity be : blockEntitiesNear(16, -8, 8)) {
+            BlockPos p = be.getBlockPos();
+            if (be instanceof DjBoothBlockEntity && (best == null || p.distSqr(worldPosition) < best.distSqr(worldPosition))) best = p;
         }
         return best;
+    }
+
+    /** Block entities of the loaded chunks within {@code r} blocks sideways and {@code down..up} vertically: a few chunk maps, not a block scan. */
+    private java.util.List<BlockEntity> blockEntitiesNear(int r, int down, int up) {
+        java.util.List<BlockEntity> out = new java.util.ArrayList<>();
+        int x = worldPosition.getX(), y = worldPosition.getY(), z = worldPosition.getZ();
+        for (int cx = (x - r) >> 4; cx <= (x + r) >> 4; cx++) {
+            for (int cz = (z - r) >> 4; cz <= (z + r) >> 4; cz++) {
+                if (!(level.getChunk(cx, cz, net.minecraft.world.level.chunk.status.ChunkStatus.FULL, false) instanceof net.minecraft.world.level.chunk.LevelChunk chunk)) continue;
+                for (BlockEntity be : chunk.getBlockEntities().values()) {
+                    BlockPos p = be.getBlockPos();
+                    if (Math.abs(p.getX() - x) <= r && Math.abs(p.getZ() - z) <= r && p.getY() - y >= down && p.getY() - y <= up) out.add(be);
+                }
+            }
+        }
+        return out;
     }
 
     /** Follows the booth's records through their songs, and plays the show recorded to them. */
@@ -304,22 +326,28 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         hearing = false;
         if (dj == null) return;
         long now = level.getGameTime();
-        for (int d = DjBoothBlockEntity.A; d <= DjBoothBlockEntity.B; d++) {
+        for (int d = 0; d < DjBoothBlockEntity.DECKS; d++) {
             boolean playing = dj.isPlaying(d);
             if (playing && !wasPlaying[d]) songTime[d] = 0;
             if (playing) songTime[d] += dj.getPitch(d);
             wasPlaying[d] = playing;
         }
         // The deck the crowd hears most.
-        int deck = dj.deckGain(DjBoothBlockEntity.A, now) >= dj.deckGain(DjBoothBlockEntity.B, now) ? DjBoothBlockEntity.A : DjBoothBlockEntity.B;
-        if (!dj.isPlaying(deck)) deck = 1 - deck;
-        if (!dj.isPlaying(deck)) return;
+        int deck = -1;
+        for (int d = 0; d < DjBoothBlockEntity.DECKS; d++) {
+            if (dj.isPlaying(d) && (deck < 0 || dj.deckGain(d, now) > dj.deckGain(deck, now))) deck = d;
+        }
+        if (deck < 0) return;
         hearing = true;
         // From the record as saved (its id and components, an Etched disc's track included): the
         // item's own hash differs from one game start to the next, and the show must find it again.
         net.minecraft.world.item.ItemStack disc = dj.getDisc(deck);
         if (disc.isEmpty()) return;
-        song = disc.save(level.registryAccess()).toString().hashCode();
+        if (disc != hashedDisc) {
+            hashedDisc = disc;
+            hashedSong = disc.save(level.registryAccess()).toString().hashCode();
+        }
+        song = hashedSong;
         songTick = (int) songTime[deck];
         if (song != lastSong) {
             lastSong = song;
@@ -362,7 +390,8 @@ public class DmxConsoleBlockEntity extends BlockEntity {
             if (progress >= 1.0f) {
                 isFading = false;
             }
-            changed();
+            // A full block update carries every scene; clients see the fade in steps of 4 ticks.
+            if (!isFading || level.getGameTime() % 4 == 0) changed();
         }
     }
 
@@ -442,7 +471,7 @@ public class DmxConsoleBlockEntity extends BlockEntity {
         read(settings, tag);
         recording = tag.getBoolean("Recording");
         cues = tag.getInt("Cues");
-        if (tag.contains("Booth")) booth = net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Booth").orElse(null);
+        booth = tag.contains("Booth") ? net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Booth").orElse(null) : null;
         if (!tag.contains("Show")) return;
         timecode.songs.clear();
         for (Tag t : tag.getList("Show", Tag.TAG_COMPOUND)) {

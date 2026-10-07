@@ -157,7 +157,7 @@ public class ClubGameTests {
         // 6. Pitch & Jog Scrub on 4 Decks
         dj.setPitch(DjBoothBlockEntity.C, 1.04f);
         helper.assertTrue(Math.abs(dj.getPitch(DjBoothBlockEntity.C) - 1.04f) < 1e-4, "Pitch on Deck 3 did not set");
-        dj.jogScrub(DjBoothBlockEntity.C, 20f);
+        dj.jogScrub(DjBoothBlockEntity.C, 20f, null);
 
         helper.succeed();
     }

@@ -116,7 +116,8 @@ public class BreweryCommonEvents {
 
     public static void reduceDuration(Player player, Holder<MobEffect> effectHolder, int reductionTicks) {
         MobEffectInstance current = player.getEffect(effectHolder);
-        if (current != null) {
+        // An infinite effect (a command, a beacon-like source) is not this mod's to wear off.
+        if (current != null && !current.isInfiniteDuration()) {
             int newDuration = current.getDuration() - reductionTicks;
             int amplifier = current.getAmplifier();
             boolean ambient = current.isAmbient();

@@ -120,11 +120,18 @@ public final class DrugPostProcessor {
                 shaderFailed = true;
                 LOGGER.warn("Drunk shader could not be loaded; drunk vision falls back to overlays only", e);
             }
-        } else if (!want && chain != null) {
+        } else if (want) {
+            unwantedFor = 0;
+        } else if (chain != null && ++unwantedFor >= CLOSE_AFTER) {
+            // Not on the first quiet call: a value easing around the threshold would rebuild (recompile) the chain over and over.
+            unwantedFor = 0;
             chain.close();
             chain = null;
         }
     }
+
+    private static final int CLOSE_AFTER = 40;
+    private static int unwantedFor;
 
     public static void closeChain() {
         if (chain != null) {
@@ -148,6 +155,8 @@ public final class DrugPostProcessor {
             com.createbrewery.block.club.StrobeLightBlockEntity.clearRoomLights();
             com.createbrewery.drugs.DrugPose.SEEN.clear();
             com.createbrewery.drugs.DrugPose.ACTING.clear();
+            MusicPulse.clearClub();
+            com.createbrewery.block.club.DjBoothBlockEntity.clearClientBooths();
             return;
         }
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);

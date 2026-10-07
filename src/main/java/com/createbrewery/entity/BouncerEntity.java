@@ -325,6 +325,14 @@ public class BouncerEntity extends PathfinderMob {
         player.displayClientMessage(Component.literal("§8[§6Türsteher§8] §f" + message), false);
     }
 
+    /** The cash box goes with him: entry fees not yet collected drop where he falls. */
+    @Override
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean recentlyHit) {
+        super.dropCustomDeathLoot(level, source, recentlyHit);
+        for (int left = collectedEmeralds; left > 0; left -= 64) spawnAtLocation(new ItemStack(Items.EMERALD, Math.min(64, left)));
+        collectedEmeralds = 0;
+    }
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
@@ -337,6 +345,7 @@ public class BouncerEntity extends PathfinderMob {
         if (ownerUUID != null) tag.putUUID("OwnerUUID", ownerUUID);
         tag.putInt("EntryFee", entryFee);
         tag.putInt("CollectedEmeralds", collectedEmeralds);
+        tag.putInt("AdmitTicks", admitTicks);
 
         ListTag list = new ListTag();
         for (String name : guestList) list.add(StringTag.valueOf(name));
@@ -353,6 +362,8 @@ public class BouncerEntity extends PathfinderMob {
         if (tag.hasUUID("OwnerUUID")) ownerUUID = tag.getUUID("OwnerUUID");
         if (tag.contains("EntryFee")) entryFee = tag.getInt("EntryFee");
         if (tag.contains("CollectedEmeralds")) collectedEmeralds = tag.getInt("CollectedEmeralds");
+        // Doors opened for a guest close on time even if the chunk unloaded in between.
+        admitTicks = tag.getInt("AdmitTicks");
 
         guestList.clear();
         if (tag.contains("GuestList", 9)) {
