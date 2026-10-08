@@ -1,28 +1,28 @@
 {
   "variants": {
     "facing=down": {
-      "model": "createbrewery:block/moving_head",
+      "model": "createbrewery:block/moving_head_base",
       "x": 180
     },
     "facing=east": {
-      "model": "createbrewery:block/moving_head",
+      "model": "createbrewery:block/moving_head_base",
       "x": 90,
       "y": 90
     },
     "facing=north": {
-      "model": "createbrewery:block/moving_head",
+      "model": "createbrewery:block/moving_head_base",
       "x": 90
     },
     "facing=south": {
-      "model": "createbrewery:block/moving_head",
+      "model": "createbrewery:block/moving_head_base",
       "x": 90,
       "y": 180
     },
     "facing=up": {
-      "model": "createbrewery:block/moving_head"
+      "model": "createbrewery:block/moving_head_base"
     },
     "facing=west": {
-      "model": "createbrewery:block/moving_head",
+      "model": "createbrewery:block/moving_head_base",
       "x": 90,
       "y": 270
     }

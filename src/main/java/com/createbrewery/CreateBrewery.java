@@ -477,6 +477,7 @@ public class CreateBrewery {
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::onRegisterClientExtensions);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::addLayers);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::registerRenderers);
+            modEventBus.addListener(com.createbrewery.block.club.FixtureRenderer::registerModels);
             modEventBus.addListener(com.createbrewery.drunk.DrunkClient::registerLayerDefinitions);
             modEventBus.addListener(com.createbrewery.particle.BreweryParticle::register);
             modEventBus.addListener(com.createbrewery.particle.FogParticle::registerShaders);

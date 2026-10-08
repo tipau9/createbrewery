@@ -298,8 +298,9 @@ public class ModBlocks {
         .initialProperties(() -> Blocks.IRON_BLOCK)
         .properties(BlockBehaviour.Properties::noOcclusion)
         .lang("Moving Head")
+        // Only the base is the block; the yoke and head turn in FixtureRenderer.
         .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
-            prov.models().getExistingFile(prov.modLoc("block/" + ctx.getName()))))
+            prov.models().getExistingFile(prov.modLoc("block/moving_head_base"))))
         .simpleItem()
         .register();
 

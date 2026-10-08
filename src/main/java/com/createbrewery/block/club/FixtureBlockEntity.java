@@ -343,8 +343,9 @@ public class FixtureBlockEntity extends BlockEntity {
         return pixelColors[i];
     }
 
-    /** The middle of a moving head's head (its model: 5 to 14 sixteenths up), what it turns around; and how far its lens sits from there. */
-    private static final double HEAD_PIVOT = 9.5 / 16 - 0.5, HEAD_RADIUS = 0.26;
+    /** The middle of a moving head's head (its model: 5 to 14 sixteenths up), what it tilts around; and its lens, a hair out of the face. */
+    static final float HEAD_PIVOT = 9.5f / 16 - 0.5f;
+    private static final double HEAD_RADIUS = 4.5 / 16 + 0.01;
 
     Vec3 lens(Direction facing) {
         return lens(facing, 1f);

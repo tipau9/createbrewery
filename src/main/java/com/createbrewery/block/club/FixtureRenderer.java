@@ -3,7 +3,14 @@ package com.createbrewery.block.club;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.resources.model.ModelManager;
+import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.client.event.ModelEvent;
+import org.joml.Vector3f;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
@@ -24,9 +31,10 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
 
     @Override
     public void render(FixtureBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        Direction facing = be.getBlockState().getValue(FixtureBlock.FACING);
+        if (be.kind() == FixtureBlock.Kind.MOVING_HEAD) head(be, facing, partialTick, pose, buffers, light, overlay);
         float lv = be.level(partialTick);
         if (lv < 0.02f) return;
-        Direction facing = be.getBlockState().getValue(FixtureBlock.FACING);
         int c = be.color();
         float r = (c >> 16 & 255) / 255f, g = (c >> 8 & 255) / 255f, b = (c & 255) / 255f;
         VertexConsumer v = buffers.getBuffer(ClubRenderTypes.GLOW);
@@ -105,6 +113,44 @@ public class FixtureRenderer implements BlockEntityRenderer<FixtureBlockEntity> 
                 }
             }
         }
+    }
+
+    static final ModelResourceLocation YOKE = ModelResourceLocation.standalone(ResourceLocation.fromNamespaceAndPath("createbrewery", "block/moving_head_yoke")),
+        HEAD = ModelResourceLocation.standalone(ResourceLocation.fromNamespaceAndPath("createbrewery", "block/moving_head_head"));
+
+    public static void registerModels(ModelEvent.RegisterAdditional event) {
+        event.register(YOKE);
+        event.register(HEAD);
+    }
+
+    /**
+     * A moving head's yoke and head, turned to where its beam goes, like a real one: the yoke turns
+     * around the base, the head tilts between its arms (the model lies on the floor, lens up).
+     */
+    private static void head(FixtureBlockEntity be, Direction facing, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        Vec3 n = Vec3.atLowerCornerOf(facing.getNormal());
+        Quaternionf face = new Quaternionf().rotationTo(0f, 1f, 0f, (float) n.x, (float) n.y, (float) n.z);
+        Vector3f d = be.direction(facing, partialTick).toVector3f();
+        new Quaternionf(face).conjugate().transform(d);
+        // The yoke looks the same turned half round, so it stays within a quarter turn and the tilt takes the sign.
+        float yaw = (float) Math.atan2(d.x, d.z), tilt = (float) Math.acos(Mth.clamp(d.y, -1f, 1f));
+        if (yaw > Mth.HALF_PI) { yaw -= Mth.PI; tilt = -tilt; }
+        else if (yaw < -Mth.HALF_PI) { yaw += Mth.PI; tilt = -tilt; }
+        ModelManager models = Minecraft.getInstance().getModelManager();
+        var renderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
+        VertexConsumer v = buffers.getBuffer(Sheets.cutoutBlockSheet());
+        pose.pushPose();
+        pose.translate(0.5, 0.5, 0.5);
+        pose.mulPose(face);
+        pose.translate(0, -0.5, 0);
+        pose.mulPose(Axis.YP.rotation(yaw));
+        pose.translate(-0.5, 0, -0.5);
+        renderer.renderModel(pose.last(), v, be.getBlockState(), models.getModel(YOKE), 1f, 1f, 1f, light, overlay);
+        pose.translate(0.5, FixtureBlockEntity.HEAD_PIVOT + 0.5, 0.5);
+        pose.mulPose(Axis.XP.rotation(tilt));
+        pose.translate(-0.5, -FixtureBlockEntity.HEAD_PIVOT - 0.5, -0.5);
+        renderer.renderModel(pose.last(), v, be.getBlockState(), models.getModel(HEAD), 1f, 1f, 1f, light, overlay);
+        pose.popPose();
     }
 
     /** 1 in clear air, up to 2.5 in a full haze; set per beam before it is drawn (render thread). */
