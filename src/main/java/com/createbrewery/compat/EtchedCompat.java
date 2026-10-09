@@ -18,6 +18,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.UUID;
+import org.jetbrains.annotations.Nullable;
+import java.util.Optional;
 
 public final class EtchedCompat {
 
@@ -133,6 +135,28 @@ public final class EtchedCompat {
             playPacketConstructor = packetClass.getConstructor(ItemStack.class, BlockPos.class, UUID.class);
         } catch (Throwable t) {
             LOGGER.warn("Could not find ClientboundPlayBlockMusicPacket constructor for Etched", t);
+        }
+    }
+
+    /** An Etched record's title, artist and number of tracks; an album's own title when it holds several. */
+    public record Meta(Component title, String artist, int tracks) {}
+
+    /** Null for anything that is not an Etched record, or when Etched's API cannot be read. */
+    @Nullable
+    public static Meta meta(ItemStack stack, HolderLookup.Provider registries) {
+        if (!isEtchedDisc(stack)) return null;
+        try {
+            Class<?> pr = Class.forName("gg.moonflower.etched.api.record.PlayableRecord");
+            List<?> tracks = (List<?>) pr.getMethod("getTracks", HolderLookup.Provider.class, ItemStack.class).invoke(null, registries, stack);
+            if (tracks == null || tracks.isEmpty()) return null;
+            Object track = tracks.size() > 1
+                ? ((Optional<?>) pr.getMethod("getAlbum", ItemStack.class).invoke(null, stack)).map(o -> (Object) o).orElse(tracks.get(0))
+                : tracks.get(0);
+            Component title = (Component) track.getClass().getMethod("title").invoke(track);
+            String artist = (String) track.getClass().getMethod("artist").invoke(track);
+            return new Meta(title == null || title.getString().isBlank() ? stack.getHoverName() : title, artist == null ? "" : artist, tracks.size());
+        } catch (Throwable t) {
+            return null;
         }
     }
 }

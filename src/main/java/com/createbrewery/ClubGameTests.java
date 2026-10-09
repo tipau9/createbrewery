@@ -24,6 +24,18 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import com.createbrewery.block.club.DjLibrary;
+import com.createbrewery.block.club.TrackInfo;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
+import java.util.List;
 
 /** The club blocks' ways of losing a player's items or handing out something that is not beer. */
 @GameTestHolder(CreateBrewery.MOD_ID)
@@ -60,6 +72,38 @@ public class ClubGameTests {
         helper.assertTrue(dj.isPlaying(DjBoothBlockEntity.A), "the restarted record does not play");
         helper.assertTrue(dj.getPlayheadFrame(DjBoothBlockEntity.A) == 0, "the record did not go back to its start");
         helper.assertTrue(dj.getSeekSerial(DjBoothBlockEntity.A) != serial, "listeners were not told to seek");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void libraryListsEveryContainerAndShulkerAroundTheBooth(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        helper.setBlock(POS.north(), Blocks.CHEST);
+        helper.setBlock(POS.east(), Blocks.BARREL);
+        helper.setBlock(POS.south(), Blocks.SHULKER_BOX);
+        ChestBlockEntity chest = helper.getBlockEntity(POS.north());
+        chest.setItem(0, new ItemStack(Items.MUSIC_DISC_CAT));
+        chest.setItem(3, new ItemStack(Items.DIRT));
+        ItemStack box = new ItemStack(Items.SHULKER_BOX);
+        box.set(DataComponents.CUSTOM_NAME, Component.literal("Techno"));
+        box.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(ItemStack.EMPTY, new ItemStack(Items.MUSIC_DISC_13))));
+        chest.setItem(5, box);
+        BarrelBlockEntity barrel = helper.getBlockEntity(POS.east());
+        barrel.applyComponents(DataComponentMap.builder().set(DataComponents.CUSTOM_NAME, Component.literal("House")).build(), DataComponentPatch.EMPTY);
+        barrel.setItem(2, new ItemStack(Items.MUSIC_DISC_STAL));
+        ShulkerBoxBlockEntity placed = helper.getBlockEntity(POS.south());
+        placed.setItem(0, new ItemStack(Items.MUSIC_DISC_MALL));
+
+        DjLibrary.Snapshot lib = DjLibrary.snapshot(helper.getLevel(), helper.absolutePos(POS));
+        // chest, the shulker box inside it, the placed shulker box (south comes before east), barrel
+        helper.assertTrue(lib.playlists().size() == 4, "playlists: " + lib.playlists());
+        DjLibrary.Playlist techno = lib.playlists().stream().filter(DjLibrary.Playlist::nested).findFirst().orElseThrow();
+        helper.assertTrue(techno.name().getString().equals("Techno") && techno.shulker() == 5, "shulker playlist: " + techno);
+        helper.assertTrue(lib.playlists().stream().anyMatch(p -> p.name().getString().equals("House")), "the renamed barrel lost its name: " + lib.playlists());
+        helper.assertTrue(lib.entries().size() == 4, "records: " + lib.entries());
+        int technoIdx = lib.playlists().indexOf(techno);
+        helper.assertTrue(lib.entries().stream().anyMatch(e -> e.playlist() == technoIdx && e.slot() == 1), "the record inside the shulker box is missing");
+        helper.assertTrue(lib.entries().stream().allMatch(e -> e.lengthTicks() > 0), "vanilla records know their length");
         helper.succeed();
     }
 
