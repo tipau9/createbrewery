@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.Containers;
 import net.minecraft.world.Nameable;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.JukeboxSong;
@@ -20,6 +21,7 @@ import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -124,6 +126,82 @@ public final class DjLibrary {
         Component title = song.map(h -> h.value().description()).orElse(disc.getHoverName());
         int length = song.map(h -> h.value().lengthInTicks()).orElse(0);
         return new Entry(playlist, slot, title, "", bpm, length);
+    }
+
+    /**
+     * Takes the record at the address: slot {@code slot} of container {@code source}, or of the
+     * shulker box at {@code shulker} inside it. Empty, with nothing changed, if no record is there
+     * any more (the browser's list can be a second old).
+     */
+    public static ItemStack take(List<Source> sources, int source, int shulker, int slot) {
+        if (source < 0 || source >= sources.size()) return ItemStack.EMPTY;
+        Source src = sources.get(source);
+        IItemHandler items = src.items();
+        if (shulker < 0) {
+            if (slot < 0 || slot >= items.getSlots() || !DjBoothBlock.isMusicDisc(items.getStackInSlot(slot))) return ItemStack.EMPTY;
+            return items.extractItem(slot, 1, false);
+        }
+        if (shulker >= items.getSlots()) return ItemStack.EMPTY;
+        ItemStack box = items.getStackInSlot(shulker);
+        if (!isShulker(box)) return ItemStack.EMPTY;
+        NonNullList<ItemStack> contents = contents(box);
+        if (slot < 0 || slot >= contents.size() || !DjBoothBlock.isMusicDisc(contents.get(slot))) return ItemStack.EMPTY;
+        ItemStack disc = contents.get(slot);
+        contents.set(slot, ItemStack.EMPTY);
+        return replaceBox(src, shulker, box, contents) ? disc : ItemStack.EMPTY;
+    }
+
+    /** Puts {@code disc} at the address if that slot is free, else anywhere in that container, else drops it at the booth. */
+    public static void putBack(Level level, BlockPos booth, List<Source> sources, int source, int shulker, int slot, ItemStack disc) {
+        if (source >= 0 && source < sources.size()) {
+            Source src = sources.get(source);
+            IItemHandler items = src.items();
+            if (shulker >= 0) {
+                if (shulker < items.getSlots() && isShulker(items.getStackInSlot(shulker))) {
+                    ItemStack box = items.getStackInSlot(shulker);
+                    NonNullList<ItemStack> contents = contents(box);
+                    if (slot >= 0 && slot < contents.size() && contents.get(slot).isEmpty()) {
+                        contents.set(slot, disc);
+                        if (replaceBox(src, shulker, box, contents)) return;
+                    }
+                }
+            } else if (slot >= 0 && slot < items.getSlots()) {
+                disc = items.insertItem(slot, disc, false);
+                if (disc.isEmpty()) return;
+            }
+            disc = ItemHandlerHelper.insertItem(items, disc, false);
+            if (disc.isEmpty()) return;
+        }
+        Containers.dropItemStack(level, booth.getX() + 0.5, booth.getY() + 1.0, booth.getZ() + 0.5, disc);
+    }
+
+    /** The slots holding records in container {@code source}, or in the shulker box at {@code shulker} inside it. */
+    public static List<Integer> discSlots(List<Source> sources, int source, int shulker) {
+        List<Integer> out = new ArrayList<>();
+        if (source < 0 || source >= sources.size()) return out;
+        IItemHandler items = sources.get(source).items();
+        if (shulker < 0) {
+            for (int i = 0; i < items.getSlots(); i++) if (DjBoothBlock.isMusicDisc(items.getStackInSlot(i))) out.add(i);
+        } else if (shulker < items.getSlots() && isShulker(items.getStackInSlot(shulker))) {
+            NonNullList<ItemStack> contents = contents(items.getStackInSlot(shulker));
+            for (int i = 0; i < contents.size(); i++) if (DjBoothBlock.isMusicDisc(contents.get(i))) out.add(i);
+        }
+        return out;
+    }
+
+    /**
+     * Swaps the shulker box at {@code slot} for a copy holding {@code contents}. False, with the
+     * original back in place, if the container will not take the copy.
+     */
+    private static boolean replaceBox(Source src, int slot, ItemStack box, NonNullList<ItemStack> contents) {
+        ItemStack updated = box.copyWithCount(1);
+        updated.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
+        ItemStack original = src.items().extractItem(slot, 1, false);
+        if (original.isEmpty()) return false;
+        if (src.items().insertItem(slot, updated, false).isEmpty()) return true;
+        ItemStack left = src.items().insertItem(slot, original, false);
+        if (!left.isEmpty()) Containers.dropItemStack(src.level(), src.pos().getX() + 0.5, src.pos().getY() + 1.0, src.pos().getZ() + 0.5, left);
+        return false;
     }
 
     public static boolean isShulker(ItemStack stack) {

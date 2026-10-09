@@ -108,6 +108,93 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void loadingSwapsTheRecordWithItsSlotAndSkipsStaleSlots(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        helper.setBlock(POS.north(), Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(POS.north());
+        chest.setItem(4, new ItemStack(Items.MUSIC_DISC_CAT));
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+        dj.insertDisc(new ItemStack(Items.MUSIC_DISC_STAL), false, null);
+
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.B, 0, -1, 4, null), "nothing loaded onto the empty deck");
+        helper.assertTrue(dj.getDisc(DjBoothBlockEntity.B).is(Items.MUSIC_DISC_CAT) && chest.getItem(4).isEmpty(), "cat did not move onto deck B");
+        // The browser's list was made before the slot emptied: nothing happens, nothing is lost.
+        helper.assertFalse(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, null), "loaded from an empty slot");
+        helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_STAL), "deck A lost its record");
+
+        chest.setItem(4, new ItemStack(Items.MUSIC_DISC_13));
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, null), "13 not loaded");
+        helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_13), "deck A has " + dj.getDisc(DjBoothBlockEntity.A));
+        helper.assertTrue(chest.getItem(4).is(Items.MUSIC_DISC_STAL), "stal did not take 13's slot: " + chest.getItem(4));
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void loadingFromAShulkerBoxRewritesItsContents(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        helper.setBlock(POS.north(), Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(POS.north());
+        ItemStack box = new ItemStack(Items.SHULKER_BOX);
+        box.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.MUSIC_DISC_CAT))));
+        chest.setItem(2, box);
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+        dj.insertDisc(new ItemStack(Items.MUSIC_DISC_STAL), false, null);
+
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, 2, 0, null), "nothing loaded from the shulker box");
+        helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_CAT), "deck A has " + dj.getDisc(DjBoothBlockEntity.A));
+        ItemStack after = chest.getItem(2);
+        helper.assertTrue(DjLibrary.isShulker(after), "the shulker box left its slot: " + after);
+        helper.assertTrue(DjLibrary.contents(after).get(0).is(Items.MUSIC_DISC_STAL), "stal is not in the shulker box: " + DjLibrary.contents(after));
+        int items = 0;
+        for (int i = 0; i < chest.getContainerSize(); i++) if (!chest.getItem(i).isEmpty()) items++;
+        helper.assertTrue(items == 1, "the chest holds " + items + " stacks, not just the shulker box");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void aRecordWithNowhereToGoIsDroppedNotLost(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        helper.setBlock(POS.north(), Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(POS.north());
+        // A full shulker box first: the record goes into the chest instead.
+        NonNullList<ItemStack> dirt = NonNullList.withSize(27, new ItemStack(Items.DIRT));
+        ItemStack fullBox = new ItemStack(Items.SHULKER_BOX);
+        fullBox.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(dirt));
+        chest.setItem(0, fullBox);
+        var sources = DjLibrary.sources(helper.getLevel(), helper.absolutePos(POS));
+        DjLibrary.putBack(helper.getLevel(), helper.absolutePos(POS), sources, 0, 0, 3, new ItemStack(Items.MUSIC_DISC_CAT));
+        boolean inChest = false;
+        for (int i = 1; i < chest.getContainerSize(); i++) inChest |= chest.getItem(i).is(Items.MUSIC_DISC_CAT);
+        helper.assertTrue(inChest, "cat did not go into the chest next to the full shulker box");
+
+        // Then everything full: dropped at the booth.
+        for (int i = 0; i < chest.getContainerSize(); i++) chest.setItem(i, new ItemStack(Items.DIRT));
+        DjLibrary.putBack(helper.getLevel(), helper.absolutePos(POS), sources, 0, -1, 0, new ItemStack(Items.MUSIC_DISC_13));
+        helper.assertItemEntityPresent(Items.MUSIC_DISC_13, POS, 2.0);
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void automixRestocksFromThePlaylistLastLoadedFrom(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        helper.setBlock(POS.north(), Blocks.CHEST);
+        helper.setBlock(POS.east(), Blocks.BARREL);
+        ChestBlockEntity chest = helper.getBlockEntity(POS.north());
+        chest.setItem(0, new ItemStack(Items.MUSIC_DISC_13));
+        BarrelBlockEntity barrel = helper.getBlockEntity(POS.east());
+        barrel.setItem(0, new ItemStack(Items.MUSIC_DISC_CAT));
+        barrel.setItem(1, new ItemStack(Items.MUSIC_DISC_STAL));
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+
+        // Sources: chest (north) = 0, barrel (east) = 1.
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 1, -1, 0, null), "cat not loaded from the barrel");
+        helper.assertTrue(com.createbrewery.block.club.ClubTestAccess.restock(dj, DjBoothBlockEntity.A), "nothing restocked");
+        helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_STAL), "restocked " + dj.getDisc(DjBoothBlockEntity.A) + " instead of the barrel's next record");
+        helper.assertTrue(barrel.getItem(1).is(Items.MUSIC_DISC_CAT) && chest.getItem(0).is(Items.MUSIC_DISC_13), "records ended up in the wrong place");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void bothDecksPlayAndMixOnTheCrossfader(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);

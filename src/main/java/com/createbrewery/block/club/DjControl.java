@@ -23,7 +23,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     public static final byte AUTO_DROP = 15, DROP_DETECTED = 16;
     public static final byte TOGGLE_PLAY = 17, CHANNEL_FADER = 18, COLOR_FX_SELECT = 19, COLOR_FX_PARAM = 20;
     public static final byte BEAT_FX_TYPE = 21, BEAT_FX_BEATS = 22, BEAT_FX_CHANNEL = 23, BEAT_FX_ON = 24, BEAT_FX_DEPTH = 25;
-    public static final byte PAD_TRIGGER = 26, LOAD_TRACK = 27, VINYL_MODE = 28, SLIP_MODE = 29, REVERSE = 30, CROSSFADER_ASSIGN = 31, TRIM = 32, PAD_MODE = 33;
+    public static final byte PAD_TRIGGER = 26, VINYL_MODE = 28, SLIP_MODE = 29, REVERSE = 30, CROSSFADER_ASSIGN = 31, TRIM = 32, PAD_MODE = 33;
     public static final byte JOG_SCRUB = 34, PITCH = 35, JOG_TOUCH = 36, SET_MAIN_CUE = 37, SET_HOT_CUE = 38;
     public static final byte MASTER_TEMPO = 39, JUMP_PLAYHEAD = 40;
     /** A beat jump measured by the client: {@code value} is the jump in song ticks (the server knows no tempo). */
@@ -102,7 +102,6 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case BEAT_FX_DEPTH -> dj.setBeatFxDepth(control.value);
             case PAD_TRIGGER -> dj.handlePad(deck, (int) control.value, player);
             case PAD_MODE -> dj.setPadMode(deck, (int) control.value);
-            case LOAD_TRACK -> dj.loadFromCrate(deck, (int) control.value, player);
             case VINYL_MODE -> dj.setVinylMode(deck, control.value > 0.5f);
             case SLIP_MODE -> dj.setSlipMode(deck, control.value > 0.5f);
             case REVERSE -> dj.setReverse(deck, control.value > 0.5f);

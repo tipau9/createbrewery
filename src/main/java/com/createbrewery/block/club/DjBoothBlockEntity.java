@@ -101,8 +101,8 @@ public class DjBoothBlockEntity extends BlockEntity {
     private boolean automix = true;
     private boolean autoDrop = true;
     private long lastDropTick = -100;
-    /** The record crate's slot the last record was taken from: the next one is looked for after it. */
-    private int crateSlot = -1;
+    /** The playlist the last record was loaded from (container, shulker box in it or -1) and its slot: automix carries on after it. */
+    private int libSource = 0, libShulker = -1, crateSlot = -1;
     private int dropTicks = 0;
 
     // Sound Color FX Unit State
@@ -305,81 +305,58 @@ public class DjBoothBlockEntity extends BlockEntity {
     }
 
     /**
-     * The record crate: a chest, barrel or any other container next to the booth (hoppers and
-     * funnels can fill it), played in order. Null if there is none.
-     */
-    @Nullable
-    public net.neoforged.neoforge.items.IItemHandler crate() {
-        if (level == null) return null;
-        for (net.minecraft.core.Direction side : new net.minecraft.core.Direction[] {
-            net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.EAST,
-            net.minecraft.core.Direction.WEST, net.minecraft.core.Direction.DOWN}) {
-            BlockPos at = worldPosition.relative(side);
-            if (level.getBlockEntity(at) instanceof DjBoothBlockEntity) continue;
-            var handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, at, side.getOpposite());
-            if (handler != null) return handler;
-        }
-        return null;
-    }
-
-    /**
-     * Swaps the record on {@code deck} for the next one in the crate. A record is never lost: the
-     * old one stays on the deck when there is no next one or no room for it. Server only.
+     * Swaps the record on {@code deck} for the next one in the playlist last loaded from (the first
+     * container until something was loaded). A record is never lost: the old one takes the new one's slot.
+     * Server only.
      */
     boolean restock(int deck) {
-        var crate = crate();
-        if (crate == null) return false;
-        int slots = crate.getSlots();
-        for (int k = 1; k <= slots; k++) {
-            int slot = Math.floorMod(crateSlot + k, slots);
-            if (!DjBoothBlock.isMusicDisc(crate.getStackInSlot(slot))) continue;
-            ItemStack next = crate.extractItem(slot, 1, false);
-            if (next.isEmpty()) continue;
-            ItemStack old = decks[deck].disc;
-            if (!old.isEmpty()) {
-                ItemStack left = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(crate, old, false);
-                if (!left.isEmpty()) {
-                    // No room for it: put the next one back, keep playing what we have.
-                    ItemStack back = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(crate, next, false);
-                    if (!back.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, back);
-                    return false;
-                }
-            }
-            crateSlot = slot;
-            decks[deck].disc = next;
-            decks[deck].mainCue = 0;
-            java.util.Arrays.fill(decks[deck].hotCues, -1L);
-            return true;
+        if (level == null) return false;
+        var sources = DjLibrary.sources(level, worldPosition);
+        var slots = DjLibrary.discSlots(sources, libSource, libShulker);
+        if (slots.isEmpty() && (libSource != 0 || libShulker != -1)) {
+            // That playlist is gone or empty: back to the first container.
+            libSource = 0;
+            libShulker = -1;
+            crateSlot = -1;
+            slots = DjLibrary.discSlots(sources, libSource, libShulker);
         }
-        return false;
+        if (slots.isEmpty()) return false;
+        int next = slots.get(0);
+        for (int slot : slots) {
+            if (slot > crateSlot) {
+                next = slot;
+                break;
+            }
+        }
+        return swapIn(deck, sources, libSource, libShulker, next);
     }
 
-    /** Loads a specific record from the adjacent crate slot directly onto {@code deck}. */
-    public boolean loadFromCrate(int deck, int slot, Player player) {
+    /** Loads the record at a library address onto {@code deck}; the deck's record takes its slot. Server only. */
+    public boolean loadFromLibrary(int deck, int source, int shulker, int slot, @Nullable Player player) {
         if (level == null || level.isClientSide || deck < 0 || deck >= DECKS) return false;
-        var crate = crate();
-        if (crate == null || slot < 0 || slot >= crate.getSlots()) return false;
-        ItemStack stack = crate.getStackInSlot(slot);
-        if (!DjBoothBlock.isMusicDisc(stack)) return false;
-
-        ItemStack next = crate.extractItem(slot, 1, false);
-        if (next.isEmpty()) return false;
-
-        ItemStack old = decks[deck].disc;
-        if (!old.isEmpty()) {
-            stopDeck(deck);
-            ItemStack left = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(crate, old, false);
-            if (!left.isEmpty()) {
-                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, left);
-            }
+        var sources = DjLibrary.sources(level, worldPosition);
+        // A deck changing records stops first, but only once there really is a record to change to.
+        if (!DjLibrary.discSlots(sources, source, shulker).contains(slot)) return false;
+        stopDeck(deck);
+        if (!swapIn(deck, sources, source, shulker, slot)) return false;
+        sync();
+        if (player != null) {
+            player.displayClientMessage(Component.translatable("createbrewery.dj.cued", name(deck), title(decks[deck].disc)), true);
         }
+        return true;
+    }
+
+    private boolean swapIn(int deck, java.util.List<DjLibrary.Source> sources, int source, int shulker, int slot) {
+        ItemStack next = DjLibrary.take(sources, source, shulker, slot);
+        if (next.isEmpty()) return false;
+        ItemStack old = decks[deck].disc;
+        if (!old.isEmpty()) DjLibrary.putBack(level, worldPosition, sources, source, shulker, slot, old);
         decks[deck].disc = next;
         decks[deck].mainCue = 0;
         java.util.Arrays.fill(decks[deck].hotCues, -1L);
-        sync();
-        if (player != null) {
-            player.displayClientMessage(Component.translatable("createbrewery.dj.cued", name(deck), title(next)), true);
-        }
+        libSource = source;
+        libShulker = shulker;
+        crateSlot = slot;
         return true;
     }
 
@@ -931,6 +908,8 @@ public class DjBoothBlockEntity extends BlockEntity {
         tag.putBoolean("Automix", automix);
         tag.putBoolean("AutoDrop", autoDrop);
         tag.putInt("CrateSlot", crateSlot);
+        tag.putInt("LibSource", libSource);
+        tag.putInt("LibShulker", libShulker);
         tag.putInt("ActiveColorFx", activeColorFx);
         tag.putFloat("ColorFxParam", colorFxParam);
         tag.putInt("BeatFxType", beatFxType);
@@ -979,6 +958,8 @@ public class DjBoothBlockEntity extends BlockEntity {
         automix = !tag.contains("Automix") || tag.getBoolean("Automix");
         autoDrop = !tag.contains("AutoDrop") || tag.getBoolean("AutoDrop");
         crateSlot = tag.contains("CrateSlot") ? tag.getInt("CrateSlot") : -1;
+        libSource = Math.max(0, tag.getInt("LibSource"));
+        libShulker = tag.contains("LibShulker") ? tag.getInt("LibShulker") : -1;
         if (tag.contains("ActiveColorFx")) activeColorFx = Math.floorMod(tag.getInt("ActiveColorFx"), COLOR_FX_COUNT);
         if (tag.contains("ColorFxParam")) colorFxParam = Mth.clamp(tag.getFloat("ColorFxParam"), 0f, 1f);
         if (tag.contains("BeatFxType")) beatFxType = Math.floorMod(tag.getInt("BeatFxType"), BFX_COUNT);
