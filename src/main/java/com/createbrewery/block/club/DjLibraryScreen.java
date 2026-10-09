@@ -256,7 +256,7 @@ public class DjLibraryScreen extends Screen {
     private void load(DjLibrary.Snapshot lib, DjLibrary.Entry entry, int deck) {
         if (entry.playlist() < 0 || entry.playlist() >= lib.playlists().size()) return;
         DjLibrary.Playlist p = lib.playlists().get(entry.playlist());
-        DjLibrarySync.load(pos, deck, p.source(), p.shulker(), entry.slot());
+        DjLibrarySync.load(pos, deck, p.source(), p.shulker(), entry.slot(), entry.disc());
         if (minecraft != null && minecraft.player != null) {
             minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.2f);
         }

@@ -116,14 +116,17 @@ public class ClubGameTests {
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);
         dj.insertDisc(new ItemStack(Items.MUSIC_DISC_STAL), false, null);
 
-        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.B, 0, -1, 4, null), "nothing loaded onto the empty deck");
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.B, 0, -1, 4, new ItemStack(Items.MUSIC_DISC_CAT), null), "nothing loaded onto the empty deck");
         helper.assertTrue(dj.getDisc(DjBoothBlockEntity.B).is(Items.MUSIC_DISC_CAT) && chest.getItem(4).isEmpty(), "cat did not move onto deck B");
         // The browser's list was made before the slot emptied: nothing happens, nothing is lost.
-        helper.assertFalse(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, null), "loaded from an empty slot");
+        helper.assertFalse(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, new ItemStack(Items.MUSIC_DISC_CAT), null), "loaded from an empty slot");
         helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_STAL), "deck A lost its record");
 
         chest.setItem(4, new ItemStack(Items.MUSIC_DISC_13));
-        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, null), "13 not loaded");
+        // The list still says cat is there (another record took its slot since): that is not what was clicked.
+        helper.assertFalse(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, new ItemStack(Items.MUSIC_DISC_CAT), null), "loaded 13 for a click on cat");
+        helper.assertTrue(dj.isPlaying(DjBoothBlockEntity.A) && dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_STAL), "a refused load stopped or changed deck A");
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, -1, 4, new ItemStack(Items.MUSIC_DISC_13), null), "13 not loaded");
         helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_13), "deck A has " + dj.getDisc(DjBoothBlockEntity.A));
         helper.assertTrue(chest.getItem(4).is(Items.MUSIC_DISC_STAL), "stal did not take 13's slot: " + chest.getItem(4));
         helper.succeed();
@@ -140,7 +143,7 @@ public class ClubGameTests {
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);
         dj.insertDisc(new ItemStack(Items.MUSIC_DISC_STAL), false, null);
 
-        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, 2, 0, null), "nothing loaded from the shulker box");
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 0, 2, 0, new ItemStack(Items.MUSIC_DISC_CAT), null), "nothing loaded from the shulker box");
         helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_CAT), "deck A has " + dj.getDisc(DjBoothBlockEntity.A));
         ItemStack after = chest.getItem(2);
         helper.assertTrue(DjLibrary.isShulker(after), "the shulker box left its slot: " + after);
@@ -187,7 +190,7 @@ public class ClubGameTests {
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);
 
         // Sources: chest (north) = 0, barrel (east) = 1.
-        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 1, -1, 0, null), "cat not loaded from the barrel");
+        helper.assertTrue(dj.loadFromLibrary(DjBoothBlockEntity.A, 1, -1, 0, new ItemStack(Items.MUSIC_DISC_CAT), null), "cat not loaded from the barrel");
         helper.assertTrue(com.createbrewery.block.club.ClubTestAccess.restock(dj, DjBoothBlockEntity.A), "nothing restocked");
         helper.assertTrue(dj.getDisc(DjBoothBlockEntity.A).is(Items.MUSIC_DISC_STAL), "restocked " + dj.getDisc(DjBoothBlockEntity.A) + " instead of the barrel's next record");
         helper.assertTrue(barrel.getItem(1).is(Items.MUSIC_DISC_CAT) && chest.getItem(0).is(Items.MUSIC_DISC_13), "records ended up in the wrong place");
@@ -223,9 +226,9 @@ public class ClubGameTests {
             new DjLibrary.Playlist(Component.literal("Crate"), 0, -1),
             new DjLibrary.Playlist(Component.literal("Trance"), 0, 4));
         var entries = List.of(
-            new DjLibrary.Entry(0, 0, Component.literal("Strobe"), "deadmau5", 128f, 0),
-            new DjLibrary.Entry(0, 1, Component.literal("Around the World"), "Daft Punk", 121f, 0),
-            new DjLibrary.Entry(1, 0, Component.literal("Sandstorm"), "Darude", 136f, 0));
+            new DjLibrary.Entry(0, 0, Component.literal("Strobe"), "deadmau5", 128f, 0, ItemStack.EMPTY),
+            new DjLibrary.Entry(0, 1, Component.literal("Around the World"), "Daft Punk", 121f, 0, ItemStack.EMPTY),
+            new DjLibrary.Entry(1, 0, Component.literal("Sandstorm"), "Darude", 136f, 0, ItemStack.EMPTY));
         DjLibrary.Snapshot lib = new DjLibrary.Snapshot(playlists, entries);
 
         helper.assertTrue(DjLibrary.view(lib, -1, "", DjLibrary.Sort.INDEX, false).size() == 3, "ALL TRACKS is not everything");

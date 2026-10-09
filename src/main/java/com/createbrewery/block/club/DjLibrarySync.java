@@ -8,6 +8,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.jetbrains.annotations.Nullable;
@@ -34,15 +35,16 @@ public final class DjLibrarySync {
         }
     }
 
-    /** Client → server: load the record at this library address onto {@code deck}. */
-    public record Load(BlockPos pos, int deck, int source, int shulker, int slot) implements CustomPacketPayload {
+    /** Client → server: load the record at this library address onto {@code deck}, if it is still {@code disc}. */
+    public record Load(BlockPos pos, int deck, int source, int shulker, int slot, ItemStack disc) implements CustomPacketPayload {
         public static final Type<Load> TYPE = new Type<>(CreateBrewery.ID("dj_library_load"));
-        static final StreamCodec<ByteBuf, Load> CODEC = StreamCodec.composite(
+        static final StreamCodec<RegistryFriendlyByteBuf, Load> CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, Load::pos,
             ByteBufCodecs.VAR_INT, Load::deck,
             ByteBufCodecs.VAR_INT, Load::source,
             ByteBufCodecs.VAR_INT, Load::shulker,
             ByteBufCodecs.VAR_INT, Load::slot,
+            ItemStack.OPTIONAL_STREAM_CODEC, Load::disc,
             Load::new);
 
         @Override
@@ -78,7 +80,7 @@ public final class DjLibrarySync {
             if (!(context.player() instanceof ServerPlayer player)) return;
             DjBoothBlockEntity dj = booth(player, load.pos());
             if (dj == null) return;
-            dj.loadFromLibrary(load.deck(), load.source(), load.shulker(), load.slot(), player);
+            dj.loadFromLibrary(load.deck(), load.source(), load.shulker(), load.slot(), load.disc(), player);
             send(player, load.pos());
         });
         registrar.playToClient(Library.TYPE, Library.CODEC,
@@ -103,8 +105,8 @@ public final class DjLibrarySync {
     }
 
     /** Client side. */
-    public static void load(BlockPos pos, int deck, int source, int shulker, int slot) {
-        PacketDistributor.sendToServer(new Load(pos, deck, source, shulker, slot));
+    public static void load(BlockPos pos, int deck, int source, int shulker, int slot, ItemStack disc) {
+        PacketDistributor.sendToServer(new Load(pos, deck, source, shulker, slot, disc));
     }
 
     /** Client side: null until the server has answered once. */

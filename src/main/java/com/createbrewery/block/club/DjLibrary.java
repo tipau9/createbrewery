@@ -59,16 +59,22 @@ public final class DjLibrary {
         }
     }
 
-    /** A record at {@code slot} of playlist {@code playlist} (index into the snapshot's playlists); bpm and length 0 when unknown. */
-    public record Entry(int playlist, int slot, Component title, String artist, float bpm, int lengthTicks) {
-        static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, Entry::playlist,
-            ByteBufCodecs.VAR_INT, Entry::slot,
-            ComponentSerialization.STREAM_CODEC, Entry::title,
-            ByteBufCodecs.STRING_UTF8, Entry::artist,
-            ByteBufCodecs.FLOAT, Entry::bpm,
-            ByteBufCodecs.VAR_INT, Entry::lengthTicks,
-            Entry::new);
+    /**
+     * A record at {@code slot} of playlist {@code playlist} (index into the snapshot's playlists); bpm
+     * and length 0 when unknown. {@code disc} is the record itself, sent back with a load so a slot
+     * that has since changed hands is not loaded by mistake.
+     */
+    public record Entry(int playlist, int slot, Component title, String artist, float bpm, int lengthTicks, ItemStack disc) {
+        static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.of((buf, e) -> {
+            ByteBufCodecs.VAR_INT.encode(buf, e.playlist());
+            ByteBufCodecs.VAR_INT.encode(buf, e.slot());
+            ComponentSerialization.STREAM_CODEC.encode(buf, e.title());
+            ByteBufCodecs.STRING_UTF8.encode(buf, e.artist());
+            ByteBufCodecs.FLOAT.encode(buf, e.bpm());
+            ByteBufCodecs.VAR_INT.encode(buf, e.lengthTicks());
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, e.disc());
+        }, buf -> new Entry(ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ComponentSerialization.STREAM_CODEC.decode(buf),
+            ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.FLOAT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ItemStack.OPTIONAL_STREAM_CODEC.decode(buf)));
     }
 
     public record Snapshot(List<Playlist> playlists, List<Entry> entries) {}
@@ -151,12 +157,12 @@ public final class DjLibrary {
         if (meta != null) {
             Component title = meta.tracks() > 1 ? meta.title().copy().append(" [" + meta.tracks() + "]") : meta.title();
             // ponytail: Etched lengths are unknown until streamed; add a measured length to TrackInfo if the column matters
-            return new Entry(playlist, slot, title, meta.artist(), bpm, 0);
+            return new Entry(playlist, slot, title, meta.artist(), bpm, 0, disc.copy());
         }
         var song = JukeboxSong.fromStack(level.registryAccess(), disc);
         Component title = song.map(h -> h.value().description()).orElse(disc.getHoverName());
         int length = song.map(h -> h.value().lengthInTicks()).orElse(0);
-        return new Entry(playlist, slot, title, "", bpm, length);
+        return new Entry(playlist, slot, title, "", bpm, length, disc.copy());
     }
 
     /**
@@ -204,6 +210,16 @@ public final class DjLibrary {
             if (disc.isEmpty()) return;
         }
         Containers.dropItemStack(level, booth.getX() + 0.5, booth.getY() + 1.0, booth.getZ() + 0.5, disc);
+    }
+
+    /** What sits at the address now (read only), or empty if the address does not exist. */
+    public static ItemStack peek(List<Source> sources, int source, int shulker, int slot) {
+        if (source < 0 || source >= sources.size()) return ItemStack.EMPTY;
+        IItemHandler items = sources.get(source).items();
+        if (shulker < 0) return slot >= 0 && slot < items.getSlots() ? items.getStackInSlot(slot) : ItemStack.EMPTY;
+        if (shulker >= items.getSlots() || !isShulker(items.getStackInSlot(shulker))) return ItemStack.EMPTY;
+        NonNullList<ItemStack> contents = contents(items.getStackInSlot(shulker));
+        return slot >= 0 && slot < contents.size() ? contents.get(slot) : ItemStack.EMPTY;
     }
 
     /** The slots holding records in container {@code source}, or in the shulker box at {@code shulker} inside it. */

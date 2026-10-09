@@ -331,12 +331,17 @@ public class DjBoothBlockEntity extends BlockEntity {
         return swapIn(deck, sources, libSource, libShulker, next);
     }
 
-    /** Loads the record at a library address onto {@code deck}; the deck's record takes its slot. Server only. */
-    public boolean loadFromLibrary(int deck, int source, int shulker, int slot, @Nullable Player player) {
+    /**
+     * Loads the record at a library address onto {@code deck}; the deck's record takes its slot.
+     * Only if that address still holds {@code expected}, the record the player clicked: the slot may
+     * have changed hands since the browser's list was made. Server only.
+     */
+    public boolean loadFromLibrary(int deck, int source, int shulker, int slot, ItemStack expected, @Nullable Player player) {
         if (level == null || level.isClientSide || deck < 0 || deck >= DECKS) return false;
         var sources = DjLibrary.sources(level, worldPosition);
-        // A deck changing records stops first, but only once there really is a record to change to.
-        if (!DjLibrary.discSlots(sources, source, shulker).contains(slot)) return false;
+        // A deck changing records stops first, but only once the clicked record is really there.
+        ItemStack at = DjLibrary.peek(sources, source, shulker, slot);
+        if (!DjBoothBlock.isMusicDisc(at) || !ItemStack.isSameItemSameComponents(at, expected)) return false;
         stopDeck(deck);
         if (!swapIn(deck, sources, source, shulker, slot)) return false;
         sync();
