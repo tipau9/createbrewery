@@ -38,7 +38,7 @@ import java.util.List;
 public class DjMixerScreen extends Screen {
     private static final int W = 540, H = 276;
 
-    private static final int[] DECK_COLORS = {
+    static final int[] DECK_COLORS = {
         0xFF00E5FF, // Deck 1: Cyan / Electric Blue
         0xFFFF9900, // Deck 2: Orange / Golden Amber
         0xFFA833FF, // Deck 3: Purple / Neon Violet
@@ -158,7 +158,7 @@ public class DjMixerScreen extends Screen {
         int sx = left + 166, sy = top + 6;
         tabWaveButton = addRenderableWidget(Button.builder(Component.literal("WAVE"), b -> screenTab = 0)
             .bounds(sx + 92, sy + 2, 34, 12).build());
-        tabBrowseButton = addRenderableWidget(Button.builder(Component.literal("BROWSE"), b -> screenTab = 1)
+        tabBrowseButton = addRenderableWidget(Button.builder(Component.literal("BROWSE"), b -> DjLibraryScreen.open(pos))
             .bounds(sx + 128, sy + 2, 46, 12).build());
         tabInfoButton = addRenderableWidget(Button.builder(Component.literal("INFO"), b -> screenTab = 2)
             .bounds(sx + 176, sy + 2, 30, 12).build());
