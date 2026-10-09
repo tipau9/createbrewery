@@ -218,6 +218,29 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void libraryViewSearchesAndSorts(GameTestHelper helper) {
+        var playlists = List.of(
+            new DjLibrary.Playlist(Component.literal("Crate"), 0, -1),
+            new DjLibrary.Playlist(Component.literal("Trance"), 0, 4));
+        var entries = List.of(
+            new DjLibrary.Entry(0, 0, Component.literal("Strobe"), "deadmau5", 128f, 0),
+            new DjLibrary.Entry(0, 1, Component.literal("Around the World"), "Daft Punk", 121f, 0),
+            new DjLibrary.Entry(1, 0, Component.literal("Sandstorm"), "Darude", 136f, 0));
+        DjLibrary.Snapshot lib = new DjLibrary.Snapshot(playlists, entries);
+
+        helper.assertTrue(DjLibrary.view(lib, -1, "", DjLibrary.Sort.INDEX, false).size() == 3, "ALL TRACKS is not everything");
+        helper.assertTrue(DjLibrary.view(lib, 0, "", DjLibrary.Sort.INDEX, false).size() == 2, "a playlist shows another's records");
+        var daft = DjLibrary.view(lib, -1, "daft", DjLibrary.Sort.INDEX, false);
+        helper.assertTrue(daft.size() == 1 && daft.get(0).slot() == 1 && daft.get(0).playlist() == 0, "artist search: " + daft);
+        var storm = DjLibrary.view(lib, -1, "  STORM ", DjLibrary.Sort.INDEX, false);
+        helper.assertTrue(storm.size() == 1 && storm.get(0).playlist() == 1, "title search: " + storm);
+        helper.assertTrue(DjLibrary.view(lib, -1, "", DjLibrary.Sort.BPM, false).get(0).bpm() == 121f, "BPM ascending");
+        helper.assertTrue(DjLibrary.view(lib, -1, "", DjLibrary.Sort.BPM, true).get(0).bpm() == 136f, "BPM descending");
+        helper.assertTrue(DjLibrary.view(lib, -1, "", DjLibrary.Sort.TITLE, false).get(0).title().getString().equals("Around the World"), "title sort");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void bothDecksPlayAndMixOnTheCrossfader(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);

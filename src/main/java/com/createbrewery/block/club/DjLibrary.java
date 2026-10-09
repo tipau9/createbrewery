@@ -24,7 +24,10 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * The booth's record library, read off the containers around it each time: every container next to
@@ -69,6 +72,34 @@ public final class DjLibrary {
     }
 
     public record Snapshot(List<Playlist> playlists, List<Entry> entries) {}
+
+    /** The browser's sort columns; INDEX is the order the records sit in their containers. */
+    public enum Sort { INDEX, TITLE, ARTIST, BPM, LENGTH }
+
+    /** What the browser lists: playlist {@code playlist} (-1: all), matching {@code query} in title or artist, sorted. */
+    public static List<Entry> view(Snapshot snapshot, int playlist, String query, Sort sort, boolean descending) {
+        String q = query.strip().toLowerCase(Locale.ROOT);
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : snapshot.entries()) {
+            if (playlist >= 0 && e.playlist() != playlist) continue;
+            if (!q.isEmpty() && !lower(e.title().getString()).contains(q) && !lower(e.artist()).contains(q)) continue;
+            out.add(e);
+        }
+        Comparator<Entry> order = switch (sort) {
+            case INDEX -> null;
+            case TITLE -> Comparator.comparing((Entry e) -> lower(e.title().getString()));
+            case ARTIST -> Comparator.comparing((Entry e) -> lower(e.artist()));
+            case BPM -> Comparator.comparingDouble(Entry::bpm);
+            case LENGTH -> Comparator.comparingInt(Entry::lengthTicks);
+        };
+        if (order != null) out.sort(order);
+        if (descending) Collections.reverse(out);
+        return out;
+    }
+
+    private static String lower(String s) {
+        return s.toLowerCase(Locale.ROOT);
+    }
 
     /** The containers next to the booth at {@code booth}, in {@link #SIDES} order; another booth is not a container. */
     public static List<Source> sources(Level level, BlockPos booth) {
