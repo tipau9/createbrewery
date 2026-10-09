@@ -733,6 +733,7 @@ public final class MusicPulse {
         t.deck = true;
         t.boothPos = dj.getBlockPos();
         t.deckIndex = deck;
+        com.createbrewery.block.club.TrackInfoReporter.check(dj, deck, t);
 
         if (!t.deckFrameInitialized) {
             long c = cursor(t);

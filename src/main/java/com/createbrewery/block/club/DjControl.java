@@ -32,6 +32,8 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
     public static final byte RESET_DECK = 42;
     /** The loaded record from its first beat ({@link DjBoothBlockEntity#restartDeck}). */
     public static final byte RESTART = 43;
+    /** A record's tempo measured by the client, at pitch 0 ({@link DjBoothBlockEntity#acceptTrackInfo}). */
+    public static final byte REPORT_BPM = 44;
 
     public static final Type<DjControl> TYPE = new Type<>(CreateBrewery.ID("dj_control"));
     public static final StreamCodec<ByteBuf, DjControl> CODEC = StreamCodec.composite(
@@ -121,6 +123,7 @@ public record DjControl(BlockPos pos, byte action, byte deck, float value) imple
             case BEAT_JUMP -> dj.beatJump(deck, control.value);
             case RESET_DECK -> dj.resetDeck(deck);
             case RESTART -> dj.restartDeck(deck, player);
+            case REPORT_BPM -> dj.acceptTrackInfo(deck, control.value);
             default -> {}
         }
     }

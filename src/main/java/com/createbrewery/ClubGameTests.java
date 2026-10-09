@@ -195,6 +195,29 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void aRecordRemembersItsTempoOnlyWhenPlayedAlone(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+        dj.insertDisc(new ItemStack(Items.MUSIC_DISC_CAT), false, null);
+
+        helper.assertFalse(dj.acceptTrackInfo(DjBoothBlockEntity.A, 250f), "took a tempo above 200 BPM");
+        helper.assertFalse(dj.acceptTrackInfo(DjBoothBlockEntity.A, Float.NaN), "took NaN");
+        helper.assertTrue(dj.acceptTrackInfo(DjBoothBlockEntity.A, 128f), "refused the lone deck's tempo");
+        TrackInfo info = dj.getDisc(DjBoothBlockEntity.A).get(TrackInfo.TRACK_INFO.get());
+        helper.assertTrue(info != null && info.bpm() == 128f, "record holds " + info);
+
+        dj.insertDisc(new ItemStack(Items.MUSIC_DISC_13), true, null);
+        helper.assertFalse(dj.acceptTrackInfo(DjBoothBlockEntity.B, 120f), "took the tempo of a deck that is not playing");
+        dj.toggleDeck(DjBoothBlockEntity.B, null);
+        helper.assertFalse(dj.acceptTrackInfo(DjBoothBlockEntity.B, 120f), "took a tempo while two decks play into the detector");
+        helper.assertFalse(dj.getDisc(DjBoothBlockEntity.B).has(TrackInfo.TRACK_INFO.get()), "13 got a tempo anyway");
+
+        // Heard at +8 % pitch, a 0.5 s beat is a 120 BPM record, not 128.
+        helper.assertTrue(Math.abs(TrackInfo.baseBpm(0.5 / 1.08, 1.08f) - 120f) < 0.01f, "pitch not taken out: " + TrackInfo.baseBpm(0.5 / 1.08, 1.08f));
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void bothDecksPlayAndMixOnTheCrossfader(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);

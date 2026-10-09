@@ -654,6 +654,20 @@ public class DjBoothBlockEntity extends BlockEntity {
         }
     }
 
+    /**
+     * A tempo measured by a client for the record on {@code deck}, kept on the record. Only believed
+     * for the booth's one playing deck: with two playing, the beat detector hears both.
+     */
+    public boolean acceptTrackInfo(int deck, float bpm) {
+        if (deck < 0 || deck >= DECKS || !Float.isFinite(bpm) || bpm < TrackInfo.MIN_BPM || bpm > TrackInfo.MAX_BPM) return false;
+        Deck d = decks[deck];
+        if (!d.playing || d.disc.isEmpty()) return false;
+        for (int i = 0; i < DECKS; i++) if (i != deck && decks[i].playing) return false;
+        d.disc.set(TrackInfo.TRACK_INFO.get(), new TrackInfo(bpm));
+        sync();
+        return true;
+    }
+
     public void jumpPlayhead(int deck, long frame) {
         if (deck >= 0 && deck < DECKS) {
             decks[deck].playheadFrame = Math.max(0, frame);
