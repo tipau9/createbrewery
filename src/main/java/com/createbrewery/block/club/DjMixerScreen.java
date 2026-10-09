@@ -420,10 +420,13 @@ public class DjMixerScreen extends Screen {
 
         // Headphone CUE monitor button
         cueHeadphones[playerIdx] = addRenderableWidget(Button.builder(Component.literal("CUE"), b -> MusicPulse.toggleCue(pos, currentDeck(isLeft)))
-            .bounds(px + 86, top + 124, 30, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.cue_hint"))).build());
+            .bounds(px + 80, top + 124, 22, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.cue_hint"))).build());
+
+        addRenderableWidget(Button.builder(Component.literal("|<"), b -> restartDeck(currentDeck(isLeft)))
+            .bounds(px + 104, top + 124, 22, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.restart.tip"))).build());
 
         addRenderableWidget(Button.builder(Component.literal("RST"), b -> resetDeck(currentDeck(isLeft)))
-            .bounds(px + 120, top + 124, 30, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reset.tip"))).build());
+            .bounds(px + 128, top + 124, 22, 16).tooltip(Tooltip.create(Component.translatable("createbrewery.dj.reset.tip"))).build());
 
         // Pad Mode Tabs: HOT CUE, LOOP, SLIP, JUMP
         String[] padLabels = {"CUE", "LOOP", "SLIP", "JUMP"};
@@ -562,6 +565,16 @@ public class DjMixerScreen extends Screen {
         refresh();
         if (minecraft != null && minecraft.player != null) {
             minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.6f, 0.8f);
+        }
+    }
+
+    /** |<: the record from its first beat; the manual loop points belonged to the old pass. */
+    private void restartDeck(int cd) {
+        manualLoopIn[cd] = -1;
+        manualLoopOut[cd] = -1;
+        DjControl.send(pos, DjControl.RESTART, cd, 0);
+        if (minecraft != null && minecraft.player != null) {
+            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.6f, 1.1f);
         }
     }
 

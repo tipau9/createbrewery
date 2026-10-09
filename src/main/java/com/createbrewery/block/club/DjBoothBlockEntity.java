@@ -665,6 +665,18 @@ public class DjBoothBlockEntity extends BlockEntity {
         }
     }
 
+    /** The loaded record from its first beat, playing or paused; an empty deck says so. */
+    public void restartDeck(int deck, Player player) {
+        if (deck < 0 || deck >= DECKS) return;
+        startDeck(deck, player);
+        if (decks[deck].playing) {
+            // The fresh stream must not seek back to an old cue.
+            decks[deck].playheadFrame = 0;
+            decks[deck].seekSerial++;
+            sync();
+        }
+    }
+
     public void jumpPlayhead(int deck, long frame) {
         if (deck >= 0 && deck < DECKS) {
             decks[deck].playheadFrame = Math.max(0, frame);

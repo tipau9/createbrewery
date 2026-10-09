@@ -51,6 +51,7 @@ public final class PlayerTextLang {
         registrate.addRawLang("createbrewery.dj.master_tempo.tip", "Master Tempo (Key Lock): Preserve musical pitch when changing tempo");
         registrate.addRawLang("createbrewery.dj.quantize.tip", "Quantize Beat Snapping");
         registrate.addRawLang("createbrewery.dj.reloop.tip", "Reloop / Exit");
+        registrate.addRawLang("createbrewery.dj.restart.tip", "Restart: play the record on this deck again from the start");
         registrate.addRawLang("createbrewery.dj.reset.tip", "Reset this deck: pitch, EQ, filter, effect, loop, fader, trim and switches back to default. The record, cues and playback stay.");
         registrate.addRawLang("createbrewery.dmx.blackout.tip", "BLACKOUT: darken every fixture at once");
         registrate.addRawLang("createbrewery.dmx.blind_all.tip", "BLIND ALL: halogen floodlight (100%% warm white)");

@@ -48,6 +48,22 @@ public class ClubGameTests {
     }
 
     @GameTest(template = TEMPLATE)
+    public static void restartPlaysThePausedRecordFromTheStart(GameTestHelper helper) {
+        helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
+        DjBoothBlockEntity dj = helper.getBlockEntity(POS);
+        dj.insertDisc(new ItemStack(Items.MUSIC_DISC_CAT), false, null);
+        dj.jumpPlayhead(DjBoothBlockEntity.A, 5000);
+        dj.toggleDeck(DjBoothBlockEntity.A, null);
+        int serial = dj.getSeekSerial(DjBoothBlockEntity.A);
+
+        dj.restartDeck(DjBoothBlockEntity.A, null);
+        helper.assertTrue(dj.isPlaying(DjBoothBlockEntity.A), "the restarted record does not play");
+        helper.assertTrue(dj.getPlayheadFrame(DjBoothBlockEntity.A) == 0, "the record did not go back to its start");
+        helper.assertTrue(dj.getSeekSerial(DjBoothBlockEntity.A) != serial, "listeners were not told to seek");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
     public static void bothDecksPlayAndMixOnTheCrossfader(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.DJ_BOOTH.get());
         DjBoothBlockEntity dj = helper.getBlockEntity(POS);
