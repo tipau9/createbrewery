@@ -470,6 +470,14 @@ public class ModItems {
         .properties(p -> p.stacksTo(16))
         .register();
 
+    // Worn in the Curios head slot (compat/CuriosCompat): 15 % quieter, no crackle, no tinnitus (drunk/HearingClient).
+    public static final ItemEntry<Item> EARPLUGS = REGISTRATE
+        .item("earplugs", Item::new)
+        .lang("Musiker-Gehörschutz")
+        .properties(p -> p.stacksTo(1))
+        .tag(net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("curios", "head")))
+        .register();
+
     public static final ItemEntry<com.createbrewery.drugs.EdibleItem> SPACE_BROWNIE = REGISTRATE
         .item("space_brownie", com.createbrewery.drugs.EdibleItem::new)
         .lang("Space Brownie")

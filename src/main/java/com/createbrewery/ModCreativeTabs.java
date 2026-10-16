@@ -61,6 +61,7 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.IBUPROFEN.get());
                 output.accept(ModItems.NALOXON.get());
                 output.accept(ModItems.TEST_KIT.get());
+                output.accept(ModItems.EARPLUGS.get());
 
                 // Substanzen & Zubehör
                 output.accept(ModItems.WEED.get());

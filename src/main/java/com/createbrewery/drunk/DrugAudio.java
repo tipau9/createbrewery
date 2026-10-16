@@ -38,7 +38,7 @@ public final class DrugAudio {
     private static volatile int slot = -1, send = -1;
     private static int[] effects;
     private static int current = -1;
-    private static boolean failed;
+    private static boolean failed, broken;
     private static IntBuffer attributes;
     private static java.lang.reflect.Field channelSource;
 
@@ -152,15 +152,19 @@ public final class DrugAudio {
     /** On the sound thread: every new sound also goes through our slot. Sources are reused, so always set. */
     private static void attach(Channel channel) {
         int s = slot;
-        if (s < 0) return;
+        // Without Sound Physics the direct filter is free and ringing ears take it, slot or not.
+        if (s < 0 && (PHYSICS || broken)) return;
         try {
             if (channelSource == null) {
                 channelSource = Channel.class.getDeclaredField("source");
                 channelSource.setAccessible(true);
             }
-            AL11.alSource3i(channelSource.getInt(channel), EXTEfx.AL_AUXILIARY_SEND_FILTER, s, send, EXTEfx.AL_FILTER_NULL);
+            int source = channelSource.getInt(channel);
+            if (!PHYSICS) HearingClient.attach(source);
+            if (s >= 0) AL11.alSource3i(source, EXTEfx.AL_AUXILIARY_SEND_FILTER, s, send, EXTEfx.AL_FILTER_NULL);
         } catch (ReflectiveOperationException | RuntimeException e) {
             slot = -1;
+            broken = true;
             LOGGER.warn("Drug audio: could not attach a sound, effects off", e);
         }
     }

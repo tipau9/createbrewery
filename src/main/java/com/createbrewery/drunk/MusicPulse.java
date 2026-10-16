@@ -504,6 +504,13 @@ public final class MusicPulse {
         return playing;
     }
 
+    /** Bass reaching your ears right now, summed over songs, over distance to each one's nearest box ({@link Hearing#exposure}); a second of it is the dose. */
+    private static float subBass;
+
+    public static float subBass() {
+        return subBass;
+    }
+
     public static float kick() {
         return kick;
     }
@@ -528,6 +535,7 @@ public final class MusicPulse {
         lastFrame = now;
         float k = 0f, l = 0f, h = 0f, bass = 0f, loud = 0f, high = 0f, walled = 0f;
         boolean heard = false;
+        float sub = 0f;
         for (Track t : tracks) {
             if (!mc.getSoundManager().isActive(t.sound) || !AL10.alIsSource(t.source)) {
                 t.emitters.values().forEach(Emitter::delete);
@@ -552,6 +560,17 @@ public final class MusicPulse {
             float kickNow = known ? CURRENT_SLICE[KickDetector.KICK] : 0f;
             t.pulse = Math.max(kickNow * t.mix * t.power, t.pulse * (float) Math.exp(-dt * Math.max(9.0, 4.5 / t.song.period())));
             if (!known) continue;
+            if (player != null) {
+                // The bass in your ears: from the nearest club box that plays it (a sub, or a speaker playing it all) -
+                // not the jukebox or booth itself - as loud as your sliders let it be.
+                Vec3 source = new Vec3(t.sound.getX(), t.sound.getY(), t.sound.getZ());
+                float closest = 0f;
+                for (Emitter e : t.emitters.values()) {
+                    if (e.band != Emitter.HIGH && !e.pos.equals(source)) closest = Math.max(closest, Hearing.exposure(1f, e.drive * e.level, player.getEyePosition().distanceTo(e.pos)));
+                }
+                float sliders = mc.options.getSoundSourceVolume(SoundSource.MASTER) * mc.options.getSoundSourceVolume(t.sound.getSource());
+                sub += CURRENT_SLICE[KickDetector.BASS] * t.mix * t.power * closest * sliders;
+            }
             int beatsBefore = t.song.beats;
             t.song.hear(kickNow, CURRENT_SLICE[KickDetector.LEVEL], CURRENT_SLICE[KickDetector.HATS], CURRENT_SLICE[KickDetector.BASS],
                 CURRENT_SLICE[KickDetector.LOUD], CURRENT_SLICE[KickDetector.HIGH], true, now, dt);
@@ -573,6 +592,7 @@ public final class MusicPulse {
         }
         for (AmpMeters m : METERS.values()) m.step(dt);
         playing = heard;
+        subBass = sub;
         song.hear(k, l, h, bass, loud, high, heard, now, dt);
         // At techno tempos each kick dies away faster, so hits stay apart instead of smearing.
         kick = Math.max(k, kick * (float) Math.exp(-dt * Math.max(9.0, 4.5 / song.period())));
