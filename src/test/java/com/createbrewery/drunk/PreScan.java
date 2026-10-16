@@ -38,6 +38,25 @@ final class PreScan {
      * those moments are candidates, and they are taken as they are; null: every 0.1 s, snapped.
      */
     static List<Double> detect(DropTrainer.Song s, Params p, List<Double> at) {
+        List<double[]> candidates = new ArrayList<>(); // {slice, score}
+        for (double[] c : scored(s, p, at)) if (c[1] >= p.threshold()) candidates.add(c);
+
+        // The strongest first; nothing else within the spacing of one already taken.
+        candidates.sort(Comparator.comparingDouble((double[] c) -> -c[1]));
+        int gap = (int) Math.round(p.spacing() / KickDetector.SLICE);
+        List<Integer> taken = new ArrayList<>();
+        for (double[] c : candidates) {
+            int i = (int) c[0];
+            if (taken.stream().noneMatch(t -> Math.abs(t - i) < gap)) taken.add(i);
+        }
+        List<Double> drops = new ArrayList<>();
+        for (int i : taken) drops.add((at == null ? snap(s, i) : i) * KickDetector.SLICE);
+        drops.sort(null);
+        return drops;
+    }
+
+    /** Every candidate (see {@link #detect}) with its score, unfiltered: {slice, score}. */
+    static List<double[]> scored(DropTrainer.Song s, Params p, List<Double> at) {
         int n = s.kick().length;
         int w = (int) Math.round(p.window() / KickDetector.SLICE);
         if (n < 2 * w + 1) return List.of();
@@ -73,21 +92,9 @@ final class PreScan {
             double build = mean(high, i - w / 2, i) - mean(high, i - w, i - w / 2);
             // x10: a tenth of the 60 dB scale (6 dB) weighs as much as a kick a beat more.
             double score = 10 * (p.wBass() * dBass + p.wLoud() * dLoud + p.wBuild() * build) + p.wKick() * dKick;
-            if (score >= p.threshold()) candidates.add(new double[] {i, score});
+            candidates.add(new double[] {i, score});
         }
-
-        // The strongest first; nothing else within the spacing of one already taken.
-        candidates.sort(Comparator.comparingDouble((double[] c) -> -c[1]));
-        int gap = (int) Math.round(p.spacing() / KickDetector.SLICE);
-        List<Integer> taken = new ArrayList<>();
-        for (double[] c : candidates) {
-            int i = (int) c[0];
-            if (taken.stream().noneMatch(t -> Math.abs(t - i) < gap)) taken.add(i);
-        }
-        List<Double> drops = new ArrayList<>();
-        for (int i : taken) drops.add((at == null ? snap(s, i) : i) * KickDetector.SLICE);
-        drops.sort(null);
-        return drops;
+        return candidates;
     }
 
     /** The slice within half a second of {@code i} where bass and mix rise most sharply. */

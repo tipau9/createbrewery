@@ -272,7 +272,7 @@ public final class DropTrainer {
     }
 
     private static final Pattern SEGMENT_START = Pattern.compile("\"start\"[ \t\r\n]*:[ \t\r\n]*([0-9.eE+-]+)");
-    private static Map<String, List<Double>> readBoundaries(Path dir) throws IOException {
+    static Map<String, List<Double>> readBoundaries(Path dir) throws IOException {
         Map<String, List<Double>> out = new HashMap<>();
         if (!Files.isDirectory(dir)) throw new IllegalStateException("Keine allin1-Analyse in " + dir + " (tools/drops_allin1.py)");
         try (Stream<Path> files = Files.list(dir)) {

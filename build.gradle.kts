@@ -131,6 +131,16 @@ tasks.test {
 }
 
 // Tunes DropDetector.DEFAULT on your own songs: ./gradlew trainDrops --args="C:/path/to/songs"
+// Checks suggested drops by ear and writes them into drops.txt: ./gradlew labelDrops --args="Musik/drops"
+tasks.register<JavaExec>("labelDrops") {
+    group = "verification"
+    description = "Plays allin1's strongest section boundaries per song; answer j/n, the drops go into drops.txt"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.createbrewery.drunk.DropLabeler")
+    workingDir = projectDir
+    standardInput = System.`in`
+}
+
 tasks.register<JavaExec>("trainDrops") {
     group = "verification"
     description = "Learns the drop detection settings from MP3s and their drops.txt"
