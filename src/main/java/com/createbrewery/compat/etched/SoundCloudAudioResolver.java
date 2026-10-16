@@ -47,7 +47,7 @@ import java.util.concurrent.CompletionException;
  * <p>This resolver:
  * <ol>
  *   <li>Queries the track metadata and modern HLS AAC stream URL using a valid client ID.</li>
- *   <li>Checks a persistent on-disk cache ({@code .minecraft/etched_cache/soundcloud/<hash>.wav}).</li>
+ *   <li>Checks a persistent on-disk cache ({@code .minecraft/etched_cache/soundcloud/<hash>.le.wav}).</li>
  *   <li>Downloads the HLS segment chunks and decodes the AAC frames to 16-bit 44.1 kHz Stereo PCM via JAAD.</li>
  *   <li>Writes a standard 44-byte RIFF WAV file and returns a {@link CachedWavAudioSource}.</li>
  * </ol>
@@ -82,7 +82,8 @@ public final class SoundCloudAudioResolver {
                 Files.createDirectories(cacheDir);
 
                 String hash = hashUrl(trackUrl);
-                Path wavFile = cacheDir.resolve(hash + ".wav");
+                // ".le": WAVs cached before the endianness fix hold byte-swapped PCM (white noise); never reuse them
+                Path wavFile = cacheDir.resolve(hash + ".le.wav");
 
                 if (Files.exists(wavFile) && Files.size(wavFile) > 44) {
                     LOGGER.info("Create Brewery: using cached SoundCloud WAV for {} ({})", trackUrl, wavFile.getFileName());
@@ -211,6 +212,7 @@ public final class SoundCloudAudioResolver {
         // 5. Decode segments directly to temporary WAV file
         Decoder decoder = new Decoder(asc);
         SampleBuffer sampleBuffer = new SampleBuffer();
+        sampleBuffer.setBigEndian(false); // JAAD defaults to big-endian; RIFF WAV PCM is little-endian
 
         long totalPcmBytes = 0;
         int sampleRate = 44100;
