@@ -30,6 +30,14 @@ final class PreScan {
     private static final float AUDIBLE = 0.5f;
 
     static List<Double> detect(DropTrainer.Song s, Params p) {
+        return detect(s, p, null);
+    }
+
+    /**
+     * With {@code at} (seconds, e.g. allin1's section boundaries, which sit on the downbeat) only
+     * those moments are candidates, and they are taken as they are; null: every 0.1 s, snapped.
+     */
+    static List<Double> detect(DropTrainer.Song s, Params p, List<Double> at) {
         int n = s.kick().length;
         int w = (int) Math.round(p.window() / KickDetector.SLICE);
         if (n < 2 * w + 1) return List.of();
@@ -44,7 +52,13 @@ final class PreScan {
         while (start < n && s.loud()[start] < AUDIBLE) start++;
         List<double[]> candidates = new ArrayList<>(); // {slice, score}
         int q = w / 4;
-        for (int i = start + w; i + w < n; i += STEP) {
+        List<Integer> slices = new ArrayList<>();
+        if (at == null) for (int i = start + w; i + w < n; i += STEP) slices.add(i);
+        else for (double t : at) {
+            int i = (int) Math.round(t / KickDetector.SLICE);
+            if (i >= start + w && i + w < n) slices.add(i);
+        }
+        for (int i : slices) {
             // What comes after has to stay: the weakest quarter of the window ahead counts.
             double bassAfter = Double.MAX_VALUE, loudAfter = Double.MAX_VALUE;
             for (int k = 0; k < 4; k++) {
@@ -71,7 +85,7 @@ final class PreScan {
             if (taken.stream().noneMatch(t -> Math.abs(t - i) < gap)) taken.add(i);
         }
         List<Double> drops = new ArrayList<>();
-        for (int i : taken) drops.add(snap(s, i) * KickDetector.SLICE);
+        for (int i : taken) drops.add((at == null ? snap(s, i) : i) * KickDetector.SLICE);
         drops.sort(null);
         return drops;
     }

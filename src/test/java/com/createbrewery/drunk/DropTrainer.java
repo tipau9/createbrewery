@@ -25,7 +25,10 @@ import java.util.stream.Stream;
  * --holdout 3   every third song is only scored, not learnt from: how it does on songs it has not heard
  * --energy      also learn the genre-blind energy path (overfits below a few hundred marked drops)
  * --prescan     learn and score {@link PreScan} instead: the song known in full, looking ahead too
- *               (with --holdout N: every one of the N parts is the unseen one in turn, and the unseen scores add up)</pre>
+ *               (with --holdout N: every one of the N parts is the unseen one in turn, and the unseen scores add up)
+ * --allin1      with --prescan: only allin1's section boundaries (.allin1/*.json, tools/drops_allin1.py) are candidates
+ * --auto        learn from drops-auto.txt (machine-suggested, see tools/drops_allin1.py) on the songs not in
+ *               drops.txt, and score only against the checked drops.txt: those stay the honest test</pre>
  *
  * The folder holds MP3s and a {@code drops.txt} saying where their drops are, one song a line:
  * <pre>Pursuit of Happiness.mp3: 1:02, 2:35
@@ -66,6 +69,8 @@ public final class DropTrainer {
         int holdout = 0;
         tuneEnergy = Arrays.asList(args).contains("--energy");
         boolean prescan = Arrays.asList(args).contains("--prescan");
+        boolean auto = Arrays.asList(args).contains("--auto");
+        if (Arrays.asList(args).contains("--allin1")) bounds = readBoundaries(dir.resolve(".allin1"));
         for (int i = 1; i + 1 < args.length; i++) {
             if (args[i].equals("--runs")) runs = Integer.parseInt(args[i + 1]);
             if (args[i].equals("--holdout")) holdout = Integer.parseInt(args[i + 1]);
@@ -103,6 +108,10 @@ public final class DropTrainer {
             suggested.forEach(l -> System.out.println("  " + l));
         }
 
+        if (auto) {
+            learnFromAuto(songs, labels, readLabels(dir.resolve("drops-auto.txt")), runs, apply);
+            return;
+        }
         List<Song> train = songs.stream().filter(s -> labels.containsKey(s.name) && labels.get(s.name).checked).toList();
         // --holdout N: every Nth song is not learnt from, only scored, to see how it does on songs it has not seen.
         List<Song> unseen = new ArrayList<>();
@@ -166,6 +175,45 @@ public final class DropTrainer {
         }
     }
 
+    /** --auto: learns on the machine-marked songs nobody checked, scores on the checked ones only. */
+    private static void learnFromAuto(List<Song> songs, Map<String, Label> checked, Map<String, Label> auto, int runs, boolean apply) throws IOException {
+        List<Song> test = songs.stream().filter(s -> checked.containsKey(s.name) && checked.get(s.name).checked).toList();
+        List<Song> train = songs.stream().filter(s -> auto.containsKey(s.name) && !checked.containsKey(s.name)).toList();
+        int autoDrops = train.stream().mapToInt(s -> auto.get(s.name).drops().size()).sum();
+        System.out.println("Lernen: " + train.size() + " Songs aus drops-auto.txt (" + autoDrops + " Drops), Test: " + test.size() + " gepruefte Songs");
+        if (train.size() < 10) {
+            System.out.println("Zu wenig ungepruefte Songs mit Auto-Markierung zum Lernen.");
+            return;
+        }
+        DropDetector.Params best = DropDetector.DEFAULT;
+        Score bestScore = score(train, auto, best);
+        Random r = new Random(42);
+        for (int run = 0; run < runs; run++) {
+            DropDetector.Params p = run % 2 == 0 ? random(r) : nudge(best, r);
+            Score s = score(train, auto, p);
+            if (s.f1() > bestScore.f1() + 1e-9 || s.f1() == bestScore.f1() && s.wrong() < bestScore.wrong()) {
+                best = p;
+                bestScore = s;
+                System.out.println("  Versuch " + run + ": " + s + " (gegen Auto-Markierungen)");
+            }
+        }
+        Score before = score(test, checked, DropDetector.DEFAULT), after = score(test, checked, best);
+        System.out.println();
+        System.out.println("Gepruefte Songs, bisher:   " + before);
+        System.out.println("Gepruefte Songs, gelernt:  " + after);
+        String line = code(best);
+        System.out.println(line);
+        if (apply && after.f1() > before.f1()) {
+            Path source = Path.of("src/main/java/com/createbrewery/drunk/DropDetector.java");
+            Matcher m = DEFAULT_LINE.matcher(Files.readString(source));
+            if (!m.find()) throw new IllegalStateException("DEFAULT line not found in " + source);
+            Files.writeString(source, m.replaceFirst(Matcher.quoteReplacement(line)));
+            System.out.println("In DropDetector.java eingetragen.");
+        } else if (apply) {
+            System.out.println("Nicht besser auf den geprueften Songs: nicht eingetragen.");
+        }
+    }
+
     // --- Scoring ---
 
     static List<Double> detect(Song s, DropDetector.Params p) {
@@ -214,6 +262,35 @@ public final class DropTrainer {
 
     // --- Pre-scan (the whole song known beforehand) ---
 
+    /** --allin1: per song file name, allin1's section boundaries in seconds; null: search everywhere. */
+    private static Map<String, List<Double>> bounds;
+
+    private static List<Double> preDetect(Song s, PreScan.Params p) {
+        if (bounds == null) return PreScan.detect(s, p);
+        List<Double> b = bounds.get(s.name);
+        return b == null ? List.of() : PreScan.detect(s, p, b);
+    }
+
+    private static final Pattern SEGMENT_START = Pattern.compile("\"start\"[ \t\r\n]*:[ \t\r\n]*([0-9.eE+-]+)");
+    private static Map<String, List<Double>> readBoundaries(Path dir) throws IOException {
+        Map<String, List<Double>> out = new HashMap<>();
+        if (!Files.isDirectory(dir)) throw new IllegalStateException("Keine allin1-Analyse in " + dir + " (tools/drops_allin1.py)");
+        try (Stream<Path> files = Files.list(dir)) {
+            for (Path f : files.filter(f -> f.toString().endsWith(".json")).toList()) {
+                // Only the segments' starts are needed: {"start": 12.3, "end": ..., "label": ...}, after the first.
+                String text = Files.readString(f);
+                Matcher m = SEGMENT_START.matcher(text.substring(Math.max(0, text.indexOf("\"segments\""))));
+                List<Double> starts = new ArrayList<>();
+                while (m.find()) starts.add(Double.parseDouble(m.group(1)));
+                if (!starts.isEmpty()) starts.remove(0);
+                String name = f.getFileName().toString();
+                out.put(name.substring(0, name.length() - ".json".length()) + ".mp3", starts);
+            }
+        }
+        System.out.println("allin1-Grenzen fuer " + out.size() + " Songs geladen");
+        return out;
+    }
+
     private static final double[][] PRE_RANGE = {{4, 12}, {0, 3}, {0, 3}, {0, 2}, {-1, 2}, {0.2, 4}, {6, 30}};
 
     private static PreScan.Params pre(double[] v) {
@@ -233,8 +310,8 @@ public final class DropTrainer {
             List<Song> learn = new ArrayList<>(), unseen = new ArrayList<>();
             for (int i = 0; i < songs.size(); i++) (group[i] % parts == k ? unseen : learn).add(songs.get(i));
             PreScan.Params p = preScan(learn, unseen, labels, runs, false);
-            Score l = score(unseen, labels, DropDetector.DEFAULT), q = score(unseen, labels, s -> PreScan.detect(s, p));
-            Score d = score(unseen, labels, s -> PreScan.detect(s, PreScan.Params.DEFAULT));
+            Score l = score(unseen, labels, DropDetector.DEFAULT), q = score(unseen, labels, s -> preDetect(s, p));
+            Score d = score(unseen, labels, s -> preDetect(s, PreScan.Params.DEFAULT));
             System.out.println("Teil " + (k + 1) + " ungesehen (" + unseen.size() + " Songs): Live " + l + "  |  Pre-Scan " + q + "   " + p);
             live = add(live, l);
             pre = add(pre, q);
@@ -254,7 +331,7 @@ public final class DropTrainer {
     /** Learns PreScan's settings on {@code train}; with {@code report}, scores them and the live detector on both sets. */
     private static PreScan.Params preScan(List<Song> train, List<Song> unseen, Map<String, Label> labels, int runs, boolean report) {
         PreScan.Params best = PreScan.Params.DEFAULT;
-        Score bestScore = score(train, labels, s -> PreScan.detect(s, PreScan.Params.DEFAULT));
+        Score bestScore = score(train, labels, s -> preDetect(s, PreScan.Params.DEFAULT));
         if (report) System.out.println("Pre-Scan, Startwerte: " + bestScore);
         Random r = new Random(42);
         for (int run = 0; run < runs; run++) {
@@ -262,7 +339,7 @@ public final class DropTrainer {
             if (run % 2 == 0) for (int i = 0; i < v.length; i++) v[i] = PRE_RANGE[i][0] + r.nextDouble() * (PRE_RANGE[i][1] - PRE_RANGE[i][0]);
             else for (int i = 0; i < v.length; i++) if (r.nextBoolean()) v[i] += r.nextGaussian() * 0.1 * (PRE_RANGE[i][1] - PRE_RANGE[i][0]);
             PreScan.Params p = pre(v);
-            Score s = score(train, labels, song -> PreScan.detect(song, p));
+            Score s = score(train, labels, song -> preDetect(song, p));
             if (s.f1() > bestScore.f1() + 1e-9 || s.f1() == bestScore.f1() && s.wrong() < bestScore.wrong()) {
                 best = p;
                 bestScore = s;
@@ -276,13 +353,13 @@ public final class DropTrainer {
             + "  |  Pre-Scan " + bestScore);
         if (!unseen.isEmpty()) {
             System.out.println("Ungesehen (" + unseen.size() + " Songs): Live-Detektor " + score(unseen, labels, DropDetector.DEFAULT)
-                + "  |  Pre-Scan " + score(unseen, labels, s -> PreScan.detect(s, found)));
+                + "  |  Pre-Scan " + score(unseen, labels, s -> preDetect(s, found)));
         }
         List<Song> all = new ArrayList<>(train);
         all.addAll(unseen);
         for (Song s : all) {
             System.out.printf("  %s%-40s markiert %-20s live %-20s pre-scan %s%n", unseen.contains(s) ? "* " : "  ", s.name,
-                times(labels.get(s.name).drops()), times(detect(s, DropDetector.DEFAULT)), times(PreScan.detect(s, found)));
+                times(labels.get(s.name).drops()), times(detect(s, DropDetector.DEFAULT)), times(preDetect(s, found)));
         }
         System.out.println();
         System.out.println(found + (unseen.isEmpty() ? "" : "   (* = ungesehen)"));
