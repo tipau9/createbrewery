@@ -56,6 +56,7 @@ neoForge {
 }
 
 repositories {
+    mavenCentral()
     maven("https://maven.createmod.net")            // Create, Ponder, Flywheel
     maven("https://maven.ithundxr.dev/snapshots")   // Registrate
     maven("https://maven.blamejared.com")           // JEI
@@ -63,11 +64,14 @@ repositories {
     maven("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/") // GeckoLib
     maven("https://maven.maxhenkel.de/repository/public")              // Simple Voice Chat API
     maven("https://maven.minecraftforge.net")                          // Tough As Nails, GlitchCore
-    exclusiveContent {                              // Distant Horizons
+    exclusiveContent {                              // Distant Horizons, Etched
         forRepository { maven("https://api.modrinth.com/maven") }
         filter { includeGroup("maven.modrinth") }
     }
 }
+
+val shade: Configuration by configurations.creating
+configurations.implementation.get().extendsFrom(shade)
 
 dependencies {
     implementation("com.simibubi.create:create-${property("minecraft_version")}:${property("create_version")}:slim") { isTransitive = false }
@@ -91,6 +95,10 @@ dependencies {
     // Tough As Nails (in the pack): body temperature and thirst, only when it is there.
     compileOnly("com.github.glitchfiend:ToughAsNails-neoforge:${property("minecraft_version")}-10.1.0.3") { isTransitive = false }
     compileOnly("com.github.glitchfiend:GlitchCore-neoforge:${property("minecraft_version")}-2.1.0.2") { isTransitive = false }
+    // Etched: custom music discs and booth streaming compat
+    compileOnly("maven.modrinth:etched:5.1.0") { isTransitive = false }
+    // JAAD: pure Java AAC decoding for modern SoundCloud HLS streams
+    shade("de.sfuhrm:jaad:0.8.7") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // MP3 decoding for the drop trainer (DropTrainer, ./gradlew trainDrops); tests only, not in the mod.
@@ -103,6 +111,11 @@ dependencies {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
+}
+
+tasks.jar {
+    from(shade.map { if (it.isDirectory) it else zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.processResources {
