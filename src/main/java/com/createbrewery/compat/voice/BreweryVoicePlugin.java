@@ -1,11 +1,15 @@
 package com.createbrewery.compat.voice;
 
 import com.createbrewery.CreateBrewery;
+import com.createbrewery.Config;
+import com.createbrewery.drunk.MusicPulse;
 import com.createbrewery.drunk.VoiceFx;
+import com.createbrewery.drunk.VoiceMask;
 import com.mojang.logging.LogUtils;
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
+import de.maxhenkel.voicechat.api.events.ClientReceiveSoundEvent;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
@@ -21,13 +25,16 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Simple Voice Chat (found by its annotation, only when it is installed): your microphone goes
  * through {@link VoiceFx} before it is sent, so the others hear the state you are in. And whoever
- * talks into a club microphone is heard out of its booth's speakers too.
+ * talks into a club microphone is heard out of its booth's speakers too. In a loud club, the others
+ * have to shout to be heard ({@link VoiceMask}).
  */
 @ForgeVoicechatPlugin
 public class BreweryVoicePlugin implements VoicechatPlugin {
     private final VoiceFx fx = new VoiceFx();
     /** One channel per talker and speaker (two voices on one channel would garble), reused while they talk. */
     private final Map<String, LocationalAudioChannel> channels = new ConcurrentHashMap<>();
+    /** Client: per talker, how the music drowns their voice out. */
+    private final Map<UUID, VoiceMask> masks = new ConcurrentHashMap<>();
     /** How far a voice from a club speaker carries, in blocks. */
     private static final float PA_DISTANCE = 48f;
 
@@ -46,6 +53,15 @@ public class BreweryVoicePlugin implements VoicechatPlugin {
         registration.registerEvent(ClientSoundEvent.class, event -> {
             short[] pcm = event.getRawAudio();
             fx.process(pcm, VoiceFx.params);
+            event.setRawAudio(pcm);
+        });
+        // Players only: a club microphone comes out of the speakers as a locational sound and is meant to cut through.
+        registration.registerEvent(ClientReceiveSoundEvent.EntitySound.class, event -> {
+            short[] pcm = event.getRawAudio();
+            double distance = MusicPulse.distanceTo(event.getEntityId());
+            if (pcm == null || distance < 0) return;
+            float sensitivity = Config.CLIENT_SPEC.isLoaded() ? Config.VOICE_MASKING.get().floatValue() : 1f;
+            masks.computeIfAbsent(event.getEntityId(), id -> new VoiceMask()).process(pcm, MusicPulse.heardLevel(), distance, sensitivity);
             event.setRawAudio(pcm);
         });
         registration.registerEvent(MicrophonePacketEvent.class, this::onMicrophone);

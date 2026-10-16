@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -404,6 +405,10 @@ public final class MusicPulse {
     private static final double[] offsetAndLatency = new double[2];
     /** What is heard right now, weighted by how close the song is; see {@link #update}. */
     static float kick, level, hats;
+    /** How loud the music is where you stand, walls counted, 0..1; read on the voice chat thread (see {@link VoiceMask}). */
+    private static volatile float heardLevel;
+    /** How far each other player is, in blocks, as of the last frame; read on the voice chat thread. */
+    private static volatile Map<UUID, Double> distances = Map.of();
     /** Beats, tempo, build-ups and drops of what is heard. */
     static final DropDetector song = new DropDetector();
 
@@ -514,7 +519,7 @@ public final class MusicPulse {
         double now = System.nanoTime() / 1e9;
         float dt = (float) Math.min(0.1, now - lastFrame);
         lastFrame = now;
-        float k = 0f, l = 0f, h = 0f, bass = 0f, loud = 0f, high = 0f;
+        float k = 0f, l = 0f, h = 0f, bass = 0f, loud = 0f, high = 0f, walled = 0f;
         boolean heard = false;
         for (Track t : tracks) {
             if (!mc.getSoundManager().isActive(t.sound) || !AL10.alIsSource(t.source)) {
@@ -547,6 +552,13 @@ public final class MusicPulse {
             if (t.song.beats != beatsBefore && t.heard >= 0) t.lastBeat = Math.max(0, t.heard - (long) (t.rate * 0.004));
             k = Math.max(k, kickNow * near);
             l = Math.max(l, CURRENT_SLICE[KickDetector.LEVEL] * near);
+            // Background music is not in the room with you; a song in the world is as loud as the walls and your volume let it be.
+            if (t.placed()) {
+                float through = t.emitters.isEmpty() ? 1f : 0f;
+                for (Emitter e : t.emitters.values()) through = Math.max(through, e.through());
+                float volume = mc.options.getSoundSourceVolume(SoundSource.MASTER) * mc.options.getSoundSourceVolume(t.sound.getSource());
+                walled = Math.max(walled, CURRENT_SLICE[KickDetector.LEVEL] * near * through * volume);
+            }
             h = Math.max(h, CURRENT_SLICE[KickDetector.HATS] * near);
             bass = Math.max(bass, CURRENT_SLICE[KickDetector.BASS] * near);
             loud = Math.max(loud, CURRENT_SLICE[KickDetector.LOUD] * near);
@@ -560,6 +572,22 @@ public final class MusicPulse {
         hats = Math.max(h, hats * (float) Math.exp(-dt * 14.0));
         // Up fast, down slowly: loud bits hit at once, the quiet comes in gently.
         level += (l - level) * (1f - (float) Math.exp(-dt * (l > level ? 25.0 : 4.0)));
+        heardLevel += (walled - heardLevel) * (1f - (float) Math.exp(-dt * (walled > heardLevel ? 25.0 : 4.0)));
+        Map<UUID, Double> far = new HashMap<>();
+        if (player != null && mc.level != null) {
+            for (var other : mc.level.players()) if (other != player) far.put(other.getUUID(), (double) other.distanceTo(player));
+        }
+        distances = far;
+    }
+
+    /** How loud the music is where you stand, walls counted, 0..1. Any thread. */
+    public static float heardLevel() {
+        return heardLevel;
+    }
+
+    /** How far the player {@code id} is from you in blocks, -1 if not near. Any thread. */
+    public static double distanceTo(UUID id) {
+        return distances.getOrDefault(id, -1.0);
     }
 
     /**
