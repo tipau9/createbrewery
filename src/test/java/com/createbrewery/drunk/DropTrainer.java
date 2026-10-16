@@ -23,7 +23,9 @@ import java.util.stream.Stream;
  * <pre>./gradlew trainDrops --args="C:/Musik/drops"            (learn, show the result)
  * ./gradlew trainDrops --args="C:/Musik/drops --apply"    (and write it into DropDetector.java)
  * --holdout 3   every third song is only scored, not learnt from: how it does on songs it has not heard
- * --energy      also learn the genre-blind energy path (overfits below a few hundred marked drops)</pre>
+ * --energy      also learn the genre-blind energy path (overfits below a few hundred marked drops)
+ * --prescan     learn and score {@link PreScan} instead: the song known in full, looking ahead too
+ *               (with --holdout N: every one of the N parts is the unseen one in turn, and the unseen scores add up)</pre>
  *
  * The folder holds MP3s and a {@code drops.txt} saying where their drops are, one song a line:
  * <pre>Pursuit of Happiness.mp3: 1:02, 2:35
@@ -63,6 +65,7 @@ public final class DropTrainer {
         int runs = 3000;
         int holdout = 0;
         tuneEnergy = Arrays.asList(args).contains("--energy");
+        boolean prescan = Arrays.asList(args).contains("--prescan");
         for (int i = 1; i + 1 < args.length; i++) {
             if (args[i].equals("--runs")) runs = Integer.parseInt(args[i + 1]);
             if (args[i].equals("--holdout")) holdout = Integer.parseInt(args[i + 1]);
@@ -104,8 +107,10 @@ public final class DropTrainer {
         // --holdout N: every Nth song is not learnt from, only scored, to see how it does on songs it has not seen.
         List<Song> unseen = new ArrayList<>();
         if (holdout > 1) {
+            // By group: the same recording under two names must not be learnt from and scored as unseen.
+            int[] group = groups(train, labels);
             List<Song> learn = new ArrayList<>();
-            for (int i = 0; i < train.size(); i++) (i % holdout == 0 ? unseen : learn).add(train.get(i));
+            for (int i = 0; i < train.size(); i++) (group[i] % holdout == 0 ? unseen : learn).add(train.get(i));
             train = learn;
         }
         if (train.size() < 3) {
@@ -113,6 +118,11 @@ public final class DropTrainer {
             return;
         }
         if (train.size() < 10) System.out.println("Hinweis: mit weniger als 10 Songs lernt es leicht nur diese Songs auswendig.");
+        if (prescan) {
+            if (holdout > 1) crossValidate(songs.stream().filter(s -> labels.containsKey(s.name) && labels.get(s.name).checked).toList(), labels, holdout, runs);
+            else preScan(train, unseen, labels, runs, true);
+            return;
+        }
 
         DropDetector.Params best = DropDetector.DEFAULT;
         Score bestScore = score(train, labels, best), before = bestScore;
@@ -170,8 +180,113 @@ public final class DropTrainer {
     }
 
     static Score score(List<Song> songs, Map<String, Label> labels, DropDetector.Params p) {
-        return songs.parallelStream().map(s -> match(labels.get(s.name).drops(), detect(s, p)))
+        return score(songs, labels, s -> detect(s, p));
+    }
+
+    static Score score(List<Song> songs, Map<String, Label> labels, java.util.function.Function<Song, List<Double>> detector) {
+        return songs.parallelStream().map(s -> match(labels.get(s.name).drops(), detector.apply(s)))
             .reduce(new Score(0, 0, 0), (a, b) -> new Score(a.hits + b.hits, a.wrong + b.wrong, a.missed + b.missed));
+    }
+
+    /**
+     * A group number per song: songs about as long as each other (within 5 s: a release can be
+     * padded differently) with the same marked drops (within a second) are the same recording under
+     * another name. Songs without drops are only the same within a second of length.
+     */
+    static int[] groups(List<Song> songs, Map<String, Label> labels) {
+        int[] g = new int[songs.size()];
+        int next = 0;
+        for (int i = 0; i < songs.size(); i++) {
+            g[i] = -1;
+            for (int j = 0; j < i && g[i] < 0; j++) if (same(songs.get(i), songs.get(j), labels)) g[i] = g[j];
+            if (g[i] < 0) g[i] = next++;
+        }
+        return g;
+    }
+
+    private static boolean same(Song a, Song b, Map<String, Label> labels) {
+        List<Double> da = labels.get(a.name).drops(), db = labels.get(b.name).drops();
+        if (Math.abs(a.kick.length - b.kick.length) * KickDetector.SLICE > (da.isEmpty() ? 1.0 : 5.0)) return false;
+        if (da.size() != db.size()) return false;
+        for (int i = 0; i < da.size(); i++) if (Math.abs(da.get(i) - db.get(i)) > 1.0) return false;
+        return true;
+    }
+
+    // --- Pre-scan (the whole song known beforehand) ---
+
+    private static final double[][] PRE_RANGE = {{4, 12}, {0, 3}, {0, 3}, {0, 2}, {-1, 2}, {0.2, 4}, {6, 30}};
+
+    private static PreScan.Params pre(double[] v) {
+        for (int i = 0; i < v.length; i++) v[i] = Math.max(PRE_RANGE[i][0], Math.min(PRE_RANGE[i][1], v[i]));
+        return new PreScan.Params(round(v[0], 1), round(v[1], 2), round(v[2], 2), round(v[3], 2), round(v[4], 2), round(v[5], 2), round(v[6], 1));
+    }
+
+    private static double[] values(PreScan.Params p) {
+        return new double[] {p.window(), p.wBass(), p.wLoud(), p.wKick(), p.wBuild(), p.threshold(), p.spacing()};
+    }
+
+    /** Each of the {@code parts} groups unseen in turn: PreScan learnt on the rest; the unseen scores summed up. */
+    private static void crossValidate(List<Song> songs, Map<String, Label> labels, int parts, int runs) {
+        int[] group = groups(songs, labels);
+        Score live = new Score(0, 0, 0), pre = new Score(0, 0, 0), preDefault = new Score(0, 0, 0);
+        for (int k = 0; k < parts; k++) {
+            List<Song> learn = new ArrayList<>(), unseen = new ArrayList<>();
+            for (int i = 0; i < songs.size(); i++) (group[i] % parts == k ? unseen : learn).add(songs.get(i));
+            PreScan.Params p = preScan(learn, unseen, labels, runs, false);
+            Score l = score(unseen, labels, DropDetector.DEFAULT), q = score(unseen, labels, s -> PreScan.detect(s, p));
+            Score d = score(unseen, labels, s -> PreScan.detect(s, PreScan.Params.DEFAULT));
+            System.out.println("Teil " + (k + 1) + " ungesehen (" + unseen.size() + " Songs): Live " + l + "  |  Pre-Scan " + q + "   " + p);
+            live = add(live, l);
+            pre = add(pre, q);
+            preDefault = add(preDefault, d);
+        }
+        System.out.println();
+        System.out.println("Alle Songs je einmal ungesehen:");
+        System.out.println("  Live-Detektor:          " + live);
+        System.out.println("  Pre-Scan, gelernt:      " + pre);
+        System.out.println("  Pre-Scan, Startwerte:   " + preDefault);
+    }
+
+    private static Score add(Score a, Score b) {
+        return new Score(a.hits + b.hits, a.wrong + b.wrong, a.missed + b.missed);
+    }
+
+    /** Learns PreScan's settings on {@code train}; with {@code report}, scores them and the live detector on both sets. */
+    private static PreScan.Params preScan(List<Song> train, List<Song> unseen, Map<String, Label> labels, int runs, boolean report) {
+        PreScan.Params best = PreScan.Params.DEFAULT;
+        Score bestScore = score(train, labels, s -> PreScan.detect(s, PreScan.Params.DEFAULT));
+        if (report) System.out.println("Pre-Scan, Startwerte: " + bestScore);
+        Random r = new Random(42);
+        for (int run = 0; run < runs; run++) {
+            double[] v = values(best);
+            if (run % 2 == 0) for (int i = 0; i < v.length; i++) v[i] = PRE_RANGE[i][0] + r.nextDouble() * (PRE_RANGE[i][1] - PRE_RANGE[i][0]);
+            else for (int i = 0; i < v.length; i++) if (r.nextBoolean()) v[i] += r.nextGaussian() * 0.1 * (PRE_RANGE[i][1] - PRE_RANGE[i][0]);
+            PreScan.Params p = pre(v);
+            Score s = score(train, labels, song -> PreScan.detect(song, p));
+            if (s.f1() > bestScore.f1() + 1e-9 || s.f1() == bestScore.f1() && s.wrong() < bestScore.wrong()) {
+                best = p;
+                bestScore = s;
+                if (report) System.out.println("  Versuch " + run + ": " + s);
+            }
+        }
+        PreScan.Params found = best;
+        if (!report) return found;
+        System.out.println();
+        System.out.println("Gelernt (" + train.size() + " Songs):  Live-Detektor " + score(train, labels, DropDetector.DEFAULT)
+            + "  |  Pre-Scan " + bestScore);
+        if (!unseen.isEmpty()) {
+            System.out.println("Ungesehen (" + unseen.size() + " Songs): Live-Detektor " + score(unseen, labels, DropDetector.DEFAULT)
+                + "  |  Pre-Scan " + score(unseen, labels, s -> PreScan.detect(s, found)));
+        }
+        List<Song> all = new ArrayList<>(train);
+        all.addAll(unseen);
+        for (Song s : all) {
+            System.out.printf("  %s%-40s markiert %-20s live %-20s pre-scan %s%n", unseen.contains(s) ? "* " : "  ", s.name,
+                times(labels.get(s.name).drops()), times(detect(s, DropDetector.DEFAULT)), times(PreScan.detect(s, found)));
+        }
+        System.out.println();
+        System.out.println(found + (unseen.isEmpty() ? "" : "   (* = ungesehen)"));
+        return found;
     }
 
     /** Each marked drop takes the first detected one close enough to it. */
