@@ -12,6 +12,7 @@ public class Config {
     public static final ModConfigSpec.BooleanValue RECORD_MUSIC;
     public static final ModConfigSpec.BooleanValue ENABLE_VEIL_LIGHTS;
     public static final ModConfigSpec.BooleanValue PERFORMANCE_MODE;
+    public static final ModConfigSpec.DoubleValue VOICE_MASKING;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -46,6 +47,11 @@ public class Config {
                 "console's hazer blast makes less haze, and the DMX stage view and DJ waveforms are drawn in one batch.",
                 "Off: everything as it always was.")
             .define("performanceMode", false);
+        VOICE_MASKING = client
+            .comment("How much loud club music drowns out other players' voices (Simple Voice Chat) more than 2 blocks away.",
+                "1.0 = normal, 0.0 = off. Raise it if people talking normally still come through, lower it if even shouting is drowned out",
+                "(microphones differ a lot in level).")
+            .defineInRange("voiceMasking", 1.0, 0.0, 3.0);
         CLIENT_SPEC = client.build();
     }
 

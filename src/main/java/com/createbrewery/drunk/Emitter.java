@@ -160,6 +160,11 @@ final class Emitter {
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING && !queued.isEmpty()) AL10.alSourcePlay(source);
     }
 
+    /** How much of its level gets through the walls to the listener, 0..1. */
+    float through() {
+        return (float) WallFilter.loss(muffle, Math.max(1f, walls));
+    }
+
     private void create(int original) {
         try {
             source = AL10.alGenSources();
