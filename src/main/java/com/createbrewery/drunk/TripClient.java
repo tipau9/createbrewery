@@ -72,6 +72,11 @@ public final class TripClient {
 
     /** 0..1 how long the view has rested on one spot. */
     static float stare;
+    /**
+     * 0..1 how steadily the eyes hold one point, walking or not. Drift and breathing build up while
+     * the gaze rests and snap back to almost normal with a quick look away (a saccade).
+     */
+    static float fixation;
     /** 0..1 how bad a place this is to trip in. */
     static float harsh;
 
@@ -134,6 +139,8 @@ public final class TripClient {
         float turned = Math.abs(Mth.wrapDegrees(player.getYRot() - lastYaw)) + Math.abs(player.getXRot() - lastPitch);
         lastYaw = player.getYRot();
         lastPitch = player.getXRot();
+        if (turned > 3.5f) fixation *= 0.15f;
+        else if (turned < 0.4f) fixation = Math.min(1f, fixation + 1f / 120f);
         boolean still = turned < 0.6f && player.getDeltaMovement().horizontalDistanceSqr() < 0.001;
         boolean nearFire = isNearFire(mc.level, player.blockPosition());
         float stareSpeed = (nearFire && DrunkClient.desert > 0.3f ? 2f : 1f) / 80f;

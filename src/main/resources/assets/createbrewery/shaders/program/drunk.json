@@ -80,6 +80,8 @@
         { "name": "World",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Stare",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
         { "name": "Harsh",        "type": "float",      "count": 1,  "values": [ 0.0 ] },
-        { "name": "Afterglow",    "type": "float",      "count": 1,  "values": [ 0.0 ] }
+        { "name": "Afterglow",    "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "Fixation",     "type": "float",      "count": 1,  "values": [ 0.0 ] },
+        { "name": "Squint",       "type": "float",      "count": 1,  "values": [ 0.0 ] }
     ]
 }

@@ -43,6 +43,8 @@ public final class DrunkMovementHandler {
     private static final float[] yawHistory = new float[6];
     private static int hgnLeft;
     private static float hgnDir;
+    /** Alcohol: 0..1 how much the room turns on by itself while standing still. */
+    private static float spin;
 
     /** Until when (ms) the mind is blank in an open container; clicks and keys do nothing. */
     private static long blankUntil;
@@ -56,6 +58,7 @@ public final class DrunkMovementHandler {
         lastJump = -1000;
         hgnLeft = 0;
         hgnDir = 0f;
+        spin = 0f;
         blankUntil = 0;
         for (int i = 0; i < yawHistory.length; i++) yawHistory[i] = 0f;
     }
@@ -86,6 +89,7 @@ public final class DrunkMovementHandler {
         float w = DrunkClient.ramp(Intoxication.MERRY);
         float yaw = DrunkClient.noise(t * 0.35, 1) * 8f * w;
         float pitch = DrunkClient.noise(t * 0.29, 2) * 4f * w;
+        yaw += spinSaw(t) * 8f * spin;
         float retch = retch(player, partial) * 35f;
         if (mc.screen == null && !mc.isPaused()) {
             float dYaw = yaw - appliedYaw;
@@ -122,6 +126,8 @@ public final class DrunkMovementHandler {
             float phase = player.getData(ModAttachments.DRUNK).stomach > 0.05f ? 1f : -1f;
             roll += (float) (t * 50.0 % 360.0) * phase * Math.min(1f, (DrunkClient.blood - Intoxication.MERRY) / 0.8f + 0.3f);
         }
+        // Standing drunk: the room tilts along with the turning.
+        roll += spinSaw(t) * 2.5f * spin;
         // A seizure: violent, fast shaking.
         roll += DrunkClient.noise(t * 25.0, 83) * 20f * DrunkClient.seizing;
         // Entzug: the whole body shivers.
@@ -226,6 +232,44 @@ public final class DrunkMovementHandler {
         }
     }
 
+    /**
+     * Drunk and standing still (or sitting), the room keeps turning one way and the eyes jerk it
+     * back about every two seconds (positional alcohol nystagmus). Walking, the sway takes over.
+     * The bed has its own full spin (onCameraAngles).
+     */
+    public static void positionalSpin(LocalPlayer player) {
+        boolean still = player.isPassenger() || player.getDeltaMovement().horizontalDistanceSqr() < 0.0005;
+        float target = still && !player.isSleeping() && DrunkClient.blood >= Intoxication.DRUNK
+            ? 0.4f + 0.6f * DrunkClient.ramp(Intoxication.DRUNK) : 0f;
+        spin += (target - spin) * (target > spin ? 0.03f : 0.15f);
+        if (spin < 0.002f && target == 0f) spin = 0f;
+    }
+
+    /** A drop of three blocks or more, or lava, fire or magma, a step ahead. */
+    private static boolean dangerAhead(LocalPlayer player) {
+        var level = player.level();
+        var ahead = net.minecraft.core.BlockPos.containing(player.position()
+            .add(net.minecraft.world.phys.Vec3.directionFromRotation(0f, player.getYRot()).scale(0.8)));
+        boolean floor = false;
+        for (int down = 0; down <= 3; down++) {
+            var pos = ahead.below(down);
+            var state = level.getBlockState(pos);
+            if (level.getFluidState(pos).is(net.minecraft.tags.FluidTags.LAVA) || state.is(net.minecraft.tags.BlockTags.FIRE)
+                || state.is(net.minecraft.tags.BlockTags.CAMPFIRES) || state.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)) return true;
+            if (down > 0 && !state.getCollisionShape(level, pos).isEmpty()) {
+                floor = true;
+                break;
+            }
+        }
+        return !floor && player.onGround();
+    }
+
+    /** 0..1 sawtooth: about 1.75 s slow drift, 0.15 s snap back. */
+    private static float spinSaw(double t) {
+        double phase = t % 1.9 / 1.9;
+        return (float) (phase < 0.92 ? phase / 0.92 : (1.0 - phase) / 0.08);
+    }
+
     private static void steer(LocalPlayer player, Input input) {
         if (DrunkClient.breakthrough > 0.6f || DrunkClient.seizing > 0f) {
             // Broken through (or convulsing): the body is left behind and does nothing.
@@ -252,6 +296,12 @@ public final class DrunkMovementHandler {
             input.leftImpulse = DrunkClient.noise(DrunkClient.seconds(player, 0f) * 0.7, 9) * 0.6f;
             input.jumping = player.horizontalCollision && player.onGround();
             player.setSprinting(false);
+            if (dangerAhead(player)) {
+                // Even blind drunk the feet will not step off an edge or into fire: stop and turn away.
+                input.up = input.jumping = false;
+                input.forwardImpulse = input.leftImpulse = 0f;
+                player.turn(8f / 0.15f, 0.0);
+            }
             return;
         }
         if (player.hasEffect(ModEffects.VOMITING)) {

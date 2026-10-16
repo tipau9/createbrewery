@@ -230,6 +230,8 @@ public final class DrugPostProcessor {
             uniform("Coke", CokeClient.coke * s);
             uniform("Line", CokeClient.line * s);
             uniform("Stare", TripClient.stare * s);
+            uniform("Fixation", TripClient.fixation);
+            uniform("Squint", KetaClient.squint * s);
             uniform("Harsh", TripClient.harsh);
             uniform("Afterglow", DrunkClient.afterglow * s);
             uniform("DrunkTime", (float) (t % 3600.0));

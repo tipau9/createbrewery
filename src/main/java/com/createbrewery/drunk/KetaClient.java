@@ -28,6 +28,8 @@ public final class KetaClient {
 
     /** How far your own body has drifted off (0..1), and how deep in the K-Loch. */
     static float away, hole;
+    /** 0..1 one eye pinched shut against the double vision (the shader reads it); sneaking does it. */
+    static float squint;
     private static CameraType before;
     private static int nextThought = 300;
 
@@ -44,6 +46,7 @@ public final class KetaClient {
         float keta = Math.max(DrugEffect.felt(player, ModEffects.KETA_HIGH), DrugEffect.strength(player, ModEffects.K_HOLE));
         away = DrunkClient.ease(away, keta);
         hole = DrunkClient.ease(hole, DrugEffect.strength(player, ModEffects.K_HOLE));
+        squint += ((player.isShiftKeyDown() && DrunkClient.dissoc > 0.35f ? 1f : 0f) - squint) * 0.3f;
 
         // The K-Loch: out of the body. The view drifts off behind and above, far away.
         if (hole > 0.5f && before == null) {

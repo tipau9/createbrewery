@@ -235,6 +235,7 @@ public final class DrunkClient {
             var r = player.getRandom();
             seizing = player.hasEffect(ModEffects.SEIZURE) ? 1f : Math.max(0f, seizing - 0.1f);
             DrunkMovementHandler.nystagmus(player);
+            DrunkMovementHandler.positionalSpin(player);
             HallucinationClient.tick(mc, player);
             if (seizing > 0.5f) player.turn((r.nextFloat() - 0.5f) * 10f / 0.15f, (r.nextFloat() - 0.5f) * 8f / 0.15f);
             if (recurLeft > 0) recurLeft--;
@@ -259,9 +260,12 @@ public final class DrunkClient {
         }
         hearing(mc);
         muffle = Math.min(1f - 0.55f * high, 1f - 0.6f * opiate);
+        // Filmriss: the world goes dull and far away while the body walks on.
+        boolean filmriss = player != null && player.hasEffect(ModEffects.BLACKOUT);
+        if (filmriss) muffle = Math.min(muffle, 0.15f);
         boolean atMic = player != null && com.createbrewery.block.club.MicrophoneBlock.isAtActiveMicrophone(player);
         VoiceFx.params = player == null ? VoiceFx.Params.NONE : new VoiceFx.Params(Intoxication.visualIntensity(blood), wah, wahPulse(0f),
-            Math.max(opiate, BenzoClient.calm), dissoc, Math.max(CokeClient.coke, tweak), Math.max(DmtClient.waiting, DmtClient.beyond),
+            filmriss ? 1f : Math.max(opiate, BenzoClient.calm), dissoc, Math.max(CokeClient.coke, tweak), Math.max(DmtClient.waiting, DmtClient.beyond),
             atMic ? 1.0f : 0.0f);
         DrugPostProcessor.debugLog(mc, player);
     }

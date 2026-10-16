@@ -63,6 +63,78 @@ public final class RollClient {
         NeoForge.EVENT_BUS.addListener(RollClient::onNameTag);
         NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST, false,
             net.neoforged.neoforge.client.event.RenderLivingEvent.Pre.class, RollClient::onLivingPre);
+        // Last, so nobody can cancel the screen after the pose is pushed (Post would never pop it).
+        NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST, RollClient::onScreenPre);
+        NeoForge.EVENT_BUS.addListener(RollClient::onScreenPost);
+    }
+
+    // ---- up close: screens ----
+
+    /** Whether onScreenPre pushed the pose this frame. */
+    private static boolean shook;
+    /** A copy of the drawn screen, laid back over it a little to each side. */
+    private static com.mojang.blaze3d.pipeline.TextureTarget near;
+
+    /** 0..1 how badly the eyes focus up close (wide pupils, accommodation gone): from a strong roll on. */
+    private static float nearBlur() {
+        return Math.max(0f, Math.min(1f, (DrunkClient.rolling - 0.5f) / 0.4f)) * DrunkClient.screen();
+    }
+
+    /** MDMA: the eyes flicker side to side, so the screen does too - in bursts, like the world (wiggle). */
+    private static void onScreenPre(net.neoforged.neoforge.client.event.ScreenEvent.Render.Pre event) {
+        shook = false;
+        float amount = wiggle * nearBlur();
+        if (amount < 0.02f) return;
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        // About 20 Hz: one side, then the other, every 25 ms.
+        float side = (net.minecraft.Util.getMillis() / 25 & 1) == 0 ? 1f : -1f;
+        event.getGuiGraphics().pose().pushPose();
+        event.getGuiGraphics().pose().translate(side * (1.5f + 1.5f * amount) * amount / guiScale, 0.0, 0.0);
+        shook = true;
+    }
+
+    /**
+     * ...and up close nothing is sharp: small labels (a knob on the mixer, an item count) smear into
+     * two faint copies beside them.
+     */
+    private static void onScreenPost(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event) {
+        var g = event.getGuiGraphics();
+        if (shook) g.pose().popPose();
+        shook = false;
+        float blur = nearBlur();
+        if (blur < 0.02f) return;
+        g.flush();
+        var main = Minecraft.getInstance().getMainRenderTarget();
+        if (near == null) near = new com.mojang.blaze3d.pipeline.TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
+        else if (near.width != main.width || near.height != main.height) near.resize(main.width, main.height, Minecraft.ON_OSX);
+        com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
+        com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, near.frameBufferId);
+        com.mojang.blaze3d.platform.GlStateManager._glBlitFrameBuffer(0, 0, main.width, main.height, 0, 0, near.width, near.height,
+            org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT, org.lwjgl.opengl.GL11.GL_NEAREST);
+        main.bindWrite(false);
+
+        float shift = 1.2f / (float) Minecraft.getInstance().getWindow().getGuiScale();
+        int w = g.guiWidth(), h = g.guiHeight();
+        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexShader);
+        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, near.getColorTextureId());
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 0.35f * blur);
+        var m = g.pose().last().pose();
+        for (float dx : new float[] {-shift, shift}) {
+            var b = com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
+            // The framebuffer's rows run bottom up.
+            b.addVertex(m, dx, h, 0f).setUv(0f, 0f);
+            b.addVertex(m, dx + w, h, 0f).setUv(1f, 0f);
+            b.addVertex(m, dx + w, 0f, 0f).setUv(1f, 1f);
+            b.addVertex(m, dx, 0f, 0f).setUv(0f, 1f);
+            com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(b.buildOrThrow());
+        }
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
     }
 
     /** Every client tick, from DrunkClient once its channels are eased. */

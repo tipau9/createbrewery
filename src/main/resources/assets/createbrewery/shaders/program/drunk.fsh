@@ -81,6 +81,8 @@ uniform float World;
 uniform float Stare;       // 0..1: how long the view has rested on one spot
 uniform float Harsh;       // 0..1: a bad place to trip (Nether, caves, night)
 uniform float Afterglow;   // 0..1: the clear, bright day after a trip
+uniform float Fixation;    // 0..1: how steadily the eyes hold one point; a quick look away drops it
+uniform float Squint;      // 0..1: Keta, one eye pinched shut against the double vision (sneaking)
 
 in vec2 texCoord;
 
@@ -215,9 +217,11 @@ void main() {
     float lvl2 = mix(1.0, smoothstep(0.25, 0.55, Trip), lsdShare);
     float lvl3 = smoothstep(0.5, 0.8, Trip);
     float heroic = smoothstep(0.85, 1.0, Trip);
+    // Fixate and the drift builds; a quick look away (a saccade) snaps it back to almost still.
+    float fixate = mix(0.25, 1.0, Fixation);
     float luma0 = dot(tap(uv), vec3(0.299, 0.587, 0.114));
     vec2 flow = vec2(sin(uv.y * 14.0 + t * 0.8 + luma0 * 6.0), cos(uv.x * 12.0 + t * 0.7 + luma0 * 6.0));
-    uv += flow * px * (2.0 + 5.0 * peak) * Trip;
+    uv += flow * px * (2.0 + 5.0 * peak) * Trip * fixate;
     // Mushrooms: the world slowly melts downwards. Peyote: heat shimmer, like over desert sand.
     uv.y += sin(uv.x * 20.0 + t * 0.4) * 0.004 * Trip * Organic * (1.0 - World);
     uv.x += sin(uv.y * 60.0 + t * 3.0) * 0.0015 * Trip * Desert * (1.0 - World);
@@ -241,10 +245,10 @@ void main() {
     float breathe = sin(wp.x * 0.8 + t * 0.9) * sin(wp.z * 0.8 - t * 0.7) + 0.5 * sin(wp.y * 1.1 + t * 0.6);
     // Mushrooms: the breath follows a slow heartbeat, about fifty a minute.
     float beat = 1.0 + 0.8 * Organic * pow(0.5 + 0.5 * sin(t * 5.2), 8.0);
-    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * lvl2 * solid * beat;
+    uv += vec2(breathe, 0.7 * breathe) * px * (1.5 + 4.0 * smoothstep(4.0, 40.0, dist)) * Trip * lvl2 * solid * beat * fixate;
     // ...and surfaces run downwards like wet paint, in streaks that stay on their blocks.
     float run = 0.5 + 0.5 * sin(wp.x * 3.1 + 2.0 * sin(wp.z * 2.3) + t * 0.3);
-    uv.y += run * run * 0.006 * Trip * Organic * solid;
+    uv.y += run * run * 0.006 * Trip * Organic * solid * fixate;
     // Peyote: desert heat shimmer rising from the ground, waving upward and stronger at a distance.
     float heatDist = smoothstep(3.0, 35.0, dist);
     float groundShimmer = sin(wp.x * 3.0 + wp.z * 3.0 + t * 4.5 - wp.y * 5.0) * cos(wp.x * 2.0 - t * 2.5);
@@ -316,7 +320,11 @@ void main() {
 
     // Double vision: a second image drifts apart and back together.
     vec2 ghost = vec2(sin(t * 0.7) + 0.35 * sin(t * 1.9), 0.4 * cos(t * 0.53)) * 0.022 * k;
-    vec3 col = mix(tap(uv), tap(uv + ghost), 0.5 * heavy);
+    // Keta: the eye axes drift apart sideways - a second picture beside the first. Pinch one
+    // eye shut (sneak) and the view is single again.
+    float ketaTwin = smoothstep(0.35, 0.7, Dissoc) * (1.0 - Squint);
+    ghost.x += (0.014 + 0.004 * sin(t * 0.3)) * ketaTwin;
+    vec3 col = mix(tap(uv), tap(uv + ghost), max(0.5 * heavy, 0.45 * ketaTwin));
     // ...with dark gaps where the cubes meet.
     if (cubism > 0.0) {
         vec3 cf = min(fract(cube), 1.0 - fract(cube));
@@ -923,6 +931,9 @@ void main() {
 
     // Tunnel vision.
     col *= 1.0 - smoothstep(0.3, 0.9, length(d * vec2(1.0, 0.8))) * 0.7 * k;
+    // ...and the pinched-shut eye: the right side of the view goes dark. In texCoord, so the
+    // Keta flip does not move it.
+    col *= 1.0 - smoothstep(0.55, 0.95, texCoord.x) * 0.92 * Squint;
 
     // Eyes shut on a trip: darkness, and in it the closed-eye visions - patterns unfolding without
     // end down a slow tunnel. Mushrooms: soft, organic, veined, in greens, golds and violet.
