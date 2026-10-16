@@ -9,7 +9,8 @@
     "LightTextureMixin",
     "SoundCloudIdTrackerMixin",
     "SoundSourceManagerMixin",
-    "VoxelShadowGridMixin"
+    "VoxelShadowGridMixin",
+    "SoundPhysicsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

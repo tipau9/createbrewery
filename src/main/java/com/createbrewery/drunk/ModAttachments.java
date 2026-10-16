@@ -24,6 +24,10 @@ public final class ModAttachments {
             .sync((holder, to) -> holder == to, DrunkState.STREAM_CODEC)
             .build());
 
+    /** The bass dose in the player's ears (see {@link HearingDose}); server only, saved while above 0. */
+    public static final Supplier<AttachmentType<Float>> HEARING = ATTACHMENTS.register("hearing",
+        () -> AttachmentType.builder(() -> 0f).serialize(com.mojang.serialization.Codec.FLOAT, d -> d > 0f).build());
+
     public static void register(IEventBus modEventBus) {
         ATTACHMENTS.register(modEventBus);
     }

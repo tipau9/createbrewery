@@ -99,6 +99,8 @@ dependencies {
     compileOnly("maven.modrinth:etched:5.1.0") { isTransitive = false }
     // JAAD: pure Java AAC decoding for modern SoundCloud HLS streams
     shade("de.sfuhrm:jaad:0.8.7") { isTransitive = false }
+    // Curios (in the pack): earplugs are worn in its head slot, only when it is there.
+    compileOnly("maven.modrinth:curios:9.5.1+1.21.1") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // MP3 decoding for the drop trainer (DropTrainer, ./gradlew trainDrops); tests only, not in the mod.

@@ -718,6 +718,12 @@ public class ModRecipeProvider {
                 .requires(Items.LAPIS_LAZULI)
                 .unlockedBy("has_glass_bottle", has(Items.GLASS_BOTTLE))
                 .save(output, CreateBrewery.ID("drug_test_kit"));
+            ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.EARPLUGS.get(), 1)
+                .requires(Items.WHITE_WOOL)
+                .requires(Items.SLIME_BALL)
+                .requires(Items.IRON_NUGGET)
+                .unlockedBy("has_slime_ball", has(Items.SLIME_BALL))
+                .save(output, CreateBrewery.ID("earplugs"));
 
             // Bar & Tavern recipes
             ShapedRecipeBuilder.shaped(RecipeCategory.DECORATIONS, ModBlocks.BEER_KEG.get())

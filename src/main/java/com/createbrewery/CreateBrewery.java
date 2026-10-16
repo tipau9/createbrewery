@@ -49,6 +49,7 @@ public class CreateBrewery {
         REGISTRATE.addRawLang("effect.createbrewery.cheers", "Cheers");
         REGISTRATE.addRawLang("effect.createbrewery.vomiting", "Vomiting");
         REGISTRATE.addRawLang("effect.createbrewery.painkiller", "Painkiller");
+        REGISTRATE.addRawLang("effect.createbrewery.tinnitus", "Tinnitus");
         REGISTRATE.addRawLang("effect.createbrewery.coke_high", "Coke High");
         REGISTRATE.addRawLang("effect.createbrewery.coke_crash", "Crash");
         REGISTRATE.addRawLang("effect.createbrewery.keta_high", "Ketamine High");
@@ -491,6 +492,8 @@ public class CreateBrewery {
         modEventBus.addListener(com.createbrewery.block.club.DmxControl::register);
         modEventBus.addListener(com.createbrewery.block.club.DmxPatch::register);
         modEventBus.addListener(com.createbrewery.block.club.AmpControl::register);
+        modEventBus.addListener(com.createbrewery.drunk.HearingDose::register);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(com.createbrewery.drunk.HearingDose::onPlayerTick);
         modEventBus.addListener(ModRecipeProvider::gatherData);
         ModLootModifiers.register(modEventBus);
         ModDataMaps.register(modEventBus);
