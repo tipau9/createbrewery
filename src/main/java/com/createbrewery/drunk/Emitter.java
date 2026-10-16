@@ -68,6 +68,12 @@ final class Emitter {
     private final ArrayDeque<int[]> queued = new ArrayDeque<>();
     private final float[] in = new float[PIECE], out = new float[PIECE];
     private final ByteBuffer pcm = MemoryUtil.memAlloc(PIECE * 2);
+    /** Ringing ears (see {@link HearingClient}): the dull low-pass and its corner; -1 not set. */
+    private final DeckFx.Biquad ears = new DeckFx.Biquad();
+    private double earsAt = -1;
+    /** Blocks from the listener's head (very far for the headphones), and how hard an overdriven box crackles in unplugged ears, eased. */
+    private double heardAt = Double.MAX_VALUE;
+    private float harsh;
     /** 0 in plain view .. 1 walled off, and how many solid blocks are in the way; both eased. */
     float muffle;
     private float walls, targetMuffle, targetWalls;
@@ -140,6 +146,12 @@ final class Emitter {
         muffle += (targetMuffle - muffle) * ease;
         walls += (targetWalls - walls) * ease;
         filter.set(muffle, Math.max(1f, walls));
+        heardAt = phones || listener == null ? Double.MAX_VALUE : listener.getEyePosition().distanceTo(pos);
+        double corner = Hearing.cutoff(HearingClient.tinnitus);
+        if (Math.abs(corner - earsAt) > 1) {
+            earsAt = corner;
+            ears.lowPass(corner, rate, Math.sqrt(0.5));
+        }
 
         if (t.deck && fx == null) fx = new DeckFx(rate);
         if (fx != null) {
@@ -224,11 +236,20 @@ final class Emitter {
             if (split != null) split.process(in, n);
             dsp.process(in, n);
             if (drive != 1f) for (int i = 0; i < n; i++) in[i] *= drive;
+            // How far past its limit the box is pushed, before the limiter hides it.
+            float peak = 0f;
+            for (int i = 0; i < n; i++) peak = Math.max(peak, Math.abs(in[i]));
+            float ceiling = Math.min(DeckFx.Limiter.CEILING, (float) Math.pow(10, limitDb / 20));
+            float crack = HearingClient.plugs ? 0f : Hearing.harsh(peak, ceiling, heardAt);
+            harsh += (crack - harsh) * 0.2f;
             limiter.process(in, n);
             filter.process(in, 0, n, out);
+            boolean dull = earsAt < 19000;
             pcm.clear();
             for (int i = 0; i < n; i++) {
-                float s = Math.max(-1f, Math.min(1f, out[i]));
+                float y = Hearing.crackle(out[i], harsh);
+                if (dull) y = (float) ears.run(y);
+                float s = Math.max(-1f, Math.min(1f, y));
                 pcm.putShort((short) (s * 32767));
             }
             pcm.flip();

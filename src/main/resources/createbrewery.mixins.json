@@ -6,7 +6,8 @@
   "client": [
     "ChannelMixin",
     "LibraryMixin",
-    "LightTextureMixin"
+    "LightTextureMixin",
+    "SoundPhysicsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

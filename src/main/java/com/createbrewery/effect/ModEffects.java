@@ -52,6 +52,13 @@ public class ModEffects {
     public static final DeferredHolder<MobEffect, PainkillerEffect> PAINKILLER =
         EFFECTS.register("painkiller", PainkillerEffect::new);
 
+    /** Ringing ears from a night at the subs (drunk/HearingDose); what it does is all client sound (drunk/HearingClient). Milk does not stop it. */
+    public static final DeferredHolder<MobEffect, MobEffect> TINNITUS = EFFECTS.register("tinnitus", () ->
+        new MobEffect(MobEffectCategory.HARMFUL, 0xB8C4D6) {
+            @Override
+            public void fillEffectCures(java.util.Set<net.neoforged.neoforge.common.EffectCure> cures, net.minecraft.world.effect.MobEffectInstance instance) {}
+        });
+
     // ---- Koks and Keta (see drugs/DrugServer) ----
 
     // Each comes up, holds and fades (DrugEffect/Pharmacology). Game time runs ~20x real time:

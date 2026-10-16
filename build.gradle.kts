@@ -91,6 +91,8 @@ dependencies {
     // Tough As Nails (in the pack): body temperature and thirst, only when it is there.
     compileOnly("com.github.glitchfiend:ToughAsNails-neoforge:${property("minecraft_version")}-10.1.0.3") { isTransitive = false }
     compileOnly("com.github.glitchfiend:GlitchCore-neoforge:${property("minecraft_version")}-2.1.0.2") { isTransitive = false }
+    // Curios (in the pack): earplugs are worn in its head slot, only when it is there.
+    compileOnly("maven.modrinth:curios:9.5.1+1.21.1") { isTransitive = false }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     // MP3 decoding for the drop trainer (DropTrainer, ./gradlew trainDrops); tests only, not in the mod.

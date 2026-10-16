@@ -187,6 +187,7 @@ public final class DrunkClient {
         KetaClient.init();
         MusicPulse.init();
         DrugAudio.init();
+        HearingClient.init();
         PoseClient.init();
         SniffFirstPerson.init();
         HiccupsEffect.clientKick = entity -> {
