@@ -32,6 +32,10 @@ final class Emitter {
     private static final double RAY_EVERY = 0.05;
     /** Highs fade over distance in air too, even with nothing in the way. */
     private static final float AIR_ABSORPTION = 1.5f;
+    /** A horn's coverage: inside this (cos of about 50 degrees off axis) it plays everything. */
+    private static final double CONE = 0.65;
+    /** Its highs just off the cone, and right behind the box. */
+    private static final double CONE_EDGE_HZ = 16000, BEHIND_HZ = 1200;
 
     /** Which part of the song it plays: all of it, or one side of the amp rack's crossover. */
     static final int FULL = 0, LOW = 1, HIGH = 2;
@@ -55,6 +59,19 @@ final class Emitter {
     private final BlockPos home;
     /** Which way the sound leaves it. */
     private final Vec3 front;
+    /**
+     * A speaker's horn beams its highs forward (a jukebox or booth plays from its top and the subs,
+     * {@link #LOW}, go every way): beside or behind it they fall away, the lows bend around.
+     */
+    private final boolean horn;
+    private final DeckFx.Biquad cone = new DeckFx.Biquad();
+    /** cos of the angle between the horn's axis and the listener, eased; the low-pass corner it last set (-1 open). */
+    private float aim = 1f;
+    private double coneAt = -1;
+    /** Set each frame: the mids and highs ducked under the subs' kick (gain, 1 none), and the bass built up by the walls around the listener (dB). */
+    float duck = 1f, boundaryDb;
+    private final DeckFx.Biquad boundary = new DeckFx.Biquad();
+    private float shelf, shelfAt;
     private final WallFilter filter;
     /** The deck's EQ, filter and effect, run on this stream; only made for a DJ booth deck. */
     private DeckFx fx;
@@ -98,6 +115,7 @@ final class Emitter {
         // A speaker's mouth sits in its front face; a jukebox or booth plays from its middle, heard from above.
         Vec3 out = pos.subtract(Vec3.atCenterOf(home));
         this.front = out.lengthSqr() > 0.01 ? out.normalize() : new Vec3(0, 1, 0);
+        this.horn = !phones && Math.abs(front.y) < 0.5;
         this.rate = rate;
         this.filter = new WallFilter(rate);
         this.limiter = new DeckFx.Limiter(rate);
@@ -152,6 +170,23 @@ final class Emitter {
             earsAt = corner;
             ears.lowPass(corner, rate, Math.sqrt(0.5));
         }
+        if (horn && band != LOW && listener != null) {
+            Vec3 to = listener.getEyePosition().subtract(pos);
+            float d = to.lengthSqr() < 1e-6 ? 1f : (float) front.dot(to.normalize());
+            aim += (d - aim) * ease;
+        } else {
+            aim = 1f;
+        }
+        double coneHz = aim >= CONE ? -1 : CONE_EDGE_HZ * Math.pow(BEHIND_HZ / CONE_EDGE_HZ, Math.min(1.0, (CONE - aim) / (CONE + 1)));
+        if (coneHz < 0 ? coneAt >= 0 : coneAt < 0 || Math.abs(coneHz - coneAt) > coneAt * 0.03) {
+            coneAt = coneHz;
+            if (coneHz > 0) cone.lowPass(coneHz, rate, Math.sqrt(0.5));
+        }
+        shelf += ((band == HIGH ? 0f : boundaryDb) - shelf) * ease;
+        if (Math.abs(shelf - shelfAt) > 0.1f) {
+            shelfAt = shelf;
+            boundary.lowShelf(80, rate, shelf);
+        }
 
         if (t.deck && fx == null) fx = new DeckFx(rate);
         if (fx != null) {
@@ -167,7 +202,7 @@ final class Emitter {
         }
         limiter.setThreshold(limitDb);
         feed(t, target + (long) (LEAD * rate * pitch));
-        AL10.alSourcef(source, AL10.AL_GAIN, gain * level);
+        AL10.alSourcef(source, AL10.AL_GAIN, gain * level * (band == LOW ? 1f : duck));
         AL10.alSourcef(source, AL10.AL_PITCH, pitch * servo);
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING && !queued.isEmpty()) AL10.alSourcePlay(source);
     }
@@ -244,10 +279,12 @@ final class Emitter {
             harsh += (crack - harsh) * 0.2f;
             limiter.process(in, n);
             filter.process(in, 0, n, out);
-            boolean dull = earsAt < 19000;
+            boolean dull = earsAt < 19000, beamed = coneAt > 0, loaded = shelfAt > 0.1f;
             pcm.clear();
             for (int i = 0; i < n; i++) {
                 float y = Hearing.crackle(out[i], harsh);
+                if (beamed) y = (float) cone.run(y);
+                if (loaded) y = (float) boundary.run(y);
                 if (dull) y = (float) ears.run(y);
                 float s = Math.max(-1f, Math.min(1f, y));
                 pcm.putShort((short) (s * 32767));

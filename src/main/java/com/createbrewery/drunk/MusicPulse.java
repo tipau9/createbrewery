@@ -622,6 +622,21 @@ public final class MusicPulse {
      * world goes out of its speakers (the linked ones of the booth playing it, or one at the
      * jukebox or booth itself) and the game's own source is muted.
      */
+    /** Blocks from a subwoofer within which its kick ducks the rest, and by how much at most. */
+    private static final double CHEST_REACH = 5;
+    private static final float CHEST_DB = 2.5f;
+
+    /** Boundary loading: +2.5 dB in the bass with a wall within a block and a half, +3.5 dB in a corner. */
+    private static float boundary(net.minecraft.world.level.Level level, LocalPlayer player) {
+        Vec3 body = player.position().add(0, 0.9, 0);
+        int walls = 0;
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos p = BlockPos.containing(body.add(d.getStepX() * 1.5, 0, d.getStepZ() * 1.5));
+            if (level.getBlockState(p).isSolidRender(level, p)) walls++;
+        }
+        return walls == 0 ? 0f : walls == 1 ? 2.5f : 3.5f;
+    }
+
     private static void play(Track t, Minecraft mc, LocalPlayer player, long cursor, double now, float dt) {
         float base = baseGain(t);
         float lift = 1f + RollClient.peak; // at the peak the music sounds louder
@@ -678,6 +693,12 @@ public final class MusicPulse {
         }
         float crossover = amp == null ? 100f : amp.crossover;
         boolean steep = amp != null && amp.slope == AmpSettings.LR48;
+        // Right in front of the subs every kick presses on the chest and the mids and highs duck
+        // under it, for as long as the kick rings; against a wall or in a corner the bass builds up.
+        float chest = 0f;
+        if (player != null) for (Vec3 sub : subs) chest = Math.max(chest, (float) (1.0 - player.getEyePosition().distanceTo(sub) / CHEST_REACH));
+        float duck = (float) Math.pow(10, -CHEST_DB * chest * Math.min(1f, t.pulse) / 20);
+        float boundaryDb = player == null ? 0f : boundary(mc.level, player);
 
         for (Iterator<Map.Entry<Vec3, Emitter>> it = t.emitters.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Vec3, Emitter> e = it.next();
@@ -696,6 +717,8 @@ public final class MusicPulse {
             e.crossover = crossover;
             e.steep = steep;
             e.zone = want.zone();
+            e.duck = duck;
+            e.boundaryDb = boundaryDb;
             AmpSettings.Zone z = amp == null || want.zone() < 0 ? null : amp.zones[want.zone()];
             if (z == null) {
                 e.dsp.set(0, 0, 0, 0, false);

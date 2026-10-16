@@ -16,10 +16,18 @@ final class ClubState {
 
     /** The raw pulse as heard, 0..1 (smooth, for things that follow it continuously) and the raw drop. */
     float kick, drop;
-    /** True for exactly one tick on a kick; its running count; 0..1 through the beat; the punch that dies before the next kick. */
+    /**
+     * True for exactly one tick on a beat; its running count; 0..1 through the beat; the punch that
+     * dies before the next kick. When the kick drops out (a breakdown) the beat runs on by itself
+     * at the learnt tempo, like a flywheel, for {@link #FLYWHEEL_BEATS} beats and then fades out;
+     * the punch only ever follows real kicks.
+     */
     boolean beat;
     int beatIndex;
     float beatPhase, env;
+    /** 1 while the beat runs on without a kick, fading to 0 after {@link #FLYWHEEL_BEATS} (8 bars) and 4 more bars. */
+    float flywheel;
+    static final int FLYWHEEL_BEATS = 32, FLYWHEEL_FADE = 16;
     /** True for one tick when a drop lands; then 1 decaying over a second or two. */
     boolean dropEdge;
     float dropLevel;
@@ -34,8 +42,8 @@ final class ClubState {
     /** Seconds per beat, at least 0.2. */
     double period = 0.5;
 
-    private boolean kickLatched, dropLatched;
-    private double sinceKick = 99;
+    private boolean kickLatched, dropLatched, ranOn;
+    private double sinceKick = 99, sinceBeat = 99;
 
     void update(float dt, float kick, float drop, float tension, boolean playing, double period, Mixer mixer, boolean noFlashing) {
         this.kick = kick;
@@ -44,16 +52,30 @@ final class ClubState {
         this.noFlashing = noFlashing;
         this.period = Math.max(0.2, period);
 
-        beat = kick > BEAT_ON && !kickLatched;
-        if (beat) {
+        boolean kicked = kick > BEAT_ON && !kickLatched;
+        if (kicked) {
             kickLatched = true;
-            beatIndex++;
+            // A late kick right after the flywheel already counted this beat only pulls it back in phase.
+            beat = !(ranOn && sinceBeat < 0.35 * this.period);
+            if (beat) beatIndex++;
             sinceKick = 0;
+            sinceBeat = 0;
+            ranOn = false;
         } else {
             if (kick < BEAT_OFF) kickLatched = false;
             sinceKick += dt;
+            sinceBeat += dt;
+            beat = false;
         }
-        beatPhase = (float) Math.min(1.0, sinceKick / this.period);
+        flywheel = playing && sinceKick < 99
+            ? clamp((float) ((FLYWHEEL_BEATS + FLYWHEEL_FADE - sinceKick / this.period) / FLYWHEEL_FADE)) : 0f;
+        if (!kicked && flywheel > 0f && sinceBeat >= this.period) {
+            beat = true;
+            beatIndex++;
+            sinceBeat -= this.period;
+            ranOn = true;
+        }
+        beatPhase = flywheel > 0f ? (float) Math.min(1.0, sinceBeat / this.period) : (float) Math.min(1.0, sinceKick / this.period);
         env = (float) Math.exp(-sinceKick * 7);
 
         dropEdge = drop > DROP_ON && !dropLatched;

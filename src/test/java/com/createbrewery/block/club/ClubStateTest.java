@@ -32,6 +32,42 @@ class ClubStateTest {
     }
 
     @Test
+    void beatRunsOnThroughABreakdownThenFades() {
+        ClubState c = new ClubState();
+        tick(c, 1f, 0, 0, true);
+        tick(c, 0f, 0, 0, true);
+        int beats = 0;
+        for (int i = 0; i < 200; i++) { // 10 s = 20 beats at 0.5 s, no kick
+            tick(c, 0, 0, 0, true);
+            if (c.beat) beats++;
+        }
+        assertTrue(beats >= 19 && beats <= 20, "flywheel beats: " + beats);
+        assertTrue(c.breakdown, "a flywheel beat must not end the breakdown");
+        assertTrue(c.env < 0.01f, "the punch follows real kicks only");
+        for (int i = 0; i < 1000; i++) tick(c, 0, 0, 0, true); // long past 8 + 4 bars
+        assertEquals(0f, c.flywheel, 1e-6);
+        int late = 0;
+        for (int i = 0; i < 40; i++) {
+            tick(c, 0, 0, 0, true);
+            if (c.beat) late++;
+        }
+        assertEquals(0, late, "the flywheel ran on forever");
+    }
+
+    @Test
+    void aLateKickAfterAFlywheelBeatDoesNotDoubleStep() {
+        ClubState c = new ClubState();
+        tick(c, 1f, 0, 0, true);
+        for (int i = 0; i < 10; i++) tick(c, 0, 0, 0, true); // 0.5 s: the flywheel beat
+        assertTrue(c.beat);
+        int index = c.beatIndex;
+        tick(c, 1f, 0, 0, true); // the real kick, 50 ms late
+        assertFalse(c.beat);
+        assertEquals(index, c.beatIndex);
+        assertEquals(0f, c.beatPhase, 1e-6);
+    }
+
+    @Test
     void dropFiresOnceAndDecays() {
         ClubState c = new ClubState();
         tick(c, 0, 1f, 0, true);
