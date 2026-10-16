@@ -107,7 +107,8 @@ public final class DrugPostProcessor {
                 || DrunkClient.trip > 0.01f || DrunkClient.bad > 0.01f || DrunkClient.breakthrough > 0.01f || DrunkClient.rolling > 0.01f || DrunkClient.tweak > 0.01f
                 || TweakClient.tired > 0.01f || NodClient.sick > 0.01f || BenzoClient.calm > 0.01f || CokeClient.line > 0.01f || BenzoClient.rebound > 0.01f
                 || NodClient.air > 0.01f || DrunkClient.opiate > 0.01f || DrunkClient.wah > 0.01f || DrunkClient.afterglow > 0.01f || DmtClient.descent > 0.01f
-                || RollClient.heat > 0.01f || RollClient.zap > 0.01f);
+                || RollClient.heat > 0.01f || RollClient.zap > 0.01f
+                || com.createbrewery.block.club.StrobeFlash.burnIn() > 0.01f);
 
         if (want && chain == null) {
             try {
@@ -233,6 +234,14 @@ public final class DrugPostProcessor {
             uniform("Harsh", TripClient.harsh);
             uniform("Afterglow", DrunkClient.afterglow * s);
             uniform("DrunkTime", (float) (t % 3600.0));
+            uniform("StrobeBurnInIntensity", com.createbrewery.block.club.StrobeFlash.burnIn() * s);
+            uniform("Capture", com.createbrewery.block.club.StrobeFlash.takeCapture());
+            float[] burnPos = com.createbrewery.block.club.StrobeFlash.burnPos();
+            try {
+                for (PostPass pass : passes()) pass.getEffect().safeGetUniform("StrobeBurnInPos").set(burnPos[0], burnPos[1], burnPos[2]);
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                // Without the position only the lens spot is missing; the ghost of the room still shows.
+            }
         }
 
         DrunkMovementHandler.updateAimDrift(mc, player, partial, t);
@@ -269,6 +278,7 @@ public final class DrugPostProcessor {
             chainWidth = main.width;
             chainHeight = main.height;
             chainFrames = 0;
+            com.createbrewery.block.club.StrobeFlash.loseBurn();
         }
         uniform("Trail", chainFrames < 3 ? 0f : 1f);
     }
@@ -336,21 +346,25 @@ public final class DrugPostProcessor {
     }
 
     @SuppressWarnings("unchecked")
+    private static List<PostPass> passes() throws ReflectiveOperationException {
+        if (chainPasses == null) {
+            chainPasses = PostChain.class.getDeclaredField("passes");
+            chainPasses.setAccessible(true);
+        }
+        return (List<PostPass>) chainPasses.get(chain);
+    }
+
     private static void worldUniforms(RenderLevelStageEvent event) {
         Vec3 cam = event.getCamera().getPosition();
         Matrix4f viewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getModelViewMatrix());
         if (!worldFailed) {
             try {
-                if (chainPasses == null) {
-                    chainPasses = PostChain.class.getDeclaredField("passes");
-                    chainPasses.setAccessible(true);
-                }
                 Vec3 moved = prevCam == null || chainFrames < 3 ? Vec3.ZERO : cam.subtract(prevCam);
                 Matrix4f dhInv = dh ? dhInvViewProj(event.getModelViewMatrix()) : null;
                 uniform("Dh", dhInv == null ? 0f : 1f);
                 int normals = veilNormals();
                 uniform("Normals", normals < 0 ? 0f : 1f);
-                for (PostPass pass : (List<PostPass>) chainPasses.get(chain)) {
+                for (PostPass pass : passes()) {
                     var effect = pass.getEffect();
                     effect.safeGetUniform("InvViewProj").set(new Matrix4f(viewProj).invert());
                     effect.safeGetUniform("PrevViewProj").set(chainFrames < 3 ? viewProj : prevViewProj);

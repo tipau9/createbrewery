@@ -3,10 +3,12 @@
     "vertex": "blit",
     "fragment": "createbrewery:drunk_final",
     "attributes": [ "Position" ],
-    "samplers": [ { "name": "DiffuseSampler" }, { "name": "BloomSampler" }, { "name": "DiffuseDepthSampler" } ],
+    "samplers": [ { "name": "DiffuseSampler" }, { "name": "BloomSampler" }, { "name": "DiffuseDepthSampler" }, { "name": "BurnSampler" } ],
     "uniforms": [
         { "name": "ProjMat",      "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
         { "name": "OutSize",      "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] },
+        { "name": "StrobeBurnInPos",       "type": "float", "count": 3, "values": [ 0.5, 0.5, 0.1 ] },
+        { "name": "StrobeBurnInIntensity", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "Intensity",    "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Mood",         "type": "float",     "count": 1,  "values": [ 0.0 ] },
         { "name": "Coke",         "type": "float",     "count": 1,  "values": [ 0.0 ] },

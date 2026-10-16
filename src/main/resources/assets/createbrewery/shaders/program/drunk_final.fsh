@@ -25,6 +25,9 @@ uniform mat4 PrevViewProj;
 uniform vec3 CamDelta;
 uniform float World;
 uniform float Trail;
+uniform sampler2D BurnSampler;         // the frame a strobe burnt into the eye (strobe_burn)
+uniform vec3 StrobeBurnInPos;          // where the lens was on screen then (xy) and how big (z, in screen heights)
+uniform float StrobeBurnInIntensity;   // how much of the burn-in is left, 0..1 (see StrobeFlash)
 in vec2 texCoord;
 out vec4 fragColor;
 
@@ -82,6 +85,29 @@ void main() {
               + vec3(1.0, 0.45, 0.75) * 0.8 * Roll * (1.0 + 0.8 * Beat * Level)
               + vec3(0.8, 0.95, 1.1) * 0.3 * Tweak;
     col += (1.0 - exp(-bloom * 8.0)) * tint;
+
+    // Retinal burn-in: a strobe stared into is burnt into the eye. Composited here, not in
+    // drunk.fsh, so it never reaches the previous frame and no tracer drags it into the world:
+    // it stays put on the screen - on the retina - and rides along with every turn of the head.
+    // Complementary colours, green at first and sliding to violet as it fades.
+    // ponytail: strengths eyeballed; tune the 0.35 darkening and 0.45 ghost gain here.
+    float burnIn = StrobeBurnInIntensity;
+    if (burnIn > 0.01) {
+        vec2 bp = px * 3.0;
+        vec3 burnt = (2.0 * texture(BurnSampler, texCoord).rgb
+                    + texture(BurnSampler, texCoord + bp).rgb + texture(BurnSampler, texCoord - bp).rgb
+                    + texture(BurnSampler, texCoord + vec2(bp.x, -bp.y)).rgb + texture(BurnSampler, texCoord - vec2(bp.x, -bp.y)).rgb) / 6.0;
+        float bl = dot(burnt, vec3(0.299, 0.587, 0.114));
+        vec3 ghost = clamp(mix(vec3(0.75, 0.35, 1.0), vec3(0.3, 1.0, 0.45), burnIn) + (bl - burnt) * 1.5, 0.0, 1.0);
+        float w = smoothstep(0.2, 0.75, bl) * burnIn;
+        col = col * (1.0 - 0.35 * w) + ghost * w * 0.45;
+        // The lens itself bleached the deepest: a dark violet core in a green halo.
+        vec2 lens = (texCoord - StrobeBurnInPos.xy) * vec2(OutSize.x / OutSize.y, 1.0);
+        float r2 = StrobeBurnInPos.z * StrobeBurnInPos.z;
+        float core = exp(-dot(lens, lens) / r2);
+        float halo = exp(-dot(lens, lens) / (9.0 * r2)) - core;
+        col = mix(col, vec3(0.16, 0.05, 0.28), 0.8 * core * burnIn) + vec3(0.1, 0.45, 0.2) * halo * burnIn;
+    }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
